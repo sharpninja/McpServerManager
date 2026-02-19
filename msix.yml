@@ -15,6 +15,8 @@ build:
   rid: win-x64
   selfContained: true
 
+plugins: []
+
 output:
   dir: artifacts
 
