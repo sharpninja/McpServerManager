@@ -1,4 +1,4 @@
-name: Build Android APK & Publish F-Droid Repo
+name: Build & Release
 
 on:
   push:
@@ -15,67 +15,63 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-release:
+  # ── Shared version detection ──────────────────────────────────────────────
+  version:
     runs-on: ubuntu-latest
     outputs:
       semver: ${{ steps.gitversion.outputs.semVer }}
+      major: ${{ steps.gitversion.outputs.major }}
+      minor: ${{ steps.gitversion.outputs.minor }}
+      patch: ${{ steps.gitversion.outputs.patch }}
+      commits: ${{ steps.gitversion.outputs.commitsSinceVersionSource }}
       version-code: ${{ steps.version-code.outputs.code }}
-      apk-url: ${{ steps.upload-release.outputs.apk-url }}
-      apk-hash: ${{ steps.apk-hash.outputs.sha256 }}
-      apk-size: ${{ steps.apk-hash.outputs.size }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for GitVersion
+          fetch-depth: 0
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Install Android workload
-        run: dotnet workload install android
-
-      - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v3.2.1
+      - uses: gittools/actions/gitversion/setup@v3.2.1
         with:
           versionSpec: '6.x'
 
-      - name: Determine version
-        id: gitversion
+      - id: gitversion
         uses: gittools/actions/gitversion/execute@v3.2.1
         with:
           useConfigFile: false
 
-      - name: Display version
-        run: |
-          echo "SemVer: ${{ steps.gitversion.outputs.semVer }}"
-          echo "FullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}"
-          echo "Major: ${{ steps.gitversion.outputs.major }}"
-          echo "Minor: ${{ steps.gitversion.outputs.minor }}"
-          echo "Patch: ${{ steps.gitversion.outputs.patch }}"
-          echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.commitsSinceVersionSource }}"
-
-      - name: Calculate version code
+      - name: Calculate Android version code
         id: version-code
         run: |
-          MAJOR=${{ steps.gitversion.outputs.major }}
-          MINOR=${{ steps.gitversion.outputs.minor }}
-          PATCH=${{ steps.gitversion.outputs.patch }}
-          COMMITS=${{ steps.gitversion.outputs.commitsSinceVersionSource }}
-          # version code = major*10000 + minor*1000 + patch*100 + commits
-          CODE=$(( MAJOR * 10000 + MINOR * 1000 + PATCH * 100 + COMMITS ))
+          CODE=$(( ${{ steps.gitversion.outputs.major }} * 10000 + ${{ steps.gitversion.outputs.minor }} * 1000 + ${{ steps.gitversion.outputs.patch }} * 100 + ${{ steps.gitversion.outputs.commitsSinceVersionSource }} ))
           if [ "$CODE" -lt 1 ]; then CODE=1; fi
           echo "code=$CODE" >> "$GITHUB_OUTPUT"
-          echo "Version code: $CODE"
+
+      - run: echo "SemVer=${{ steps.gitversion.outputs.semVer }}  VersionCode=${{ steps.version-code.outputs.code }}"
+
+  # ── Android APK ───────────────────────────────────────────────────────────
+  build-android:
+    needs: version
+    runs-on: ubuntu-latest
+    outputs:
+      apk-hash: ${{ steps.apk-hash.outputs.sha256 }}
+      apk-size: ${{ steps.apk-hash.outputs.size }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - run: dotnet workload install android
 
       - name: Decode keystore
         if: env.KEYSTORE_BASE64 != ''
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > ${{ github.workspace }}/release.keystore
+        run: echo "$KEYSTORE_BASE64" | base64 -d > ${{ github.workspace }}/release.keystore
 
       - name: Build Android APK
         run: |
@@ -84,119 +80,185 @@ jobs:
             SIGNING_ARGS="/p:AndroidSigningKeyStore=${{ github.workspace }}/release.keystore /p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }} /p:AndroidSigningStorePass=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} /p:AndroidSigningKeyPass=${{ secrets.ANDROID_KEY_PASSWORD }}"
           fi
           dotnet publish src/RequestTracker.Android/RequestTracker.Android.csproj \
-            -c Release \
-            -f net9.0-android \
-            /p:ApplicationVersion=${{ steps.version-code.outputs.code }} \
-            /p:ApplicationDisplayVersion=${{ steps.gitversion.outputs.semVer }} \
+            -c Release -f net9.0-android \
+            /p:ApplicationVersion=${{ needs.version.outputs.version-code }} \
+            /p:ApplicationDisplayVersion=${{ needs.version.outputs.semver }} \
             $SIGNING_ARGS
 
       - name: Find and rename APK
         id: find-apk
         run: |
-          echo "=== All output files ==="
-          find src/RequestTracker.Android/bin/Release -type f -name "*.apk" -o -name "*.aab" | sort
-          echo "=== Searching for APK ==="
-          # Search for signed APK first, then any APK
           APK=$(find src/RequestTracker.Android/bin/Release -name "*-Signed.apk" | head -1)
+          [ -z "$APK" ] && APK=$(find src/RequestTracker.Android/bin/Release -name "*.apk" | head -1)
           if [ -z "$APK" ]; then
-            APK=$(find src/RequestTracker.Android/bin/Release -name "*.apk" | head -1)
+            echo "ERROR: No APK found!"; find src/RequestTracker.Android/bin/Release -type f; exit 1
           fi
-          if [ -z "$APK" ]; then
-            echo "ERROR: No APK found! Full file listing:"
-            find src/RequestTracker.Android/bin/Release -type f
-            exit 1
-          fi
-          DEST="src/RequestTracker.Android/bin/Release/RequestTracker-${{ steps.gitversion.outputs.semVer }}.apk"
+          DEST="artifacts/RequestTracker-${{ needs.version.outputs.semver }}.apk"
+          mkdir -p artifacts
           cp "$APK" "$DEST"
           echo "apk-path=$DEST" >> "$GITHUB_OUTPUT"
-          echo "Found APK: $APK -> $DEST"
 
-      - name: Compute APK hash and size
+      - name: Compute APK hash
         id: apk-hash
         run: |
-          APK="${{ steps.find-apk.outputs.apk-path }}"
-          SHA256=$(sha256sum "$APK" | awk '{print $1}')
-          SIZE=$(stat -c%s "$APK")
+          SHA256=$(sha256sum "${{ steps.find-apk.outputs.apk-path }}" | awk '{print $1}')
+          SIZE=$(stat -c%s "${{ steps.find-apk.outputs.apk-path }}")
           echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
           echo "size=$SIZE" >> "$GITHUB_OUTPUT"
-          echo "APK SHA-256: $SHA256"
-          echo "APK size: $SIZE bytes"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: artifacts/*.apk
+
+  # ── Windows MSIX ──────────────────────────────────────────────────────────
+  build-windows:
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Build MSIX package
+        shell: pwsh
+        run: |
+          Import-Module ./scripts/MsixTools/MsixTools.psd1 -Force
+          New-MsixPackage `
+            -WorkspaceRoot . `
+            -ConfigPath msix.yml `
+            -Version "${{ needs.version.outputs.semver }}" `
+            -ExcludeService `
+            -DevCert `
+            -Force
+
+      - name: Rename MSIX
+        shell: pwsh
+        run: |
+          $msix = Get-ChildItem artifacts -Filter '*.msix' | Select-Object -First 1
+          $dest = "artifacts/RequestTracker-${{ needs.version.outputs.semver }}-win-x64.msix"
+          if ($msix.FullName -ne (Resolve-Path $dest -ErrorAction SilentlyContinue)) {
+            Move-Item $msix.FullName $dest -Force
+          }
+          Write-Host "MSIX: $dest"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-msix
+          path: artifacts/*.msix
+
+  # ── Linux DEB ─────────────────────────────────────────────────────────────
+  build-linux:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Build DEB package
+        run: |
+          chmod +x scripts/build-deb.sh
+          scripts/build-deb.sh --version "${{ needs.version.outputs.semver }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-deb
+          path: artifacts/*.deb
+
+  # ── GitHub Release ────────────────────────────────────────────────────────
+  release:
+    needs: [version, build-android, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    outputs:
+      apk-url: ${{ steps.urls.outputs.apk-url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: List release assets
+        run: ls -lh release-assets/
 
       - name: Create GitHub Release
-        id: create-release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.gitversion.outputs.semVer }}
-          name: RequestTracker v${{ steps.gitversion.outputs.semVer }}
+          tag_name: v${{ needs.version.outputs.semver }}
+          name: RequestTracker v${{ needs.version.outputs.semver }}
           body: |
-            ## RequestTracker v${{ steps.gitversion.outputs.semVer }}
+            ## RequestTracker v${{ needs.version.outputs.semver }}
+
+            ### Downloads
+            | Platform | File |
+            |----------|------|
+            | 🤖 Android | `RequestTracker-${{ needs.version.outputs.semver }}.apk` |
+            | 🪟 Windows | `RequestTracker-${{ needs.version.outputs.semver }}-win-x64.msix` |
+            | 🐧 Linux | `requesttracker_${{ needs.version.outputs.semver }}_amd64.deb` |
 
             ### Android APK
-            - **Version**: ${{ steps.gitversion.outputs.semVer }}
-            - **Version Code**: ${{ steps.version-code.outputs.code }}
-            - **SHA-256**: `${{ steps.apk-hash.outputs.sha256 }}`
+            - **Version Code**: ${{ needs.version.outputs.version-code }}
+            - **SHA-256**: `${{ needs.build-android.outputs.apk-hash }}`
 
             ### Install via F-Droid
-            Add this repo URL to your F-Droid client:
             ```
             https://sharpninja.github.io/RequestTracker/fdroid/repo
             ```
+
+            ### Install on Linux
+            ```bash
+            sudo dpkg -i requesttracker_${{ needs.version.outputs.semver }}_amd64.deb
+            ```
           draft: false
-          prerelease: ${{ contains(steps.gitversion.outputs.semVer, '-') }}
-          files: ${{ steps.find-apk.outputs.apk-path }}
+          prerelease: ${{ contains(needs.version.outputs.semver, '-') }}
+          files: release-assets/*
 
-      - name: Get APK release asset URL
-        id: upload-release
+      - name: Compute release URLs
+        id: urls
         run: |
-          # Get the direct download URL for the APK asset from the release
-          TAG="v${{ steps.gitversion.outputs.semVer }}"
-          APK_NAME="RequestTracker-${{ steps.gitversion.outputs.semVer }}.apk"
-          APK_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${APK_NAME}"
-          echo "apk-url=$APK_URL" >> "$GITHUB_OUTPUT"
-          echo "APK release URL: $APK_URL"
+          TAG="v${{ needs.version.outputs.semver }}"
+          echo "apk-url=https://github.com/${{ github.repository }}/releases/download/${TAG}/RequestTracker-${{ needs.version.outputs.semver }}.apk" >> "$GITHUB_OUTPUT"
 
+  # ── F-Droid repo deployment ───────────────────────────────────────────────
   deploy-fdroid:
-    needs: build-and-release
+    needs: [version, build-android, release]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Generate F-Droid repo metadata
         run: |
           python .github/scripts/generate_fdroid_repo.py \
-            --version "${{ needs.build-and-release.outputs.semver }}" \
-            --version-code "${{ needs.build-and-release.outputs.version-code }}" \
-            --apk-url "${{ needs.build-and-release.outputs.apk-url }}" \
-            --apk-hash "${{ needs.build-and-release.outputs.apk-hash }}" \
-            --apk-size "${{ needs.build-and-release.outputs.apk-size }}" \
+            --version "${{ needs.version.outputs.semver }}" \
+            --version-code "${{ needs.version.outputs.version-code }}" \
+            --apk-url "${{ needs.release.outputs.apk-url }}" \
+            --apk-hash "${{ needs.build-android.outputs.apk-hash }}" \
+            --apk-size "${{ needs.build-android.outputs.apk-size }}" \
             --repo-url "https://sharpninja.github.io/RequestTracker/fdroid/repo" \
             --output-dir docs/fdroid/repo
 
-      - name: Show generated metadata
-        run: |
-          echo "=== index-v1.json ==="
-          cat docs/fdroid/repo/index-v1.json
-          echo ""
-          echo "=== entry.json ==="
-          cat docs/fdroid/repo/entry.json
+      - uses: actions/configure-pages@v5
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/fdroid
 
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4

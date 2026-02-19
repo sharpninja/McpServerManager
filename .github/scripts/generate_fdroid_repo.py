@@ -30,7 +30,7 @@ def generate_index_v1(args):
         "repo": {
             "name": "RequestTracker F-Droid Repo",
             "description": "F-Droid repository for the RequestTracker Android application.",
-            "icon": "",
+            "icon": "icons/com.requesttracker.android.128.png",
             "address": args.repo_url,
             "timestamp": timestamp,
             "version": 21,
@@ -51,6 +51,7 @@ def generate_index_v1(args):
                 "sourceCode": "https://github.com/sharpninja/RequestTracker",
                 "issueTracker": "https://github.com/sharpninja/RequestTracker/issues",
                 "categories": ["Development", "System"],
+                "icon": "icons/com.requesttracker.android.128.png",
                 "suggestedVersionName": args.version,
                 "suggestedVersionCode": args.version_code,
             }

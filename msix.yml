@@ -1,0 +1,22 @@
+package:
+  name: RequestTracker
+  displayName: RequestTracker
+
+desktop:
+  path: src/RequestTracker.Desktop/RequestTracker.Desktop.csproj
+  framework: net9.0
+  subDir: desktop
+  displayName: RequestTracker
+  appId: RequestTrackerDesktop
+  description: Avalonia desktop app for browsing and analyzing Copilot request/session logs
+
+build:
+  configuration: Release
+  rid: win-x64
+  selfContained: true
+
+output:
+  dir: artifacts
+
+icons:
+  svg: src/RequestTracker.Core/Assets/logo.svg

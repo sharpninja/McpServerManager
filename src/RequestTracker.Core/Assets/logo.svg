@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1565C0"/>
+      <stop offset="100%" style="stop-color:#1E88E5"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#42A5F5"/>
+      <stop offset="100%" style="stop-color:#90CAF9"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect x="0" y="0" width="512" height="512" rx="80" ry="80" fill="url(#bg)"/>
+
+  <!-- Subtle inner border glow -->
+  <rect x="16" y="16" width="480" height="480" rx="68" ry="68" fill="none" stroke="url(#accent)" stroke-width="2" opacity="0.3"/>
+
+  <!-- Magnifying glass circle (represents tracking/searching requests) -->
+  <circle cx="240" cy="232" r="120" fill="none" stroke="#FFFFFF" stroke-width="28" opacity="0.15"/>
+
+  <!-- Document/log lines inside the glass (represents request logs) -->
+  <rect x="170" y="185" width="140" height="12" rx="6" fill="#FFFFFF" opacity="0.5"/>
+  <rect x="170" y="215" width="110" height="12" rx="6" fill="#FFFFFF" opacity="0.4"/>
+  <rect x="170" y="245" width="125" height="12" rx="6" fill="#FFFFFF" opacity="0.35"/>
+  <rect x="170" y="275" width="95"  height="12" rx="6" fill="#FFFFFF" opacity="0.3"/>
+
+  <!-- Arrow/pointer over lines (represents tracking/navigating) -->
+  <polygon points="148,220 148,260 168,240" fill="#FFFFFF" opacity="0.7"/>
+
+  <!-- "RT" text - bold, clean -->
+  <text x="256" y="340" text-anchor="middle" font-family="'Segoe UI','Helvetica Neue',Arial,sans-serif" font-weight="800" font-size="200" fill="#FFFFFF" letter-spacing="-8">RT</text>
+</svg>
