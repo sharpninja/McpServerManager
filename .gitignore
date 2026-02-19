@@ -8,3 +8,4 @@ stderr*.log
 src/RequestTracker/crash.log
 docs/EXCEPTION-EVALUATION.md
 .nuget/
+.github/scripts/__pycache__/

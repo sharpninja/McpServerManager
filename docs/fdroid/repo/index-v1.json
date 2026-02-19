@@ -1,0 +1,11 @@
+{
+  "repo": {
+    "name": "RequestTracker F-Droid Repo",
+    "description": "F-Droid repository for the RequestTracker Android application. Awaiting first release.",
+    "address": "https://sharpninja.github.io/RequestTracker/fdroid/repo",
+    "timestamp": 0,
+    "version": 21
+  },
+  "apps": [],
+  "packages": {}
+}
