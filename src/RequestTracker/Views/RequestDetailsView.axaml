@@ -76,6 +76,44 @@
         </Border>
       </Expander>
 
+      <Expander Header="{Binding ProcessingDialog.Count, StringFormat='Processing Dialog ({0})'}" IsExpanded="True" HorizontalAlignment="Stretch">
+          <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Background="White" Padding="12" MinHeight="80">
+              <Grid>
+                  <TextBlock Text="No processing dialog recorded." Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
+                             IsVisible="{Binding ProcessingDialog, Converter={StaticResource CountToVisibility}, ConverterParameter='Invert'}"/>
+                  <StackPanel IsVisible="{Binding ProcessingDialog, Converter={StaticResource CountToVisibility}}">
+                      <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Padding="0,0,0,4" Margin="0,0,0,6">
+                          <Grid ColumnDefinitions="160,90,100,*">
+                              <TextBlock Grid.Column="0" Text="Timestamp" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <TextBlock Grid.Column="1" Text="Role" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <TextBlock Grid.Column="2" Text="Category" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <TextBlock Grid.Column="3" Text="Content" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold" Margin="4,0"/>
+                          </Grid>
+                      </Border>
+                      <ItemsControl ItemsSource="{Binding ProcessingDialog}">
+                          <ItemsControl.ItemsPanel>
+                              <ItemsPanelTemplate>
+                                  <StackPanel Spacing="4"/>
+                              </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                              <DataTemplate DataType="models:UnifiedProcessingDialogItem">
+                                  <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1">
+                                      <Grid ColumnDefinitions="160,90,100,*">
+                                          <SelectableTextBlock Grid.Column="0" Text="{Binding TimestampDisplay}" FontFamily="Consolas, Monospace" FontSize="13"/>
+                                          <SelectableTextBlock Grid.Column="1" Text="{Binding Role}" FontFamily="Consolas, Monospace" FontSize="13"/>
+                                          <SelectableTextBlock Grid.Column="2" Text="{Binding Category}" FontFamily="Consolas, Monospace" FontSize="13"/>
+                                          <SelectableTextBlock Grid.Column="3" Text="{Binding Content}" FontFamily="Consolas, Monospace" FontSize="13" TextWrapping="Wrap" Margin="4,0"/>
+                                      </Grid>
+                                  </Border>
+                              </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                  </StackPanel>
+              </Grid>
+          </Border>
+      </Expander>
+
       <!-- Actions: expander with grid when there are items, empty-state message when none -->
       <Expander Header="{Binding Actions.Count, StringFormat='Actions ({0})'}" IsExpanded="True" HorizontalAlignment="Stretch">
           <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Background="White" Padding="12" MinHeight="80">
@@ -107,44 +145,6 @@
                                           <SelectableTextBlock Grid.Column="2" Text="{Binding Description}" FontFamily="Consolas, Monospace" FontSize="14" TextWrapping="Wrap" Margin="4,0"/>
                                           <SelectableTextBlock Grid.Column="3" Text="{Binding Status}" FontFamily="Consolas, Monospace" FontSize="14"/>
                                           <SelectableTextBlock Grid.Column="4" Text="{Binding FilePath}" FontFamily="Consolas, Monospace" FontSize="14" TextWrapping="Wrap"/>
-                                      </Grid>
-                                  </Border>
-                              </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                  </StackPanel>
-              </Grid>
-          </Border>
-      </Expander>
-
-      <Expander Header="{Binding ProcessingDialog.Count, StringFormat='Processing Dialog ({0})'}" IsExpanded="True" HorizontalAlignment="Stretch">
-          <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Background="White" Padding="12" MinHeight="80">
-              <Grid>
-                  <TextBlock Text="No processing dialog recorded." Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
-                             IsVisible="{Binding ProcessingDialog, Converter={StaticResource CountToVisibility}, ConverterParameter='Invert'}"/>
-                  <StackPanel IsVisible="{Binding ProcessingDialog, Converter={StaticResource CountToVisibility}}">
-                      <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Padding="0,0,0,4" Margin="0,0,0,6">
-                          <Grid ColumnDefinitions="160,90,100,*">
-                              <TextBlock Grid.Column="0" Text="Timestamp" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
-                              <TextBlock Grid.Column="1" Text="Role" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
-                              <TextBlock Grid.Column="2" Text="Category" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
-                              <TextBlock Grid.Column="3" Text="Content" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold" Margin="4,0"/>
-                          </Grid>
-                      </Border>
-                      <ItemsControl ItemsSource="{Binding ProcessingDialog}">
-                          <ItemsControl.ItemsPanel>
-                              <ItemsPanelTemplate>
-                                  <StackPanel Spacing="4"/>
-                              </ItemsPanelTemplate>
-                          </ItemsControl.ItemsPanel>
-                          <ItemsControl.ItemTemplate>
-                              <DataTemplate DataType="models:UnifiedProcessingDialogItem">
-                                  <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1">
-                                      <Grid ColumnDefinitions="160,90,100,*">
-                                          <SelectableTextBlock Grid.Column="0" Text="{Binding TimestampDisplay}" FontFamily="Consolas, Monospace" FontSize="13"/>
-                                          <SelectableTextBlock Grid.Column="1" Text="{Binding Role}" FontFamily="Consolas, Monospace" FontSize="13"/>
-                                          <SelectableTextBlock Grid.Column="2" Text="{Binding Category}" FontFamily="Consolas, Monospace" FontSize="13"/>
-                                          <SelectableTextBlock Grid.Column="3" Text="{Binding Content}" FontFamily="Consolas, Monospace" FontSize="13" TextWrapping="Wrap" Margin="4,0"/>
                                       </Grid>
                                   </Border>
                               </DataTemplate>
