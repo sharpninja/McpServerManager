@@ -232,7 +232,7 @@ jobs:
 
             ### Install via F-Droid
             ```
-            https://sharpninja.github.io/RequestTracker/fdroid/repo
+            https://sharpninja.github.io/RequestTracker/repo
             ```
 
             ### Install on Linux
@@ -271,7 +271,7 @@ jobs:
             --apk-url "${{ needs.release.outputs.apk-url }}" \
             --apk-hash "${{ needs.build-android.outputs.apk-hash }}" \
             --apk-size "${{ needs.build-android.outputs.apk-size }}" \
-            --repo-url "https://sharpninja.github.io/RequestTracker/fdroid/repo" \
+            --repo-url "https://sharpninja.github.io/RequestTracker/repo" \
             --output-dir docs/fdroid/repo
 
       - uses: actions/configure-pages@v5
