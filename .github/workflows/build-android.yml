@@ -93,9 +93,16 @@ jobs:
       - name: Find and rename APK
         id: find-apk
         run: |
-          APK=$(find src/RequestTracker.Android/bin/Release -name "*.apk" | head -1)
+          echo "=== All output files ==="
+          find src/RequestTracker.Android/bin/Release -type f -name "*.apk" -o -name "*.aab" | sort
+          echo "=== Searching for APK ==="
+          # Search for signed APK first, then any APK
+          APK=$(find src/RequestTracker.Android/bin/Release -name "*-Signed.apk" | head -1)
           if [ -z "$APK" ]; then
-            echo "ERROR: No APK found!"
+            APK=$(find src/RequestTracker.Android/bin/Release -name "*.apk" | head -1)
+          fi
+          if [ -z "$APK" ]; then
+            echo "ERROR: No APK found! Full file listing:"
             find src/RequestTracker.Android/bin/Release -type f
             exit 1
           fi
