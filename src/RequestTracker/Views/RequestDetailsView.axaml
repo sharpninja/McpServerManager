@@ -63,7 +63,7 @@
       </Expander>
 
       <!-- Interpretation (if present); collapsed by default -->
-      <Expander Header="Interpretation" IsExpanded="False" HorizontalAlignment="Stretch" IsVisible="{Binding Interpretation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <Expander Header="Interpretation" IsExpanded="True" HorizontalAlignment="Stretch" IsVisible="{Binding Interpretation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
         <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Background="#F0F8FF">
           <SelectableTextBlock Text="{Binding Interpretation}" TextWrapping="Wrap" FontFamily="Segoe UI, Sans-Serif" Foreground="Black" />
         </Border>
@@ -77,7 +77,7 @@
       </Expander>
 
       <!-- Actions: expander with grid when there are items, empty-state message when none -->
-      <Expander Header="{Binding Actions.Count, StringFormat='Actions ({0})'}" HorizontalAlignment="Stretch">
+      <Expander Header="{Binding Actions.Count, StringFormat='Actions ({0})'}" IsExpanded="True" HorizontalAlignment="Stretch">
           <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Background="White" Padding="12" MinHeight="80">
               <Grid>
                   <TextBlock Text="No actions recorded." Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -117,7 +117,7 @@
           </Border>
       </Expander>
 
-      <Expander Header="{Binding ProcessingDialog.Count, StringFormat='Processing Dialog ({0})'}" HorizontalAlignment="Stretch">
+      <Expander Header="{Binding ProcessingDialog.Count, StringFormat='Processing Dialog ({0})'}" IsExpanded="True" HorizontalAlignment="Stretch">
           <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Background="White" Padding="12" MinHeight="80">
               <Grid>
                   <TextBlock Text="No processing dialog recorded." Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -156,7 +156,7 @@
       </Expander>
 
       <!-- Context -->
-      <Expander Header="Context" HorizontalAlignment="Stretch">
+      <Expander Header="Context" IsExpanded="True" HorizontalAlignment="Stretch">
         <ItemsControl ItemsSource="{Binding ContextList}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
@@ -189,7 +189,7 @@
       </Expander>
 
       <!-- Original JSON -->
-      <Expander Header="Original JSON" HorizontalAlignment="Stretch" x:CompileBindings="False">
+      <Expander Header="Original JSON" IsExpanded="True" HorizontalAlignment="Stretch" x:CompileBindings="False">
           <StackPanel Spacing="6" HorizontalAlignment="Stretch">
             <Button Content="Copy" Command="{Binding DataContext.CopyOriginalJsonCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                     CommandParameter="{Binding}" HorizontalAlignment="Right"/>

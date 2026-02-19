@@ -260,13 +260,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (!string.IsNullOrEmpty(q))
         {
-            var lower = q.ToLowerInvariant();
-            filtered = filtered.Where(e => (e.SearchText ?? "").ToLowerInvariant().Contains(lower) ||
-                                          (e.RequestId ?? "").ToLowerInvariant().Contains(lower) ||
-                                          (e.DisplayText ?? "").ToLowerInvariant().Contains(lower) ||
-                                          (e.Model ?? "").ToLowerInvariant().Contains(lower) ||
-                                          (e.Agent ?? "").ToLowerInvariant().Contains(lower) ||
-                                          (e.Timestamp ?? "").ToLowerInvariant().Contains(lower));
+            var matcher = Services.BooleanSearchParser.Parse(q);
+            filtered = filtered.Where(e => matcher(e.SearchText ?? "") ||
+                                          matcher(e.RequestId ?? "") ||
+                                          matcher(e.DisplayText ?? "") ||
+                                          matcher(e.Model ?? "") ||
+                                          matcher(e.Agent ?? "") ||
+                                          matcher(e.Timestamp ?? ""));
         }
         if (!string.IsNullOrEmpty(rid))
             filtered = filtered.Where(e => string.Equals(e.RequestId ?? "", rid, StringComparison.OrdinalIgnoreCase));
@@ -286,6 +286,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (IsRequestDetailsVisible)
         {
+            // Re-bind SelectedUnifiedRequest to the matching entry in the new list so
+            // the details view shows fresh data and nav buttons work after refresh.
+            int idx = GetCurrentRequestIndexInFilteredList();
+            if (idx >= 0)
+                SelectedUnifiedRequest = FilteredSearchEntries[idx].UnifiedEntry;
             NavigateToPreviousRequestCommand.NotifyCanExecuteChanged();
             NavigateToNextRequestCommand.NotifyCanExecuteChanged();
         }
@@ -680,7 +685,11 @@ public partial class MainWindowViewModel : ViewModelBase
             return -1;
         for (int i = 0; i < FilteredSearchEntries.Count; i++)
         {
-            if (FilteredSearchEntries[i].UnifiedEntry == SelectedUnifiedRequest)
+            var entry = FilteredSearchEntries[i].UnifiedEntry;
+            if (entry == SelectedUnifiedRequest)
+                return i;
+            if (entry != null && !string.IsNullOrEmpty(entry.RequestId) &&
+                string.Equals(entry.RequestId, SelectedUnifiedRequest.RequestId, StringComparison.Ordinal))
                 return i;
         }
         return -1;
@@ -1164,6 +1173,12 @@ public partial class MainWindowViewModel : ViewModelBase
              return;
          }
          _lastNavigatedPath = node.Path;
+
+         if (preserveDetailsView)
+         {
+             NavigateToPreviousRequestCommand.NotifyCanExecuteChanged();
+             NavigateToNextRequestCommand.NotifyCanExecuteChanged();
+         }
 
          // Sync AI model with selection: codellama for source files, llama3 for other files; ignore directory nodes.
          if (!node.IsDirectory)
