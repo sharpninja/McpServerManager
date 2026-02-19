@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RequestTracker/RequestTracker.csproj" />
+    <Project Path="src/RequestTracker.Core/RequestTracker.Core.csproj" />
+    <Project Path="src/RequestTracker.Desktop/RequestTracker.Desktop.csproj" />
+    <Project Path="src/RequestTracker.Android/RequestTracker.Android.csproj" />
+  </Folder>
+</Solution>
