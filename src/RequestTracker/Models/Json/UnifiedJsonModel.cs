@@ -105,6 +105,20 @@ namespace RequestTracker.Models.Json
         public string Role { get; set; } = "";
         public string Content { get; set; } = "";
         public string Category { get; set; } = "";
+
+        /// <summary>Timestamp formatted as short date/time in local time.</summary>
+        public string TimestampDisplay
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(Timestamp)) return "";
+                if (DateTimeOffset.TryParse(Timestamp, out var dto))
+                    return dto.LocalDateTime.ToString("g");
+                if (DateTime.TryParse(Timestamp, out var dt))
+                    return dt.ToString("g");
+                return Timestamp;
+            }
+        }
     }
 
     /// <summary>Export path and content for the unified model JSON schema.</summary>
