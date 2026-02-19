@@ -489,7 +489,20 @@ public partial class MainWindow : Window
         if (e.Source is not Control source)
             return;
         var item = source.FindAncestorOfType<TreeViewItem>();
-        if (item?.DataContext is FileNode node && node.IsDirectory)
+        if (item?.DataContext is not FileNode node)
+            return;
+
+        // Re-tapping an already-selected MCP node refreshes its data from the server.
+        if (MainWindowViewModel.IsMcpVirtualNode(node)
+            && DataContext is MainWindowViewModel vm
+            && vm.SelectedNode == node)
+        {
+            vm.RefreshCurrentMcpNode();
+            e.Handled = true;
+            return;
+        }
+
+        if (node.IsDirectory)
         {
             node.IsExpanded = !node.IsExpanded;
             e.Handled = true;

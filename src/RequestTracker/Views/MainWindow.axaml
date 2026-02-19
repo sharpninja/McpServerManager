@@ -15,7 +15,7 @@
         x:Name="Root"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="RequestTracker"
+        Title="{Binding WindowTitle}"
         Width="1000" Height="700"
         WindowState="Normal"
         ShowInTaskbar="True">
@@ -298,7 +298,18 @@
 
         <!-- Status Bar. Bottom of window for both orientations; row/column set in code-behind -->
         <Border x:Name="StatusBarBorder" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Padding="8,6">
-            <SelectableTextBlock Text="{Binding StatusMessage}" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <SelectableTextBlock Grid.Column="0"
+                                     Text="{Binding StatusMessage}"
+                                     FontWeight="Bold"
+                                     VerticalAlignment="Center"
+                                     HorizontalAlignment="Left"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding AppVersionDisplay}"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Right"
+                           Foreground="Gray"/>
+            </Grid>
         </Border>
     </Grid>
 

@@ -45,6 +45,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly McpSessionLogService _mcpSessionService;
     private List<UnifiedSessionLog> _mcpSessions = new();
     private Dictionary<string, UnifiedSessionLog> _mcpSessionsByPath = new(StringComparer.OrdinalIgnoreCase);
+    private Timer? _mcpAutoRefreshTimer;
 
     [ObservableProperty]
     private ObservableCollection<FileNode> _nodes = new();
@@ -125,9 +126,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AppVersionDisplay))]
+    [NotifyPropertyChangedFor(nameof(WindowTitle))]
     private string _appVersion = ResolveAppVersion();
 
     public string AppVersionDisplay => $"v{AppVersion}";
+
+    /// <summary>Window title including the full SemVer from GitVersion.</summary>
+    public string WindowTitle => $"RequestTracker {AppVersionDisplay}";
 
     [ObservableProperty]
     private string _statusMessage = "Ready";
@@ -733,6 +738,13 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedNodeChanged(FileNode? value)
     {
         Console.WriteLine($"Selected Node Changed: {value?.Path}");
+
+        // Start or stop the 10-second auto-refresh timer based on whether an MCP node is selected.
+        if (value != null && IsMcpVirtualNode(value))
+            StartMcpAutoRefresh();
+        else
+            StopMcpAutoRefresh();
+
         // Avoid reloading content when selection was restored to same path (e.g. after tree rebuild / file watcher).
         // MCP nodes always reload so clicks refresh data from the server.
         if (value != null && string.Equals(value.Path, _lastNavigatedPath, StringComparison.OrdinalIgnoreCase)
@@ -922,10 +934,37 @@ public partial class MainWindowViewModel : ViewModelBase
         node.Path.StartsWith(McpAgentPrefix, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Returns true for ALL_JSON, MCP agent, and MCP session virtual nodes.</summary>
-    private static bool IsMcpVirtualNode(FileNode? node) =>
+    public static bool IsMcpVirtualNode(FileNode? node) =>
         node != null &&
         (node.Path == "ALL_JSON_VIRTUAL_NODE" || IsMcpAgentNode(node) ||
          node.Path.StartsWith(McpSessionPrefix, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Re-navigates the currently selected MCP node, refreshing its data from the server. Called from code-behind when the user re-taps an already-selected node.</summary>
+    public void RefreshCurrentMcpNode()
+    {
+        if (SelectedNode != null && IsMcpVirtualNode(SelectedNode))
+            GenerateAndNavigate(SelectedNode);
+    }
+
+    /// <summary>Starts a 10-second auto-refresh timer for MCP nodes. Stops any existing timer first.</summary>
+    private void StartMcpAutoRefresh()
+    {
+        StopMcpAutoRefresh();
+        _mcpAutoRefreshTimer = new Timer(_ =>
+        {
+            DispatchToUi(() =>
+            {
+                if (SelectedNode != null && IsMcpVirtualNode(SelectedNode))
+                    GenerateAndNavigate(SelectedNode);
+            });
+        }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+    }
+
+    private void StopMcpAutoRefresh()
+    {
+        _mcpAutoRefreshTimer?.Dispose();
+        _mcpAutoRefreshTimer = null;
+    }
 
     private static string GetAgentNameFromVirtualPath(string virtualPath) =>
         virtualPath.StartsWith(McpAgentPrefix, StringComparison.OrdinalIgnoreCase)
