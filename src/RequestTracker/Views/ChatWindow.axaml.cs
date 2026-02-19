@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -95,13 +97,17 @@ public partial class ChatWindow : Window
         {
             _ = vm.LoadModelsAsync();
             vm.LoadPrompts();
+            vm.Messages.CollectionChanged += OnMessagesCollectionChanged;
         }
     }
 
     private void OnClosing(object? sender, WindowClosingEventArgs e)
     {
         if (DataContext is ViewModels.ChatWindowViewModel vm)
+        {
             vm.CancelSend();
+            vm.Messages.CollectionChanged -= OnMessagesCollectionChanged;
+        }
         SaveLayoutSettings();
     }
 
@@ -198,6 +204,34 @@ public partial class ChatWindow : Window
         var prompt = GetPromptFromSource(e.Source);
         if (prompt != null && DataContext is ViewModels.ChatWindowViewModel vm)
             await vm.SubmitPromptCommand.ExecuteAsync(prompt);
+    }
+
+    private void OnMessagesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
+        {
+            foreach (var item in e.NewItems)
+            {
+                if (item is ChatMessage msg && msg.Role == "assistant")
+                    msg.PropertyChanged += OnAssistantMessagePropertyChanged;
+            }
+            ScrollToEnd();
+        }
+    }
+
+    private void OnAssistantMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ChatMessage.Text))
+            ScrollToEnd();
+    }
+
+    private void ScrollToEnd()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (MessageScroll != null)
+                MessageScroll.Offset = new Vector(MessageScroll.Offset.X, double.MaxValue);
+        }, DispatcherPriority.Background);
     }
 
     private void OnInputKeyDown(object? sender, KeyEventArgs e)

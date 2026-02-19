@@ -1153,8 +1153,10 @@ public partial class MainWindowViewModel : ViewModelBase
          CurrentPreviewHtmlPath = null;
          CurrentPreviewMarkdownText = "";
 
-         // Reset details view
-         IsRequestDetailsVisible = false;
+         // Reset details view only when navigating to a different node (preserve on refresh)
+         bool preserveDetailsView = node != null && node.Path == _lastNavigatedPath && IsRequestDetailsVisible;
+         if (!preserveDetailsView)
+             IsRequestDetailsVisible = false;
 
          if (node == null)
          {
@@ -1173,7 +1175,7 @@ public partial class MainWindowViewModel : ViewModelBase
          if (node.Path == "ALL_JSON_VIRTUAL_NODE")
          {
              IsMarkdownVisible = false;
-             IsJsonVisible = true;
+             if (!preserveDetailsView) IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
              RefreshMcpSessionsThenLoad(() => LoadAllJson());
              return;
@@ -1182,7 +1184,7 @@ public partial class MainWindowViewModel : ViewModelBase
          if (IsMcpAgentNode(node))
          {
              IsMarkdownVisible = false;
-             IsJsonVisible = true;
+             if (!preserveDetailsView) IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
              var agentName = GetAgentNameFromVirtualPath(node.Path);
              RefreshMcpSessionsThenLoad(() => LoadAllJson(agentName));
@@ -1192,7 +1194,7 @@ public partial class MainWindowViewModel : ViewModelBase
          if (IsMcpSessionNode(node))
          {
              IsMarkdownVisible = false;
-             IsJsonVisible = true;
+             if (!preserveDetailsView) IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
              var virtualPath = node.Path;
              RefreshMcpSessionsThenLoad(() => LoadMcpSession(virtualPath));
@@ -1204,7 +1206,7 @@ public partial class MainWindowViewModel : ViewModelBase
          if (node.Path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
          {
              IsMarkdownVisible = false;
-             IsJsonVisible = true;
+             if (!preserveDetailsView) IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
              LoadJson(node.Path);
              return;

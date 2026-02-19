@@ -18,7 +18,7 @@ public class FileNodeToArchiveVisibleConverter : IValueConverter
     {
         if (value is not FileNode node)
             return false;
-        if (node.Path == "ALL_JSON_VIRTUAL_NODE" || node.IsDirectory)
+        if (node.Path == "ALL_JSON_VIRTUAL_NODE" || node.IsDirectory || node.Path.StartsWith("MCP_SESSION://", StringComparison.OrdinalIgnoreCase))
             return false;
         string name = Path.GetFileName(node.Path);
         if (string.IsNullOrEmpty(name))

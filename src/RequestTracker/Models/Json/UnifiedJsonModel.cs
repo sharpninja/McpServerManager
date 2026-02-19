@@ -78,6 +78,10 @@ namespace RequestTracker.Models.Json
 
         public bool HasActions => Actions?.Count > 0;
 
+        // Processing dialog captured during execution (reasoning/tool trace).
+        public ObservableCollection<UnifiedProcessingDialogItem> ProcessingDialog { get; set; } = new ObservableCollection<UnifiedProcessingDialogItem>();
+        public bool HasProcessingDialog => ProcessingDialog?.Count > 0;
+
         /// <summary>Original source object for the "Original JSON" viewer. Not serialized to avoid object cycle when building the JSON tree.</summary>
         [JsonIgnore]
         public object? OriginalEntry { get; set; }
@@ -93,6 +97,14 @@ namespace RequestTracker.Models.Json
 
         /// <summary>Single line for list display: Order | Type | Description | Status | FilePath.</summary>
         public string PipeDelimitedLine => $"{Order} | {Type} | {Description} | {Status} | {FilePath}";
+    }
+
+    public class UnifiedProcessingDialogItem
+    {
+        public string Timestamp { get; set; } = "";
+        public string Role { get; set; } = "";
+        public string Content { get; set; } = "";
+        public string Category { get; set; } = "";
     }
 
     /// <summary>Export path and content for the unified model JSON schema.</summary>
