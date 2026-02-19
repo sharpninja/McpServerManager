@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -36,9 +37,14 @@ public partial class MainWindowViewModel : ViewModelBase
     private static string GetResolvedTargetPath() => PathConverter.ToDisplayPath(AppSettings.ResolveSessionsRootPath());
 
     private static string GetHtmlCacheDir() => AppSettings.ResolveHtmlCacheDirectory();
+    private static string GetMcpBaseUrl() => AppSettings.ResolveMcpBaseUrl();
+    private const string McpSessionPrefix = "MCP_SESSION://";
+    private const string McpAgentPrefix = "MCP_AGENT://";
 
-    private FileSystemWatcher? _watcher;
     private readonly IClipboardService _clipboardService;
+    private readonly McpSessionLogService _mcpSessionService;
+    private List<UnifiedSessionLog> _mcpSessions = new();
+    private Dictionary<string, UnifiedSessionLog> _mcpSessionsByPath = new(StringComparer.OrdinalIgnoreCase);
 
     [ObservableProperty]
     private ObservableCollection<FileNode> _nodes = new();
@@ -118,7 +124,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private JsonTreeNode? _selectedJsonNode;
 
     [ObservableProperty]
-    private string _statusMessage = "Status";
+    [NotifyPropertyChangedFor(nameof(AppVersionDisplay))]
+    private string _appVersion = ResolveAppVersion();
+
+    public string AppVersionDisplay => $"v{AppVersion}";
+
+    [ObservableProperty]
+    private string _statusMessage = "Ready";
 
     /// <summary>True when markdown preview was opened in the system browser.</summary>
     [ObservableProperty]
@@ -171,61 +183,35 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel(IClipboardService clipboardService)
     {
         _clipboardService = clipboardService;
+        _mcpSessionService = new McpSessionLogService(GetMcpBaseUrl());
         // InitializeTree and SetupWatcher run in InitializeAfterWindowShown() when the window is opened,
         // so the window displays even if file system or watcher setup fails.
+    }
+
+    private static string ResolveAppVersion()
+    {
+        var assembly = typeof(MainWindowViewModel).Assembly;
+        var informationalVersion = assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+
+        var version = string.IsNullOrWhiteSpace(informationalVersion)
+            ? assembly.GetName().Version?.ToString()
+            : informationalVersion;
+
+        return string.IsNullOrWhiteSpace(version) ? "unknown" : version;
     }
 
     /// <summary>Called by MainWindow when it has opened. Builds the file tree off the UI thread and applies on UI; starts the watcher.</summary>
     public void InitializeAfterWindowShown()
     {
-        DispatchToUi(() => StatusMessage = "Loading file tree...");
-        Task.Run(() =>
+        DispatchToUi(() => StatusMessage = "Loading sessions from MCP...");
+        Task.Run(async () =>
         {
             try
             {
                 OllamaLogAgentService.TryStartOllamaIfNeeded();
-
-                string resolvedPath = GetResolvedTargetPath();
-                var (allJsonNode, rootDto, documentsDto, sourceDto) = BuildTreeOffThread(resolvedPath);
-                SetupWatcher(); // lightweight; can run on background
-                DispatchToUi(() =>
-                {
-                    try
-                    {
-                        var previousPath = SelectedNode?.Path;
-                        Nodes.Clear();
-                        Nodes.Add(allJsonNode);
-                        if (documentsDto != null)
-                        {
-                            var documentsNode = ApplyTreeDtoToNodes(documentsDto);
-                            documentsNode.Name = "Documents";
-                            Nodes.Add(documentsNode);
-                        }
-                        if (sourceDto != null)
-                        {
-                            var sourceNode = ApplyTreeDtoToNodes(sourceDto);
-                            sourceNode.Name = "Source";
-                            Nodes.Add(sourceNode);
-                        }
-                        if (rootDto != null)
-                        {
-                            var root = ApplyTreeDtoToNodes(rootDto);
-                            Nodes.Add(root);
-                            SetStatus($"Loaded: {resolvedPath}");
-                        }
-                        else
-                        {
-                            Nodes.Add(new FileNode(resolvedPath, true) { Name = "Directory not found" });
-                            SetStatus($"Directory not found: {resolvedPath}");
-                        }
-                        RestoreTreeSelection(previousPath, allJsonNode);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"ApplyTreeDto failed: {ex}");
-                        SetStatus($"Error: {ex.Message}");
-                    }
-                });
+                await ReloadFromMcpAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -341,6 +327,14 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (SelectedNode != null)
         {
+            if (SelectedNode.Path == "ALL_JSON_VIRTUAL_NODE" ||
+                IsMcpSessionNode(SelectedNode) ||
+                SelectedNode.Path.StartsWith("MCP_", StringComparison.OrdinalIgnoreCase))
+            {
+                _ = ReloadFromMcpAsync();
+                return;
+            }
+
             // Force regenerate
              string hash = SelectedNode.Path.GetHashCode().ToString("X");
              string tempFileName = $"{Path.GetFileNameWithoutExtension(SelectedNode.Path)}_{hash}.html";
@@ -479,7 +473,7 @@ public partial class MainWindowViewModel : ViewModelBase
             sb.AppendLine("Navigation: Request details view (one request selected).");
         else if (IsJsonVisible && SelectedNode != null)
             sb.AppendLine(SelectedNode.Path == "ALL_JSON_VIRTUAL_NODE"
-                ? "Navigation: All JSON (aggregated log from all files)."
+                ? "Navigation: All JSON (aggregated log from MCP sessions)."
                 : $"Navigation: JSON file: {SelectedNode.Path}");
         else if (IsMarkdownVisible && !string.IsNullOrEmpty(_currentMarkdownPath))
             sb.AppendLine($"Navigation: Markdown: {_currentMarkdownPath}");
@@ -739,8 +733,10 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedNodeChanged(FileNode? value)
     {
         Console.WriteLine($"Selected Node Changed: {value?.Path}");
-        // Avoid reloading content when selection was restored to same path (e.g. after tree rebuild / file watcher)
-        if (value != null && string.Equals(value.Path, _lastNavigatedPath, StringComparison.OrdinalIgnoreCase))
+        // Avoid reloading content when selection was restored to same path (e.g. after tree rebuild / file watcher).
+        // MCP nodes always reload so clicks refresh data from the server.
+        if (value != null && string.Equals(value.Path, _lastNavigatedPath, StringComparison.OrdinalIgnoreCase)
+            && !IsMcpVirtualNode(value))
         {
             ExpandToNode(Nodes, value);
             return;
@@ -916,6 +912,138 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedNode = toSelect ?? allJsonNode;
     }
 
+    private bool IsMcpSessionNode(FileNode? node) =>
+        node != null &&
+        !node.IsDirectory &&
+        node.Path.StartsWith(McpSessionPrefix, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsMcpAgentNode(FileNode? node) =>
+        node != null &&
+        node.Path.StartsWith(McpAgentPrefix, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Returns true for ALL_JSON, MCP agent, and MCP session virtual nodes.</summary>
+    private static bool IsMcpVirtualNode(FileNode? node) =>
+        node != null &&
+        (node.Path == "ALL_JSON_VIRTUAL_NODE" || IsMcpAgentNode(node) ||
+         node.Path.StartsWith(McpSessionPrefix, StringComparison.OrdinalIgnoreCase));
+
+    private static string GetAgentNameFromVirtualPath(string virtualPath) =>
+        virtualPath.StartsWith(McpAgentPrefix, StringComparison.OrdinalIgnoreCase)
+            ? virtualPath.Substring(McpAgentPrefix.Length).Trim()
+            : virtualPath.Trim();
+
+    private static string BuildMcpSessionPath(string sourceType, string sessionId) =>
+        $"{McpSessionPrefix}{sourceType}/{sessionId}";
+
+    private static DateTime GetSessionSortTimestamp(UnifiedSessionLog s) =>
+        s.LastUpdated ?? s.Started ?? DateTime.MinValue;
+
+    private static IEnumerable<UnifiedSessionLog> OrderSessionsNewestFirst(IEnumerable<UnifiedSessionLog> sessions) =>
+        sessions
+            .OrderByDescending(GetSessionSortTimestamp)
+            .ThenByDescending(s => s.SessionId ?? "", StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Re-fetches session data from the MCP server (without rebuilding the tree) then invokes the load callback on the UI thread.</summary>
+    private void RefreshMcpSessionsThenLoad(Action loadCallback)
+    {
+        StatusMessage = "Refreshing from MCP...";
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var sessions = await _mcpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(false);
+                var byPath = new Dictionary<string, UnifiedSessionLog>(StringComparer.OrdinalIgnoreCase);
+                foreach (var s in sessions)
+                {
+                    var path = BuildMcpSessionPath(s.SourceType ?? "Unknown", s.SessionId ?? "");
+                    if (!byPath.TryGetValue(path, out var existing) || GetSessionSortTimestamp(s) >= GetSessionSortTimestamp(existing))
+                        byPath[path] = s;
+                }
+                var uniqueSessions = OrderSessionsNewestFirst(byPath.Values).ToList();
+                DispatchToUi(() =>
+                {
+                    _mcpSessions = uniqueSessions;
+                    _mcpSessionsByPath = byPath;
+                    loadCallback();
+                });
+            }
+            catch (Exception ex)
+            {
+                DispatchToUi(() => StatusMessage = $"MCP refresh failed: {ex.Message}");
+            }
+        });
+    }
+
+    private async Task ReloadFromMcpAsync()
+    {
+        var sessions = await _mcpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(false);
+        var byPath = new Dictionary<string, UnifiedSessionLog>(StringComparer.OrdinalIgnoreCase);
+        foreach (var s in sessions)
+        {
+            var path = BuildMcpSessionPath(s.SourceType ?? "Unknown", s.SessionId ?? "");
+            if (!byPath.TryGetValue(path, out var existing) || GetSessionSortTimestamp(s) >= GetSessionSortTimestamp(existing))
+                byPath[path] = s;
+        }
+
+        var uniqueSessions = OrderSessionsNewestFirst(byPath.Values).ToList();
+        var (allJsonNode, documentsDto, sourceDto) = BuildMcpTreeOffThread(uniqueSessions);
+        DispatchToUi(() =>
+        {
+            _mcpSessions = uniqueSessions;
+            _mcpSessionsByPath = byPath;
+
+            var previousPath = SelectedNode?.Path;
+            Nodes.Clear();
+            Nodes.Add(allJsonNode);
+            if (documentsDto != null)
+            {
+                var documentsNode = ApplyTreeDtoToNodes(documentsDto);
+                documentsNode.Name = "Documents";
+                Nodes.Add(documentsNode);
+            }
+            if (sourceDto != null)
+            {
+                var sourceNode = ApplyTreeDtoToNodes(sourceDto);
+                sourceNode.Name = "Source";
+                Nodes.Add(sourceNode);
+            }
+
+            RestoreTreeSelection(previousPath, allJsonNode);
+            StatusMessage = $"Loaded {_mcpSessions.Count} session(s) from MCP.";
+        });
+    }
+
+    private static (FileNode allJsonNode, TreeDto? documentsDto, TreeDto? sourceDto) BuildMcpTreeOffThread(IReadOnlyList<UnifiedSessionLog> sessions)
+    {
+        var allJsonNode = new FileNode("ALL_JSON_VIRTUAL_NODE", true) { Name = "All JSON", IsExpanded = true };
+        var byAgent = sessions
+            .GroupBy(s => string.IsNullOrWhiteSpace(s.SourceType) ? "Unknown" : s.SourceType.Trim(), StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(g => g.Max(GetSessionSortTimestamp))
+            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var group in byAgent)
+        {
+            var agentNode = new FileNode($"{McpAgentPrefix}{group.Key}", true) { Name = group.Key };
+            foreach (var session in OrderSessionsNewestFirst(group))
+            {
+                var sessionPath = BuildMcpSessionPath(group.Key, session.SessionId ?? "");
+                var title = !string.IsNullOrWhiteSpace(session.Title) ? session.Title!.Trim() : session.SessionId ?? "(session)";
+                var item = new FileNode(sessionPath, false)
+                {
+                    Name = $"{title} ({session.SessionId})"
+                };
+                agentNode.Children.Add(item);
+            }
+            allJsonNode.Children.Add(agentNode);
+        }
+
+        string resolvedPath = GetResolvedTargetPath();
+        var documentsDto = BuildDocumentsDto(resolvedPath);
+        var sourceDto = BuildSourceDto(resolvedPath);
+        return (allJsonNode, documentsDto, sourceDto);
+    }
+
     private static JsonTreeNode? FindJsonNodeBySourcePath(ObservableCollection<JsonTreeNode> nodes, string sourcePath)
     {
         if (string.IsNullOrEmpty(sourcePath)) return null;
@@ -1008,7 +1136,27 @@ public partial class MainWindowViewModel : ViewModelBase
              IsMarkdownVisible = false;
              IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
-             LoadAllJson();
+             RefreshMcpSessionsThenLoad(() => LoadAllJson());
+             return;
+         }
+
+         if (IsMcpAgentNode(node))
+         {
+             IsMarkdownVisible = false;
+             IsJsonVisible = true;
+             ArchiveCommand.NotifyCanExecuteChanged();
+             var agentName = GetAgentNameFromVirtualPath(node.Path);
+             RefreshMcpSessionsThenLoad(() => LoadAllJson(agentName));
+             return;
+         }
+
+         if (IsMcpSessionNode(node))
+         {
+             IsMarkdownVisible = false;
+             IsJsonVisible = true;
+             ArchiveCommand.NotifyCanExecuteChanged();
+             var virtualPath = node.Path;
+             RefreshMcpSessionsThenLoad(() => LoadMcpSession(virtualPath));
              return;
          }
 
@@ -1155,58 +1303,50 @@ public partial class MainWindowViewModel : ViewModelBase
         return result;
     }
 
-    private void LoadAllJson()
+    private void LoadMcpSession(string virtualPath)
     {
-        var rootPath = GetResolvedTargetPath();
-        if (!Directory.Exists(rootPath))
+        if (!_mcpSessionsByPath.TryGetValue(virtualPath, out var session))
         {
-            StatusMessage = "Root directory not found.";
+            StatusMessage = "Session not found. Click Refresh.";
             return;
         }
 
-        DispatchToUi(() => StatusMessage = "Aggregating all JSON files...");
+        JsonTree.Clear();
+        SearchableEntries.Clear();
+        JsonLogSummary = new JsonLogSummary();
 
-        Task.Run(async () =>
+        var summary = new JsonLogSummary();
+        BuildUnifiedSummaryAndIndex(session, summary);
+        summary.SummaryLines.Clear();
+        summary.SummaryLines.Add($"Type: {session.SourceType}");
+        summary.SummaryLines.Add($"Session: {session.SessionId}");
+        summary.SummaryLines.Add($"Entries: {session.EntryCount}");
+        if (!string.IsNullOrEmpty(session.Model))
+            summary.SummaryLines.Add($"Model: {session.Model}");
+        if (session.LastUpdated.HasValue)
+            summary.SummaryLines.Add($"Last Updated: {session.LastUpdated}");
+        JsonLogSummary = summary;
+
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = false };
+        var unifiedNode = JsonSerializer.SerializeToNode(session, options);
+        var root = new JsonTreeNode("Root", $"{session.SourceType} (Unified)", "Object");
+        root.IsExpanded = true;
+        BuildJsonTree(unifiedNode, root, null);
+        JsonTree.Add(root);
+
+        UpdateFilteredSearchEntries();
+        StatusMessage = $"Loaded {session.SourceType}/{session.SessionId}";
+    }
+
+    private void LoadAllJson(string? preselectedAgent = null)
+    {
+        DispatchToUi(() => StatusMessage = "Aggregating sessions from MCP...");
+
+        Task.Run(() =>
         {
             try
             {
-                var jsonFiles = Directory.GetFiles(rootPath, "*.json", SearchOption.AllDirectories)
-                    .Where(f => !IsArchivedName(Path.GetFileName(f)))
-                    .ToArray();
-                var unifiedLogs = new List<UnifiedSessionLog>();
-                int totalRequests = 0;
-                int totalFiles = jsonFiles.Length;
-                int processed = 0;
-
-                foreach (var file in jsonFiles)
-                {
-                    try
-                    {
-                        var text = await File.ReadAllTextAsync(file);
-                        var (unified, count) = TryParseFileToUnifiedLog(text);
-                        if (unified != null && count >= 0)
-                        {
-                            unifiedLogs.Add(unified);
-                            totalRequests += count;
-                        }
-                    }
-                    catch
-                    {
-                        // Skip unreadable files
-                    }
-                    finally
-                    {
-                        processed++;
-                        if (totalFiles > 0 && (processed % 5 == 0 || processed == totalFiles))
-                        {
-                            var p = processed;
-                            var t = totalFiles;
-                            DispatchToUi(() => StatusMessage = $"Reading files... {p}/{t}");
-                        }
-                    }
-                }
-
-                foreach (var log in unifiedLogs)
+                foreach (var log in _mcpSessions)
                 {
                     var agent = string.IsNullOrWhiteSpace(log.SourceType) ? "Unknown" : log.SourceType.Trim();
                     if (log.Entries == null) continue;
@@ -1217,7 +1357,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     }
                 }
 
-                var allEntries = unifiedLogs.SelectMany(l => l.Entries).OrderByDescending(e => e.Timestamp).ToList();
+                var allEntries = _mcpSessions.SelectMany(l => l.Entries).OrderByDescending(e => e.Timestamp).ToList();
                 var deduped = DeduplicateUnifiedEntries(allEntries);
 
                 var masterLog = new UnifiedSessionLog
@@ -1230,17 +1370,20 @@ public partial class MainWindowViewModel : ViewModelBase
                     Status = "Aggregated",
                     EntryCount = deduped.Count,
                     Entries = deduped,
-                    TotalTokens = unifiedLogs.Sum(l => l.TotalTokens)
+                    TotalTokens = _mcpSessions.Sum(l => l.TotalTokens)
                 };
 
                 var reqCount = deduped.Count;
-                var fileCount = jsonFiles.Length;
+                var sessionCount = _mcpSessions.Count;
                 DispatchToUi(() =>
                 {
                     try
                     {
                         BuildUnifiedSummaryAndIndex(masterLog);
-                        StatusMessage = $"Loaded {reqCount} requests from {fileCount} files.";
+                        AgentFilter = string.IsNullOrWhiteSpace(preselectedAgent) ? "" : preselectedAgent.Trim();
+                        StatusMessage = string.IsNullOrWhiteSpace(preselectedAgent)
+                            ? $"Loaded {reqCount} requests from {sessionCount} sessions."
+                            : $"Loaded {reqCount} requests from {sessionCount} sessions. Filtered by agent: {AgentFilter}.";
                     }
                     catch (Exception ex)
                     {
@@ -1252,7 +1395,7 @@ public partial class MainWindowViewModel : ViewModelBase
             catch (Exception ex)
             {
                 var msg = ex.Message;
-                DispatchToUi(() => StatusMessage = $"Error aggregating JSON: {msg}");
+                DispatchToUi(() => StatusMessage = $"Error aggregating MCP sessions: {msg}");
                 Console.WriteLine($"Aggregation Error: {ex}");
             }
         });
@@ -1370,6 +1513,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _currentMarkdownPath != null &&
         File.Exists(_currentMarkdownPath) &&
         IsMarkdownVisible &&
+        !_currentMarkdownPath.StartsWith(McpSessionPrefix, StringComparison.OrdinalIgnoreCase) &&
         !IsArchivedName(Path.GetFileName(_currentMarkdownPath));
 
     [RelayCommand(CanExecute = nameof(CanArchive))]
@@ -1419,7 +1563,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanArchiveTreeItem))]
     private void ArchiveTreeItem(FileNode? node)
     {
-        if (node == null || node.Path == "ALL_JSON_VIRTUAL_NODE" || node.IsDirectory) return;
+        if (node == null || node.Path == "ALL_JSON_VIRTUAL_NODE" || node.IsDirectory || node.Path.StartsWith(McpSessionPrefix, StringComparison.OrdinalIgnoreCase)) return;
         string path = node.Path;
         if (!File.Exists(path)) return;
         string? dir = Path.GetDirectoryName(path);
@@ -1451,60 +1595,14 @@ public partial class MainWindowViewModel : ViewModelBase
     private static bool CanArchiveTreeItem(FileNode? node) =>
         node != null &&
         node.Path != "ALL_JSON_VIRTUAL_NODE" &&
+        !node.Path.StartsWith(McpSessionPrefix, StringComparison.OrdinalIgnoreCase) &&
         !node.IsDirectory &&
         !IsArchivedName(Path.GetFileName(node.Path));
 
     /// <summary>Rebuilds the file tree on a background thread and applies on UI; selects All JSON.</summary>
     private void RebuildFileTree()
     {
-        string resolvedPath = GetResolvedTargetPath();
-        Task.Run(() =>
-        {
-            try
-            {
-                var (allJsonNode, rootDto, documentsDto, sourceDto) = BuildTreeOffThread(resolvedPath);
-                DispatchToUi(() =>
-                {
-                    try
-                    {
-                        var previousPath = SelectedNode?.Path;
-                        Nodes.Clear();
-                        Nodes.Add(allJsonNode);
-                        if (documentsDto != null)
-                        {
-                            var documentsNode = ApplyTreeDtoToNodes(documentsDto);
-                            documentsNode.Name = "Documents";
-                            Nodes.Add(documentsNode);
-                        }
-                        if (sourceDto != null)
-                        {
-                            var sourceNode = ApplyTreeDtoToNodes(sourceDto);
-                            sourceNode.Name = "Source";
-                            Nodes.Add(sourceNode);
-                        }
-                        if (rootDto != null)
-                        {
-                            var root = ApplyTreeDtoToNodes(rootDto);
-                            Nodes.Add(root);
-                        }
-                        else
-                        {
-                            Nodes.Add(new FileNode(resolvedPath, true) { Name = "Directory not found" });
-                        }
-                        RestoreTreeSelection(previousPath, allJsonNode);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"RebuildFileTree apply failed: {ex}");
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"RebuildFileTree build failed: {ex}");
-                DispatchToUi(() => StatusMessage = $"Rebuild failed: {ex.Message}");
-            }
-        });
+        _ = ReloadFromMcpAsync();
     }
 
     private static string? ResolveCssPath()
@@ -2512,25 +2610,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void SetupWatcher()
     {
-        string resolvedPath = GetResolvedTargetPath();
-        if (!Directory.Exists(resolvedPath)) return;
-
-        _watcher?.Dispose();
-        _watcher = new FileSystemWatcher(resolvedPath)
-        {
-            IncludeSubdirectories = true,
-            NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.CreationTime,
-            Filter = "*"
-        };
-        // Reduce dropped events when many files change at once (default 8KB can overflow)
-        try { _watcher.InternalBufferSize = 65536; } catch { /* ignore on unsupported platforms */ }
-
-        _watcher.Created += OnTreeChanged;
-        _watcher.Deleted += OnTreeChanged;
-        _watcher.Renamed += OnTreeChanged;
-        _watcher.Changed += OnFileChanged;
-
-        _watcher.EnableRaisingEvents = true;
+        // Session logs now come from the MCP server; no local session-file watcher is needed.
     }
 
     public void SetStatus(string message)
