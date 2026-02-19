@@ -259,26 +259,152 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python and F-Droid CLI
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install fdroidserver
+        run: pip install fdroidserver
 
-      - name: Generate F-Droid repo metadata
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+
+      - name: Restore F-Droid keystore cache
+        id: fdroid-cache
+        uses: actions/cache@v4
+        with:
+          path: fdroid-workspace
+          key: fdroid-keystore-v1-${{ runner.os }}
+
+      - name: Prepare F-Droid workspace
         run: |
-          python .github/scripts/generate_fdroid_repo.py \
-            --version "${{ needs.version.outputs.semver }}" \
-            --version-code "${{ needs.version.outputs.version-code }}" \
-            --apk-url "${{ needs.release.outputs.apk-url }}" \
-            --apk-hash "${{ needs.build-android.outputs.apk-hash }}" \
-            --apk-size "${{ needs.build-android.outputs.apk-size }}" \
-            --repo-url "https://sharpninja.github.io/RequestTracker/repo" \
-            --output-dir docs/fdroid/repo
+          REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo"
+          mkdir -p fdroid-workspace/repo fdroid-workspace/metadata
+          if [ ! -f fdroid-workspace/keystore.jks ]; then
+            keytool -genkeypair -keystore fdroid-workspace/keystore.jks -alias fdroidrepo \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android \
+              -dname "CN=RequestTracker Repo, OU=CI, O=GitHub"
+          fi
+          cat > fdroid-workspace/config.yml << CONFIG
+          repo_url: "$REPO_URL"
+          repo_name: "RequestTracker"
+          repo_description: "Android app for browsing and analyzing Copilot session logs. Supports phone and tablet layouts."
+          repo_keyalias: fdroidrepo
+          keystore: keystore.jks
+          keystorepass: android
+          keypass: android
+          keydname: "CN=RequestTracker Repo, OU=CI, O=GitHub"
+          CONFIG
+          chmod 600 fdroid-workspace/config.yml
+          mkdir -p fdroid-workspace/repo/icons
+          # Copy logo as repo icon
+          if [ -f docs/fdroid/icon.png ]; then
+            cp docs/fdroid/icon.png fdroid-workspace/repo/icons/icon.png
+          else
+            echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > fdroid-workspace/repo/icons/icon.png
+          fi
+          rm -f fdroid-workspace/repo/*.apk fdroid-workspace/repo/*.xml fdroid-workspace/repo/*.jar 2>/dev/null || true
+          rm -f fdroid-workspace/repo/index.* 2>/dev/null || true
+          APK=$(find . -name "*.apk" -type f | head -1)
+          cp "$APK" fdroid-workspace/repo/
+          cp fdroid/metadata/com.requesttracker.android.yml fdroid-workspace/metadata/
+
+      - name: Ensure repo icon exists
+        run: |
+          mkdir -p fdroid-workspace/repo/icons
+          [ -f fdroid-workspace/repo/icons/icon.png ] || echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > fdroid-workspace/repo/icons/icon.png
+
+      - name: Generate F-Droid repo (fdroid update)
+        run: |
+          cd fdroid-workspace && fdroid update
+
+      - name: Verify F-Droid repo (logo, URL, hash, version)
+        env:
+          EXPECTED_VERSION: ${{ needs.version.outputs.semver }}
+          EXPECTED_REPO_URL: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo"
+        run: |
+          set -e
+          REPO=fdroid-workspace/repo
+          ICON="$REPO/icons/icon.png"
+          ERRORS=()
+
+          # 1) Logo: icon.png must exist
+          if [ ! -f "$ICON" ]; then
+            ERRORS+=("F-Droid logo check FAILED: icon file missing at $ICON")
+          elif [ ! -s "$ICON" ]; then
+            ERRORS+=("F-Droid logo check FAILED: repo/icons/icon.png is empty")
+          fi
+
+          # 2) APK must exist
+          APK=$(find "$REPO" -name "*.apk" -type f | head -1)
+          if [ -z "$APK" ]; then
+            ERRORS+=("F-Droid APK check FAILED: no APK found in $REPO")
+          fi
+          export APK
+
+          # 3) Repo URL in config must match expected
+          if [ -f fdroid-workspace/config.yml ]; then
+            CONFIG_URL=$(grep -E '^\s*repo_url:\s*' fdroid-workspace/config.yml | sed -E 's/.*repo_url:\s*["]?([^"]*)["]?.*/\1/' | tr -d '"' | xargs)
+            if [ "$CONFIG_URL" != "$EXPECTED_REPO_URL" ]; then
+              ERRORS+=("F-Droid URL check FAILED: config repo_url is '$CONFIG_URL' but expected '$EXPECTED_REPO_URL'")
+            fi
+          else
+            ERRORS+=("F-Droid URL check FAILED: fdroid-workspace/config.yml not found")
+          fi
+
+          # 4) Index must exist and reference APK with correct hash
+          APKNAME=$(basename "$APK")
+          COMPUTED=$(sha256sum "$APK" | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
+          INDEX_HASH=""
+          SOURCE=""
+
+          if [ -f "$REPO/index-v1.json" ]; then
+            INDEX_HASH=$(jq -r --arg apk "$APKNAME" '
+              .packages // {} |
+              to_entries[] |
+              .value[] |
+              select(.apkName == $apk) |
+              .hash // ""
+            ' "$REPO/index-v1.json" | head -1 | sed 's/sha256://g' | tr -d "[:space:]" | tr "[:upper:]" "[:lower:]")
+            SOURCE="index-v1.json"
+          elif [ -f "$REPO/index.xml" ]; then
+            INDEX_HASH=$(xmllint --xpath "string(//package[@apkName='$APKNAME']/@hash)" "$REPO/index.xml" 2>/dev/null | sed 's/sha256://g' | tr -d "[:space:]" | tr "[:upper:]" "[:lower:]")
+            SOURCE="index.xml"
+          fi
+
+          if [ -z "$INDEX_HASH" ]; then
+            echo "APK $APKNAME not found in repo index" >&2
+            exit 1
+          fi
+
+          if [ "$INDEX_HASH" != "$COMPUTED" ]; then
+            echo "Hash mismatch: $SOURCE has $INDEX_HASH, computed $COMPUTED" >&2
+            exit 1
+          fi
+
+          echo "$SOURCE hash matches."
+
+          if [ ${#ERRORS[@]} -gt 0 ]; then
+            echo "F-Droid verification failed:"
+            printf '%s\n' "${ERRORS[@]}"
+            exit 1
+          fi
+
+      - name: Assemble Pages artifact
+        run: |
+          mkdir -p pages-output/repo
+          cp docs/fdroid/index.html pages-output/
+          [ -f docs/fdroid/icon.png ] && cp docs/fdroid/icon.png pages-output/
+          cp -r fdroid-workspace/repo/* pages-output/repo/
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/fdroid
+          path: pages-output
 
       - id: deployment
         uses: actions/deploy-pages@v4
