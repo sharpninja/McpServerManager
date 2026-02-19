@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RequestTracker.Core.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
+             x:Class="RequestTracker.Android.Views.ConnectionDialogView"
+             x:DataType="vm:ConnectionViewModel">
+
+    <Grid VerticalAlignment="Center" HorizontalAlignment="Center"
+          MaxWidth="360" Margin="24">
+        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                CornerRadius="12" Padding="28" BoxShadow="0 4 16 0 #40000000">
+            <StackPanel Spacing="16">
+                <!-- Title -->
+                <TextBlock Text="Connect to Server"
+                           FontSize="22" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Enter the hostname and port of the MCP session log server."
+                           TextWrapping="Wrap" FontSize="13" Foreground="Gray"
+                           HorizontalAlignment="Center" TextAlignment="Center"
+                           Margin="0,0,0,4"/>
+
+                <!-- Host -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Host" FontSize="13" FontWeight="Medium"/>
+                    <TextBox Text="{Binding Host}"
+                             Watermark="e.g. 192.168.1.100"
+                             FontSize="16" Padding="10,8"
+                             IsEnabled="{Binding !IsConnecting}"/>
+                </StackPanel>
+
+                <!-- Port -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Port" FontSize="13" FontWeight="Medium"/>
+                    <TextBox Text="{Binding Port}"
+                             Watermark="e.g. 5000"
+                             FontSize="16" Padding="10,8"
+                             IsEnabled="{Binding !IsConnecting}"/>
+                </StackPanel>
+
+                <!-- Error -->
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="Red" FontSize="13"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                <!-- Connect Button -->
+                <Button Content="Connect"
+                        Command="{Binding ConnectCommand}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        FontSize="16" FontWeight="SemiBold"
+                        Padding="0,12"
+                        IsEnabled="{Binding !IsConnecting}"
+                        Margin="0,8,0,0"/>
+
+                <!-- Connecting indicator -->
+                <TextBlock Text="Connecting..."
+                           FontSize="13" Foreground="Gray"
+                           HorizontalAlignment="Center"
+                           IsVisible="{Binding IsConnecting}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

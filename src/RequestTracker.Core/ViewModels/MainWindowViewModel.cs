@@ -207,6 +207,12 @@ public partial class MainWindowViewModel : ViewModelBase
         _mcpSessionService = new McpSessionLogService(GetMcpBaseUrl());
     }
 
+    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl)
+    {
+        _clipboardService = clipboardService;
+        _mcpSessionService = new McpSessionLogService(mcpBaseUrl);
+    }
+
     /// <summary>Command for tree item tap (handles directory expand/collapse and MCP node refresh).</summary>
     [RelayCommand]
     private void TreeItemTapped(FileNode? node)

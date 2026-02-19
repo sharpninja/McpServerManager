@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
@@ -25,12 +26,28 @@ public partial class App : Application
 
             try
             {
-                var clipboardService = new AndroidClipboardService();
-                var vm = new MainWindowViewModel(clipboardService);
-                singleView.MainView = DeviceFormFactor.IsTablet()
-                    ? new TabletMainView { DataContext = vm }
-                    : (Avalonia.Controls.Control)new PhoneMainView { DataContext = vm };
-                vm.InitializeAfterWindowShown();
+                var connectionVm = new ConnectionViewModel();
+                var connectionView = new ConnectionDialogView { DataContext = connectionVm };
+                singleView.MainView = connectionView;
+
+                connectionVm.Connected += mcpBaseUrl =>
+                {
+                    try
+                    {
+                        var clipboardService = new AndroidClipboardService();
+                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl);
+                        singleView.MainView = DeviceFormFactor.IsTablet()
+                            ? new TabletMainView { DataContext = vm }
+                            : (Control)new PhoneMainView { DataContext = vm };
+                        vm.InitializeAfterWindowShown();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"Connection failed: {ex}");
+                        connectionVm.ErrorMessage = $"Connection failed: {ex.Message}";
+                        connectionVm.IsConnecting = false;
+                    }
+                };
             }
             catch (Exception ex)
             {
