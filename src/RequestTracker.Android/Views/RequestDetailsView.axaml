@@ -17,6 +17,7 @@
     <Style Selector="Expander">
       <Setter Property="Padding" Value="0"/>
       <Setter Property="Margin" Value="0,2"/>
+      <Setter Property="IsExpanded" Value="True"/>
     </Style>
     <Style Selector="Expander /template/ Border#ExpanderContent">
       <Setter Property="Padding" Value="4"/>
@@ -80,7 +81,7 @@
 
       <!-- Processing Dialog -->
       <Expander Header="{Binding ProcessingDialog.Count, StringFormat='Processing Dialog ({0})'}"
-                IsExpanded="False" HorizontalAlignment="Stretch">
+                HorizontalAlignment="Stretch">
         <ItemsControl ItemsSource="{Binding ProcessingDialog}">
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="models:UnifiedProcessingDialogItem">
@@ -98,7 +99,7 @@
 
       <!-- Actions -->
       <Expander Header="{Binding Actions.Count, StringFormat='Actions ({0})'}"
-                IsExpanded="False" HorizontalAlignment="Stretch">
+                HorizontalAlignment="Stretch">
         <ItemsControl ItemsSource="{Binding Actions}">
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="models:UnifiedAction">
@@ -117,7 +118,7 @@
       </Expander>
 
       <!-- Context -->
-      <Expander Header="Context" IsExpanded="False" HorizontalAlignment="Stretch">
+      <Expander Header="Context" HorizontalAlignment="Stretch">
         <ItemsControl ItemsSource="{Binding ContextList}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
@@ -128,7 +129,7 @@
       </Expander>
 
       <!-- Tags/Notes -->
-      <Expander Header="Tags &amp; Notes" IsExpanded="False" HorizontalAlignment="Stretch">
+      <Expander Header="Tags &amp; Notes" HorizontalAlignment="Stretch">
         <StackPanel Spacing="2">
           <TextBlock Text="{Binding FailureNote, StringFormat='Failure Note: {0}'}"
                      IsVisible="{Binding FailureNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
@@ -144,7 +145,7 @@
       </Expander>
 
       <!-- Original JSON -->
-      <Expander Header="Original JSON" IsExpanded="False" HorizontalAlignment="Stretch" x:CompileBindings="False">
+      <Expander Header="Original JSON" HorizontalAlignment="Stretch" x:CompileBindings="False">
         <Border Background="#FAFAFA" Padding="2" CornerRadius="4">
           <TextBlock Text="{Binding OriginalEntry, Converter={StaticResource ObjectToJson}}"
                      TextWrapping="Wrap" FontSize="13"/>
