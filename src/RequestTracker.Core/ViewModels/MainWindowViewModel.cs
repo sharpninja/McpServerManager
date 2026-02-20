@@ -224,7 +224,23 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
         if (node.IsDirectory)
-            node.IsExpanded = !node.IsExpanded;
+        {
+            bool expanding = !node.IsExpanded;
+            node.IsExpanded = expanding;
+
+            // Accordion: collapse siblings when expanding a directory
+            if (expanding)
+            {
+                foreach (var topNode in Nodes)
+                {
+                    foreach (var sibling in topNode.Children)
+                    {
+                        if (sibling != node && sibling.IsDirectory)
+                            sibling.IsExpanded = false;
+                    }
+                }
+            }
+        }
         SelectedNode = node;
     }
 
