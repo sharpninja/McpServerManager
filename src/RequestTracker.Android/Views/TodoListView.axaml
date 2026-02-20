@@ -76,7 +76,6 @@
                   </Border>
                   <ListBox ItemsSource="{Binding Items}" Margin="4,0"
                            SelectionMode="Single"
-                           DoubleTapped="OnListItemDoubleTapped"
                            SelectionChanged="OnGroupListBoxSelectionChanged"
                            Loaded="OnGroupListBoxLoaded"
                            Unloaded="OnGroupListBoxUnloaded">

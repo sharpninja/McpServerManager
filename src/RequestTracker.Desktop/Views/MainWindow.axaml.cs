@@ -79,6 +79,13 @@ public partial class MainWindow : Window
 
         ContentView.ApplySettings(_layoutSettings);
         TodoView.ApplySettings(_layoutSettings);
+        MainTabControl.SelectedIndex = _layoutSettings.SelectedTabIndex;
+        MainTabControl.SelectionChanged += OnTabSelectionChanged;
+
+        // Apply initial orientation from current client size
+        var initialSize = ClientSize;
+        ContentView.OnHostSizeChanged(initialSize);
+        TodoView.OnHostSizeChanged(initialSize);
 
         int sx = (int)_layoutSettings.WindowX;
         int sy = (int)_layoutSettings.WindowY;
@@ -108,6 +115,12 @@ public partial class MainWindow : Window
 
         if (_layoutSettings.ChatWindowWasOpen)
             Dispatcher.UIThread.Post(() => ShowChatWindowIfRequested(), DispatcherPriority.Loaded);
+    }
+
+    private void OnTabSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender == MainTabControl)
+            _layoutSettings.SelectedTabIndex = MainTabControl.SelectedIndex;
     }
 
     private void OnOpenChatWindowRequested(object? sender, EventArgs e)
@@ -155,6 +168,7 @@ public partial class MainWindow : Window
             toSave.WindowY = _layoutSettings.WindowY;
             toSave.WindowState = _layoutSettings.WindowState;
             toSave.ChatWindowWasOpen = _chatWindowWasOpenOnClosing ?? (_chatWindow != null);
+            toSave.SelectedTabIndex = _layoutSettings.SelectedTabIndex;
             _chatWindowWasOpenOnClosing = null;
             LayoutSettingsIo.Save(toSave);
         }
@@ -204,8 +218,9 @@ public partial class MainWindow : Window
     private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         if (WindowState == WindowState.Minimized) return;
-        ContentView.OnHostSizeChanged(e.NewSize);
-        TodoView.OnHostSizeChanged(e.NewSize);
+        var size = ClientSize;
+        ContentView.OnHostSizeChanged(size);
+        TodoView.OnHostSizeChanged(size);
         SaveWindowStateToSettings();
         SaveSettings();
     }

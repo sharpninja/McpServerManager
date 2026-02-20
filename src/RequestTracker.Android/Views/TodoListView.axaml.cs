@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using RequestTracker.Core.Models;
 using RequestTracker.Core.ViewModels;
 
@@ -59,12 +58,6 @@ public partial class TodoListView : UserControl
             Editor.FontSize = vm.EditorFontSize;
     }
 
-    private void OnListItemDoubleTapped(object? sender, TappedEventArgs e)
-    {
-        if (DataContext is TodoListViewModel vm && vm.OpenSelectedTodoCommand.CanExecute(null))
-            vm.OpenSelectedTodoCommand.Execute(null);
-    }
-
     private void OnGroupListBoxSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is not ListBox activeListBox) return;
@@ -77,7 +70,11 @@ public partial class TodoListView : UserControl
         }
 
         if (DataContext is TodoListViewModel vm && activeListBox.SelectedItem is TodoListEntry entry)
+        {
             vm.SelectedEntry = entry;
+            if (vm.OpenSelectedTodoCommand.CanExecute(null))
+                vm.OpenSelectedTodoCommand.Execute(null);
+        }
     }
 
     private void OnGroupListBoxLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

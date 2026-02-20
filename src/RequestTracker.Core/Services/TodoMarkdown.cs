@@ -51,7 +51,7 @@ public static class TodoMarkdown
         if (item.DependsOn?.Count > 0)
         {
             fm.Add("depends-on:");
-            foreach (var d in item.DependsOn) fm.Add($"  - {d}");
+            foreach (var d in item.DependsOn) fm.Add($"  - {d ?? ""}");
         }
         if (item.FunctionalRequirements?.Count > 0)
         {
@@ -86,7 +86,7 @@ public static class TodoMarkdown
             body.Add("## Implementation Tasks");
             body.Add("");
             foreach (var t in item.ImplementationTasks)
-                body.Add($"- [{(t.Done ? 'x' : ' ')}] {t.Task}");
+                body.Add($"- [{(t.Done ? 'x' : ' ')}] {t.Task ?? ""}");
             body.Add("");
         }
 

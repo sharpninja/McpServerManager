@@ -38,6 +38,9 @@ public class LayoutSettings
 
     /// <summary>True if the chat window was open when the app was last closed; reopen it on next launch.</summary>
     public bool ChatWindowWasOpen { get; set; }
+
+    /// <summary>Index of the last selected tab in MainTabControl (0 = Request Tracker, 1 = Todos).</summary>
+    public int SelectedTabIndex { get; set; }
 }
 
 public class GridLengthDto

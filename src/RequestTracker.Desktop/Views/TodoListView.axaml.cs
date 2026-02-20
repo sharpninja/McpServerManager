@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using RequestTracker.Core.Models;
 using RequestTracker.Core.ViewModels;
@@ -23,6 +22,7 @@ public partial class TodoListView : UserControl
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
         Loaded += OnLoaded;
+        Editor.Text = "";
     }
 
     private void InitializeComponent()
@@ -88,13 +88,7 @@ public partial class TodoListView : UserControl
             Editor.FontSize = vm.EditorFontSize;
     }
 
-    private void OnListItemDoubleTapped(object? sender, TappedEventArgs e)
-    {
-        if (DataContext is TodoListViewModel vm && vm.OpenSelectedTodoCommand.CanExecute(null))
-            vm.OpenSelectedTodoCommand.Execute(null);
-    }
-
-    /// <summary>Called from XAML when a per-group ListBox selection changes. Ensures single selection across all groups.</summary>
+    /// <summary>Called from XAML when a per-group ListBox selection changes. Ensures single selection across all groups and auto-opens the todo.</summary>
     private void OnGroupListBoxSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is not ListBox activeListBox) return;
@@ -107,9 +101,13 @@ public partial class TodoListView : UserControl
                 lb.SelectedItem = null;
         }
 
-        // Propagate selection to ViewModel
+        // Propagate selection to ViewModel and auto-open
         if (DataContext is TodoListViewModel vm && activeListBox.SelectedItem is TodoListEntry entry)
+        {
             vm.SelectedEntry = entry;
+            if (vm.OpenSelectedTodoCommand.CanExecute(null))
+                vm.OpenSelectedTodoCommand.Execute(null);
+        }
     }
 
     /// <summary>Track ListBox instances as they are created by the ItemsControl template.</summary>
