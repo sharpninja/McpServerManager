@@ -11,5 +11,6 @@
 
     <Panel x:Name="HostPanel"
            HorizontalAlignment="Stretch"
-           VerticalAlignment="Stretch"/>
+           VerticalAlignment="Stretch"
+           ClipToBounds="True"/>
 </UserControl>

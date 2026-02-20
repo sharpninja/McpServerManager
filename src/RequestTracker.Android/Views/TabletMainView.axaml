@@ -19,7 +19,7 @@
         <conv:FileNodeToArchiveVisibleConverter x:Key="FileNodeToArchiveVisible"/>
     </UserControl.Resources>
 
-    <Grid x:Name="MainGrid" ColumnDefinitions="225, 4, *" RowDefinitions="*, Auto">
+    <Grid x:Name="MainGrid" ColumnDefinitions="225, 4, *" RowDefinitions="*, Auto" ClipToBounds="True">
         <!-- Tree View -->
         <TreeView Grid.Column="0" Grid.Row="0"
                   ItemsSource="{Binding Nodes}" SelectedItem="{Binding SelectedNode}"
@@ -53,7 +53,7 @@
         <GridSplitter Grid.Column="1" Grid.Row="0" ResizeDirection="Columns" Background="LightGray"/>
 
         <!-- Viewer Panel (no chat button for Android) -->
-        <Grid Grid.Column="2" Grid.Row="0" RowDefinitions="Auto, *">
+        <Grid Grid.Column="2" Grid.Row="0" RowDefinitions="Auto, *" ClipToBounds="True">
              <!-- Navigation Toolbar -->
              <Grid Grid.Row="0" ColumnDefinitions="Auto, Auto, Auto, *" Margin="5">
                 <Button Grid.Column="0" Command="{Binding NavigateBackCommand}" Margin="0,0,5,0" Width="30" ToolTip.Tip="Back">
@@ -93,7 +93,7 @@
                         <Grid RowDefinitions="Auto, Auto, *">
                             <TextBlock Grid.Row="0" Text="Search index (double-tap to open)" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
                             <Border Grid.Row="1" BorderBrush="#C0C0C0" BorderThickness="0,0,0,1">
-                                <Grid ColumnDefinitions="250,*,100,130" Margin="4,2">
+                                <Grid ColumnDefinitions="3*,4*,2*,2*" Margin="4,2">
                                     <TextBlock Grid.Column="0" Text="Request ID" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace"/>
                                     <TextBlock Grid.Column="1" Text="Display" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace"/>
                                     <TextBlock Grid.Column="2" Text="Model" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace"/>
@@ -118,9 +118,9 @@
                                                         <Binding Path="DataContext.SelectedSearchEntry" ElementName="Root"/>
                                                     </MultiBinding>
                                                 </Border.Background>
-                                                <Grid ColumnDefinitions="250,*,100,130" Margin="4,2">
+                                                <Grid ColumnDefinitions="3*,4*,2*,2*" Margin="4,2">
                                                     <SelectableTextBlock Grid.Column="0" Text="{Binding RequestId}" FontFamily="Consolas, Monospace" FontSize="13" TextTrimming="CharacterEllipsis"/>
-                                                    <SelectableTextBlock Grid.Column="1" Text="{Binding DisplayText}" FontFamily="Consolas, Monospace" FontSize="13" TextWrapping="Wrap"/>
+                                                    <SelectableTextBlock Grid.Column="1" Text="{Binding DisplayText}" FontFamily="Consolas, Monospace" FontSize="13" TextTrimming="CharacterEllipsis"/>
                                                     <SelectableTextBlock Grid.Column="2" Text="{Binding Model}" FontFamily="Consolas, Monospace" FontSize="13" TextTrimming="CharacterEllipsis"/>
                                                     <SelectableTextBlock Grid.Column="3" Text="{Binding TimestampDisplay}" FontFamily="Consolas, Monospace" FontSize="13" TextTrimming="CharacterEllipsis"/>
                                                 </Grid>
