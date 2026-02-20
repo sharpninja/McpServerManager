@@ -2,6 +2,8 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Microsoft.Extensions.Logging;
+using RequestTracker.Core.Services;
 using RequestTracker.Core.ViewModels;
 using RequestTracker.Desktop.Services;
 using RequestTracker.Desktop.Views;
@@ -12,6 +14,7 @@ namespace RequestTracker.Desktop;
 
 public partial class App : Application
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("App");
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -34,7 +37,7 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"MainWindow creation failed: {ex}");
+                _logger.LogError(ex, "MainWindow creation failed");
                 System.IO.File.WriteAllText("crash.log", ex.ToString());
             }
         }

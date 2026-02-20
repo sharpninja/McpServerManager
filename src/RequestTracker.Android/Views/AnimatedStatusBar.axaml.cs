@@ -1,15 +1,17 @@
 using System;
-using System.Diagnostics;
 using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Microsoft.Extensions.Logging;
+using RequestTracker.Core.Services;
 
 namespace RequestTracker.Android.Views;
 
 public partial class AnimatedStatusBar : UserControl
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("AnimatedStatusBar");
     public static readonly StyledProperty<bool> IsBusyProperty =
         AvaloniaProperty.Register<AnimatedStatusBar, bool>(nameof(IsBusy));
 
@@ -43,7 +45,7 @@ public partial class AnimatedStatusBar : UserControl
         base.OnPropertyChanged(change);
         if (change.Property == IsBusyProperty)
         {
-            Debug.WriteLine($"[AnimatedStatusBar] IsBusy changed to {IsBusy}");
+            _logger.LogDebug("IsBusy changed to {IsBusy}", IsBusy);
             if (IsBusy)
                 StartAnimation();
             else
@@ -96,7 +98,7 @@ public partial class AnimatedStatusBar : UserControl
         else
             ClearValue(BackgroundProperty);
 
-        Debug.WriteLine($"[AnimatedStatusBar] StopAnimation: background reset to {brush?.GetType().Name ?? "cleared"}");
+        _logger.LogDebug("StopAnimation: background reset to {BrushType}", brush?.GetType().Name ?? "cleared");
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

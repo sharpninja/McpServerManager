@@ -3,8 +3,10 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Microsoft.Extensions.Logging;
 using RequestTracker.Android.Services;
 using RequestTracker.Android.Views;
+using RequestTracker.Core.Services;
 using RequestTracker.Core.ViewModels;
 using System;
 using System.Linq;
@@ -13,6 +15,7 @@ namespace RequestTracker.Android;
 
 public partial class App : Application
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("App");
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -41,7 +44,7 @@ public partial class App : Application
                     }
                     catch (Exception ex)
                     {
-                        Console.Error.WriteLine($"Connection failed: {ex}");
+                        _logger.LogError(ex, "Connection failed");
                         connectionVm.ErrorMessage = $"Connection failed: {ex.Message}";
                         connectionVm.IsConnecting = false;
                     }
@@ -49,7 +52,7 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Android init failed: {ex}");
+                _logger.LogError(ex, "Android init failed");
             }
         }
 

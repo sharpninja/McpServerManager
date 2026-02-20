@@ -25,11 +25,6 @@ public partial class TodoListView : UserControl
         Editor.Text = "";
     }
 
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
-    }
-
     /// <summary>Inject saved layout settings for splitter persistence.</summary>
     public void ApplySettings(LayoutSettings settings) => _layoutSettings = settings;
 

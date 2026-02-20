@@ -81,20 +81,15 @@
                            Unloaded="OnGroupListBoxUnloaded">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:TodoListEntry">
-                        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="2">
-                          <CheckBox Grid.Column="0" IsChecked="{Binding Item.Done, Mode=OneWay}"
-                                    IsHitTestVisible="False" Margin="0,0,6,0"
-                                    VerticalAlignment="Center"/>
-                          <TextBlock Grid.Column="1"
-                                     Text="{Binding Item.Priority}" FontWeight="SemiBold"
-                                     Width="60" VerticalAlignment="Center"
-                                     Margin="0,0,6,0"/>
-                          <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Item.Title}" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding Item.Id}" FontSize="11"
-                                       Foreground="Gray"/>
+                        <Grid ColumnDefinitions="*,Auto" Margin="2">
+                          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Item.Id}" FontWeight="SemiBold" FontSize="13"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding Item.Title}" FontSize="12"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource SystemBaseMediumColor}"/>
                           </StackPanel>
-                          <TextBlock Grid.Column="3"
+                          <TextBlock Grid.Column="1"
                                      Text="{Binding Item.Section}" FontSize="11"
                                      Foreground="Gray" VerticalAlignment="Center"
                                      Margin="6,0,0,0"/>

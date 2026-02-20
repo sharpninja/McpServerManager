@@ -1,13 +1,16 @@
 using Avalonia;
 using System;
 using System.IO;
+using Microsoft.Extensions.Logging;
 using RequestTracker.Core;
+using RequestTracker.Core.Services;
 
 namespace RequestTracker.Desktop;
 
 sealed class Program
 {
     private static readonly string HtmlCacheDir = AppSettings.ResolveHtmlCacheDirectory();
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("Program");
 
     [STAThread]
     public static void Main(string[] args)
@@ -19,7 +22,7 @@ sealed class Program
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"FATAL CRASH: {ex}");
+            _logger.LogCritical(ex, "FATAL CRASH");
             File.WriteAllText("crash.log", ex.ToString());
             throw;
         }
@@ -35,7 +38,7 @@ sealed class Program
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Could not remove HTML cache: {ex.Message}");
+            _logger.LogDebug("Could not remove HTML cache: {Message}", ex.Message);
         }
     }
 

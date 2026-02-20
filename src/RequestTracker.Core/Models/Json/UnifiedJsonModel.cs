@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
+using RequestTracker.Core.Services;
 
 namespace RequestTracker.Core.Models.Json
 {
@@ -144,6 +146,8 @@ namespace RequestTracker.Core.Models.Json
 
     public static class UnifiedLogFactory
     {
+        private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("UnifiedJson");
+
         /// <summary>Ensures entries have OriginalEntry set and Agent set from log SourceType when empty (e.g. when loaded from unified-format file).</summary>
         public static void EnsureOriginalEntriesSet(UnifiedSessionLog? log)
         {
@@ -310,7 +314,7 @@ namespace RequestTracker.Core.Models.Json
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Copilot actions parse failed RequestId={requestId}: {ex.Message}");
+                _logger.LogWarning("Copilot actions parse failed RequestId={RequestId}: {Message}", requestId, ex.Message);
                 }
                 return list.OrderBy(a => a.Order).ToList();
             }
@@ -340,7 +344,7 @@ namespace RequestTracker.Core.Models.Json
                      using var doc = System.Text.Json.JsonDocument.Parse(jsonString);
                      ParseActionsFromElement(doc.RootElement, list);
                  } catch (Exception ex) {
-                     System.Diagnostics.Debug.WriteLine($"Failed to parse actions JSON: {ex.Message}");
+                     _logger.LogWarning("Failed to parse actions JSON: {Message}", ex.Message);
                  }
             }
             return list.OrderBy(a => a.Order).ToList();

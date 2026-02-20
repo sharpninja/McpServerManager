@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using RequestTracker.Core.Services;
 
 namespace RequestTracker.Core.Cqrs;
 
@@ -34,7 +35,9 @@ public sealed class Mediator : IMediator
         get { lock (_busyLock) return _outstandingTasks.Count > 0; }
     }
 
-    private static void Log(string message) => Debug.WriteLine($"[Mediator] {message}");
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("Mediator");
+
+    private static void Log(string message) => _logger.LogDebug(message);
 
     public void TrackBackgroundWork(Task task)
     {

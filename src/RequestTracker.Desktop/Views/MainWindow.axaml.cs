@@ -4,13 +4,16 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using Microsoft.Extensions.Logging;
 using RequestTracker.Core.Models;
+using RequestTracker.Core.Services;
 using RequestTracker.Core.ViewModels;
 
 namespace RequestTracker.Desktop.Views;
 
 public partial class MainWindow : Window
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("MainWindow");
     private LayoutSettings _layoutSettings = new();
     private ChatWindow? _chatWindow;
     private bool? _chatWindowWasOpenOnClosing;
@@ -64,7 +67,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error applying window settings: {ex.Message}");
+            _logger.LogWarning("Error applying window settings: {Message}", ex.Message);
         }
     }
 
@@ -169,6 +172,8 @@ public partial class MainWindow : Window
             toSave.WindowState = _layoutSettings.WindowState;
             toSave.ChatWindowWasOpen = _chatWindowWasOpenOnClosing ?? (_chatWindow != null);
             toSave.SelectedTabIndex = _layoutSettings.SelectedTabIndex;
+            toSave.TodoEditorLandscapeListWidth = _layoutSettings.TodoEditorLandscapeListWidth;
+            toSave.TodoEditorPortraitListHeight = _layoutSettings.TodoEditorPortraitListHeight;
             _chatWindowWasOpenOnClosing = null;
             LayoutSettingsIo.Save(toSave);
         }

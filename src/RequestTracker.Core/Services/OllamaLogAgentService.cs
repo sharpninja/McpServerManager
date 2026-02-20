@@ -7,12 +7,14 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace RequestTracker.Core.Services;
 
 /// <summary>Log agent that uses a local Ollama server (http://localhost:11434).</summary>
 public sealed class OllamaLogAgentService : ILogAgentService
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("Ollama");
     private const string DefaultModel = "llama3:latest";
     private const string DefaultBaseUrl = "http://localhost:11434";
     private static readonly string SystemPrompt = "You are an assistant for a log viewer app. The user sees request logs (Cursor, Copilot, or unified JSON). You receive a summary of the current view (filtered list and optionally the selected request). Help them query, filter, and understand the logs. Be concise and practical.";
@@ -175,7 +177,7 @@ public sealed class OllamaLogAgentService : ILogAgentService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Could not start Ollama: {ex.Message}");
+            _logger.LogWarning("Could not start Ollama: {Message}", ex.Message);
         }
     }
 }

@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using RequestTracker.Core.Converters;
 using RequestTracker.Core.Models;
 using RequestTracker.Core.Models.Json;
@@ -47,10 +48,15 @@ public partial class MainWindowViewModel : ViewModelBase
     internal readonly McpSessionLogService McpSessionService;
     private readonly McpTodoService _mcpTodoService;
     internal readonly Mediator _mediator = new();
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
 
     /// <summary>ViewModel for the Todo tab. Created lazily on first access.</summary>
     public TodoListViewModel TodoViewModel => _todoViewModel ??= new TodoListViewModel(_clipboardService, GetMcpBaseUrl());
     private TodoListViewModel? _todoViewModel;
+
+    /// <summary>ViewModel for the Log tab. Created lazily on first access.</summary>
+    public LogViewModel LogViewModel => _logViewModel ??= new LogViewModel(_clipboardService);
+    private LogViewModel? _logViewModel;
     internal List<UnifiedSessionLog> _mcpSessions = new();
     internal Dictionary<string, UnifiedSessionLog> _mcpSessionsByPath = new(StringComparer.OrdinalIgnoreCase);
     private Timer? _mcpAutoRefreshTimer;
@@ -172,7 +178,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnIsBusyChanged(bool value)
     {
-        System.Diagnostics.Debug.WriteLine($"[ViewModel] IsBusy changed to {value}, mediator.IsBusy={_mediator.IsBusy}");
+        _logger.LogDebug($"[ViewModel] IsBusy changed to {value}, mediator.IsBusy={_mediator.IsBusy}");
     }
 
     /// <summary>True when markdown preview was opened in the system browser.</summary>
@@ -546,23 +552,23 @@ public partial class MainWindowViewModel : ViewModelBase
         const string prefix = "[Unified Grid Actions]";
         if (entry == null)
         {
-            Console.WriteLine($"{prefix} Bound entry is null; grid will show no actions.");
+            _logger.LogDebug($"{prefix} Bound entry is null; grid will show no actions.");
             return;
         }
         string requestId = entry.RequestId ?? "(null)";
-        Console.WriteLine($"{prefix} Binding entry for details grid RequestId={requestId} HasActions={entry.HasActions}");
+        _logger.LogDebug($"{prefix} Binding entry for details grid RequestId={requestId} HasActions={entry.HasActions}");
         var actions = entry.Actions;
         if (actions == null || actions.Count == 0)
         {
-            Console.WriteLine($"{prefix}   Actions count=0 (grid will be empty/hidden).");
+            _logger.LogDebug($"{prefix}   Actions count=0 (grid will be empty/hidden).");
             return;
         }
-        Console.WriteLine($"{prefix}   Actions count={actions.Count}");
+        _logger.LogDebug($"{prefix}   Actions count={actions.Count}");
         for (int i = 0; i < actions.Count; i++)
         {
             var a = actions[i];
             string desc = string.IsNullOrEmpty(a.Description) ? "" : (a.Description.Length <= 80 ? a.Description : a.Description.Substring(0, 77) + "...");
-            Console.WriteLine($"{prefix}   [{i + 1}] Order={a.Order} Type={a.Type} Status={a.Status} FilePath={a.FilePath} Description={desc}");
+            _logger.LogDebug($"{prefix}   [{i + 1}] Order={a.Order} Type={a.Type} Status={a.Status} FilePath={a.FilePath} Description={desc}");
         }
     }
 
@@ -626,7 +632,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"NotifyModelConsumer: {ex.Message}");
+            _logger.LogError(ex, "NotifyModelConsumer");
         }
     }
 
@@ -640,7 +646,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"NotifyContextConsumer: {ex.Message}");
+            _logger.LogError(ex, "NotifyContextConsumer");
         }
     }
 
@@ -942,7 +948,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSelectedNodeChanged(FileNode? value)
     {
-        Console.WriteLine($"Selected Node Changed: {value?.Path}");
+        _logger.LogDebug($"Selected Node Changed: {value?.Path}");
 
         // Start or stop the auto-refresh timer based on whether an MCP node is selected.
         if (value != null && IsMcpVirtualNode(value))
@@ -1070,7 +1076,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         else
         {
-            Console.WriteLine($"Could not resolve navigation: {path} -> {targetPathSimple}");
+            _logger.LogWarning($"Could not resolve navigation: {path} -> {targetPathSimple}");
         }
     }
 
@@ -1085,7 +1091,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         else
         {
-             Console.WriteLine($"Node not found in tree for: {path}");
+             _logger.LogWarning($"Node not found in tree for: {path}");
         }
     }
 
@@ -1594,7 +1600,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Could not open in browser: {ex.Message}");
+            _logger.LogError(ex, "Could not open in browser");
         }
     }
 
@@ -1785,7 +1791,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(configuredPath))
         {
             if (File.Exists(configuredPath)) return configuredPath;
-            Console.WriteLine($"Configured CSS path not found: {configuredPath}");
+            _logger.LogWarning($"Configured CSS path not found: {configuredPath}");
         }
 
         string cssPath = Path.Combine(AppContext.BaseDirectory, "Assets", "styles.css");
@@ -1818,7 +1824,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(htmlContent))
             {
-                Console.WriteLine($"Pandoc failed: ExitCode={process.ExitCode}. stderr: {stderr}");
+                _logger.LogError($"Pandoc failed: ExitCode={process.ExitCode}. stderr: {stderr}");
                 return false;
             }
             File.WriteAllText(destPath, htmlContent);
@@ -1826,7 +1832,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error converting: {ex}");
+            _logger.LogError(ex, "Error converting markdown to HTML");
             return false;
         }
     }
@@ -1838,7 +1844,7 @@ public partial class MainWindowViewModel : ViewModelBase
             string? cssPath = ResolveCssPath();
             if (cssPath == null)
             {
-                Console.WriteLine("ConvertMarkdownToHtmlAsync: CSS path not found");
+                _logger.LogWarning("ConvertMarkdownToHtmlAsync: CSS path not found");
                 return false;
             }
 
@@ -1861,21 +1867,21 @@ public partial class MainWindowViewModel : ViewModelBase
 
             if (process.ExitCode != 0)
             {
-                Console.WriteLine($"Pandoc failed: ExitCode={process.ExitCode}. stderr: {stderr}");
+                _logger.LogError($"Pandoc failed: ExitCode={process.ExitCode}. stderr: {stderr}");
                 return false;
             }
             if (string.IsNullOrWhiteSpace(htmlContent))
             {
-                Console.WriteLine($"Pandoc produced no output. stderr: {stderr}");
+                _logger.LogError($"Pandoc produced no output. stderr: {stderr}");
                 return false;
             }
             await File.WriteAllTextAsync(destPath, htmlContent);
-            Console.WriteLine($"Pandoc completed: wrote {htmlContent.Length} chars to {destPath}");
+            _logger.LogDebug($"Pandoc completed: wrote {htmlContent.Length} chars to {destPath}");
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error converting: {ex}");
+            _logger.LogError(ex, "Error converting markdown to HTML");
             return false;
         }
     }
@@ -1957,7 +1963,7 @@ public partial class MainWindowViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error parsing JSON: {ex}");
+                _logger.LogError(ex, "Error parsing JSON");
                 var msg = ex.Message;
                 DispatchToUi(() =>
                 {
@@ -2504,7 +2510,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error building Source tree: {ex.Message}");
+            _logger.LogWarning(ex, "Error building Source tree");
         }
         return sourceDto;
     }
@@ -2546,7 +2552,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error building Documents tree: {ex.Message}");
+            _logger.LogWarning(ex, "Error building Documents tree");
         }
         return documentsDto;
     }
@@ -2627,7 +2633,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error accessing {node.Path}: {ex.Message}");
+            _logger.LogWarning(ex, $"Error accessing {node.Path}");
         }
     }
 
@@ -2690,7 +2696,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error building Documents node: {ex.Message}");
+            _logger.LogWarning(ex, "Error building Documents node");
         }
         return documentsNode;
     }
@@ -2729,7 +2735,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error building Source node: {ex.Message}");
+            _logger.LogWarning(ex, "Error building Source node");
         }
         return sourceNode;
     }
@@ -2782,7 +2788,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error accessing {node.Path}: {ex.Message}");
+            _logger.LogWarning(ex, $"Error accessing {node.Path}");
         }
     }
 
@@ -2838,13 +2844,13 @@ public partial class MainWindowViewModel : ViewModelBase
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"OnTreeChanged apply failed: {ex}");
+                        _logger.LogError(ex, "OnTreeChanged apply failed");
                     }
                 });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"OnTreeChanged build failed: {ex}");
+                _logger.LogError(ex, "OnTreeChanged build failed");
             }
         });
     }
@@ -2856,7 +2862,7 @@ public partial class MainWindowViewModel : ViewModelBase
             // If the changed file is the current one, regenerate
             if (_currentMarkdownPath != null && e.FullPath.Equals(_currentMarkdownPath, StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"Detected change in current file: {e.FullPath}");
+                _logger.LogDebug($"Detected change in current file: {e.FullPath}");
 
                 // Log the change
                 ChangeLog.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Rebuilt: {Path.GetFileName(e.FullPath)}");

@@ -1,13 +1,15 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
+using Microsoft.Extensions.Logging;
 using RequestTracker.Core.Models;
+using RequestTracker.Core.Services;
 
 namespace RequestTracker.Desktop.Views;
 
 public partial class RequestTrackerView : UserControl
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("RequestTrackerView");
     private bool? _wasPortrait;
     private bool _isUpdatingLayout;
     private LayoutSettings _layoutSettings = new();
@@ -15,11 +17,6 @@ public partial class RequestTrackerView : UserControl
     public RequestTrackerView()
     {
         InitializeComponent();
-    }
-
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
     }
 
     /// <summary>Inject saved layout settings and apply initial state.</summary>
@@ -73,7 +70,7 @@ public partial class RequestTrackerView : UserControl
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error applying JSON viewer splitter: {ex.Message}");
+            _logger.LogWarning("Error applying JSON viewer splitter: {Message}", ex.Message);
         }
     }
 
@@ -88,7 +85,7 @@ public partial class RequestTrackerView : UserControl
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error saving JSON viewer splitter: {ex.Message}");
+            _logger.LogWarning("Error saving JSON viewer splitter: {Message}", ex.Message);
         }
     }
 

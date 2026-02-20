@@ -34,7 +34,7 @@ public class LayoutSettings
 
     // Todo editor splitter
     public GridLengthDto TodoEditorLandscapeListWidth { get; set; } = new(1, GridUnitType.Star);
-    public GridLengthDto TodoEditorPortraitListHeight { get; set; } = new(1, GridUnitType.Star);
+    public GridLengthDto TodoEditorPortraitListHeight { get; set; } = new(400, GridUnitType.Pixel);
 
     /// <summary>True if the chat window was open when the app was last closed; reopen it on next launch.</summary>
     public bool ChatWindowWasOpen { get; set; }

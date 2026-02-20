@@ -21,6 +21,9 @@
         <TabItem Header="Todos">
             <views:TodoListView x:Name="TodoView" DataContext="{Binding TodoViewModel}"/>
         </TabItem>
+        <TabItem Header="Logs">
+            <views:LogView x:Name="LogView" DataContext="{Binding LogViewModel}"/>
+        </TabItem>
     </TabControl>
 
 </Window>

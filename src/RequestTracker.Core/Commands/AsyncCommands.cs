@@ -7,12 +7,19 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using Microsoft.Extensions.Logging;
 using RequestTracker.Core.Cqrs;
 using RequestTracker.Core.Models;
 using RequestTracker.Core.Models.Json;
+using RequestTracker.Core.Services;
 using RequestTracker.Core.ViewModels;
 
 namespace RequestTracker.Core.Commands;
+
+internal static class CommandLogger
+{
+    internal static readonly ILogger Logger = AppLogService.Instance.CreateLogger("Commands");
+}
 
 // --- Initialize from MCP (full tree build + first load) ---
 
@@ -37,7 +44,7 @@ public sealed class InitializeFromMcpHandler : ICommandHandler<InitializeFromMcp
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"InitializeFromMcp failed: {ex}");
+                CommandLogger.Logger.LogError(ex, "InitializeFromMcp failed");
                 vm.DispatchToUi(() => vm.StatusMessage = $"Failed to load tree: {ex.Message}");
             }
         }));
@@ -134,14 +141,14 @@ public sealed class RefreshAndLoadAllJsonHandler : ICommandHandler<RefreshAndLoa
                     catch (Exception ex)
                     {
                         vm.StatusMessage = $"Error building UI: {ex.Message}";
-                        Console.WriteLine($"UI Build Error: {ex}");
+                        CommandLogger.Logger.LogError(ex, "UI Build Error");
                     }
                 });
             }
             catch (Exception ex)
             {
                 vm.DispatchToUi(() => vm.StatusMessage = $"Error aggregating MCP sessions: {ex.Message}");
-                Console.WriteLine($"Aggregation Error: {ex}");
+                CommandLogger.Logger.LogError(ex, "Aggregation Error");
             }
         }));
         return Task.CompletedTask;
