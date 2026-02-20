@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
@@ -12,13 +13,16 @@ public partial class TodoListView : UserControl
 {
     private bool? _wasPortrait;
     private bool _isUpdatingLayout;
+    private bool _hasAutoLoaded;
     private LayoutSettings _layoutSettings = new();
+    private readonly List<ListBox> _groupListBoxes = new();
 
     public TodoListView()
     {
         InitializeComponent();
         SizeChanged += OnSizeChanged;
         DataContextChanged += OnDataContextChanged;
+        Loaded += OnLoaded;
     }
 
     public void ApplySettings(LayoutSettings settings) => _layoutSettings = settings;
@@ -27,6 +31,14 @@ public partial class TodoListView : UserControl
     {
         if (_wasPortrait.HasValue)
             SaveCurrentSplitterToSettings(_wasPortrait.Value);
+    }
+
+    private async void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_hasAutoLoaded) return;
+        _hasAutoLoaded = true;
+        if (DataContext is TodoListViewModel vm)
+            await vm.LoadTodosCommand.ExecuteAsync(null);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -51,6 +63,33 @@ public partial class TodoListView : UserControl
     {
         if (DataContext is TodoListViewModel vm && vm.OpenSelectedTodoCommand.CanExecute(null))
             vm.OpenSelectedTodoCommand.Execute(null);
+    }
+
+    private void OnGroupListBoxSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not ListBox activeListBox) return;
+        if (activeListBox.SelectedItem == null) return;
+
+        foreach (var lb in _groupListBoxes)
+        {
+            if (!ReferenceEquals(lb, activeListBox))
+                lb.SelectedItem = null;
+        }
+
+        if (DataContext is TodoListViewModel vm && activeListBox.SelectedItem is TodoListEntry entry)
+            vm.SelectedEntry = entry;
+    }
+
+    private void OnGroupListBoxLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is ListBox lb && !_groupListBoxes.Contains(lb))
+            _groupListBoxes.Add(lb);
+    }
+
+    private void OnGroupListBoxUnloaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is ListBox lb)
+            _groupListBoxes.Remove(lb);
     }
 
     private void OnEditorCut(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.Cut();

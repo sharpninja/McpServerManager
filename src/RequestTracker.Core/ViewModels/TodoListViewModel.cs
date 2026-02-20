@@ -222,9 +222,9 @@ public partial class TodoListViewModel : ViewModelBase
     [RelayCommand]
     private void NewTodo()
     {
-        NewTodoTitle = "";
-        NewTodoPriorityIndex = 1;
-        IsCreatingNew = true;
+        EditorText = TodoMarkdown.BlankTemplate();
+        EditorTitle = "NEW-TODO";
+        IsEditorVisible = true;
     }
 
     [RelayCommand]
@@ -316,17 +316,51 @@ public partial class TodoListViewModel : ViewModelBase
 
         try
         {
-            var updateReq = TodoMarkdown.FromMarkdown(text);
-            var result = await _mediator.SendAsync<UpdateTodoCommand, McpTodoMutationResult>(
-                new UpdateTodoCommand(id, updateReq));
-            if (result.Success)
+            if (string.Equals(id, "NEW-TODO", StringComparison.OrdinalIgnoreCase))
             {
-                StatusText = $"Saved {id}";
-                await LoadTodosAsync();
+                // New todo: generate a real ID and create via MCP
+                var newId = $"TODO-{DateTime.UtcNow:yyyyMMddHHmmss}";
+                var updateReq = TodoMarkdown.FromMarkdown(text);
+                var createReq = new McpTodoCreateRequest
+                {
+                    Id = newId,
+                    Title = updateReq.Title ?? "Untitled",
+                    Priority = updateReq.Priority ?? "medium",
+                    Section = updateReq.Section ?? "general",
+                    Description = updateReq.Description,
+                    TechnicalDetails = updateReq.TechnicalDetails,
+                    ImplementationTasks = updateReq.ImplementationTasks,
+                    DependsOn = updateReq.DependsOn,
+                    Estimate = updateReq.Estimate
+                };
+
+                var result = await _mediator.SendAsync<CreateTodoCommand, McpTodoMutationResult>(
+                    new CreateTodoCommand(createReq));
+                if (result.Success)
+                {
+                    StatusText = $"Created {newId}";
+                    EditorTitle = newId;
+                    await LoadTodosAsync();
+                }
+                else
+                {
+                    StatusText = $"Create failed: {result.Error}";
+                }
             }
             else
             {
-                StatusText = $"Save failed: {result.Error}";
+                var updateReq = TodoMarkdown.FromMarkdown(text);
+                var result = await _mediator.SendAsync<UpdateTodoCommand, McpTodoMutationResult>(
+                    new UpdateTodoCommand(id, updateReq));
+                if (result.Success)
+                {
+                    StatusText = $"Saved {id}";
+                    await LoadTodosAsync();
+                }
+                else
+                {
+                    StatusText = $"Save failed: {result.Error}";
+                }
             }
         }
         catch (Exception ex)

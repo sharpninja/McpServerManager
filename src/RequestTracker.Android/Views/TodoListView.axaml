@@ -75,7 +75,10 @@
                   </Border>
                   <ListBox ItemsSource="{Binding Items}" Margin="4,0"
                            SelectionMode="Single"
-                           DoubleTapped="OnListItemDoubleTapped">
+                           DoubleTapped="OnListItemDoubleTapped"
+                           SelectionChanged="OnGroupListBoxSelectionChanged"
+                           Loaded="OnGroupListBoxLoaded"
+                           Unloaded="OnGroupListBoxUnloaded">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:TodoListEntry">
                         <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="2">

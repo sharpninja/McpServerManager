@@ -48,7 +48,7 @@ requesttracker:
 
   - id: RT-003
     title: Wire Todo tab auto-load and selection binding
-    done: false
+    done: true
     description:
     - The Todo tab does not auto-load items when first selected.
     - ListBox SelectedItem within grouped ItemsControl does not propagate to ViewModel.SelectedEntry since each group has an independent ListBox.
@@ -57,26 +57,26 @@ requesttracker:
     - Each priority group renders its own ListBox, so SelectedEntry binding needs a shared selection mechanism or code-behind event handler
     implementation-tasks:
     - task: Add auto-load on first tab activation (Loaded or IsVisibleChanged)
-      done: false
+      done: true
     - task: Wire ListBox SelectionChanged in each group to update ViewModel.SelectedEntry
-      done: false
+      done: true
     - task: Ensure only one item is selected across all group ListBoxes at a time
-      done: false
+      done: true
 
   - id: RT-004
     title: Wire New Todo creation through the YAML editor
-    done: false
+    done: true
     description:
     - The New button currently shows an inline form with title/priority only.
     - The VS extension creates new todos by opening a blank YAML template in the editor.
     - Align the creation flow so New opens a blank TodoMarkdown.BlankTemplate() in the editor and Save parses it.
     implementation-tasks:
     - task: Change NewTodoCommand to open BlankTemplate in editor instead of inline form
-      done: false
+      done: true
     - task: Detect new-todo vs edit in SaveEditorAsync (check for NEW-TODO id prefix)
-      done: false
+      done: true
     - task: Dispatch CreateTodoCommand for new items, UpdateTodoCommand for existing
-      done: false
+      done: true
 
   completed:
   - id: RT-100

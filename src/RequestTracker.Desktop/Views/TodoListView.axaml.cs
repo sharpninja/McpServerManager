@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
@@ -13,13 +14,16 @@ public partial class TodoListView : UserControl
 {
     private bool? _wasPortrait;
     private bool _isUpdatingLayout;
+    private bool _hasAutoLoaded;
     private LayoutSettings _layoutSettings = new();
+    private readonly List<ListBox> _groupListBoxes = new();
 
     public TodoListView()
     {
         InitializeComponent();
         SizeChanged += OnSizeChanged;
         DataContextChanged += OnDataContextChanged;
+        Loaded += OnLoaded;
     }
 
     private void InitializeComponent()
@@ -35,6 +39,14 @@ public partial class TodoListView : UserControl
     {
         if (_wasPortrait.HasValue)
             SaveCurrentSplitterToSettings(_wasPortrait.Value);
+    }
+
+    private async void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_hasAutoLoaded) return;
+        _hasAutoLoaded = true;
+        if (DataContext is TodoListViewModel vm)
+            await vm.LoadTodosCommand.ExecuteAsync(null);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -59,6 +71,38 @@ public partial class TodoListView : UserControl
     {
         if (DataContext is TodoListViewModel vm && vm.OpenSelectedTodoCommand.CanExecute(null))
             vm.OpenSelectedTodoCommand.Execute(null);
+    }
+
+    /// <summary>Called from XAML when a per-group ListBox selection changes. Ensures single selection across all groups.</summary>
+    private void OnGroupListBoxSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not ListBox activeListBox) return;
+        if (activeListBox.SelectedItem == null) return;
+
+        // Deselect all other group ListBoxes
+        foreach (var lb in _groupListBoxes)
+        {
+            if (!ReferenceEquals(lb, activeListBox))
+                lb.SelectedItem = null;
+        }
+
+        // Propagate selection to ViewModel
+        if (DataContext is TodoListViewModel vm && activeListBox.SelectedItem is TodoListEntry entry)
+            vm.SelectedEntry = entry;
+    }
+
+    /// <summary>Track ListBox instances as they are created by the ItemsControl template.</summary>
+    private void OnGroupListBoxLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is ListBox lb && !_groupListBoxes.Contains(lb))
+            _groupListBoxes.Add(lb);
+    }
+
+    /// <summary>Remove tracked ListBox instances when unloaded (group removed by filter).</summary>
+    private void OnGroupListBoxUnloaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is ListBox lb)
+            _groupListBoxes.Remove(lb);
     }
 
     private void OnEditorCut(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.Cut();
