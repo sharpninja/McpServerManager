@@ -10,6 +10,7 @@
   
     <Application.Styles>
         <StyleInclude Source="avares://Avalonia.Themes.Fluent/FluentTheme.axaml"/>
+        <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
         <Style Selector="TextBlock">
             <Setter Property="FontFamily" Value="Segoe UI, sans-serif"/>
         </Style>

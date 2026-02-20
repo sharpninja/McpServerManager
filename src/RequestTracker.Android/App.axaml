@@ -51,6 +51,7 @@
 
     <Application.Styles>
         <StyleInclude Source="avares://Avalonia.Themes.Fluent/FluentTheme.axaml"/>
+        <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
         <fa:FluentAvaloniaTheme />
     </Application.Styles>
 </Application>
