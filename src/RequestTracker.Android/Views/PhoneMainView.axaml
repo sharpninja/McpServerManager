@@ -20,6 +20,13 @@
     <Grid RowDefinitions="180, 4, *, Auto" ClipToBounds="True">
         <!-- Session List grouped by agent (children of All JSON node) -->
         <ScrollViewer Grid.Row="0">
+            <StackPanel>
+                <!-- All JSON header -->
+                <Border Background="{DynamicResource SystemAccentColor}" Padding="8,6"
+                        beh:TappedBehavior.Command="{Binding TreeItemTappedCommand}"
+                        beh:TappedBehavior.CommandParameter="{Binding Nodes[0]}">
+                    <TextBlock Text="All JSON" FontWeight="Bold" FontSize="15" Foreground="White"/>
+                </Border>
             <ItemsControl ItemsSource="{Binding Nodes[0].Children}" x:CompileBindings="False">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="models:FileNode">
@@ -46,6 +53,7 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </StackPanel>
         </ScrollViewer>
 
         <!-- Splitter -->
