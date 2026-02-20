@@ -17,6 +17,10 @@ sealed class Program
     {
         try
         {
+            var workingDir = AppSettings.ResolveWorkingDir();
+            if (!string.IsNullOrEmpty(workingDir) && Directory.Exists(workingDir))
+                Environment.CurrentDirectory = workingDir;
+
             RemoveGeneratedHtmlFiles();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }

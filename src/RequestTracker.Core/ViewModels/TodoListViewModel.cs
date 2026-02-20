@@ -197,10 +197,11 @@ public partial class TodoListViewModel : ViewModelBase
         StatusText = $"Analyzing {item.Id}…";
         _activeCts?.Cancel();
         _activeCts = new CancellationTokenSource();
+        var ct = _activeCts.Token;
         try
         {
             var result = await _mediator.SendAsync<AnalyzeTodoRequirementsCommand, McpRequirementsAnalysisResult>(
-                new AnalyzeTodoRequirementsCommand(item.Id));
+                new AnalyzeTodoRequirementsCommand(item.Id), ct);
             if (result.Success)
             {
                 StatusText = $"Requirements for {item.Id}: {(result.FunctionalRequirements?.Count ?? 0)} functional, {(result.TechnicalRequirements?.Count ?? 0)} technical";

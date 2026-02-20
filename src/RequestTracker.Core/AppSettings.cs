@@ -13,6 +13,7 @@ public sealed class AppSettings
 
     public PathSettings Paths { get; init; } = new();
     public McpSettings Mcp { get; init; } = new();
+    public string? WorkingDir { get; init; }
 
     private static readonly Lazy<AppSettings> CurrentValue = new(Load);
 
@@ -34,6 +35,9 @@ public sealed class AppSettings
 
     public static string? ResolveCssFallbackPath()
         => ResolveOptionalPath(Current.Paths.CssFallbackPath);
+
+    public static string? ResolveWorkingDir()
+        => ResolveOptionalPath(Current.WorkingDir);
 
     public static string ResolveMcpBaseUrl()
         => ResolveRequiredUrl(Current.Mcp.BaseUrl, "Mcp.BaseUrl");
