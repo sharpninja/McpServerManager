@@ -22,7 +22,7 @@ public partial class TodoListView : UserControl
         SizeChanged += OnSizeChanged;
         DataContextChanged += OnDataContextChanged;
         Loaded += OnLoaded;
-        Editor.FontFamily = new Avalonia.Media.FontFamily("Cascadia Code,Consolas,Menlo,monospace");
+        Editor.FontFamily = new Avalonia.Media.FontFamily("avares://RequestTracker.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code");
         Editor.WordWrap = true;
     }
 

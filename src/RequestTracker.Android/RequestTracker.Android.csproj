@@ -34,4 +34,8 @@
   <ItemGroup>
     <ProjectReference Include="..\RequestTracker.Core\RequestTracker.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\Fonts\FiraCode-Regular.ttf" />
+  </ItemGroup>
 </Project>
