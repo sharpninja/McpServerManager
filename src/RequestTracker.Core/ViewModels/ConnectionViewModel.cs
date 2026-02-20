@@ -10,7 +10,7 @@ public partial class ConnectionViewModel : ViewModelBase
     private string _host = "192.168.1.100";
 
     [ObservableProperty]
-    private string _port = "5000";
+    private string _port = "7147";
 
     [ObservableProperty]
     private string _errorMessage = "";

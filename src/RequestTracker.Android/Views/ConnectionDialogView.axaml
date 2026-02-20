@@ -25,7 +25,7 @@
                 <!-- Host -->
                 <StackPanel Spacing="4">
                     <TextBlock Text="Host" FontSize="13" FontWeight="Medium"/>
-                    <TextBox Text="{Binding Host}"
+                    <TextBox Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                              Watermark="e.g. 192.168.1.100"
                              FontSize="16" Padding="10,8"
                              IsEnabled="{Binding !IsConnecting}"/>
@@ -34,8 +34,8 @@
                 <!-- Port -->
                 <StackPanel Spacing="4">
                     <TextBlock Text="Port" FontSize="13" FontWeight="Medium"/>
-                    <TextBox Text="{Binding Port}"
-                             Watermark="e.g. 5000"
+                    <TextBox Text="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                             Watermark="e.g. 7147"
                              FontSize="16" Padding="10,8"
                              IsEnabled="{Binding !IsConnecting}"/>
                 </StackPanel>
