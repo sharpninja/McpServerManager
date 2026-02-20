@@ -165,6 +165,11 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isBusy;
 
+    partial void OnIsBusyChanged(bool value)
+    {
+        System.Diagnostics.Debug.WriteLine($"[ViewModel] IsBusy changed to {value}, mediator.IsBusy={_mediator.IsBusy}");
+    }
+
     /// <summary>True when markdown preview was opened in the system browser.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowMarkdownLoadingPlaceholder))]
@@ -225,6 +230,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void RegisterCqrsHandlers()
     {
+        _mediator.IsBusyChanged += _ => DispatchToUi(() => IsBusy = _mediator.IsBusy);
         // Async operations (data loading)
         _mediator.Register(new Commands.InitializeFromMcpHandler());
         _mediator.Register(new Commands.RefreshAndLoadAllJsonHandler());
@@ -1207,7 +1213,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var uniqueSessions = OrderSessionsNewestFirst(byPath.Values).ToList();
         var (allJsonNode, documentsDto, sourceDto) = BuildMcpTreeOffThread(uniqueSessions);
-        DispatchToUi(() =>
+        // Await the UI dispatch so the tracked task stays alive until the tree selection
+        // (and any subsequent navigation commands it triggers) has been dispatched.
+        await Dispatcher.UIThread.InvokeAsync(() =>
         {
             _mcpSessions = uniqueSessions;
             _mcpSessionsByPath = byPath;

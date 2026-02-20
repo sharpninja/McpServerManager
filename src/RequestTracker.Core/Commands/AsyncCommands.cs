@@ -27,21 +27,20 @@ public sealed class InitializeFromMcpHandler : ICommandHandler<InitializeFromMcp
     public Task ExecuteAsync(InitializeFromMcpCommand command, CancellationToken cancellationToken = default)
     {
         var vm = command.ViewModel;
-        vm.DispatchToUi(() => { vm.StatusMessage = "Loading sessions from MCP..."; vm.IsBusy = true; });
-        _ = Task.Run(async () =>
+        vm.DispatchToUi(() => vm.StatusMessage = "Loading sessions from MCP...");
+        vm._mediator.TrackBackgroundWork(Task.Run(async () =>
         {
             try
             {
                 Services.OllamaLogAgentService.TryStartOllamaIfNeeded();
                 await vm.ReloadFromMcpAsyncInternal().ConfigureAwait(false);
-                vm.DispatchToUi(() => vm.IsBusy = false);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"InitializeFromMcp failed: {ex}");
-                vm.DispatchToUi(() => { vm.StatusMessage = $"Failed to load tree: {ex.Message}"; vm.IsBusy = false; });
+                vm.DispatchToUi(() => vm.StatusMessage = $"Failed to load tree: {ex.Message}");
             }
-        });
+        }));
         return Task.CompletedTask;
     }
 }
@@ -64,8 +63,8 @@ public sealed class RefreshAndLoadAllJsonHandler : ICommandHandler<RefreshAndLoa
     public Task ExecuteAsync(RefreshAndLoadAllJsonCommand command, CancellationToken cancellationToken = default)
     {
         var vm = command.ViewModel;
-        vm.DispatchToUi(() => { vm.StatusMessage = "Refreshing from MCP..."; vm.IsBusy = true; });
-        _ = Task.Run(async () =>
+        vm.DispatchToUi(() => vm.StatusMessage = "Refreshing from MCP...");
+        vm._mediator.TrackBackgroundWork(Task.Run(async () =>
         {
             try
             {
@@ -131,22 +130,20 @@ public sealed class RefreshAndLoadAllJsonHandler : ICommandHandler<RefreshAndLoa
                         vm.StatusMessage = string.IsNullOrWhiteSpace(preselectedAgent)
                             ? $"Loaded {reqCount} requests from {sessionCount} sessions."
                             : $"Loaded {reqCount} requests from {sessionCount} sessions. Filtered by agent: {vm.AgentFilter}.";
-                        vm.IsBusy = false;
                     }
                     catch (Exception ex)
                     {
                         vm.StatusMessage = $"Error building UI: {ex.Message}";
-                        vm.IsBusy = false;
                         Console.WriteLine($"UI Build Error: {ex}");
                     }
                 });
             }
             catch (Exception ex)
             {
-                vm.DispatchToUi(() => { vm.StatusMessage = $"Error aggregating MCP sessions: {ex.Message}"; vm.IsBusy = false; });
+                vm.DispatchToUi(() => vm.StatusMessage = $"Error aggregating MCP sessions: {ex.Message}");
                 Console.WriteLine($"Aggregation Error: {ex}");
             }
-        });
+        }));
         return Task.CompletedTask;
     }
 }
@@ -192,8 +189,8 @@ public sealed class RefreshAndLoadSessionHandler : ICommandHandler<RefreshAndLoa
     public Task ExecuteAsync(RefreshAndLoadSessionCommand command, CancellationToken cancellationToken = default)
     {
         var vm = command.ViewModel;
-        vm.DispatchToUi(() => { vm.StatusMessage = "Refreshing from MCP..."; vm.IsBusy = true; });
-        _ = Task.Run(async () =>
+        vm.DispatchToUi(() => vm.StatusMessage = "Refreshing from MCP...");
+        vm._mediator.TrackBackgroundWork(Task.Run(async () =>
         {
             try
             {
@@ -203,7 +200,7 @@ public sealed class RefreshAndLoadSessionHandler : ICommandHandler<RefreshAndLoa
 
                 if (!byPath.TryGetValue(command.VirtualPath, out var session))
                 {
-                    vm.DispatchToUi(() => { vm.StatusMessage = "Session not found. Click Refresh."; vm.IsBusy = false; });
+                    vm.DispatchToUi(() => vm.StatusMessage = "Session not found. Click Refresh.");
                     return;
                 }
 
@@ -234,14 +231,13 @@ public sealed class RefreshAndLoadSessionHandler : ICommandHandler<RefreshAndLoa
                     vm.JsonTree.Add(root);
                     vm.UpdateFilteredSearchEntriesInternal();
                     vm.StatusMessage = $"Loaded {session.SourceType}/{session.SessionId}";
-                    vm.IsBusy = false;
                 });
             }
             catch (Exception ex)
             {
-                vm.DispatchToUi(() => { vm.StatusMessage = $"Error loading session: {ex.Message}"; vm.IsBusy = false; });
+                vm.DispatchToUi(() => vm.StatusMessage = $"Error loading session: {ex.Message}");
             }
-        });
+        }));
         return Task.CompletedTask;
     }
 }

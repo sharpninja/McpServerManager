@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
@@ -29,6 +30,7 @@ public partial class AnimatedStatusBar : UserControl
 
     private Timer? _timer;
     private double _hue;
+    private volatile bool _animating;
 
     public AnimatedStatusBar()
     {
@@ -41,6 +43,7 @@ public partial class AnimatedStatusBar : UserControl
         base.OnPropertyChanged(change);
         if (change.Property == IsBusyProperty)
         {
+            Debug.WriteLine($"[AnimatedStatusBar] IsBusy changed to {IsBusy}");
             if (IsBusy)
                 StartAnimation();
             else
@@ -54,13 +57,16 @@ public partial class AnimatedStatusBar : UserControl
 
     private void StartAnimation()
     {
+        _animating = true;
         _hue = 0;
         _timer?.Dispose();
         _timer = new Timer(_ =>
         {
+            if (!_animating) return;
             _hue = (_hue + 3) % 360;
             Dispatcher.UIThread.Post(() =>
             {
+                if (!_animating) return;
                 Background = new SolidColorBrush(HslToColor(_hue, 0.7, 0.55));
             });
         }, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(40));
@@ -68,27 +74,34 @@ public partial class AnimatedStatusBar : UserControl
 
     private void StopAnimation()
     {
+        _animating = false;
         _timer?.Dispose();
         _timer = null;
-        // Resolve the theme brush directly from application resources
+
+        // Reset to theme brush
+        IBrush? brush = null;
         if (Application.Current != null &&
             Application.Current.TryGetResource("StatusBarBrush", Application.Current.ActualThemeVariant, out var res) &&
             res is IBrush themeBrush)
         {
-            Background = themeBrush;
+            brush = themeBrush;
         }
         else if (IdleBrush != null)
         {
-            Background = IdleBrush;
+            brush = IdleBrush;
         }
+
+        if (brush != null)
+            Background = brush;
         else
-        {
             ClearValue(BackgroundProperty);
-        }
+
+        Debug.WriteLine($"[AnimatedStatusBar] StopAnimation: background reset to {brush?.GetType().Name ?? "cleared"}");
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _animating = false;
         _timer?.Dispose();
         _timer = null;
         base.OnDetachedFromVisualTree(e);
