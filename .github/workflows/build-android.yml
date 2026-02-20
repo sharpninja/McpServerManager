@@ -145,7 +145,6 @@ jobs:
             -ConfigPath msix.yml `
             -Version "${{ needs.version.outputs.semver }}" `
             -ExcludeService `
-            -DevCert `
             -Force
 
       - name: Rename MSIX
