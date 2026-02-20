@@ -63,6 +63,8 @@ public sealed class RefreshAndLoadAllJsonCommand : ICommand
 {
     public MainWindowViewModel ViewModel { get; }
     public string? PreselectedAgent { get; }
+    /// <summary>Pre-fetched sessions to avoid a redundant MCP round-trip (e.g. on startup).</summary>
+    public IReadOnlyList<UnifiedSessionLog>? CachedSessions { get; init; }
     public RefreshAndLoadAllJsonCommand(MainWindowViewModel vm, string? preselectedAgent = null)
     {
         ViewModel = vm;
@@ -80,9 +82,23 @@ public sealed class RefreshAndLoadAllJsonHandler : ICommandHandler<RefreshAndLoa
         {
             try
             {
-                var sessions = await vm.McpSessionService.GetAllSessionsAsync(cancellationToken).ConfigureAwait(true);
-                var byPath = vm.BuildSessionsByPathDict(sessions);
-                var uniqueSessions = vm.OrderAndDeduplicateSessions(byPath);
+                IReadOnlyList<UnifiedSessionLog> sessions;
+                Dictionary<string, UnifiedSessionLog> byPath;
+                List<UnifiedSessionLog> uniqueSessions;
+
+                if (command.CachedSessions is { Count: > 0 })
+                {
+                    // Reuse sessions already fetched by ReloadFromMcpAsyncInternal to
+                    // avoid a redundant MCP round-trip on startup / tree rebuild.
+                    uniqueSessions = command.CachedSessions.ToList();
+                    byPath = vm.BuildSessionsByPathDict(uniqueSessions);
+                }
+                else
+                {
+                    sessions = await vm.McpSessionService.GetAllSessionsAsync(cancellationToken).ConfigureAwait(true);
+                    byPath = vm.BuildSessionsByPathDict(sessions);
+                    uniqueSessions = vm.OrderAndDeduplicateSessions(byPath);
+                }
 
                 // Stamp agent on entries
                 foreach (var log in uniqueSessions)
@@ -120,10 +136,15 @@ public sealed class RefreshAndLoadAllJsonHandler : ICommandHandler<RefreshAndLoa
                 summary.SummaryLines.Add($"Total Tokens: {masterLog.TotalTokens:N0}");
                 summary.SummaryLines.Add($"Aggregated at: {masterLog.Started}");
 
-                var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = false };
-                var unifiedNode = JsonSerializer.SerializeToNode(masterLog, options);
                 var root = new JsonTreeNode("Root", "Aggregated Unified Log", "Object") { IsExpanded = true };
-                vm.BuildJsonTreeInternal(unifiedNode, root, null);
+                // Lightweight summary tree instead of serializing the entire master log
+                // (which creates thousands of JsonTreeNodes and causes ANR on Android).
+                root.Children.Add(new JsonTreeNode("sourceType", masterLog.SourceType ?? "Aggregated", "String"));
+                root.Children.Add(new JsonTreeNode("sessionId", masterLog.SessionId ?? "ALL-JSON", "String"));
+                root.Children.Add(new JsonTreeNode("title", masterLog.Title ?? "All Requests", "String"));
+                root.Children.Add(new JsonTreeNode("entryCount", masterLog.EntryCount.ToString(), "Number"));
+                root.Children.Add(new JsonTreeNode("totalTokens", $"{masterLog.TotalTokens:N0}", "Number"));
+                root.Children.Add(new JsonTreeNode("sessions", $"{uniqueSessions.Count} sessions", "Number"));
 
                 var reqCount = deduped.Count;
                 var sessionCount = uniqueSessions.Count;

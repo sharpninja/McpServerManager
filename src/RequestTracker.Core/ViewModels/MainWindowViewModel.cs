@@ -67,6 +67,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private LogViewModel? _logViewModel;
     internal List<UnifiedSessionLog> _mcpSessions = new();
     internal Dictionary<string, UnifiedSessionLog> _mcpSessionsByPath = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Cached sessions from ReloadFromMcpAsyncInternal, consumed once by the auto-triggered ALL_JSON load.</summary>
+    private IReadOnlyList<UnifiedSessionLog>? _cachedSessionsForAutoLoad;
     private Timer? _mcpAutoRefreshTimer;
 
     [ObservableProperty]
@@ -1268,6 +1270,8 @@ public partial class MainWindowViewModel : ViewModelBase
                 Nodes.Add(sourceNode);
             }
 
+             // Cache sessions so the auto-triggered ALL_JSON load doesn't re-fetch from MCP.
+            _cachedSessionsForAutoLoad = uniqueSessions;
             RestoreTreeSelection(previousPath, allJsonNode);
             StatusMessage = $"Loaded {_mcpSessions.Count} session(s) from MCP.";
         });
@@ -1405,7 +1409,9 @@ public partial class MainWindowViewModel : ViewModelBase
              IsMarkdownVisible = false;
              if (!preserveDetailsView) IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
-             _ = _mediator.SendAsync(new Commands.RefreshAndLoadAllJsonCommand(this));
+             var cached = _cachedSessionsForAutoLoad;
+             _cachedSessionsForAutoLoad = null;
+             _ = _mediator.SendAsync(new Commands.RefreshAndLoadAllJsonCommand(this) { CachedSessions = cached });
              return;
          }
 
