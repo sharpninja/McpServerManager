@@ -45,13 +45,14 @@ public partial class MainWindowViewModel : ViewModelBase
     private const string McpAgentPrefix = "MCP_AGENT://";
 
     private readonly IClipboardService _clipboardService;
+    private readonly string _mcpBaseUrl;
     internal readonly McpSessionLogService McpSessionService;
     private readonly McpTodoService _mcpTodoService;
     internal readonly Mediator _mediator = new();
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
 
     /// <summary>ViewModel for the Todo tab. Created lazily on first access.</summary>
-    public TodoListViewModel TodoViewModel => _todoViewModel ??= new TodoListViewModel(_clipboardService, GetMcpBaseUrl());
+    public TodoListViewModel TodoViewModel => _todoViewModel ??= new TodoListViewModel(_clipboardService, _mcpBaseUrl);
     private TodoListViewModel? _todoViewModel;
 
     /// <summary>ViewModel for the Log tab. Created lazily on first access.</summary>
@@ -228,14 +229,16 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel(IClipboardService clipboardService)
     {
         _clipboardService = clipboardService;
-        McpSessionService = new McpSessionLogService(GetMcpBaseUrl());
-        _mcpTodoService = new McpTodoService(GetMcpBaseUrl());
+        _mcpBaseUrl = GetMcpBaseUrl();
+        McpSessionService = new McpSessionLogService(_mcpBaseUrl);
+        _mcpTodoService = new McpTodoService(_mcpBaseUrl);
         RegisterCqrsHandlers();
     }
 
     public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl)
     {
         _clipboardService = clipboardService;
+        _mcpBaseUrl = mcpBaseUrl;
         McpSessionService = new McpSessionLogService(mcpBaseUrl);
         _mcpTodoService = new McpTodoService(mcpBaseUrl);
         RegisterCqrsHandlers();

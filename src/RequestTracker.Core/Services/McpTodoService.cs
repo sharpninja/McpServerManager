@@ -22,7 +22,7 @@ public sealed class McpTodoService
         _httpClient = new HttpClient
         {
             BaseAddress = new Uri(baseUrl.TrimEnd('/')),
-            Timeout = TimeSpan.FromSeconds(30)
+            Timeout = TimeSpan.FromSeconds(5)
         };
     }
 
