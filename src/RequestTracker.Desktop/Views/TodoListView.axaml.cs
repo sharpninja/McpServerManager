@@ -22,6 +22,8 @@ public partial class TodoListView : UserControl
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
         Loaded += OnLoaded;
+        Editor.FontFamily = new Avalonia.Media.FontFamily("Cascadia Code,Consolas,Menlo,monospace");
+        Editor.WordWrap = true;
         Editor.Text = "";
     }
 
