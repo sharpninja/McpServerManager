@@ -584,7 +584,8 @@ public partial class TodoListViewModel : ViewModelBase
                 2 => "all",
                 _ => "title"
             };
-            source = source.Where(e => MatchesTextFilter(e.Item, text, scopeTag));
+            var matcher = Services.BooleanSearchParser.Parse(text);
+            source = source.Where(e => MatchesTextFilter(e.Item, matcher, scopeTag));
         }
 
         var filtered = source.ToList();
@@ -600,7 +601,7 @@ public partial class TodoListViewModel : ViewModelBase
         GroupedItems = new ObservableCollection<TodoListGroup>(groups);
     }
 
-    private static bool MatchesTextFilter(McpTodoFlatItem? item, string filterText, string scope)
+    private static bool MatchesTextFilter(McpTodoFlatItem? item, Func<string, bool> matcher, string scope)
     {
         if (item == null) return false;
         var searchable = scope switch
@@ -613,7 +614,6 @@ public partial class TodoListViewModel : ViewModelBase
                     .Concat(item.TechnicalDetails ?? Enumerable.Empty<string>())
                     .Where(s => !string.IsNullOrEmpty(s)))
         };
-        var matcher = Services.BooleanSearchParser.Parse(filterText);
         return matcher(searchable);
     }
 
