@@ -259,7 +259,6 @@ public sealed class RefreshAndLoadSessionHandler : ICommandHandler<RefreshAndLoa
                 {
                     vm.SetMcpSessionState(uniqueSessions, byPath);
                     vm.JsonTree.Clear();
-                    vm.SearchableEntries.Clear();
                     vm.JsonLogSummary = summary;
                     vm.JsonTree.Add(root);
                     vm.UpdateFilteredSearchEntriesInternal();
