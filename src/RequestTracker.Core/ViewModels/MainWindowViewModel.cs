@@ -538,7 +538,8 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var entries = FilteredSearchEntries ?? SearchableEntries;
         var sb = new StringBuilder();
-        string resolvedPath = GetResolvedTargetPath();
+        string? resolvedPath = null;
+        try { resolvedPath = GetResolvedTargetPath(); } catch { }
 
         var agentConfig = AgentConfigIo.ReadContent();
         if (!string.IsNullOrWhiteSpace(agentConfig))
@@ -548,8 +549,11 @@ public partial class MainWindowViewModel : ViewModelBase
             sb.AppendLine();
         }
 
-        AppendDocsContext(sb, resolvedPath);
-        AppendSourceContext(sb, resolvedPath);
+        if (resolvedPath != null)
+        {
+            AppendDocsContext(sb, resolvedPath);
+            AppendSourceContext(sb, resolvedPath);
+        }
 
         // Navigation context: what the user is currently viewing
         if (IsRequestDetailsVisible)
@@ -1171,9 +1175,10 @@ public partial class MainWindowViewModel : ViewModelBase
             allJsonNode.Children.Add(agentNode);
         }
 
-        string resolvedPath = GetResolvedTargetPath();
-        var documentsDto = BuildDocumentsDto(resolvedPath);
-        var sourceDto = BuildSourceDto(resolvedPath);
+        string? resolvedPath = null;
+        try { resolvedPath = GetResolvedTargetPath(); } catch { }
+        var documentsDto = resolvedPath != null ? BuildDocumentsDto(resolvedPath) : null;
+        var sourceDto = resolvedPath != null ? BuildSourceDto(resolvedPath) : null;
         return (allJsonNode, documentsDto, sourceDto);
     }
 
@@ -2624,32 +2629,36 @@ public partial class MainWindowViewModel : ViewModelBase
     private void InitializeTree()
     {
         Nodes.Clear();
-        string resolvedPath = GetResolvedTargetPath();
+        string? resolvedPath = null;
+        try { resolvedPath = GetResolvedTargetPath(); } catch { }
         var allJsonNode = new FileNode("ALL_JSON_VIRTUAL_NODE", false) { Name = "All JSON" };
         Nodes.Add(allJsonNode);
-        var documentsNode = BuildDocumentsNode(resolvedPath);
-        if (documentsNode != null)
+        if (resolvedPath != null)
         {
-            documentsNode.Name = "Documents";
-            Nodes.Add(documentsNode);
+            var documentsNode = BuildDocumentsNode(resolvedPath);
+            if (documentsNode != null)
+            {
+                documentsNode.Name = "Documents";
+                Nodes.Add(documentsNode);
+            }
+            var sourceNode = BuildSourceNode(resolvedPath);
+            if (sourceNode != null)
+            {
+                sourceNode.Name = "Source";
+                Nodes.Add(sourceNode);
+            }
+            if (!Directory.Exists(resolvedPath))
+            {
+                SetStatus($"Directory not found: {resolvedPath}");
+                Nodes.Add(new FileNode(resolvedPath, true) { Name = "Directory not found" });
+                SelectedNode = allJsonNode;
+                return;
+            }
+            SetStatus($"Loaded: {resolvedPath}");
+            var root = new FileNode(resolvedPath, true);
+            LoadChildren(root);
+            Nodes.Add(root);
         }
-        var sourceNode = BuildSourceNode(resolvedPath);
-        if (sourceNode != null)
-        {
-            sourceNode.Name = "Source";
-            Nodes.Add(sourceNode);
-        }
-        if (!Directory.Exists(resolvedPath))
-        {
-            SetStatus($"Directory not found: {resolvedPath}");
-            Nodes.Add(new FileNode(resolvedPath, true) { Name = "Directory not found" });
-            SelectedNode = allJsonNode;
-            return;
-        }
-        SetStatus($"Loaded: {resolvedPath}");
-        var root = new FileNode(resolvedPath, true);
-        LoadChildren(root);
-        Nodes.Add(root);
         SelectedNode = allJsonNode;
     }
 
@@ -2775,7 +2784,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void OnTreeChanged(object sender, FileSystemEventArgs e)
     {
-        string resolvedPath = GetResolvedTargetPath();
+        string? resolvedPath = null;
+        try { resolvedPath = GetResolvedTargetPath(); } catch { }
+        if (resolvedPath == null) return;
         Task.Run(() =>
         {
             try

@@ -22,7 +22,15 @@ public sealed class AppSettings
         => ResolveRequiredPath(Current.Paths.SessionsRootPath, "Paths.SessionsRootPath");
 
     public static string ResolveHtmlCacheDirectory()
-        => ResolveRequiredPath(Current.Paths.HtmlCacheDirectory, "Paths.HtmlCacheDirectory");
+    {
+        var dir = Current.Paths.HtmlCacheDirectory;
+        if (string.IsNullOrWhiteSpace(dir))
+        {
+            // Fallback: use a temp directory
+            return Path.Combine(Path.GetTempPath(), "RequestTracker_Cache");
+        }
+        return ResolveRequiredPath(dir, "Paths.HtmlCacheDirectory");
+    }
 
     public static string? ResolveCssFallbackPath()
         => ResolveOptionalPath(Current.Paths.CssFallbackPath);
@@ -34,7 +42,12 @@ public sealed class AppSettings
     {
         string configPath = Path.Combine(AppContext.BaseDirectory, ConfigFileName);
         if (!File.Exists(configPath))
+        {
+            // On Android there is no appsettings.config; return defaults.
+            if (OperatingSystem.IsAndroid())
+                return new AppSettings();
             throw new FileNotFoundException("Missing appsettings.config. Ensure it is copied next to the executable.", configPath);
+        }
 
         string json = File.ReadAllText(configPath);
         var settings = JsonSerializer.Deserialize<AppSettings>(json, new JsonSerializerOptions
