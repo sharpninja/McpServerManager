@@ -589,11 +589,12 @@ public partial class TodoListViewModel : ViewModelBase
 
         var filtered = source.ToList();
 
-        // Group by priority
+        // Group by priority, sort items within each group by ID
         var groups = filtered
             .GroupBy(e => e.PriorityGroup)
             .OrderBy(g => PrioritySortKey(g.First().Item?.Priority))
-            .Select(g => new TodoListGroup(g.Key, new ObservableCollection<TodoListEntry>(g)))
+            .Select(g => new TodoListGroup(g.Key, new ObservableCollection<TodoListEntry>(
+                g.OrderBy(e => e.Item?.Id, StringComparer.OrdinalIgnoreCase))))
             .ToList();
 
         GroupedItems = new ObservableCollection<TodoListGroup>(groups);
@@ -612,7 +613,8 @@ public partial class TodoListViewModel : ViewModelBase
                     .Concat(item.TechnicalDetails ?? Enumerable.Empty<string>())
                     .Where(s => !string.IsNullOrEmpty(s)))
         };
-        return searchable.Contains(filterText, StringComparison.OrdinalIgnoreCase);
+        var matcher = Services.BooleanSearchParser.Parse(filterText);
+        return matcher(searchable);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
