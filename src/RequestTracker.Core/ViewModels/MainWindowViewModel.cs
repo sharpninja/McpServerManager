@@ -240,6 +240,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     }
                 }
             }
+            return;
         }
         SelectedNode = node;
     }
