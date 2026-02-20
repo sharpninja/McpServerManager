@@ -24,7 +24,7 @@ public partial class LogViewModel : ViewModelBase
     public static string[] LevelFilterOptions { get; } =
         ["All", "Trace", "Debug", "Information", "Warning", "Error", "Critical"];
 
-    [ObservableProperty] private string _selectedLevelFilter = "All";
+    [ObservableProperty] private string _selectedLevelFilter = "Information";
     [ObservableProperty] private bool _isPaused;
 
     public string PauseButtonText => IsPaused ? "▶ Resume" : "⏸ Pause";

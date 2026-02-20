@@ -179,7 +179,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnIsBusyChanged(bool value)
     {
-        _logger.LogInformation($"[ViewModel] IsBusy changed to {value}, mediator.IsBusy={_mediator.IsBusy}");
+        _logger.LogDebug($"[ViewModel] IsBusy changed to {value}, mediator.IsBusy={_mediator.IsBusy}");
     }
 
     /// <summary>True when markdown preview was opened in the system browser.</summary>

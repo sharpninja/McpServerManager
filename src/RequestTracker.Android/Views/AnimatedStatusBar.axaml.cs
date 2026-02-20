@@ -45,7 +45,7 @@ public partial class AnimatedStatusBar : UserControl
         base.OnPropertyChanged(change);
         if (change.Property == IsBusyProperty)
         {
-            _logger.LogInformation("IsBusy changed to {IsBusy}", IsBusy);
+            _logger.LogDebug("IsBusy changed to {IsBusy}", IsBusy);
             if (IsBusy)
                 StartAnimation();
             else
