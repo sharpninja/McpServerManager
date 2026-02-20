@@ -26,7 +26,7 @@
                 <StackPanel Spacing="4">
                     <TextBlock Text="Host" FontSize="13" FontWeight="Medium"/>
                     <TextBox Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                             Watermark="e.g. 192.168.1.100"
+                             Watermark="e.g. 10.0.2.2"
                              FontSize="16" Padding="10,8"
                              IsEnabled="{Binding !IsConnecting}"/>
                 </StackPanel>

@@ -7,7 +7,7 @@ namespace RequestTracker.Core.ViewModels;
 public partial class ConnectionViewModel : ViewModelBase
 {
     [ObservableProperty]
-    private string _host = "192.168.1.100";
+    private string _host = "10.0.2.2";
 
     [ObservableProperty]
     private string _port = "7147";
