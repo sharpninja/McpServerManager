@@ -397,6 +397,8 @@ jobs:
         run: |
           mkdir -p pages-output/repo
           cp docs/fdroid/index.html pages-output/
+          [ -f docs/fdroid/.nojekyll ] && cp docs/fdroid/.nojekyll pages-output/
+          touch pages-output/.nojekyll
           [ -f docs/fdroid/icon.png ] && cp docs/fdroid/icon.png pages-output/
           cp -r fdroid-workspace/repo/* pages-output/repo/
 
