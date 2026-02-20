@@ -1,4 +1,4 @@
-# F-Droid metadata for RequestTracker (binary repo – no Builds).
+# F-Droid metadata for Request Tracker (binary repo – no Builds).
 # See https://f-droid.org/docs/Build_Metadata_Reference
 
 Categories:
@@ -10,7 +10,7 @@ License: MIT
 Summary: Browse and analyze Copilot session logs
 
 Description: |
-  RequestTracker is an Avalonia-based Android app for browsing, searching,
+  Request Tracker is an Avalonia-based Android app for browsing, searching,
   and analyzing Copilot request/session logs. Supports phone (portrait
   NavigationView) and tablet (desktop-like) layouts.
 

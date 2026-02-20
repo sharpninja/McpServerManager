@@ -286,17 +286,17 @@ jobs:
             keytool -genkeypair -keystore fdroid-workspace/keystore.jks -alias fdroidrepo \
               -keyalg RSA -keysize 2048 -validity 10000 \
               -storepass android -keypass android \
-              -dname "CN=RequestTracker Repo, OU=CI, O=GitHub"
+              -dname "CN=Request Tracker Repo, OU=CI, O=GitHub"
           fi
           cat > fdroid-workspace/config.yml << CONFIG
           repo_url: "$REPO_URL"
-          repo_name: "RequestTracker"
+          repo_name: "Request Tracker"
           repo_description: "Android app for browsing and analyzing Copilot session logs. Supports phone and tablet layouts."
           repo_keyalias: fdroidrepo
           keystore: keystore.jks
           keystorepass: android
           keypass: android
-          keydname: "CN=RequestTracker Repo, OU=CI, O=GitHub"
+          keydname: "CN=Request Tracker Repo, OU=CI, O=GitHub"
           CONFIG
           chmod 600 fdroid-workspace/config.yml
           mkdir -p fdroid-workspace/repo/icons
@@ -310,7 +310,7 @@ jobs:
           rm -f fdroid-workspace/repo/index.* 2>/dev/null || true
           APK=$(find . -name "*.apk" -type f | head -1)
           cp "$APK" fdroid-workspace/repo/
-          cp fdroid/metadata/com.requesttracker.android.yml fdroid-workspace/metadata/
+          cp fdroid/metadata/ninja.thesharp.requesttracker.yml fdroid-workspace/metadata/
 
       - name: Ensure repo icon exists
         run: |

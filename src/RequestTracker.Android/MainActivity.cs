@@ -6,7 +6,7 @@ using Avalonia.Android;
 namespace RequestTracker.Android;
 
 [Activity(
-    Label = "RequestTracker",
+    Label = "Request Tracker",
     Theme = "@style/MyTheme.NoActionBar",
     Icon = "@drawable/icon",
     MainLauncher = true,
