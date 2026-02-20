@@ -7,61 +7,34 @@
              x:Class="RequestTracker.Android.Views.ConnectionDialogView"
              x:DataType="vm:ConnectionViewModel">
 
-    <Grid VerticalAlignment="Center" HorizontalAlignment="Center"
-          MaxWidth="360" Margin="24">
-        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                CornerRadius="12" Padding="28" BoxShadow="0 4 16 0 #40000000">
-            <StackPanel Spacing="16">
-                <!-- Title -->
-                <TextBlock Text="Connect to Server"
-                           FontSize="22" FontWeight="SemiBold"
-                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
+    <StackPanel VerticalAlignment="Center" Spacing="12" Margin="16">
+        <TextBlock Text="Connect to Server"
+                   FontSize="20" FontWeight="SemiBold"/>
 
-                <TextBlock Text="Enter the hostname and port of the MCP session log server."
-                           TextWrapping="Wrap" FontSize="13" Foreground="Gray"
-                           HorizontalAlignment="Center" TextAlignment="Center"
-                           Margin="0,0,0,4"/>
+        <TextBlock Text="Host" FontSize="13"/>
+        <TextBox Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                 Watermark="e.g. 10.0.2.2"
+                 IsEnabled="{Binding !IsConnecting}"/>
 
-                <!-- Host -->
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Host" FontSize="13" FontWeight="Medium"/>
-                    <TextBox Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                             Watermark="e.g. 10.0.2.2"
-                             FontSize="16" Padding="10,8"
-                             IsEnabled="{Binding !IsConnecting}"/>
-                </StackPanel>
+        <TextBlock Text="Port" FontSize="13"/>
+        <TextBox Text="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                 Watermark="e.g. 7147"
+                 IsEnabled="{Binding !IsConnecting}"/>
 
-                <!-- Port -->
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Port" FontSize="13" FontWeight="Medium"/>
-                    <TextBox Text="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                             Watermark="e.g. 7147"
-                             FontSize="16" Padding="10,8"
-                             IsEnabled="{Binding !IsConnecting}"/>
-                </StackPanel>
+        <TextBlock Text="{Binding ErrorMessage}"
+                   Foreground="Red" TextWrapping="Wrap"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                <!-- Error -->
-                <TextBlock Text="{Binding ErrorMessage}"
-                           Foreground="Red" FontSize="13"
-                           TextWrapping="Wrap"
-                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        <Button Content="Connect"
+                Command="{Binding ConnectCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                IsEnabled="{Binding !IsConnecting}"
+                Margin="0,8,0,0"/>
 
-                <!-- Connect Button -->
-                <Button Content="Connect"
-                        Command="{Binding ConnectCommand}"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Center"
-                        FontSize="16" FontWeight="SemiBold"
-                        Padding="0,12"
-                        IsEnabled="{Binding !IsConnecting}"
-                        Margin="0,8,0,0"/>
-
-                <!-- Connecting indicator -->
-                <TextBlock Text="Connecting..."
-                           FontSize="13" Foreground="Gray"
-                           HorizontalAlignment="Center"
-                           IsVisible="{Binding IsConnecting}"/>
-            </StackPanel>
-        </Border>
-    </Grid>
+        <TextBlock Text="Connecting..."
+                   Foreground="Gray"
+                   HorizontalAlignment="Center"
+                   IsVisible="{Binding IsConnecting}"/>
+    </StackPanel>
 </UserControl>

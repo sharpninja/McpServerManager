@@ -1,28 +1,35 @@
-using Android.Content.Res;
+using System;
 using Android.Util;
 
 namespace RequestTracker.Android.Services;
 
-/// <summary>Detects phone vs tablet form factor based on screen size.</summary>
+/// <summary>Detects phone vs tablet form factor based on current display metrics.</summary>
 public static class DeviceFormFactor
 {
-    /// <summary>Returns true if the device screen is ≥ 600dp wide (tablet threshold).</summary>
-    public static bool IsTablet()
+    private const double TabletWidthThresholdDp = 600;
+
+    /// <summary>Raised when the display configuration changes (fold/unfold, rotation).</summary>
+    public static event Action? DisplayChanged;
+
+    /// <summary>Returns the current display width in dp.</summary>
+    public static double GetCurrentWidthDp()
     {
         try
         {
             var context = global::Android.App.Application.Context;
             var metrics = context.Resources?.DisplayMetrics;
-            if (metrics == null) return false;
-
-            float widthDp = metrics.WidthPixels / metrics.Density;
-            float heightDp = metrics.HeightPixels / metrics.Density;
-            float smallestWidth = System.Math.Min(widthDp, heightDp);
-            return smallestWidth >= 600;
+            if (metrics == null) return 0;
+            return metrics.WidthPixels / metrics.Density;
         }
         catch
         {
-            return false;
+            return 0;
         }
     }
+
+    /// <summary>Returns true if current display width ≥ 600dp.</summary>
+    public static bool IsTablet() => GetCurrentWidthDp() >= TabletWidthThresholdDp;
+
+    /// <summary>Called by MainActivity when configuration changes.</summary>
+    public static void NotifyDisplayChanged() => DisplayChanged?.Invoke();
 }

@@ -1,20 +1,18 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Layout;
-using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
+using RequestTracker.Android.Services;
 
 namespace RequestTracker.Android.Views;
 
 /// <summary>
-/// Switches between PhoneMainView and TabletMainView based on available width.
-/// Reacts to fold/unfold and rotation on foldable devices.
+/// Switches between PhoneMainView and TabletMainView based on actual Android display width.
+/// Listens for configuration changes (fold/unfold, rotation) via DeviceFormFactor.
 /// </summary>
 public partial class AdaptiveMainView : UserControl
 {
-    private const double TabletWidthThreshold = 600;
     private bool? _isTabletLayout;
-    private Control? _currentView;
     private Panel? _hostPanel;
 
     public AdaptiveMainView()
@@ -23,41 +21,30 @@ public partial class AdaptiveMainView : UserControl
         _hostPanel = this.FindControl<Panel>("HostPanel");
     }
 
-    protected override void OnSizeChanged(SizeChangedEventArgs e)
-    {
-        base.OnSizeChanged(e);
-        EvaluateLayout();
-    }
-
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        // Also listen to Bounds property changes for Android config changes
-        this.GetObservable(BoundsProperty).Subscribe(new BoundsObserver(this));
+        DeviceFormFactor.DisplayChanged += OnDisplayChanged;
         EvaluateLayout();
     }
 
-    private sealed class BoundsObserver : IObserver<Rect>
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        private readonly AdaptiveMainView _owner;
-        public BoundsObserver(AdaptiveMainView owner) => _owner = owner;
-        public void OnNext(Rect value) => _owner.EvaluateLayout();
-        public void OnError(Exception error) { }
-        public void OnCompleted() { }
+        DeviceFormFactor.DisplayChanged -= OnDisplayChanged;
+        base.OnDetachedFromVisualTree(e);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    private void OnDisplayChanged()
     {
-        EvaluateLayout(availableSize.Width);
-        return base.MeasureOverride(availableSize);
+        Dispatcher.UIThread.Post(EvaluateLayout);
     }
 
-    private void EvaluateLayout(double? widthOverride = null)
+    private void EvaluateLayout()
     {
-        double width = widthOverride ?? Bounds.Width;
-        if (width <= 0) return;
+        double widthDp = DeviceFormFactor.GetCurrentWidthDp();
+        if (widthDp <= 0) return;
 
-        bool shouldBeTablet = width >= TabletWidthThreshold;
+        bool shouldBeTablet = DeviceFormFactor.IsTablet();
 
         if (_isTabletLayout.HasValue && shouldBeTablet == _isTabletLayout.Value)
             return;
@@ -76,7 +63,5 @@ public partial class AdaptiveMainView : UserControl
             _hostPanel.Children.Clear();
             _hostPanel.Children.Add(newView);
         }
-
-        _currentView = newView;
     }
 }
