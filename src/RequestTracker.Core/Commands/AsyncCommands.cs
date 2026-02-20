@@ -45,7 +45,7 @@ public sealed class InitializeFromMcpHandler : ICommandHandler<InitializeFromMcp
                 {
                     Services.OllamaLogAgentService.TryStartOllamaIfNeeded();
                 }
-                await vm.ReloadFromMcpAsyncInternal().ConfigureAwait(false);
+                await vm.ReloadFromMcpAsyncInternal().ConfigureAwait(true);
             }
             catch (Exception ex)
             {
@@ -80,7 +80,7 @@ public sealed class RefreshAndLoadAllJsonHandler : ICommandHandler<RefreshAndLoa
         {
             try
             {
-                var sessions = await vm.McpSessionService.GetAllSessionsAsync(cancellationToken).ConfigureAwait(false);
+                var sessions = await vm.McpSessionService.GetAllSessionsAsync(cancellationToken).ConfigureAwait(true);
                 var byPath = vm.BuildSessionsByPathDict(sessions);
                 var uniqueSessions = vm.OrderAndDeduplicateSessions(byPath);
 
@@ -206,7 +206,7 @@ public sealed class RefreshAndLoadSessionHandler : ICommandHandler<RefreshAndLoa
         {
             try
             {
-                var sessions = await vm.McpSessionService.GetAllSessionsAsync(cancellationToken).ConfigureAwait(false);
+                var sessions = await vm.McpSessionService.GetAllSessionsAsync(cancellationToken).ConfigureAwait(true);
                 var byPath = vm.BuildSessionsByPathDict(sessions);
                 var uniqueSessions = vm.OrderAndDeduplicateSessions(byPath);
 

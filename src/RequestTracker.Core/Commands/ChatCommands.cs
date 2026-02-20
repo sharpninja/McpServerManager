@@ -20,7 +20,7 @@ public sealed class ChatSendMessageHandler : ICommandHandler<ChatSendMessageComm
 {
     public async Task ExecuteAsync(ChatSendMessageCommand command, CancellationToken cancellationToken = default)
     {
-        await command.ViewModel.SendAsyncInternal().ConfigureAwait(false);
+        await command.ViewModel.SendAsyncInternal().ConfigureAwait(true);
     }
 }
 
@@ -36,7 +36,7 @@ public sealed class ChatLoadModelsHandler : ICommandHandler<ChatLoadModelsComman
 {
     public async Task ExecuteAsync(ChatLoadModelsCommand command, CancellationToken cancellationToken = default)
     {
-        await command.ViewModel.LoadModelsAsyncInternal().ConfigureAwait(false);
+        await command.ViewModel.LoadModelsAsyncInternal().ConfigureAwait(true);
     }
 }
 
@@ -74,7 +74,7 @@ public sealed class ChatSubmitPromptHandler : ICommandHandler<ChatSubmitPromptCo
 {
     public async Task ExecuteAsync(ChatSubmitPromptCommand command, CancellationToken cancellationToken = default)
     {
-        await command.ViewModel.SubmitPromptAsyncInternal(command.Prompt).ConfigureAwait(false);
+        await command.ViewModel.SubmitPromptAsyncInternal(command.Prompt).ConfigureAwait(true);
     }
 }
 

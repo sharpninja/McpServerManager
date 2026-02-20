@@ -56,16 +56,16 @@ public sealed class OllamaLogAgentService : ILogAgentService
         try
         {
             if (stream)
-                return await SendMessageStreamingAsync(content, modelToUse, contentProgress!, cancellationToken).ConfigureAwait(false);
+                return await SendMessageStreamingAsync(content, modelToUse, contentProgress!, cancellationToken).ConfigureAwait(true);
 
-            var response = await _httpClient.PostAsync("/api/chat", content, cancellationToken).ConfigureAwait(false);
+            var response = await _httpClient.PostAsync("/api/chat", content, cancellationToken).ConfigureAwait(true);
             if (!response.IsSuccessStatusCode)
             {
-                var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(true);
                 return $"Ollama error ({(int)response.StatusCode}): {response.ReasonPhrase}. Ensure Ollama is running (e.g. run 'ollama serve' and 'ollama run " + modelToUse + "').";
             }
 
-            var responseJson = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            var responseJson = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(true);
             using var doc = JsonDocument.Parse(responseJson);
             var root = doc.RootElement;
             if (root.TryGetProperty("message", out var msgEl) && msgEl.TryGetProperty("content", out var contentEl))
@@ -89,18 +89,18 @@ public sealed class OllamaLogAgentService : ILogAgentService
     private async Task<string> SendMessageStreamingAsync(StringContent content, string modelToUse, IProgress<string> contentProgress, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(System.Net.Http.HttpMethod.Post, "/api/chat") { Content = content };
-        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(true);
         if (!response.IsSuccessStatusCode)
         {
-            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(true);
             return $"Ollama error ({(int)response.StatusCode}): {response.ReasonPhrase}. Ensure Ollama is running (e.g. run 'ollama serve' and 'ollama run " + modelToUse + "').";
         }
 
         var accumulated = new StringBuilder();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(true);
         using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 1024);
 
-        while (await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
+        while (await reader.ReadLineAsync(cancellationToken).ConfigureAwait(true) is { } line)
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
             try
@@ -133,9 +133,9 @@ public sealed class OllamaLogAgentService : ILogAgentService
     {
         var url = (baseUrl ?? DefaultBaseUrl).TrimEnd('/');
         using var client = new HttpClient { BaseAddress = new Uri(url), Timeout = TimeSpan.FromSeconds(10) };
-        var response = await client.GetAsync("/api/tags", cancellationToken).ConfigureAwait(false);
+        var response = await client.GetAsync("/api/tags", cancellationToken).ConfigureAwait(true);
         if (!response.IsSuccessStatusCode) return Array.Empty<string>();
-        var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(true);
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
         if (!root.TryGetProperty("models", out var modelsEl)) return Array.Empty<string>();

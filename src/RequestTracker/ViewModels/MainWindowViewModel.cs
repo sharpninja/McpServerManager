@@ -216,7 +216,7 @@ public partial class MainWindowViewModel : ViewModelBase
             try
             {
                 OllamaLogAgentService.TryStartOllamaIfNeeded();
-                await ReloadFromMcpAsync().ConfigureAwait(false);
+                await ReloadFromMcpAsync().ConfigureAwait(true);
             }
             catch (Exception ex)
             {
@@ -999,7 +999,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             try
             {
-                var sessions = await _mcpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(false);
+                var sessions = await _mcpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(true);
                 var byPath = new Dictionary<string, UnifiedSessionLog>(StringComparer.OrdinalIgnoreCase);
                 foreach (var s in sessions)
                 {
@@ -1024,7 +1024,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task ReloadFromMcpAsync()
     {
-        var sessions = await _mcpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(false);
+        var sessions = await _mcpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(true);
         var byPath = new Dictionary<string, UnifiedSessionLog>(StringComparer.OrdinalIgnoreCase);
         foreach (var s in sessions)
         {
@@ -1147,7 +1147,7 @@ public partial class MainWindowViewModel : ViewModelBase
             throw new FileNotFoundException("File not found.", fullPath);
         using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true);
         using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
-        var text = await reader.ReadToEndAsync().ConfigureAwait(false);
+        var text = await reader.ReadToEndAsync().ConfigureAwait(true);
         if (string.IsNullOrEmpty(text)) return text;
         // Strip Unicode BOM if present (can cause Markdown.Avalonia to show nothing)
         if (text[0] == '\uFEFF')

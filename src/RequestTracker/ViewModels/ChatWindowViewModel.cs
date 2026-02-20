@@ -130,7 +130,7 @@ public partial class ChatWindowViewModel : ViewModelBase
         if (prompt == null) return;
         CurrentInput = GetPromptText(prompt);
         if (string.IsNullOrWhiteSpace(CurrentInput)) return;
-        await SendAsync().ConfigureAwait(false);
+        await SendAsync().ConfigureAwait(true);
     }
 
     partial void OnSelectedModelChanged(string? value)
@@ -143,7 +143,7 @@ public partial class ChatWindowViewModel : ViewModelBase
     {
         try
         {
-            var models = await OllamaLogAgentService.GetAvailableModelsAsync(null, CancellationToken.None).ConfigureAwait(false);
+            var models = await OllamaLogAgentService.GetAvailableModelsAsync(null, CancellationToken.None).ConfigureAwait(true);
             DispatchToUi(() =>
             {
                 AvailableModels.Clear();
@@ -206,7 +206,7 @@ public partial class ChatWindowViewModel : ViewModelBase
         try
         {
             var model = SelectedModel;
-            var reply = await Task.Run(() => _agentService.SendMessageAsync(text, context, model, progress, token), token).ConfigureAwait(false);
+            var reply = await Task.Run(() => _agentService.SendMessageAsync(text, context, model, progress, token), token).ConfigureAwait(true);
 
             if (token.IsCancellationRequested) return;
 

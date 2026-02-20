@@ -1227,7 +1227,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     internal async Task ReloadFromMcpAsyncInternal()
     {
-        var sessions = await McpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(false);
+        var sessions = await McpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(true);
         var byPath = new Dictionary<string, UnifiedSessionLog>(StringComparer.OrdinalIgnoreCase);
         foreach (var s in sessions)
         {
@@ -1353,7 +1353,7 @@ public partial class MainWindowViewModel : ViewModelBase
             throw new FileNotFoundException("File not found.", fullPath);
         using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true);
         using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
-        var text = await reader.ReadToEndAsync().ConfigureAwait(false);
+        var text = await reader.ReadToEndAsync().ConfigureAwait(true);
         if (string.IsNullOrEmpty(text)) return text;
         // Strip Unicode BOM if present (can cause Markdown.Avalonia to show nothing)
         if (text[0] == '\uFEFF')

@@ -35,7 +35,7 @@ public sealed class McpSessionLogService
         while (offset < total)
         {
             var url = $"/mcp/sessionlog?limit={PageSize}&offset={offset}";
-            var page = await _httpClient.GetFromJsonAsync<McpSessionLogQueryResult>(url, cancellationToken).ConfigureAwait(false);
+            var page = await _httpClient.GetFromJsonAsync<McpSessionLogQueryResult>(url, cancellationToken).ConfigureAwait(true);
             if (page == null || page.Items == null || page.Items.Count == 0)
                 break;
 

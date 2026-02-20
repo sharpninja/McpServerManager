@@ -32,7 +32,7 @@ public static class CopilotCliService
         {
             // Write prompt to a temp file to avoid shell escaping issues
             tmpFile = Path.GetTempFileName();
-            await File.WriteAllTextAsync(tmpFile, prompt, cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(tmpFile, prompt, cancellationToken).ConfigureAwait(true);
 
             var shell = "pwsh";
             var agentCmd = $"copilot -p \"$(Get-Content -Raw '{tmpFile.Replace("'", "''")}')\" --allow-all";
@@ -65,7 +65,7 @@ public static class CopilotCliService
             }))
             {
                 string? line;
-                while ((line = await process.StandardOutput.ReadLineAsync().ConfigureAwait(false)) != null)
+                while ((line = await process.StandardOutput.ReadLineAsync().ConfigureAwait(true)) != null)
                 {
                     stdoutBuf.AppendLine(line);
                     onStdoutLine?.Invoke(AnsiEscapePattern.Replace(line, ""));
@@ -73,7 +73,7 @@ public static class CopilotCliService
             }
 
             var exited = process.WaitForExit(timeoutMs);
-            var stderr = await stderrTask.ConfigureAwait(false);
+            var stderr = await stderrTask.ConfigureAwait(true);
             var stdout = stdoutBuf.ToString();
 
             if (!exited)
