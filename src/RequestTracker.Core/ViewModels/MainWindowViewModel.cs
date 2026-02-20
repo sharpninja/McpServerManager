@@ -851,7 +851,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         Console.WriteLine($"Selected Node Changed: {value?.Path}");
 
-        // Start or stop the 10-second auto-refresh timer based on whether an MCP node is selected.
+        // Start or stop the auto-refresh timer based on whether an MCP node is selected.
         if (value != null && IsMcpVirtualNode(value))
             StartMcpAutoRefresh();
         else
@@ -1062,10 +1062,11 @@ public partial class MainWindowViewModel : ViewModelBase
             GenerateAndNavigate(SelectedNode);
     }
 
-    /// <summary>Starts a 10-second auto-refresh timer for MCP nodes. Stops any existing timer first.</summary>
+    /// <summary>Starts an auto-refresh timer for MCP nodes (60s on Android, 10s elsewhere). Stops any existing timer first.</summary>
     private void StartMcpAutoRefresh()
     {
         StopMcpAutoRefresh();
+        var interval = OperatingSystem.IsAndroid() ? TimeSpan.FromMinutes(1) : TimeSpan.FromSeconds(10);
         _mcpAutoRefreshTimer = new Timer(_ =>
         {
             DispatchToUi(() =>
@@ -1073,7 +1074,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 if (SelectedNode != null && IsMcpVirtualNode(SelectedNode))
                     GenerateAndNavigate(SelectedNode);
             });
-        }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+        }, null, interval, interval);
     }
 
     private void StopMcpAutoRefresh()
