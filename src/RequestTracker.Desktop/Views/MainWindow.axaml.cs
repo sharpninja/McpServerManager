@@ -205,6 +205,7 @@ public partial class MainWindow : Window
     {
         if (WindowState == WindowState.Minimized) return;
         ContentView.OnHostSizeChanged(e.NewSize);
+        TodoView.OnHostSizeChanged(e.NewSize);
         SaveWindowStateToSettings();
         SaveSettings();
     }

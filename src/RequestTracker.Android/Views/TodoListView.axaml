@@ -58,11 +58,12 @@
     <TextBlock Grid.Row="3" Text="{Binding StatusText}" Margin="8,0,8,4"
                FontSize="14" Foreground="{DynamicResource SubtleForeground}"/>
 
-    <!-- ═══ Content area: list + splitter + editor (layout set in code-behind) ═══ -->
-    <Grid x:Name="ContentGrid" Grid.Row="4">
+    <!-- ═══ Content area: list + splitter + editor ═══ -->
+    <Grid x:Name="ContentGrid" Grid.Row="4"
+          ColumnDefinitions="*,4,*" RowDefinitions="*">
 
       <!-- List panel -->
-      <Border x:Name="ListPanel">
+      <Border x:Name="ListPanel" Grid.Column="0" Background="{DynamicResource SystemAltHighColor}">
         <ScrollViewer>
           <ItemsControl ItemsSource="{Binding GroupedItems}">
             <ItemsControl.ItemTemplate>
@@ -126,12 +127,14 @@
       </Border>
 
       <!-- Splitter -->
-      <GridSplitter x:Name="TodoSplitter" Background="Gray" Opacity="0.4"/>
+      <GridSplitter x:Name="TodoSplitter" Grid.Column="1" Background="Gray" Opacity="0.4"
+                    ResizeDirection="Columns"/>
 
-      <!-- Editor panel -->
-      <Border x:Name="EditorPanel" IsVisible="{Binding IsEditorVisible}">
+      <!-- Editor panel (always visible) -->
+      <Border x:Name="EditorPanel" Grid.Column="2">
         <Grid RowDefinitions="Auto,*">
-          <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="2" Margin="4">
+          <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="2" Margin="4"
+                      IsVisible="{Binding IsEditorVisible}">
             <Button Command="{Binding SaveEditorCommand}" Padding="6" ToolTip.Tip="Save to MCP" Width="30">
               <PathIcon Data="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" Width="14" Height="14"/>
             </Button>
@@ -163,11 +166,19 @@
               <PathIcon Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" Width="12" Height="12"/>
             </Button>
           </StackPanel>
-          <avedit:TextEditor x:Name="Editor" Grid.Row="1"
-                             FontFamily="Cascadia Code,Consolas,Menlo,monospace"
-                             FontSize="14"
-                             ShowLineNumbers="True"
-                             WordWrap="True"/>
+          <!-- Editor or placeholder -->
+          <Panel Grid.Row="1">
+            <avedit:TextEditor x:Name="Editor"
+                               IsVisible="{Binding IsEditorVisible}"
+                               FontFamily="Cascadia Code,Consolas,Menlo,monospace"
+                               FontSize="14"
+                               ShowLineNumbers="True"
+                               WordWrap="True"/>
+            <TextBlock IsVisible="{Binding !IsEditorVisible}"
+                       Text="Double-tap a todo to open it here, or tap ＋ New"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Foreground="{DynamicResource SubtleForeground}" FontSize="14" FontStyle="Italic"/>
+          </Panel>
         </Grid>
       </Border>
 

@@ -21,7 +21,6 @@ public partial class TodoListView : UserControl
     public TodoListView()
     {
         InitializeComponent();
-        SizeChanged += OnSizeChanged;
         DataContextChanged += OnDataContextChanged;
         Loaded += OnLoaded;
     }
@@ -39,6 +38,28 @@ public partial class TodoListView : UserControl
     {
         if (_wasPortrait.HasValue)
             SaveCurrentSplitterToSettings(_wasPortrait.Value);
+    }
+
+    /// <summary>Called by the host window when the window size changes to handle orientation.</summary>
+    public void OnHostSizeChanged(Size newSize)
+    {
+        if (_isUpdatingLayout || ContentGrid == null) return;
+
+        bool isPortrait = newSize.Height > newSize.Width;
+        if (_wasPortrait == isPortrait) return;
+
+        _isUpdatingLayout = true;
+        try
+        {
+            if (_wasPortrait.HasValue)
+                SaveCurrentSplitterToSettings(_wasPortrait.Value);
+            _wasPortrait = isPortrait;
+            UpdateLayoutForOrientation(isPortrait);
+        }
+        finally
+        {
+            _isUpdatingLayout = false;
+        }
     }
 
     private async void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -108,27 +129,6 @@ public partial class TodoListView : UserControl
     private void OnEditorCut(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.Cut();
     private void OnEditorCopy(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.Copy();
     private void OnEditorPaste(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.Paste();
-
-    private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
-    {
-        if (_isUpdatingLayout || ContentGrid == null) return;
-
-        bool isPortrait = e.NewSize.Height > e.NewSize.Width;
-        if (_wasPortrait == isPortrait) return;
-
-        _isUpdatingLayout = true;
-        try
-        {
-            if (_wasPortrait.HasValue)
-                SaveCurrentSplitterToSettings(_wasPortrait.Value);
-            _wasPortrait = isPortrait;
-            UpdateLayoutForOrientation(isPortrait);
-        }
-        finally
-        {
-            _isUpdatingLayout = false;
-        }
-    }
 
     private void UpdateLayoutForOrientation(bool isPortrait)
     {

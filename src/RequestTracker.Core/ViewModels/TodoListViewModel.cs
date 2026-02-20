@@ -224,7 +224,6 @@ public partial class TodoListViewModel : ViewModelBase
     {
         EditorText = TodoMarkdown.BlankTemplate();
         EditorTitle = "NEW-TODO";
-        IsEditorVisible = true;
     }
 
     [RelayCommand]
@@ -288,7 +287,6 @@ public partial class TodoListViewModel : ViewModelBase
             {
                 EditorText = TodoMarkdown.ToMarkdown(fresh);
                 EditorTitle = fresh.Id;
-                IsEditorVisible = true;
             }
             else
             {
@@ -308,15 +306,12 @@ public partial class TodoListViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(text)) return;
 
         var id = TodoMarkdown.ExtractId(text);
-        if (string.IsNullOrEmpty(id))
-        {
-            StatusText = "Cannot save: no id in front matter";
-            return;
-        }
+        var isNew = string.IsNullOrEmpty(id)
+                    || string.Equals(id, "NEW-TODO", StringComparison.OrdinalIgnoreCase);
 
         try
         {
-            if (string.Equals(id, "NEW-TODO", StringComparison.OrdinalIgnoreCase))
+            if (isNew)
             {
                 // New todo: generate a real ID and create via MCP
                 var newId = $"TODO-{DateTime.UtcNow:yyyyMMddHHmmss}";
@@ -351,7 +346,7 @@ public partial class TodoListViewModel : ViewModelBase
             {
                 var updateReq = TodoMarkdown.FromMarkdown(text);
                 var result = await _mediator.SendAsync<UpdateTodoCommand, McpTodoMutationResult>(
-                    new UpdateTodoCommand(id, updateReq));
+                    new UpdateTodoCommand(id!, updateReq));
                 if (result.Success)
                 {
                     StatusText = $"Saved {id}";
@@ -370,9 +365,8 @@ public partial class TodoListViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void CloseEditor()
+    private void ClearEditor()
     {
-        IsEditorVisible = false;
         EditorText = "";
         EditorTitle = "";
     }

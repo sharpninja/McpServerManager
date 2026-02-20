@@ -1564,10 +1564,7 @@ public partial class MainWindowViewModel : ViewModelBase
         return result;
     }
 
-    /// <summary>
-    /// Opens an HTML file in the system default browser.
-    /// Opens the generated HTML in the default browser (pandoc output).
-    /// </summary>
+    /// <summary>Opens an HTML file in the system default browser.</summary>
     private static void OpenHtmlInDefaultBrowser(string htmlFilePath)
     {
         if (!File.Exists(htmlFilePath)) return;
