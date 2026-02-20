@@ -1,0 +1,150 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:models="clr-namespace:RequestTracker.Core.Models.Json;assembly=RequestTracker.Core"
+             xmlns:conv="clr-namespace:RequestTracker.Core.Converters;assembly=RequestTracker.Core"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
+             x:Class="RequestTracker.Android.Views.RequestDetailsView"
+             x:DataType="models:UnifiedRequestEntry">
+
+  <UserControl.Resources>
+      <conv:ObjectToJsonConverter x:Key="ObjectToJson"/>
+      <conv:CountToVisibilityConverter x:Key="CountToVisibility"/>
+  </UserControl.Resources>
+
+  <ScrollViewer>
+    <StackPanel Spacing="8" Margin="8">
+      <!-- Header -->
+      <TextBlock Text="{Binding QueryTitle}" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding RequestId}" FontSize="11" Foreground="Gray" TextTrimming="CharacterEllipsis"/>
+      <TextBlock Text="{Binding TimestampLocalDisplay}" FontSize="11" Foreground="Gray"/>
+
+      <!-- Metadata Badges -->
+      <WrapPanel Orientation="Horizontal">
+        <WrapPanel.Styles>
+          <Style Selector="Border">
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="Margin" Value="0,0,4,4"/>
+          </Style>
+          <Style Selector="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+          </Style>
+        </WrapPanel.Styles>
+        <Border><TextBlock Text="{Binding Model}"/></Border>
+        <Border IsVisible="{Binding ModelProvider, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding ModelProvider}"/>
+        </Border>
+        <Border IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding Status}"/>
+        </Border>
+        <Border><TextBlock Text="{Binding TokenCount, StringFormat='Tokens: {0}'}"/></Border>
+        <Border IsVisible="{Binding IsPremium}"><TextBlock Text="Premium" Foreground="DarkGoldenrod"/></Border>
+      </WrapPanel>
+
+      <Border Height="1" Background="#D0D0D0"/>
+
+      <!-- Query -->
+      <Expander Header="Query" IsExpanded="True" HorizontalAlignment="Stretch">
+        <Border Background="#FAFAFA" Padding="8" CornerRadius="4">
+          <TextBlock Text="{Binding QueryText}" TextWrapping="Wrap" FontSize="12"/>
+        </Border>
+      </Expander>
+
+      <!-- Interpretation -->
+      <Expander Header="Interpretation" IsExpanded="True" HorizontalAlignment="Stretch"
+                IsVisible="{Binding Interpretation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <Border Background="#F0F8FF" Padding="8" CornerRadius="4">
+          <TextBlock Text="{Binding Interpretation}" TextWrapping="Wrap" FontSize="12"/>
+        </Border>
+      </Expander>
+
+      <!-- Response -->
+      <Expander Header="Response" IsExpanded="True" HorizontalAlignment="Stretch">
+        <Border Background="#FAFAFA" Padding="8" CornerRadius="4">
+          <TextBlock Text="{Binding Response}" TextWrapping="Wrap" FontSize="12"/>
+        </Border>
+      </Expander>
+
+      <!-- Processing Dialog -->
+      <Expander Header="{Binding ProcessingDialog.Count, StringFormat='Processing Dialog ({0})'}"
+                IsExpanded="False" HorizontalAlignment="Stretch">
+        <Border Background="White" Padding="8" CornerRadius="4">
+          <ItemsControl ItemsSource="{Binding ProcessingDialog}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="models:UnifiedProcessingDialogItem">
+                <StackPanel Margin="0,0,0,6">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding Role}" FontWeight="SemiBold" FontSize="11"/>
+                    <TextBlock Text="{Binding TimestampDisplay}" FontSize="11" Foreground="Gray"/>
+                  </StackPanel>
+                  <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="12" Margin="0,2,0,0"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Border>
+      </Expander>
+
+      <!-- Actions -->
+      <Expander Header="{Binding Actions.Count, StringFormat='Actions ({0})'}"
+                IsExpanded="False" HorizontalAlignment="Stretch">
+        <Border Background="White" Padding="8" CornerRadius="4">
+          <ItemsControl ItemsSource="{Binding Actions}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="models:UnifiedAction">
+                <StackPanel Margin="0,0,0,6">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding Type}" FontWeight="SemiBold" FontSize="11"/>
+                    <TextBlock Text="{Binding Status}" FontSize="11" Foreground="Gray"/>
+                  </StackPanel>
+                  <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12" Margin="0,2,0,0"/>
+                  <TextBlock Text="{Binding FilePath}" FontSize="10" Foreground="Gray" TextTrimming="CharacterEllipsis"
+                             IsVisible="{Binding FilePath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Border>
+      </Expander>
+
+      <!-- Context -->
+      <Expander Header="Context" IsExpanded="False" HorizontalAlignment="Stretch">
+        <ItemsControl ItemsSource="{Binding ContextList}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding}" Margin="0,2" FontSize="12" TextWrapping="Wrap"/>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Expander>
+
+      <!-- Tags/Notes -->
+      <Expander Header="Tags &amp; Notes" IsExpanded="False" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="4">
+          <TextBlock Text="{Binding FailureNote, StringFormat='Failure Note: {0}'}"
+                     IsVisible="{Binding FailureNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Foreground="Red" FontSize="12"/>
+          <ItemsControl ItemsSource="{Binding Tags}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding}" FontSize="12" TextWrapping="Wrap" Margin="0,2"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Expander>
+
+      <!-- Original JSON -->
+      <Expander Header="Original JSON" IsExpanded="False" HorizontalAlignment="Stretch" x:CompileBindings="False">
+        <Border Background="#FAFAFA" Padding="8" CornerRadius="4">
+          <TextBlock Text="{Binding OriginalEntry, Converter={StaticResource ObjectToJson}}"
+                     TextWrapping="Wrap" FontSize="11"/>
+        </Border>
+      </Expander>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
