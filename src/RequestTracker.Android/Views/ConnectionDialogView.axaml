@@ -9,14 +9,14 @@
 
     <StackPanel VerticalAlignment="Center" Spacing="12" Margin="16">
         <TextBlock Text="Connect to Server"
-                   FontSize="20" FontWeight="SemiBold"/>
+                   FontSize="23" FontWeight="SemiBold"/>
 
-        <TextBlock Text="Host" FontSize="13"/>
+        <TextBlock Text="Host" FontSize="15"/>
         <TextBox Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                  Watermark="e.g. 10.0.2.2"
                  IsEnabled="{Binding !IsConnecting}"/>
 
-        <TextBlock Text="Port" FontSize="13"/>
+        <TextBlock Text="Port" FontSize="15"/>
         <TextBox Text="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                  Watermark="e.g. 7147"
                  IsEnabled="{Binding !IsConnecting}"/>

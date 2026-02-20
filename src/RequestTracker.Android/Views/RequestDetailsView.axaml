@@ -27,9 +27,9 @@
   <ScrollViewer>
     <StackPanel Spacing="2" Margin="8">
       <!-- Header -->
-      <TextBlock Text="{Binding QueryTitle}" FontSize="18" FontWeight="Bold" TextWrapping="Wrap"/>
-      <TextBlock Text="{Binding RequestId}" FontSize="13" Foreground="Gray" TextTrimming="CharacterEllipsis"/>
-      <TextBlock Text="{Binding TimestampLocalDisplay}" FontSize="13" Foreground="Gray"/>
+      <TextBlock Text="{Binding QueryTitle}" FontSize="21" FontWeight="Bold" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding RequestId}" FontSize="15" Foreground="Gray" TextTrimming="CharacterEllipsis"/>
+      <TextBlock Text="{Binding TimestampLocalDisplay}" FontSize="15" Foreground="Gray"/>
 
       <!-- Metadata Badges -->
       <WrapPanel Orientation="Horizontal">
@@ -60,7 +60,7 @@
       <!-- Query -->
       <Expander Header="Query" IsExpanded="True" HorizontalAlignment="Stretch">
         <Border Background="#FAFAFA" Padding="2" CornerRadius="4">
-          <TextBlock Text="{Binding QueryText}" TextWrapping="Wrap" FontSize="14"/>
+          <TextBlock Text="{Binding QueryText}" TextWrapping="Wrap" FontSize="16"/>
         </Border>
       </Expander>
 
@@ -68,14 +68,14 @@
       <Expander Header="Interpretation" IsExpanded="True" HorizontalAlignment="Stretch"
                 IsVisible="{Binding Interpretation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
         <Border Background="#F0F8FF" Padding="2" CornerRadius="4">
-          <TextBlock Text="{Binding Interpretation}" TextWrapping="Wrap" FontSize="14"/>
+          <TextBlock Text="{Binding Interpretation}" TextWrapping="Wrap" FontSize="16"/>
         </Border>
       </Expander>
 
       <!-- Response -->
       <Expander Header="Response" IsExpanded="True" HorizontalAlignment="Stretch">
         <Border Background="#FAFAFA" Padding="2" CornerRadius="4">
-          <TextBlock Text="{Binding Response}" TextWrapping="Wrap" FontSize="14"/>
+          <TextBlock Text="{Binding Response}" TextWrapping="Wrap" FontSize="16"/>
         </Border>
       </Expander>
 
@@ -87,10 +87,10 @@
             <DataTemplate DataType="models:UnifiedProcessingDialogItem">
               <StackPanel Margin="0,0,0,4">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <TextBlock Text="{Binding Role}" FontWeight="SemiBold" FontSize="13"/>
-                  <TextBlock Text="{Binding TimestampDisplay}" FontSize="13" Foreground="Gray"/>
+                  <TextBlock Text="{Binding Role}" FontWeight="SemiBold" FontSize="15"/>
+                  <TextBlock Text="{Binding TimestampDisplay}" FontSize="15" Foreground="Gray"/>
                 </StackPanel>
-                <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="14" Margin="0,2,0,0"/>
+                <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="16" Margin="0,2,0,0"/>
               </StackPanel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
@@ -105,11 +105,11 @@
             <DataTemplate DataType="models:UnifiedAction">
               <StackPanel Margin="0,0,0,4">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <TextBlock Text="{Binding Type}" FontWeight="SemiBold" FontSize="13"/>
-                  <TextBlock Text="{Binding Status}" FontSize="13" Foreground="Gray"/>
+                  <TextBlock Text="{Binding Type}" FontWeight="SemiBold" FontSize="15"/>
+                  <TextBlock Text="{Binding Status}" FontSize="15" Foreground="Gray"/>
                 </StackPanel>
-                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="14" Margin="0,2,0,0"/>
-                <TextBlock Text="{Binding FilePath}" FontSize="12" Foreground="Gray" TextTrimming="CharacterEllipsis"
+                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="16" Margin="0,2,0,0"/>
+                <TextBlock Text="{Binding FilePath}" FontSize="14" Foreground="Gray" TextTrimming="CharacterEllipsis"
                            IsVisible="{Binding FilePath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
               </StackPanel>
             </DataTemplate>
@@ -122,7 +122,7 @@
         <ItemsControl ItemsSource="{Binding ContextList}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <TextBlock Text="{Binding}" Margin="0,1" FontSize="14" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding}" Margin="0,1" FontSize="16" TextWrapping="Wrap"/>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -133,11 +133,11 @@
         <StackPanel Spacing="2">
           <TextBlock Text="{Binding FailureNote, StringFormat='Failure Note: {0}'}"
                      IsVisible="{Binding FailureNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                     Foreground="Red" FontSize="14"/>
+                     Foreground="Red" FontSize="16"/>
           <ItemsControl ItemsSource="{Binding Tags}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <TextBlock Text="{Binding}" FontSize="14" TextWrapping="Wrap" Margin="0,1"/>
+                <TextBlock Text="{Binding}" FontSize="16" TextWrapping="Wrap" Margin="0,1"/>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
@@ -148,7 +148,7 @@
       <Expander Header="Original JSON" HorizontalAlignment="Stretch" x:CompileBindings="False">
         <Border Background="#FAFAFA" Padding="2" CornerRadius="4">
           <TextBlock Text="{Binding OriginalEntry, Converter={StaticResource ObjectToJson}}"
-                     TextWrapping="Wrap" FontSize="13"/>
+                     TextWrapping="Wrap" FontSize="15"/>
         </Border>
       </Expander>
 
