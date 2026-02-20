@@ -36,9 +36,7 @@ public partial class App : Application
                     {
                         var clipboardService = new AndroidClipboardService();
                         var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl);
-                        singleView.MainView = DeviceFormFactor.IsTablet()
-                            ? new TabletMainView { DataContext = vm }
-                            : (Control)new PhoneMainView { DataContext = vm };
+                        singleView.MainView = new AdaptiveMainView { DataContext = vm };
                         vm.InitializeAfterWindowShown();
                     }
                     catch (Exception ex)
