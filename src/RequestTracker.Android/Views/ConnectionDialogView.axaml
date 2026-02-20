@@ -33,7 +33,7 @@
                 Margin="0,8,0,0"/>
 
         <TextBlock Text="Connecting..."
-                   Foreground="Gray"
+                   Foreground="{DynamicResource SubtleForeground}"
                    HorizontalAlignment="Center"
                    IsVisible="{Binding IsConnecting}"/>
     </StackPanel>

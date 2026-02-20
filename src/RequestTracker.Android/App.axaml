@@ -4,7 +4,44 @@
              xmlns:models="using:RequestTracker.Core.Models.Json"
              xmlns:views="using:RequestTracker.Android.Views"
              x:Class="RequestTracker.Android.App"
-             RequestedThemeVariant="Light">
+             RequestedThemeVariant="Default">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="GroupHeaderBrush" Color="#E0E0E0"/>
+                    <SolidColorBrush x:Key="SeparatorBrush" Color="LightGray"/>
+                    <SolidColorBrush x:Key="EntryBorderBrush" Color="#C0C0C0"/>
+                    <SolidColorBrush x:Key="ItemBorderBrush" Color="#F0F0F0"/>
+                    <SolidColorBrush x:Key="StatusBarBrush" Color="#F5F5F5"/>
+                    <SolidColorBrush x:Key="BadgeBrush" Color="#E0E0E0"/>
+                    <SolidColorBrush x:Key="DividerBrush" Color="#D0D0D0"/>
+                    <SolidColorBrush x:Key="ContentBgBrush" Color="#FAFAFA"/>
+                    <SolidColorBrush x:Key="InterpretationBgBrush" Color="#F0F8FF"/>
+                    <SolidColorBrush x:Key="SearchBorderBrush" Color="#DDD"/>
+                    <SolidColorBrush x:Key="JsonKeyBrush" Color="#007ACC"/>
+                    <SolidColorBrush x:Key="JsonValueBrush" Color="#CE9178"/>
+                    <SolidColorBrush x:Key="SubtleForeground" Color="Gray"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="GroupHeaderBrush" Color="#3A3A3A"/>
+                    <SolidColorBrush x:Key="SeparatorBrush" Color="#555555"/>
+                    <SolidColorBrush x:Key="EntryBorderBrush" Color="#555555"/>
+                    <SolidColorBrush x:Key="ItemBorderBrush" Color="#333333"/>
+                    <SolidColorBrush x:Key="StatusBarBrush" Color="#2A2A2A"/>
+                    <SolidColorBrush x:Key="BadgeBrush" Color="#3A3A3A"/>
+                    <SolidColorBrush x:Key="DividerBrush" Color="#555555"/>
+                    <SolidColorBrush x:Key="ContentBgBrush" Color="#2A2A2A"/>
+                    <SolidColorBrush x:Key="InterpretationBgBrush" Color="#1E2A35"/>
+                    <SolidColorBrush x:Key="SearchBorderBrush" Color="#555555"/>
+                    <SolidColorBrush x:Key="JsonKeyBrush" Color="#569CD6"/>
+                    <SolidColorBrush x:Key="JsonValueBrush" Color="#CE9178"/>
+                    <SolidColorBrush x:Key="SubtleForeground" Color="#999999"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 
     <Application.DataTemplates>
         <DataTemplate DataType="models:UnifiedRequestEntry">

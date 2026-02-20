@@ -50,7 +50,7 @@
         </TreeView>
 
         <!-- Column Splitter -->
-        <GridSplitter Grid.Column="1" Grid.Row="0" ResizeDirection="Columns" Background="LightGray"/>
+        <GridSplitter Grid.Column="1" Grid.Row="0" ResizeDirection="Columns" Background="{DynamicResource SeparatorBrush}"/>
 
         <!-- Viewer Panel (no chat button for Android) -->
         <Grid Grid.Column="2" Grid.Row="0" RowDefinitions="Auto, *" ClipToBounds="True">
@@ -69,7 +69,7 @@
              </Grid>
 
              <!-- JSON Tree View -->
-             <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="5" IsVisible="{Binding IsJsonVisible}"
+             <Border Grid.Row="1" BorderBrush="{DynamicResource SubtleForeground}" BorderThickness="1" Margin="5" IsVisible="{Binding IsJsonVisible}"
                      VerticalAlignment="Stretch" HorizontalAlignment="Stretch" MinHeight="320">
                 <Grid RowDefinitions="Auto, Auto, 200, 4, *"
                       VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
@@ -89,10 +89,10 @@
                         <TextBox Grid.Column="1" Text="{Binding SearchQuery}" Watermark="Search..."/>
                     </Grid>
                     <!-- Search results -->
-                    <Border Grid.Row="2" MinHeight="80" BorderBrush="#ddd" BorderThickness="0,0,0,1" Padding="4" Margin="0,0,0,4">
+                    <Border Grid.Row="2" MinHeight="80" BorderBrush="{DynamicResource SearchBorderBrush}" BorderThickness="0,0,0,1" Padding="4" Margin="0,0,0,4">
                         <Grid RowDefinitions="Auto, Auto, *">
                             <TextBlock Grid.Row="0" Text="Search index (double-tap to open)" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,4"/>
-                            <Border Grid.Row="1" BorderBrush="#C0C0C0" BorderThickness="0,0,0,1">
+                            <Border Grid.Row="1" BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1">
                                 <Grid ColumnDefinitions="3*,4*,2*,2*" Margin="4,2">
                                     <TextBlock Grid.Column="0" Text="Request ID" FontWeight="SemiBold" FontSize="15" FontFamily="Consolas, Monospace"/>
                                     <TextBlock Grid.Column="1" Text="Display" FontWeight="SemiBold" FontSize="15" FontFamily="Consolas, Monospace"/>
@@ -107,7 +107,7 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="jsonModels:SearchableEntry">
-                                            <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1"
+                                            <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1"
                                                     beh:TappedBehavior.Command="{Binding DataContext.SearchRowDoubleTappedCommand, ElementName=Root}"
                                                     beh:TappedBehavior.CommandParameter="{Binding}">
                                                 <Border.Background>
@@ -129,7 +129,7 @@
                             </ScrollViewer>
                         </Grid>
                     </Border>
-                    <GridSplitter Grid.Row="3" ResizeDirection="Rows" Background="LightGray" Height="4"/>
+                    <GridSplitter Grid.Row="3" ResizeDirection="Rows" Background="{DynamicResource SeparatorBrush}" Height="4"/>
                     <!-- JSON Tree -->
                     <Border Grid.Row="4" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" MinHeight="180">
                         <TreeView ItemsSource="{Binding JsonTree}" SelectedItem="{Binding SelectedJsonNode}"
@@ -139,10 +139,10 @@
                                     <StackPanel Orientation="Horizontal" Spacing="5" Background="Transparent" x:CompileBindings="False"
                                                 beh:DoubleTappedBehavior.Command="{Binding DataContext.JsonNodeDoubleTappedCommand, ElementName=Root}"
                                                 beh:DoubleTappedBehavior.CommandParameter="{Binding}">
-                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#007acc"/>
-                                        <TextBlock Text=":" Foreground="Gray"/>
-                                        <TextBlock Text="{Binding Value}" Foreground="#ce9178"/>
-                                        <TextBlock Text="{Binding Type}" Foreground="Gray" FontStyle="Italic" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="{DynamicResource JsonKeyBrush}"/>
+                                        <TextBlock Text=":" Foreground="{DynamicResource SubtleForeground}"/>
+                                        <TextBlock Text="{Binding Value}" Foreground="{DynamicResource JsonValueBrush}"/>
+                                        <TextBlock Text="{Binding Type}" Foreground="{DynamicResource SubtleForeground}" FontStyle="Italic" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0"/>
                                     </StackPanel>
                                 </TreeDataTemplate>
                             </TreeView.ItemTemplate>
@@ -157,10 +157,10 @@
              </Border>
 
              <!-- Markdown View -->
-             <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="5" IsVisible="{Binding IsMarkdownVisible}">
+             <Border Grid.Row="1" BorderBrush="{DynamicResource SubtleForeground}" BorderThickness="1" Margin="5" IsVisible="{Binding IsMarkdownVisible}">
                 <Grid RowDefinitions="Auto, *">
                     <TextBlock Text="Loading…" IsVisible="{Binding ShowMarkdownLoadingPlaceholder}"
-                               VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray" Margin="12"/>
+                               VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource SubtleForeground}" Margin="12"/>
                     <Border Grid.Row="1" IsVisible="{Binding IsPreviewOpenedInBrowser}" Padding="0">
                         <Grid RowDefinitions="Auto, *">
                             <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="8,6">
@@ -176,7 +176,7 @@
              </Border>
 
              <!-- Request Details View -->
-             <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="5" IsVisible="{Binding IsRequestDetailsVisible}">
+             <Border Grid.Row="1" BorderBrush="{DynamicResource SubtleForeground}" BorderThickness="1" Margin="5" IsVisible="{Binding IsRequestDetailsVisible}">
                 <Grid RowDefinitions="Auto, *">
                     <Grid Grid.Row="0" ColumnDefinitions="Auto, Auto, Auto, *" Margin="5" VerticalAlignment="Center">
                         <Button Grid.Column="0" Content="← Back" Command="{Binding CloseRequestDetailsCommand}" Margin="0,0,10,0"/>
@@ -192,7 +192,7 @@
         <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Padding="8,6">
             <Grid ColumnDefinitions="*,Auto">
                 <SelectableTextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontWeight="Bold" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1" Text="{Binding AppVersionDisplay}" VerticalAlignment="Center" Foreground="Gray"/>
+                <TextBlock Grid.Column="1" Text="{Binding AppVersionDisplay}" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
             </Grid>
         </Border>
     </Grid>
