@@ -70,6 +70,7 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Cached sessions from ReloadFromMcpAsyncInternal, consumed once by the auto-triggered ALL_JSON load.</summary>
     private IReadOnlyList<UnifiedSessionLog>? _cachedSessionsForAutoLoad;
     private Timer? _mcpAutoRefreshTimer;
+    private bool _isRefreshing;
 
     [ObservableProperty]
     private ObservableCollection<FileNode> _nodes = new();
@@ -524,10 +525,25 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private bool CanNavigateForward() => _forwardStack.Count > 0;
 
-    [RelayCommand]
-    private void Refresh() => _mediator.SendAsync(new Commands.RefreshViewCommand(this));
+    [RelayCommand(CanExecute = nameof(CanRefresh))]
+    private async Task RefreshAsync()
+    {
+        _isRefreshing = true;
+        RefreshCommand.NotifyCanExecuteChanged();
+        try
+        {
+            await _mediator.SendAsync(new Commands.RefreshViewCommand(this));
+        }
+        finally
+        {
+            _isRefreshing = false;
+            RefreshCommand.NotifyCanExecuteChanged();
+        }
+    }
 
-    public void RefreshInternal()
+    private bool CanRefresh() => !_isRefreshing;
+
+    public async Task RefreshInternalAsync()
     {
         if (SelectedNode != null)
         {
@@ -535,7 +551,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 IsMcpSessionNode(SelectedNode) ||
                 SelectedNode.Path.StartsWith("MCP_", StringComparison.OrdinalIgnoreCase))
             {
-                _ = ReloadFromMcpAsyncInternal();
+                await ReloadFromMcpAsyncInternal();
                 return;
             }
 
@@ -1173,17 +1189,17 @@ public partial class MainWindowViewModel : ViewModelBase
             GenerateAndNavigateInternal(SelectedNode);
     }
 
-    /// <summary>Starts an auto-refresh timer for MCP nodes (60s on Android, 10s elsewhere). Stops any existing timer first.</summary>
+    /// <summary>Starts an auto-refresh timer for MCP nodes (60s). Stops any existing timer first.</summary>
     private void StartMcpAutoRefresh()
     {
         StopMcpAutoRefresh();
-        var interval = OperatingSystem.IsAndroid() ? TimeSpan.FromMinutes(1) : TimeSpan.FromSeconds(10);
+        var interval = TimeSpan.FromMinutes(1);
         _mcpAutoRefreshTimer = new Timer(_ =>
         {
             DispatchToUi(() =>
             {
-                if (SelectedNode != null && IsMcpVirtualNode(SelectedNode))
-                    GenerateAndNavigateInternal(SelectedNode);
+                if (!_isRefreshing && SelectedNode != null && IsMcpVirtualNode(SelectedNode))
+                    _ = RefreshAsync();
             });
         }, null, interval, interval);
     }

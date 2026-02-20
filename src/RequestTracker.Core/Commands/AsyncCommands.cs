@@ -348,10 +348,9 @@ public sealed class RefreshCommand : ICommand
 
 public sealed class RefreshHandler : ICommandHandler<RefreshCommand>
 {
-    public Task ExecuteAsync(RefreshCommand command, CancellationToken cancellationToken = default)
+    public async Task ExecuteAsync(RefreshCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.RefreshInternal();
-        return Task.CompletedTask;
+        await command.ViewModel.RefreshInternalAsync();
     }
 }
 

@@ -47,10 +47,9 @@ public sealed class RefreshViewCommand : ICommand
 
 public sealed class RefreshViewHandler : ICommandHandler<RefreshViewCommand>
 {
-    public Task ExecuteAsync(RefreshViewCommand command, CancellationToken cancellationToken = default)
+    public async Task ExecuteAsync(RefreshViewCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.RefreshInternal();
-        return Task.CompletedTask;
+        await command.ViewModel.RefreshInternalAsync();
     }
 }
 
