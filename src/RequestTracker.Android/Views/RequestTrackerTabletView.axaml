@@ -27,7 +27,7 @@
                   VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}" DataType="models:FileNode">
-                    <SelectableTextBlock Text="{Binding Name}"/>
+                    <TextBlock Text="{Binding Name}"/>
                 </TreeDataTemplate>
             </TreeView.ItemTemplate>
             <TreeView.ItemContainerTheme>
@@ -140,10 +140,10 @@
                                     <StackPanel Orientation="Horizontal" Spacing="5" Background="Transparent" x:CompileBindings="False"
                                                 beh:DoubleTappedBehavior.Command="{Binding DataContext.JsonNodeDoubleTappedCommand, ElementName=ContentRoot}"
                                                 beh:DoubleTappedBehavior.CommandParameter="{Binding}">
-                                        <SelectableTextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="{DynamicResource JsonKeyBrush}"/>
-                                        <SelectableTextBlock Text=":" Foreground="{DynamicResource SubtleForeground}"/>
-                                        <SelectableTextBlock Text="{Binding Value}" Foreground="{DynamicResource JsonValueBrush}"/>
-                                        <SelectableTextBlock Text="{Binding Type}" Foreground="{DynamicResource SubtleForeground}" FontStyle="Italic" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="{DynamicResource JsonKeyBrush}"/>
+                                        <TextBlock Text=":" Foreground="{DynamicResource SubtleForeground}"/>
+                                        <TextBlock Text="{Binding Value}" Foreground="{DynamicResource JsonValueBrush}"/>
+                                        <TextBlock Text="{Binding Type}" Foreground="{DynamicResource SubtleForeground}" FontStyle="Italic" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0"/>
                                     </StackPanel>
                                 </TreeDataTemplate>
                             </TreeView.ItemTemplate>

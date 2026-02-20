@@ -83,13 +83,13 @@
                       <DataTemplate x:DataType="vm:TodoListEntry">
                         <Grid ColumnDefinitions="*,Auto" Margin="2">
                           <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <SelectableTextBlock Text="{Binding Item.Id}" FontWeight="SemiBold" FontSize="14"
+                            <TextBlock Text="{Binding Item.Id}" FontWeight="SemiBold" FontSize="14"
                                        TextTrimming="CharacterEllipsis"/>
-                            <SelectableTextBlock Text="{Binding Item.Title}" FontSize="13"
+                            <TextBlock Text="{Binding Item.Title}" FontSize="13"
                                        TextTrimming="CharacterEllipsis"
                                        Foreground="{DynamicResource SubtleForeground}"/>
                           </StackPanel>
-                          <SelectableTextBlock Grid.Column="1"
+                          <TextBlock Grid.Column="1"
                                      Text="{Binding Item.Section}" FontSize="13"
                                      Foreground="{DynamicResource SubtleForeground}" VerticalAlignment="Center"
                                      Margin="6,0,0,0"/>

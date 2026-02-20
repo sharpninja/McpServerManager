@@ -42,7 +42,7 @@
                   VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}" DataType="models:FileNode">
-                    <SelectableTextBlock Text="{Binding Name}"/>
+                    <TextBlock Text="{Binding Name}"/>
                 </TreeDataTemplate>
             </TreeView.ItemTemplate>
             <TreeView.ItemContainerTheme>
@@ -254,10 +254,10 @@
                                     <StackPanel Orientation="Horizontal" Spacing="5" Background="Transparent" x:CompileBindings="False"
                                                 beh:DoubleTappedBehavior.Command="{Binding DataContext.JsonNodeDoubleTappedCommand, ElementName=ContentRoot}"
                                                 beh:DoubleTappedBehavior.CommandParameter="{Binding}">
-                                        <SelectableTextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#007acc"/>
-                                        <SelectableTextBlock Text=":" Foreground="Gray"/>
-                                        <SelectableTextBlock Text="{Binding Value}" Foreground="#ce9178"/>
-                                        <SelectableTextBlock Text="{Binding Type}" Foreground="Gray" FontStyle="Italic" FontSize="12" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#007acc"/>
+                                        <TextBlock Text=":" Foreground="Gray"/>
+                                        <TextBlock Text="{Binding Value}" Foreground="#ce9178"/>
+                                        <TextBlock Text="{Binding Type}" Foreground="Gray" FontStyle="Italic" FontSize="12" VerticalAlignment="Center" Margin="5,0,0,0"/>
                                     </StackPanel>
                                 </TreeDataTemplate>
                             </TreeView.ItemTemplate>
