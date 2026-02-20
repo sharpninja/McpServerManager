@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 
 namespace RequestTracker.Android.Views;
@@ -12,7 +13,7 @@ namespace RequestTracker.Android.Views;
 public partial class AdaptiveMainView : UserControl
 {
     private const double TabletWidthThreshold = 600;
-    private bool _isTabletLayout;
+    private bool? _isTabletLayout;
     private Control? _currentView;
     private Panel? _hostPanel;
 
@@ -25,20 +26,40 @@ public partial class AdaptiveMainView : UserControl
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
-        UpdateLayout(e.NewSize.Width);
+        EvaluateLayout();
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        UpdateLayout(Bounds.Width);
+        // Also listen to Bounds property changes for Android config changes
+        this.GetObservable(BoundsProperty).Subscribe(new BoundsObserver(this));
+        EvaluateLayout();
     }
 
-    private void UpdateLayout(double availableWidth)
+    private sealed class BoundsObserver : IObserver<Rect>
     {
-        bool shouldBeTablet = availableWidth >= TabletWidthThreshold;
+        private readonly AdaptiveMainView _owner;
+        public BoundsObserver(AdaptiveMainView owner) => _owner = owner;
+        public void OnNext(Rect value) => _owner.EvaluateLayout();
+        public void OnError(Exception error) { }
+        public void OnCompleted() { }
+    }
 
-        if (_currentView != null && shouldBeTablet == _isTabletLayout)
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        EvaluateLayout(availableSize.Width);
+        return base.MeasureOverride(availableSize);
+    }
+
+    private void EvaluateLayout(double? widthOverride = null)
+    {
+        double width = widthOverride ?? Bounds.Width;
+        if (width <= 0) return;
+
+        bool shouldBeTablet = width >= TabletWidthThreshold;
+
+        if (_isTabletLayout.HasValue && shouldBeTablet == _isTabletLayout.Value)
             return;
 
         _isTabletLayout = shouldBeTablet;
