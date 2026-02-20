@@ -305,3 +305,113 @@ public sealed class OpenPromptTemplatesHandler : ICommandHandler<OpenPromptTempl
         return Task.CompletedTask;
     }
 }
+
+// --- Phone Navigation ---
+
+public sealed class PhoneNavigateSectionCommand : ICommand
+{
+    public MainWindowViewModel ViewModel { get; }
+    public string? SectionKey { get; }
+    public PhoneNavigateSectionCommand(MainWindowViewModel vm, string? sectionKey)
+    {
+        ViewModel = vm;
+        SectionKey = sectionKey;
+    }
+}
+
+public sealed class PhoneNavigateSectionHandler : ICommandHandler<PhoneNavigateSectionCommand>
+{
+    public Task ExecuteAsync(PhoneNavigateSectionCommand command, CancellationToken cancellationToken = default)
+    {
+        command.ViewModel.PhoneNavigateSectionInternal(command.SectionKey);
+        return Task.CompletedTask;
+    }
+}
+
+// --- Tree Item Tap ---
+
+public sealed class TreeItemTappedCommand : ICommand
+{
+    public MainWindowViewModel ViewModel { get; }
+    public Models.FileNode? Node { get; }
+    public TreeItemTappedCommand(MainWindowViewModel vm, Models.FileNode? node)
+    {
+        ViewModel = vm;
+        Node = node;
+    }
+}
+
+public sealed class TreeItemTappedHandler : ICommandHandler<TreeItemTappedCommand>
+{
+    public Task ExecuteAsync(TreeItemTappedCommand command, CancellationToken cancellationToken = default)
+    {
+        command.ViewModel.TreeItemTappedInternal(command.Node);
+        return Task.CompletedTask;
+    }
+}
+
+// --- JSON Node Double-Tap ---
+
+public sealed class JsonNodeDoubleTappedCommand : ICommand
+{
+    public MainWindowViewModel ViewModel { get; }
+    public Models.Json.JsonTreeNode? Node { get; }
+    public JsonNodeDoubleTappedCommand(MainWindowViewModel vm, Models.Json.JsonTreeNode? node)
+    {
+        ViewModel = vm;
+        Node = node;
+    }
+}
+
+public sealed class JsonNodeDoubleTappedHandler : ICommandHandler<JsonNodeDoubleTappedCommand>
+{
+    public Task ExecuteAsync(JsonNodeDoubleTappedCommand command, CancellationToken cancellationToken = default)
+    {
+        command.ViewModel.JsonNodeDoubleTappedInternal(command.Node);
+        return Task.CompletedTask;
+    }
+}
+
+// --- Search Row Tap ---
+
+public sealed class SearchRowTappedCommand : ICommand
+{
+    public MainWindowViewModel ViewModel { get; }
+    public Models.Json.SearchableEntry? Entry { get; }
+    public SearchRowTappedCommand(MainWindowViewModel vm, Models.Json.SearchableEntry? entry)
+    {
+        ViewModel = vm;
+        Entry = entry;
+    }
+}
+
+public sealed class SearchRowTappedHandler : ICommandHandler<SearchRowTappedCommand>
+{
+    public Task ExecuteAsync(SearchRowTappedCommand command, CancellationToken cancellationToken = default)
+    {
+        command.ViewModel.SearchRowTappedInternal(command.Entry);
+        return Task.CompletedTask;
+    }
+}
+
+// --- Search Row Double-Tap ---
+
+public sealed class SearchRowDoubleTappedCommand : ICommand
+{
+    public MainWindowViewModel ViewModel { get; }
+    public Models.Json.SearchableEntry? Entry { get; }
+    public SearchRowDoubleTappedCommand(MainWindowViewModel vm, Models.Json.SearchableEntry? entry)
+    {
+        ViewModel = vm;
+        Entry = entry;
+    }
+}
+
+public sealed class SearchRowDoubleTappedHandler : ICommandHandler<SearchRowDoubleTappedCommand>
+{
+    public Task ExecuteAsync(SearchRowDoubleTappedCommand command, CancellationToken cancellationToken = default)
+    {
+        command.ViewModel.SearchRowDoubleTappedInternal(command.Entry);
+        return Task.CompletedTask;
+    }
+}

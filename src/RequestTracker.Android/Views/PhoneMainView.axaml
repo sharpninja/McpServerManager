@@ -7,6 +7,7 @@
              xmlns:jsonModels="using:RequestTracker.Core.Models.Json"
              xmlns:conv="using:RequestTracker.Core.Converters"
              xmlns:beh="using:RequestTracker.Core.Behaviors"
+             xmlns:views="using:RequestTracker.Android.Views"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
              x:Class="RequestTracker.Android.Views.PhoneMainView"
              x:Name="Root"
@@ -139,11 +140,11 @@
         </Grid>
 
         <!-- Status Bar -->
-        <Border Grid.Row="3" Padding="8,4" Background="{DynamicResource StatusBarBrush}">
+        <views:AnimatedStatusBar Grid.Row="3" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
             <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                 <TextBlock Grid.Column="1" Text="{Binding AppVersionDisplay}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
             </Grid>
-        </Border>
+        </views:AnimatedStatusBar>
     </Grid>
 </UserControl>

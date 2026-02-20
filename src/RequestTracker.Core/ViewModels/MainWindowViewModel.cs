@@ -44,9 +44,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private const string McpAgentPrefix = "MCP_AGENT://";
 
     private readonly IClipboardService _clipboardService;
-    private readonly McpSessionLogService _mcpSessionService;
-    private List<UnifiedSessionLog> _mcpSessions = new();
-    private Dictionary<string, UnifiedSessionLog> _mcpSessionsByPath = new(StringComparer.OrdinalIgnoreCase);
+    internal readonly McpSessionLogService McpSessionService;
+    internal readonly Mediator _mediator = new();
+    internal List<UnifiedSessionLog> _mcpSessions = new();
+    internal Dictionary<string, UnifiedSessionLog> _mcpSessionsByPath = new(StringComparer.OrdinalIgnoreCase);
     private Timer? _mcpAutoRefreshTimer;
 
     [ObservableProperty]
@@ -83,6 +84,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [RelayCommand]
     private void PhoneNavigateSection(string? sectionKey)
+        => _mediator.SendAsync(new Commands.PhoneNavigateSectionCommand(this, sectionKey));
+
+    internal void PhoneNavigateSectionInternal(string? sectionKey)
     {
         IsPhoneSessionsVisible = sectionKey == "Sessions";
         IsPhoneViewerVisible = sectionKey == "Viewer";
@@ -157,6 +161,10 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _statusMessage = "Ready";
 
+    /// <summary>True while an async operation (MCP refresh, JSON load, etc.) is in progress.</summary>
+    [ObservableProperty]
+    private bool _isBusy;
+
     /// <summary>True when markdown preview was opened in the system browser.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowMarkdownLoadingPlaceholder))]
@@ -204,18 +212,75 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel(IClipboardService clipboardService)
     {
         _clipboardService = clipboardService;
-        _mcpSessionService = new McpSessionLogService(GetMcpBaseUrl());
+        McpSessionService = new McpSessionLogService(GetMcpBaseUrl());
+        RegisterCqrsHandlers();
     }
 
     public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl)
     {
         _clipboardService = clipboardService;
-        _mcpSessionService = new McpSessionLogService(mcpBaseUrl);
+        McpSessionService = new McpSessionLogService(mcpBaseUrl);
+        RegisterCqrsHandlers();
+    }
+
+    private void RegisterCqrsHandlers()
+    {
+        // Async operations (data loading)
+        _mediator.Register(new Commands.InitializeFromMcpHandler());
+        _mediator.Register(new Commands.RefreshAndLoadAllJsonHandler());
+        _mediator.Register(new Commands.RefreshAndLoadAgentJsonHandler());
+        _mediator.Register(new Commands.RefreshAndLoadSessionHandler());
+        _mediator.Register(new Commands.LoadJsonFileHandler());
+        _mediator.Register(new Commands.NavigateToNodeHandler());
+        _mediator.Register(new Commands.LoadMarkdownFileHandler());
+        _mediator.Register(new Commands.LoadSourceFileHandler());
+
+        // Navigation
+        _mediator.Register(new Commands.NavigateBackHandler());
+        _mediator.Register(new Commands.NavigateForwardHandler());
+        _mediator.Register(new Commands.RefreshViewHandler());
+        _mediator.Register(new Commands.PhoneNavigateSectionHandler());
+        _mediator.Register(new Commands.TreeItemTappedHandler());
+
+        // Request details
+        _mediator.Register(new Commands.ShowRequestDetailsHandler());
+        _mediator.Register(new Commands.CloseRequestDetailsHandler());
+        _mediator.Register(new Commands.NavigateToPreviousRequestHandler());
+        _mediator.Register(new Commands.NavigateToNextRequestHandler());
+
+        // Selection & interaction
+        _mediator.Register(new Commands.SelectSearchEntryHandler());
+        _mediator.Register(new Commands.JsonNodeDoubleTappedHandler());
+        _mediator.Register(new Commands.SearchRowTappedHandler());
+        _mediator.Register(new Commands.SearchRowDoubleTappedHandler());
+
+        // Clipboard
+        _mediator.Register(new Commands.CopyTextHandler());
+        _mediator.Register(new Commands.CopyOriginalJsonHandler());
+
+        // Preview/Markdown
+        _mediator.Register(new Commands.OpenPreviewInBrowserHandler());
+        _mediator.Register(new Commands.ToggleShowRawMarkdownHandler());
+
+        // Archive
+        _mediator.Register(new Commands.ArchiveCurrentHandler());
+        _mediator.Register(new Commands.ArchiveTreeItemHandler());
+
+        // Tree & config
+        _mediator.Register(new Commands.OpenTreeItemHandler());
+        _mediator.Register(new Commands.OpenAgentConfigHandler());
+        _mediator.Register(new Commands.OpenPromptTemplatesHandler());
+
+        // Refresh
+        _mediator.Register(new Commands.RefreshHandler());
     }
 
     /// <summary>Command for tree item tap (handles directory expand/collapse and MCP node refresh).</summary>
     [RelayCommand]
     private void TreeItemTapped(FileNode? node)
+        => _mediator.SendAsync(new Commands.TreeItemTappedCommand(this, node));
+
+    internal void TreeItemTappedInternal(FileNode? node)
     {
         if (node == null) return;
         if (IsMcpVirtualNode(node) && SelectedNode == node)
@@ -225,6 +290,16 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         if (node.IsDirectory)
         {
+            // Root "All JSON" node: select it to load/refresh aggregated JSON
+            if (Nodes.Contains(node))
+            {
+                if (SelectedNode == node)
+                    GenerateAndNavigateInternal(node);
+                else
+                    SelectedNode = node;
+                return;
+            }
+
             bool expanding = !node.IsExpanded;
             node.IsExpanded = expanding;
 
@@ -248,6 +323,9 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Command for JSON tree node double-tap (navigate to details or copy text).</summary>
     [RelayCommand]
     private void JsonNodeDoubleTapped(JsonTreeNode? node)
+        => _mediator.SendAsync(new Commands.JsonNodeDoubleTappedCommand(this, node));
+
+    internal void JsonNodeDoubleTappedInternal(JsonTreeNode? node)
     {
         if (node == null) return;
         if (!string.IsNullOrEmpty(node.SourcePath))
@@ -257,6 +335,9 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Command for search row single-tap (select entry).</summary>
     [RelayCommand]
     private void SearchRowTapped(SearchableEntry? entry)
+        => _mediator.SendAsync(new Commands.SearchRowTappedCommand(this, entry));
+
+    internal void SearchRowTappedInternal(SearchableEntry? entry)
     {
         if (entry != null)
             SelectedSearchEntry = entry;
@@ -265,6 +346,9 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Command for search row double-tap (open request details).</summary>
     [RelayCommand]
     private void SearchRowDoubleTapped(SearchableEntry? entry)
+        => _mediator.SendAsync(new Commands.SearchRowDoubleTappedCommand(this, entry));
+
+    internal void SearchRowDoubleTappedInternal(SearchableEntry? entry)
     {
         if (entry?.UnifiedEntry != null)
             ShowRequestDetailsInternal(entry);
@@ -287,32 +371,19 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Called by MainWindow when it has opened. Builds the file tree off the UI thread and applies on UI; starts the watcher.</summary>
     public void InitializeAfterWindowShown()
     {
-        DispatchToUi(() => StatusMessage = "Loading sessions from MCP...");
-        Task.Run(async () =>
-        {
-            try
-            {
-                OllamaLogAgentService.TryStartOllamaIfNeeded();
-                await ReloadFromMcpAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"InitializeAfterWindowShown failed: {ex}");
-                DispatchToUi(() => SetStatus($"Failed to load tree: {ex.Message}"));
-            }
-        });
+        _ = _mediator.SendAsync(new Commands.InitializeFromMcpCommand(this));
     }
 
     partial void OnSearchQueryChanged(string value)
     {
-        UpdateFilteredSearchEntries();
+        UpdateFilteredSearchEntriesInternal();
     }
 
-    partial void OnRequestIdFilterChanged(string value) => UpdateFilteredSearchEntries();
-    partial void OnDisplayFilterChanged(string value) => UpdateFilteredSearchEntries();
-    partial void OnModelFilterChanged(string value) => UpdateFilteredSearchEntries();
-    partial void OnTimestampFilterChanged(string value) => UpdateFilteredSearchEntries();
-    partial void OnAgentFilterChanged(string value) => UpdateFilteredSearchEntries();
+    partial void OnRequestIdFilterChanged(string value) => UpdateFilteredSearchEntriesInternal();
+    partial void OnDisplayFilterChanged(string value) => UpdateFilteredSearchEntriesInternal();
+    partial void OnModelFilterChanged(string value) => UpdateFilteredSearchEntriesInternal();
+    partial void OnTimestampFilterChanged(string value) => UpdateFilteredSearchEntriesInternal();
+    partial void OnAgentFilterChanged(string value) => UpdateFilteredSearchEntriesInternal();
 
     partial void OnSelectedSearchEntryChanged(SearchableEntry? value)
     {
@@ -325,7 +396,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private void UpdateFilteredSearchEntries()
+    internal void UpdateFilteredSearchEntriesInternal()
     {
         var q = (SearchQuery ?? "").Trim();
         var rid = (RequestIdFilter ?? "").Trim().ToLowerInvariant();
@@ -376,7 +447,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand(CanExecute = nameof(CanNavigateBack))]
-    private void NavigateBack() => NavigateBackInternal();
+    private void NavigateBack() => _mediator.SendAsync(new Commands.NavigateBackCommand(this));
 
     public void NavigateBackInternal()
     {
@@ -395,7 +466,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool CanNavigateBack() => _backStack.Count > 0;
 
     [RelayCommand(CanExecute = nameof(CanNavigateForward))]
-    private void NavigateForward() => NavigateForwardInternal();
+    private void NavigateForward() => _mediator.SendAsync(new Commands.NavigateForwardCommand(this));
 
     public void NavigateForwardInternal()
     {
@@ -414,7 +485,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool CanNavigateForward() => _forwardStack.Count > 0;
 
     [RelayCommand]
-    private void Refresh() => RefreshInternal();
+    private void Refresh() => _mediator.SendAsync(new Commands.RefreshViewCommand(this));
 
     public void RefreshInternal()
     {
@@ -424,7 +495,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 IsMcpSessionNode(SelectedNode) ||
                 SelectedNode.Path.StartsWith("MCP_", StringComparison.OrdinalIgnoreCase))
             {
-                _ = ReloadFromMcpAsync();
+                _ = ReloadFromMcpAsyncInternal();
                 return;
             }
 
@@ -436,7 +507,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
              if (File.Exists(tempPath)) File.Delete(tempPath);
 
-             GenerateAndNavigate(SelectedNode);
+             GenerateAndNavigateInternal(SelectedNode);
         }
     }
 
@@ -474,7 +545,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ShowRequestDetails(SearchableEntry entry) => ShowRequestDetailsInternal(entry);
+    private void ShowRequestDetails(SearchableEntry entry) => _mediator.SendAsync(new Commands.ShowRequestDetailsCommand(this, entry));
 
     public void ShowRequestDetailsInternal(SearchableEntry entry)
     {
@@ -758,7 +829,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void SelectSearchEntry(SearchableEntry entry) => SelectSearchEntryInternal(entry);
+    private void SelectSearchEntry(SearchableEntry entry) => _mediator.SendAsync(new Commands.SelectSearchEntryCommand(this, entry));
 
     public void SelectSearchEntryInternal(SearchableEntry entry)
     {
@@ -767,7 +838,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void CloseRequestDetails() => CloseRequestDetailsInternal();
+    private void CloseRequestDetails() => _mediator.SendAsync(new Commands.CloseRequestDetailsCommand(this));
 
     public void CloseRequestDetailsInternal()
     {
@@ -806,7 +877,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand(CanExecute = nameof(CanNavigateToPreviousRequest))]
-    private void NavigateToPreviousRequest() => NavigateToPreviousRequestInternal();
+    private void NavigateToPreviousRequest() => _mediator.SendAsync(new Commands.NavigateToPreviousRequestCommand(this));
 
     public void NavigateToPreviousRequestInternal()
     {
@@ -821,7 +892,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand(CanExecute = nameof(CanNavigateToNextRequest))]
-    private void NavigateToNextRequest() => NavigateToNextRequestInternal();
+    private void NavigateToNextRequest() => _mediator.SendAsync(new Commands.NavigateToNextRequestCommand(this));
 
     public void NavigateToNextRequestInternal()
     {
@@ -865,7 +936,7 @@ public partial class MainWindowViewModel : ViewModelBase
             ExpandToNode(Nodes, value);
             return;
         }
-        GenerateAndNavigate(value);
+        GenerateAndNavigateInternal(value);
         if (value != null)
         {
              ExpandToNode(Nodes, value);
@@ -873,7 +944,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task CopyText(string text) => await CopyTextInternal(text);
+    private async Task CopyText(string text) => await _mediator.SendAsync(new Commands.CopyTextCommand(this, text));
 
     public async Task CopyTextInternal(string text)
     {
@@ -885,7 +956,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task CopyOriginalJson(UnifiedRequestEntry? entry) => await CopyOriginalJsonInternal(entry);
+    private async Task CopyOriginalJson(UnifiedRequestEntry? entry) => await _mediator.SendAsync(new Commands.CopyOriginalJsonCommand(this, entry));
 
     public async Task CopyOriginalJsonInternal(UnifiedRequestEntry? entry)
     {
@@ -1059,7 +1130,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public void RefreshCurrentMcpNode()
     {
         if (SelectedNode != null && IsMcpVirtualNode(SelectedNode))
-            GenerateAndNavigate(SelectedNode);
+            GenerateAndNavigateInternal(SelectedNode);
     }
 
     /// <summary>Starts an auto-refresh timer for MCP nodes (60s on Android, 10s elsewhere). Stops any existing timer first.</summary>
@@ -1072,7 +1143,7 @@ public partial class MainWindowViewModel : ViewModelBase
             DispatchToUi(() =>
             {
                 if (SelectedNode != null && IsMcpVirtualNode(SelectedNode))
-                    GenerateAndNavigate(SelectedNode);
+                    GenerateAndNavigateInternal(SelectedNode);
             });
         }, null, interval, interval);
     }
@@ -1088,51 +1159,44 @@ public partial class MainWindowViewModel : ViewModelBase
             ? virtualPath.Substring(McpAgentPrefix.Length).Trim()
             : virtualPath.Trim();
 
-    private static string BuildMcpSessionPath(string sourceType, string sessionId) =>
+    internal static string BuildMcpSessionPath(string sourceType, string sessionId) =>
         $"{McpSessionPrefix}{sourceType}/{sessionId}";
 
-    private static DateTime GetSessionSortTimestamp(UnifiedSessionLog s) =>
+    internal static DateTime GetSessionSortTimestamp(UnifiedSessionLog s) =>
         s.LastUpdated ?? s.Started ?? DateTime.MinValue;
 
-    private static IEnumerable<UnifiedSessionLog> OrderSessionsNewestFirst(IEnumerable<UnifiedSessionLog> sessions) =>
+    internal static IEnumerable<UnifiedSessionLog> OrderSessionsNewestFirst(IEnumerable<UnifiedSessionLog> sessions) =>
         sessions
             .OrderByDescending(GetSessionSortTimestamp)
             .ThenByDescending(s => s.SessionId ?? "", StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Re-fetches session data from the MCP server (without rebuilding the tree) then invokes the load callback on the UI thread.</summary>
-    private void RefreshMcpSessionsThenLoad(Action loadCallback)
+    /// <summary>Builds a path-keyed dictionary of sessions, keeping the newest per path.</summary>
+    internal Dictionary<string, UnifiedSessionLog> BuildSessionsByPathDict(IReadOnlyList<UnifiedSessionLog> sessions)
     {
-        StatusMessage = "Refreshing from MCP...";
-        _ = Task.Run(async () =>
+        var byPath = new Dictionary<string, UnifiedSessionLog>(StringComparer.OrdinalIgnoreCase);
+        foreach (var s in sessions)
         {
-            try
-            {
-                var sessions = await _mcpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(false);
-                var byPath = new Dictionary<string, UnifiedSessionLog>(StringComparer.OrdinalIgnoreCase);
-                foreach (var s in sessions)
-                {
-                    var path = BuildMcpSessionPath(s.SourceType ?? "Unknown", s.SessionId ?? "");
-                    if (!byPath.TryGetValue(path, out var existing) || GetSessionSortTimestamp(s) >= GetSessionSortTimestamp(existing))
-                        byPath[path] = s;
-                }
-                var uniqueSessions = OrderSessionsNewestFirst(byPath.Values).ToList();
-                DispatchToUi(() =>
-                {
-                    _mcpSessions = uniqueSessions;
-                    _mcpSessionsByPath = byPath;
-                    loadCallback();
-                });
-            }
-            catch (Exception ex)
-            {
-                DispatchToUi(() => StatusMessage = $"MCP refresh failed: {ex.Message}");
-            }
-        });
+            var path = BuildMcpSessionPath(s.SourceType ?? "Unknown", s.SessionId ?? "");
+            if (!byPath.TryGetValue(path, out var existing) || GetSessionSortTimestamp(s) >= GetSessionSortTimestamp(existing))
+                byPath[path] = s;
+        }
+        return byPath;
     }
 
-    private async Task ReloadFromMcpAsync()
+    /// <summary>Deduplicates and orders sessions newest-first.</summary>
+    internal List<UnifiedSessionLog> OrderAndDeduplicateSessions(Dictionary<string, UnifiedSessionLog> byPath)
+        => OrderSessionsNewestFirst(byPath.Values).ToList();
+
+    /// <summary>Updates the cached MCP session state on the UI thread.</summary>
+    internal void SetMcpSessionState(List<UnifiedSessionLog> sessions, Dictionary<string, UnifiedSessionLog> byPath)
     {
-        var sessions = await _mcpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(false);
+        _mcpSessions = sessions;
+        _mcpSessionsByPath = byPath;
+    }
+
+    internal async Task ReloadFromMcpAsyncInternal()
+    {
+        var sessions = await McpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(false);
         var byPath = new Dictionary<string, UnifiedSessionLog>(StringComparer.OrdinalIgnoreCase);
         foreach (var s in sessions)
         {
@@ -1240,7 +1304,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
 
     /// <summary>Dispatches an action to the UI thread. Use for any property/collection updates from background work.</summary>
-    private void DispatchToUi(Action action)
+    internal void DispatchToUi(Action action)
     {
         if (Dispatcher.UIThread.CheckAccess())
             action();
@@ -1264,7 +1328,7 @@ public partial class MainWindowViewModel : ViewModelBase
         return text;
     }
 
-    private void GenerateAndNavigate(FileNode? node)
+    internal void GenerateAndNavigateInternal(FileNode? node)
     {
          CancelMarkdownPreview();
          IsPreviewOpenedInBrowser = false;
@@ -1301,7 +1365,7 @@ public partial class MainWindowViewModel : ViewModelBase
              IsMarkdownVisible = false;
              if (!preserveDetailsView) IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
-             RefreshMcpSessionsThenLoad(() => LoadAllJson());
+             _ = _mediator.SendAsync(new Commands.RefreshAndLoadAllJsonCommand(this));
              return;
          }
 
@@ -1311,7 +1375,7 @@ public partial class MainWindowViewModel : ViewModelBase
              if (!preserveDetailsView) IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
              var agentName = GetAgentNameFromVirtualPath(node.Path);
-             RefreshMcpSessionsThenLoad(() => LoadAllJson(agentName));
+             _ = _mediator.SendAsync(new Commands.RefreshAndLoadAgentJsonCommand(this, agentName));
              return;
          }
 
@@ -1321,7 +1385,7 @@ public partial class MainWindowViewModel : ViewModelBase
              if (!preserveDetailsView) IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
              var virtualPath = node.Path;
-             RefreshMcpSessionsThenLoad(() => LoadMcpSession(virtualPath));
+             _ = _mediator.SendAsync(new Commands.RefreshAndLoadSessionCommand(this, virtualPath));
              return;
          }
 
@@ -1332,61 +1396,13 @@ public partial class MainWindowViewModel : ViewModelBase
              IsMarkdownVisible = false;
              if (!preserveDetailsView) IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
-             LoadJson(node.Path);
+             _ = _mediator.SendAsync(new Commands.LoadJsonFileCommand(this, node.Path));
              return;
          }
 
          if (node.Path.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
          {
-             IsMarkdownVisible = true;
-             IsJsonVisible = false;
-             ShowMarkdownAsRawText = false;
-             _currentMarkdownPath = node.Path;
-             CurrentPreviewHtmlPath = null;
-             ArchiveCommand.NotifyCanExecuteChanged();
-             NotifyContextConsumer();
-
-             string pathForThisPreview = Path.GetFullPath(node.Path);
-
-             _markdownPreviewCts?.Dispose();
-             _markdownPreviewCts = new CancellationTokenSource();
-             var token = _markdownPreviewCts.Token;
-
-             // Load raw markdown immediately and show in Markdown.Avalonia (no pandoc required for in-app preview)
-             _ = Task.Run(async () =>
-             {
-                 string markdownText;
-                 try
-                 {
-                     markdownText = await ReadTextFileWithEncodingAsync(pathForThisPreview);
-                 }
-                 catch (Exception ex)
-                 {
-                     markdownText = "";
-                     DispatchToUi(() =>
-                     {
-                         if (_currentMarkdownPath != node.Path) return;
-                         CurrentPreviewMarkdownText = "Could not read file: " + ex.Message;
-                         IsPreviewOpenedInBrowser = true;
-                     });
-                     return;
-                 }
-                 if (token.IsCancellationRequested) return;
-                 // Make preview area visible first, then set content so MarkdownScrollViewer refreshes reliably
-                 DispatchToUi(() =>
-                 {
-                     if (token.IsCancellationRequested || _currentMarkdownPath != node.Path) return;
-                     CurrentPreviewMarkdownText = "";
-                     IsPreviewOpenedInBrowser = true;
-                     StatusMessage = "Markdown loaded.";
-                 });
-                 if (token.IsCancellationRequested) return;
-                 DispatchToUi(() =>
-                 {
-                     if (token.IsCancellationRequested || _currentMarkdownPath != node.Path) return;
-                     CurrentPreviewMarkdownText = markdownText ?? "";
-                 });
-             });
+             _ = _mediator.SendAsync(new Commands.LoadMarkdownFileCommand(this, node));
              return;
          }
 
@@ -1396,50 +1412,106 @@ public partial class MainWindowViewModel : ViewModelBase
              var ext = Path.GetExtension(node.Path);
              if (!string.IsNullOrEmpty(ext) && IsCodeFile(ext))
              {
-                 IsMarkdownVisible = true;
-                 IsJsonVisible = false;
-                 _currentMarkdownPath = node.Path;
-                 CurrentPreviewHtmlPath = null;
-                 ArchiveCommand.NotifyCanExecuteChanged();
-                 NotifyContextConsumer();
-
-                 string pathForThisPreview = node.Path;
-                 _markdownPreviewCts?.Dispose();
-                 _markdownPreviewCts = new CancellationTokenSource();
-                 var token = _markdownPreviewCts.Token;
-
-                 _ = Task.Run(async () =>
-                 {
-                     string content;
-                     try
-                     {
-                         content = await File.ReadAllTextAsync(pathForThisPreview);
-                     }
-                     catch (Exception ex)
-                     {
-                         content = "";
-                         DispatchToUi(() =>
-                         {
-                             if (_currentMarkdownPath != pathForThisPreview) return;
-                             CurrentPreviewMarkdownText = "Could not read file: " + ex.Message;
-                             IsPreviewOpenedInBrowser = true;
-                         });
-                         return;
-                     }
-                     if (token.IsCancellationRequested) return;
-                     var lang = GetCodeBlockLanguage(pathForThisPreview);
-                     var markdownText = $"```{lang}\n{content}\n```";
-                     DispatchToUi(() =>
-                     {
-                         if (token.IsCancellationRequested || _currentMarkdownPath != pathForThisPreview) return;
-                         CurrentPreviewMarkdownText = markdownText;
-                         IsPreviewOpenedInBrowser = true;
-                         StatusMessage = "Source file loaded.";
-                     });
-                 });
+                 _ = _mediator.SendAsync(new Commands.LoadSourceFileCommand(this, node));
                  return;
              }
          }
+    }
+
+    internal void LoadMarkdownFileInternal(FileNode node)
+    {
+         IsMarkdownVisible = true;
+         IsJsonVisible = false;
+         ShowMarkdownAsRawText = false;
+         _currentMarkdownPath = node.Path;
+         CurrentPreviewHtmlPath = null;
+         ArchiveCommand.NotifyCanExecuteChanged();
+         NotifyContextConsumer();
+
+         string pathForThisPreview = Path.GetFullPath(node.Path);
+
+         _markdownPreviewCts?.Dispose();
+         _markdownPreviewCts = new CancellationTokenSource();
+         var token = _markdownPreviewCts.Token;
+
+         _ = Task.Run(async () =>
+         {
+             string markdownText;
+             try
+             {
+                 markdownText = await ReadTextFileWithEncodingAsync(pathForThisPreview);
+             }
+             catch (Exception ex)
+             {
+                 markdownText = "";
+                 DispatchToUi(() =>
+                 {
+                     if (_currentMarkdownPath != node.Path) return;
+                     CurrentPreviewMarkdownText = "Could not read file: " + ex.Message;
+                     IsPreviewOpenedInBrowser = true;
+                 });
+                 return;
+             }
+             if (token.IsCancellationRequested) return;
+             DispatchToUi(() =>
+             {
+                 if (token.IsCancellationRequested || _currentMarkdownPath != node.Path) return;
+                 CurrentPreviewMarkdownText = "";
+                 IsPreviewOpenedInBrowser = true;
+                 StatusMessage = "Markdown loaded.";
+             });
+             if (token.IsCancellationRequested) return;
+             DispatchToUi(() =>
+             {
+                 if (token.IsCancellationRequested || _currentMarkdownPath != node.Path) return;
+                 CurrentPreviewMarkdownText = markdownText ?? "";
+             });
+         });
+    }
+
+    internal void LoadSourceFileInternal(FileNode node)
+    {
+         IsMarkdownVisible = true;
+         IsJsonVisible = false;
+         _currentMarkdownPath = node.Path;
+         CurrentPreviewHtmlPath = null;
+         ArchiveCommand.NotifyCanExecuteChanged();
+         NotifyContextConsumer();
+
+         string pathForThisPreview = node.Path;
+         _markdownPreviewCts?.Dispose();
+         _markdownPreviewCts = new CancellationTokenSource();
+         var token = _markdownPreviewCts.Token;
+
+         _ = Task.Run(async () =>
+         {
+             string content;
+             try
+             {
+                 content = await File.ReadAllTextAsync(pathForThisPreview);
+             }
+             catch (Exception ex)
+             {
+                 content = "";
+                 DispatchToUi(() =>
+                 {
+                     if (_currentMarkdownPath != pathForThisPreview) return;
+                     CurrentPreviewMarkdownText = "Could not read file: " + ex.Message;
+                     IsPreviewOpenedInBrowser = true;
+                 });
+                 return;
+             }
+             if (token.IsCancellationRequested) return;
+             var lang = GetCodeBlockLanguage(pathForThisPreview);
+             var markdownText = $"```{lang}\n{content}\n```";
+             DispatchToUi(() =>
+             {
+                 if (token.IsCancellationRequested || _currentMarkdownPath != pathForThisPreview) return;
+                 CurrentPreviewMarkdownText = markdownText;
+                 IsPreviewOpenedInBrowser = true;
+                 StatusMessage = "Source file loaded.";
+             });
+         });
     }
 
     private static string GetCodeBlockLanguage(string filePath)
@@ -1452,7 +1524,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     /// <summary>Removes duplicate entries by RequestId (case-insensitive). Keeps the first occurrence when ordered by timestamp descending (newest wins). Entries with empty RequestId are not deduplicated.</summary>
-    private static List<UnifiedRequestEntry> DeduplicateUnifiedEntries(List<UnifiedRequestEntry> orderedByNewestFirst)
+    internal static List<UnifiedRequestEntry> DeduplicateUnifiedEntries(List<UnifiedRequestEntry> orderedByNewestFirst)
     {
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var result = new List<UnifiedRequestEntry>();
@@ -1466,104 +1538,6 @@ public partial class MainWindowViewModel : ViewModelBase
             result.Add(e);
         }
         return result;
-    }
-
-    private void LoadMcpSession(string virtualPath)
-    {
-        if (!_mcpSessionsByPath.TryGetValue(virtualPath, out var session))
-        {
-            StatusMessage = "Session not found. Click Refresh.";
-            return;
-        }
-
-        JsonTree.Clear();
-        SearchableEntries.Clear();
-        JsonLogSummary = new JsonLogSummary();
-
-        var summary = new JsonLogSummary();
-        BuildUnifiedSummaryAndIndex(session, summary);
-        summary.SummaryLines.Clear();
-        summary.SummaryLines.Add($"Type: {session.SourceType}");
-        summary.SummaryLines.Add($"Session: {session.SessionId}");
-        summary.SummaryLines.Add($"Entries: {session.EntryCount}");
-        if (!string.IsNullOrEmpty(session.Model))
-            summary.SummaryLines.Add($"Model: {session.Model}");
-        if (session.LastUpdated.HasValue)
-            summary.SummaryLines.Add($"Last Updated: {session.LastUpdated}");
-        JsonLogSummary = summary;
-
-        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = false };
-        var unifiedNode = JsonSerializer.SerializeToNode(session, options);
-        var root = new JsonTreeNode("Root", $"{session.SourceType} (Unified)", "Object");
-        root.IsExpanded = true;
-        BuildJsonTree(unifiedNode, root, null);
-        JsonTree.Add(root);
-
-        UpdateFilteredSearchEntries();
-        StatusMessage = $"Loaded {session.SourceType}/{session.SessionId}";
-    }
-
-    private void LoadAllJson(string? preselectedAgent = null)
-    {
-        DispatchToUi(() => StatusMessage = "Aggregating sessions from MCP...");
-
-        Task.Run(() =>
-        {
-            try
-            {
-                foreach (var log in _mcpSessions)
-                {
-                    var agent = string.IsNullOrWhiteSpace(log.SourceType) ? "Unknown" : log.SourceType.Trim();
-                    if (log.Entries == null) continue;
-                    foreach (var entry in log.Entries)
-                    {
-                        if (entry != null && string.IsNullOrWhiteSpace(entry.Agent))
-                            entry.Agent = agent;
-                    }
-                }
-
-                var allEntries = _mcpSessions.SelectMany(l => l.Entries).OrderByDescending(e => e.Timestamp).ToList();
-                var deduped = DeduplicateUnifiedEntries(allEntries);
-
-                var masterLog = new UnifiedSessionLog
-                {
-                    SourceType = "Aggregated",
-                    SessionId = "ALL-JSON",
-                    Title = "All Requests",
-                    Model = "Various",
-                    Started = DateTime.Now,
-                    Status = "Aggregated",
-                    EntryCount = deduped.Count,
-                    Entries = deduped,
-                    TotalTokens = _mcpSessions.Sum(l => l.TotalTokens)
-                };
-
-                var reqCount = deduped.Count;
-                var sessionCount = _mcpSessions.Count;
-                DispatchToUi(() =>
-                {
-                    try
-                    {
-                        BuildUnifiedSummaryAndIndex(masterLog);
-                        AgentFilter = string.IsNullOrWhiteSpace(preselectedAgent) ? "" : preselectedAgent.Trim();
-                        StatusMessage = string.IsNullOrWhiteSpace(preselectedAgent)
-                            ? $"Loaded {reqCount} requests from {sessionCount} sessions."
-                            : $"Loaded {reqCount} requests from {sessionCount} sessions. Filtered by agent: {AgentFilter}.";
-                    }
-                    catch (Exception ex)
-                    {
-                        StatusMessage = $"Error building UI: {ex.Message}";
-                        Console.WriteLine($"UI Build Error: {ex}");
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                var msg = ex.Message;
-                DispatchToUi(() => StatusMessage = $"Error aggregating MCP sessions: {msg}");
-                Console.WriteLine($"Aggregation Error: {ex}");
-            }
-        });
     }
 
     /// <summary>
@@ -1604,7 +1578,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void OpenPreviewInBrowser() => OpenPreviewInBrowserInternal();
+    private void OpenPreviewInBrowser() => _mediator.SendAsync(new Commands.OpenPreviewInBrowserCommand(this));
 
     public void OpenPreviewInBrowserInternal()
     {
@@ -1617,7 +1591,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ToggleShowRawMarkdown() => ToggleShowRawMarkdownInternal();
+    private void ToggleShowRawMarkdown() => _mediator.SendAsync(new Commands.ToggleShowRawMarkdownCommand(this));
 
     public void ToggleShowRawMarkdownInternal()
     {
@@ -1625,7 +1599,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void OpenAgentConfig() => OpenAgentConfigInternal();
+    private void OpenAgentConfig() => _mediator.SendAsync(new Commands.OpenAgentConfigCommand(this));
 
     public void OpenAgentConfigInternal()
     {
@@ -1634,7 +1608,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void OpenPromptTemplates() => OpenPromptTemplatesInternal();
+    private void OpenPromptTemplates() => _mediator.SendAsync(new Commands.OpenPromptTemplatesCommand(this));
 
     public void OpenPromptTemplatesInternal()
     {
@@ -1690,7 +1664,7 @@ public partial class MainWindowViewModel : ViewModelBase
         !IsArchivedName(Path.GetFileName(_currentMarkdownPath));
 
     [RelayCommand(CanExecute = nameof(CanArchive))]
-    private void Archive() => ArchiveInternal();
+    private void Archive() => _mediator.SendAsync(new Commands.ArchiveCurrentCommand(this));
 
     public void ArchiveInternal()
     {
@@ -1727,7 +1701,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Opens (navigates to) the tree node. Used by tree context menu.</summary>
     [RelayCommand]
-    private void OpenTreeItem(FileNode? node) => OpenTreeItemInternal(node);
+    private void OpenTreeItem(FileNode? node) => _mediator.SendAsync(new Commands.OpenTreeItemCommand(this, node));
 
     public void OpenTreeItemInternal(FileNode? node)
     {
@@ -1738,7 +1712,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Archives the file represented by the tree node by renaming to archive-&lt;name&gt;. Used by tree context menu. Not available for All JSON or directories.</summary>
     [RelayCommand(CanExecute = nameof(CanArchiveTreeItem))]
-    private void ArchiveTreeItem(FileNode? node) => ArchiveTreeItemInternal(node);
+    private void ArchiveTreeItem(FileNode? node) => _mediator.SendAsync(new Commands.ArchiveTreeItemCommand(this, node));
 
     public void ArchiveTreeItemInternal(FileNode? node)
     {
@@ -1781,7 +1755,7 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Rebuilds the file tree on a background thread and applies on UI; selects All JSON.</summary>
     private void RebuildFileTree()
     {
-        _ = ReloadFromMcpAsync();
+        _ = ReloadFromMcpAsyncInternal();
     }
 
     private static string? ResolveCssPath()
@@ -1891,7 +1865,7 @@ public partial class MainWindowViewModel : ViewModelBase
         IsPreviewOpenedInBrowser = true;
     }
 
-    private void LoadJson(string path)
+    internal void LoadJsonInternal(string path)
     {
         DispatchToUi(() => StatusMessage = "Loading JSON...");
 
@@ -1988,7 +1962,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (unifiedLog != null)
         {
             schemaType = $"{unifiedLog.SourceType} (Unified)";
-            BuildUnifiedSummaryAndIndex(unifiedLog, summary);
+            BuildUnifiedSummaryAndIndexInternal(unifiedLog, summary);
             var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = false };
             var unifiedNode = JsonSerializer.SerializeToNode(unifiedLog, options);
             summary.SummaryLines.Clear();
@@ -2002,7 +1976,7 @@ public partial class MainWindowViewModel : ViewModelBase
             JsonLogSummary = summary;
             var root = new JsonTreeNode("Root", schemaType, "Object");
             root.IsExpanded = true;
-            BuildJsonTree(unifiedNode, root, null);
+            BuildJsonTreeInternal(unifiedNode, root, null);
             JsonTree.Add(root);
         }
         else
@@ -2017,11 +1991,11 @@ public partial class MainWindowViewModel : ViewModelBase
             JsonLogSummary = summary;
             var root = new JsonTreeNode("Root", schemaType, "Object");
             root.IsExpanded = true;
-            BuildJsonTree(jsonNode, root, null);
+            BuildJsonTreeInternal(jsonNode, root, null);
             JsonTree.Add(root);
         }
 
-        UpdateFilteredSearchEntries();
+        UpdateFilteredSearchEntriesInternal();
         StatusMessage = $"Loaded {Path.GetFileName(path)}";
     }
 
@@ -2257,10 +2231,10 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private void BuildUnifiedSummaryAndIndex(UnifiedSessionLog log)
+    internal void BuildUnifiedSummaryAndIndex(UnifiedSessionLog log)
     {
          var summary = new JsonLogSummary();
-         BuildUnifiedSummaryAndIndex(log, summary);
+         BuildUnifiedSummaryAndIndexInternal(log, summary);
 
          // Update Summary Header for Aggregated view
          summary.SummaryLines.Clear();
@@ -2277,13 +2251,13 @@ public partial class MainWindowViewModel : ViewModelBase
          var unifiedNode = JsonSerializer.SerializeToNode(log, options);
          var root = new JsonTreeNode("Root", "Aggregated Unified Log", "Object");
          root.IsExpanded = true;
-         BuildJsonTree(unifiedNode, root, null);
+         BuildJsonTreeInternal(unifiedNode, root, null);
          JsonTree.Add(root);
 
-         UpdateFilteredSearchEntries();
+         UpdateFilteredSearchEntriesInternal();
     }
 
-    private void BuildUnifiedSummaryAndIndex(UnifiedSessionLog log, JsonLogSummary summary)
+    internal void BuildUnifiedSummaryAndIndexInternal(UnifiedSessionLog log, JsonLogSummary summary)
     {
         summary.SearchIndex = new List<SearchableEntry>();
         var entries = log.Entries;
@@ -2342,7 +2316,7 @@ public partial class MainWindowViewModel : ViewModelBase
         DistinctTimestamps = new ObservableCollection<string>(timestamps);
     }
 
-    private void BuildJsonTree(JsonNode? node, JsonTreeNode parent, string? pathPrefix)
+    internal void BuildJsonTreeInternal(JsonNode? node, JsonTreeNode parent, string? pathPrefix)
     {
         if (node == null)
         {
@@ -2364,7 +2338,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 var child = new JsonTreeNode(childKey, "", type);
                 if (parent.Name == "Root") child.IsExpanded = true;
 
-                BuildJsonTree(property.Value, child, childPath);
+                BuildJsonTreeInternal(property.Value, child, childPath);
 
                 if (property.Value is JsonValue val)
                 {
@@ -2462,7 +2436,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     child.Value = timestampPrefix.Trim();
                 }
 
-                BuildJsonTree(item, child, itemPath);
+                BuildJsonTreeInternal(item, child, itemPath);
                 if (item is JsonValue val)
                 {
                     child.Value = val.ToString();
@@ -2869,7 +2843,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 // Invalidate cache by forcing generation (the date check in GenerateAndNavigate will handle it since file date is newer)
                 // But we need to call GenerateAndNavigate with a node.
                 var node = new FileNode(e.FullPath, false);
-                GenerateAndNavigate(node);
+                GenerateAndNavigateInternal(node);
             }
         });
     }
