@@ -13,8 +13,18 @@
       <conv:CountToVisibilityConverter x:Key="CountToVisibility"/>
   </UserControl.Resources>
 
+  <UserControl.Styles>
+    <Style Selector="Expander">
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="0,2"/>
+    </Style>
+    <Style Selector="Expander /template/ Border#ExpanderContent">
+      <Setter Property="Padding" Value="4"/>
+    </Style>
+  </UserControl.Styles>
+
   <ScrollViewer>
-    <StackPanel Spacing="4" Margin="8">
+    <StackPanel Spacing="2" Margin="8">
       <!-- Header -->
       <TextBlock Text="{Binding QueryTitle}" FontSize="18" FontWeight="Bold" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding RequestId}" FontSize="13" Foreground="Gray" TextTrimming="CharacterEllipsis"/>
