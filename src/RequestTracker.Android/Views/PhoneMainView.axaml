@@ -84,10 +84,8 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="jsonModels:SearchableEntry">
                                 <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Padding="4"
-                                        beh:TappedBehavior.Command="{Binding DataContext.SearchRowTappedCommand, ElementName=Root}"
-                                        beh:TappedBehavior.CommandParameter="{Binding}"
-                                        beh:DoubleTappedBehavior.Command="{Binding DataContext.SearchRowDoubleTappedCommand, ElementName=Root}"
-                                        beh:DoubleTappedBehavior.CommandParameter="{Binding}">
+                                        beh:TappedBehavior.Command="{Binding DataContext.SearchRowDoubleTappedCommand, ElementName=Root}"
+                                        beh:TappedBehavior.CommandParameter="{Binding}">
                                     <StackPanel Spacing="2">
                                         <TextBlock Text="{Binding DisplayText}" FontSize="13" TextTrimming="CharacterEllipsis"/>
                                         <StackPanel Orientation="Horizontal" Spacing="8">
