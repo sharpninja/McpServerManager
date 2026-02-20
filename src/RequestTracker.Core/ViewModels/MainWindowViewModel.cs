@@ -225,6 +225,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         if (node.IsDirectory)
             node.IsExpanded = !node.IsExpanded;
+        SelectedNode = node;
     }
 
     /// <summary>Command for JSON tree node double-tap (navigate to details or copy text).</summary>
