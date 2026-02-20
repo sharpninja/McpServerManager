@@ -42,6 +42,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="models:FileNode">
                                         <Border Padding="16,6,8,6" BorderBrush="#F0F0F0" BorderThickness="0,0,0,1"
+                                                Background="Transparent"
                                                 beh:TappedBehavior.Command="{Binding DataContext.TreeItemTappedCommand, ElementName=Root}"
                                                 beh:TappedBehavior.CommandParameter="{Binding}">
                                             <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"/>
@@ -84,6 +85,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="jsonModels:SearchableEntry">
                                 <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Padding="4"
+                                        Background="Transparent"
                                         beh:TappedBehavior.Command="{Binding DataContext.SearchRowDoubleTappedCommand, ElementName=Root}"
                                         beh:TappedBehavior.CommandParameter="{Binding}">
                                     <StackPanel Spacing="2">
