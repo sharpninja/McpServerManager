@@ -127,8 +127,7 @@
       <!-- Editor panel (always visible) -->
       <Border x:Name="EditorPanel" Grid.Column="2">
         <Grid RowDefinitions="Auto,*">
-          <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="2" Margin="4"
-                      IsVisible="{Binding IsEditorVisible}">
+          <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="2" Margin="4">
             <Button Command="{Binding SaveEditorCommand}" Padding="6" ToolTip.Tip="Save to MCP" Width="30">
               <PathIcon Data="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" Width="14" Height="14"/>
             </Button>
@@ -163,15 +162,10 @@
           <!-- Editor or placeholder -->
           <Panel Grid.Row="1">
             <avedit:TextEditor x:Name="Editor"
-                               IsVisible="{Binding IsEditorVisible}"
                                FontFamily="Cascadia Code,Consolas,Menlo,monospace"
                                FontSize="14"
                                ShowLineNumbers="True"
                                WordWrap="True"/>
-            <SelectableTextBlock IsVisible="{Binding !IsEditorVisible}"
-                       Text="Double-tap a todo to open it here, or tap ＋ New"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                       Foreground="{DynamicResource SubtleForeground}" FontSize="14" FontStyle="Italic"/>
           </Panel>
         </Grid>
       </Border>

@@ -52,8 +52,15 @@ public partial class MainWindowViewModel : ViewModelBase
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
 
     /// <summary>ViewModel for the Todo tab. Created lazily on first access.</summary>
-    public TodoListViewModel TodoViewModel => _todoViewModel ??= new TodoListViewModel(_clipboardService, _mcpBaseUrl);
+    public TodoListViewModel TodoViewModel => _todoViewModel ??= CreateTodoViewModel();
     private TodoListViewModel? _todoViewModel;
+
+    private TodoListViewModel CreateTodoViewModel()
+    {
+        var vm = new TodoListViewModel(_clipboardService, _mcpBaseUrl);
+        vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
+        return vm;
+    }
 
     /// <summary>ViewModel for the Log tab. Created lazily on first access.</summary>
     public LogViewModel LogViewModel => _logViewModel ??= new LogViewModel(_clipboardService);

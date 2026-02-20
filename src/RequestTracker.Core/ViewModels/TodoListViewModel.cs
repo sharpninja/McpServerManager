@@ -43,12 +43,14 @@ public partial class TodoListViewModel : ViewModelBase
     // Editor
     [ObservableProperty] private string _editorText = "";
     [ObservableProperty] private string _editorTitle = "";
-    [ObservableProperty] private bool _isEditorVisible;
     [ObservableProperty] private double _editorFontSize = 13;
     [ObservableProperty] private bool _isCopilotRunning;
 
     /// <summary>Set by the view code-behind to read current TextEditor content.</summary>
     public Func<string>? GetEditorText { get; set; }
+
+    /// <summary>Raised when a status message should appear on the global status bar.</summary>
+    public event Action<string>? GlobalStatusChanged;
 
     public static IReadOnlyList<string> PriorityOptions { get; } = new[] { "All", "High", "Medium", "Low" };
     public static IReadOnlyList<string> ScopeOptions { get; } = new[] { "Title", "ID", "All Fields" };
@@ -95,6 +97,7 @@ public partial class TodoListViewModel : ViewModelBase
     {
         IsLoading = true;
         StatusText = "Loading…";
+        GlobalStatusChanged?.Invoke("Loading todos…");
         try
         {
             var result = await _mediator.QueryAsync<QueryTodosQuery, McpTodoQueryResult>(
@@ -103,12 +106,14 @@ public partial class TodoListViewModel : ViewModelBase
             _allEntries = BuildEntries(result.Items);
             ApplyFilters();
             StatusText = $"{result.TotalCount} item(s)";
+            GlobalStatusChanged?.Invoke($"Loaded {result.TotalCount} todo(s).");
         }
         catch (Exception ex)
         {
             _allEntries = new List<TodoListEntry>();
             ApplyFilters();
             StatusText = "Error: " + ex.Message;
+            GlobalStatusChanged?.Invoke($"Todo load failed: {ex.Message}");
         }
         finally
         {
@@ -282,6 +287,7 @@ public partial class TodoListViewModel : ViewModelBase
     private async Task OpenSelectedTodoAsync()
     {
         if (SelectedEntry?.Item is not { } item) return;
+        GlobalStatusChanged?.Invoke($"Opening {item.Id}…");
         try
         {
             var fresh = await _mediator.QueryAsync<GetTodoByIdQuery, McpTodoFlatItem?>(
@@ -290,15 +296,18 @@ public partial class TodoListViewModel : ViewModelBase
             {
                 EditorText = TodoMarkdown.ToMarkdown(fresh);
                 EditorTitle = fresh.Id;
+                GlobalStatusChanged?.Invoke($"Opened {fresh.Id}.");
             }
             else
             {
                 StatusText = $"Todo {item.Id} not found";
+                GlobalStatusChanged?.Invoke($"Todo {item.Id} not found.");
             }
         }
         catch (Exception ex)
         {
             StatusText = $"Error opening: {ex.Message}";
+            GlobalStatusChanged?.Invoke($"Error opening todo: {ex.Message}");
         }
     }
 
@@ -312,6 +321,7 @@ public partial class TodoListViewModel : ViewModelBase
         var isNew = string.IsNullOrEmpty(id)
                     || string.Equals(id, "NEW-TODO", StringComparison.OrdinalIgnoreCase);
 
+        GlobalStatusChanged?.Invoke(isNew ? "Creating todo…" : $"Saving {id}…");
         try
         {
             if (isNew)
@@ -337,12 +347,14 @@ public partial class TodoListViewModel : ViewModelBase
                 if (result.Success)
                 {
                     StatusText = $"Created {newId}";
+                    GlobalStatusChanged?.Invoke($"Created todo {newId}.");
                     EditorTitle = newId;
                     await LoadTodosAsync();
                 }
                 else
                 {
                     StatusText = $"Create failed: {result.Error}";
+                    GlobalStatusChanged?.Invoke($"Create failed: {result.Error}");
                 }
             }
             else
@@ -353,17 +365,20 @@ public partial class TodoListViewModel : ViewModelBase
                 if (result.Success)
                 {
                     StatusText = $"Saved {id}";
+                    GlobalStatusChanged?.Invoke($"Saved todo {id}.");
                     await LoadTodosAsync();
                 }
                 else
                 {
                     StatusText = $"Save failed: {result.Error}";
+                    GlobalStatusChanged?.Invoke($"Save failed: {result.Error}");
                 }
             }
         }
         catch (Exception ex)
         {
             StatusText = $"Error saving: {ex.Message}";
+            GlobalStatusChanged?.Invoke($"Error saving todo: {ex.Message}");
         }
     }
 
