@@ -60,7 +60,7 @@
 
     <!-- ═══ Content area: list + splitter + editor ═══ -->
     <Grid x:Name="ContentGrid" Grid.Row="4"
-          ColumnDefinitions="*,4,*" RowDefinitions="*">
+          ColumnDefinitions="1*,4,2*" RowDefinitions="*">
 
       <!-- List panel -->
       <Border x:Name="ListPanel" Grid.Column="0" Background="{DynamicResource SystemAltHighColor}">

@@ -132,10 +132,10 @@ public partial class TodoListView : UserControl
 
         if (isPortrait)
         {
-            // Stacked: list on top, splitter, editor below
+            // Stacked: list on top (1/3), splitter, editor below (2/3)
             ContentGrid.RowDefinitions.Add(new RowDefinition(_layoutSettings.TodoEditorPortraitListHeight.ToGridLength()));
             ContentGrid.RowDefinitions.Add(new RowDefinition(4, GridUnitType.Pixel));
-            ContentGrid.RowDefinitions.Add(new RowDefinition(1, GridUnitType.Star));
+            ContentGrid.RowDefinitions.Add(new RowDefinition(2, GridUnitType.Star));
             ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
 
             Grid.SetRow(ListPanel, 0); Grid.SetColumn(ListPanel, 0);
@@ -145,10 +145,10 @@ public partial class TodoListView : UserControl
         }
         else
         {
-            // Side-by-side: list left, splitter, editor right
+            // Side-by-side: list left (1/3), splitter, editor right (2/3)
             ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(_layoutSettings.TodoEditorLandscapeListWidth.ToGridLength()));
             ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(4, GridUnitType.Pixel));
-            ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
+            ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(2, GridUnitType.Star));
             ContentGrid.RowDefinitions.Add(new RowDefinition(1, GridUnitType.Star));
 
             Grid.SetColumn(ListPanel, 0); Grid.SetRow(ListPanel, 0);
