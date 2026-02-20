@@ -45,7 +45,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private readonly IClipboardService _clipboardService;
     internal readonly McpSessionLogService McpSessionService;
+    private readonly McpTodoService _mcpTodoService;
     internal readonly Mediator _mediator = new();
+
+    /// <summary>ViewModel for the Todo tab. Created lazily on first access.</summary>
+    public TodoListViewModel TodoViewModel => _todoViewModel ??= new TodoListViewModel(_clipboardService, GetMcpBaseUrl());
+    private TodoListViewModel? _todoViewModel;
     internal List<UnifiedSessionLog> _mcpSessions = new();
     internal Dictionary<string, UnifiedSessionLog> _mcpSessionsByPath = new(StringComparer.OrdinalIgnoreCase);
     private Timer? _mcpAutoRefreshTimer;
@@ -218,6 +223,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _clipboardService = clipboardService;
         McpSessionService = new McpSessionLogService(GetMcpBaseUrl());
+        _mcpTodoService = new McpTodoService(GetMcpBaseUrl());
         RegisterCqrsHandlers();
     }
 
@@ -225,6 +231,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _clipboardService = clipboardService;
         McpSessionService = new McpSessionLogService(mcpBaseUrl);
+        _mcpTodoService = new McpTodoService(mcpBaseUrl);
         RegisterCqrsHandlers();
     }
 
@@ -279,6 +286,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // Refresh
         _mediator.Register(new Commands.RefreshHandler());
+
+        // Todo CQRS
+        var todoService = _mcpTodoService;
+        _mediator.RegisterQuery(new Commands.QueryTodosHandler(todoService));
+        _mediator.RegisterQuery(new Commands.GetTodoByIdHandler(todoService));
+        _mediator.Register<Commands.CreateTodoCommand, McpTodoMutationResult>(new Commands.CreateTodoHandler(todoService));
+        _mediator.Register<Commands.UpdateTodoCommand, McpTodoMutationResult>(new Commands.UpdateTodoHandler(todoService));
+        _mediator.Register<Commands.DeleteTodoCommand, McpTodoMutationResult>(new Commands.DeleteTodoHandler(todoService));
+        _mediator.Register<Commands.AnalyzeTodoRequirementsCommand, McpRequirementsAnalysisResult>(new Commands.AnalyzeTodoRequirementsHandler(todoService));
     }
 
     /// <summary>Command for tree item tap (handles directory expand/collapse and MCP node refresh).</summary>

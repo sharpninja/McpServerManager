@@ -1,0 +1,174 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:RequestTracker.Core.ViewModels"
+             xmlns:avedit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="RequestTracker.Android.Views.TodoListView"
+             x:Name="TodoRoot"
+             x:DataType="vm:TodoListViewModel">
+
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+    <!-- ═══ Toolbar ═══ -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="4">
+      <Button Content="＋ New" Command="{Binding NewTodoCommand}" ToolTip.Tip="New Todo" Padding="8,4"/>
+      <Button Content="↻ Refresh" Command="{Binding RefreshCommand}" ToolTip.Tip="Refresh list" Padding="8,4"/>
+      <Button Content="⎘ Copy ID" Command="{Binding CopySelectedIdCommand}" ToolTip.Tip="Copy selected todo ID" Padding="8,4"/>
+      <Button Content="■ Stop" Command="{Binding StopActionCommand}" ToolTip.Tip="Cancel running action" Padding="8,4"/>
+    </StackPanel>
+
+    <!-- ═══ New-todo inline form ═══ -->
+    <Border Grid.Row="1" IsVisible="{Binding IsCreatingNew}"
+            Background="{DynamicResource SystemAltMediumHighColor}"
+            Padding="8" Margin="4,0,4,4" CornerRadius="4">
+      <StackPanel Spacing="4">
+        <TextBox Text="{Binding NewTodoTitle, Mode=TwoWay}" Watermark="Title…"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <ComboBox ItemsSource="{x:Static vm:TodoListViewModel.NewPriorityOptions}"
+                    SelectedIndex="{Binding NewTodoPriorityIndex}" MinWidth="100"/>
+          <Button Content="Save" Command="{Binding SaveNewTodoCommand}" Padding="12,4"/>
+          <Button Content="Cancel" Command="{Binding CancelNewTodoCommand}" Padding="12,4"/>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- ═══ Filter bar ═══ -->
+    <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto" Margin="4,0,4,4">
+      <ComboBox Grid.Column="0"
+                ItemsSource="{x:Static vm:TodoListViewModel.PriorityOptions}"
+                SelectedIndex="{Binding SelectedPriorityIndex}"
+                MinWidth="90" Margin="0,0,4,0"
+                ToolTip.Tip="Filter by priority"/>
+      <ComboBox Grid.Column="1"
+                ItemsSource="{x:Static vm:TodoListViewModel.ScopeOptions}"
+                SelectedIndex="{Binding SelectedScopeIndex}"
+                MinWidth="80" Margin="0,0,4,0"
+                ToolTip.Tip="Text search scope"/>
+      <TextBox Grid.Column="2"
+               Text="{Binding FilterText, Mode=TwoWay}"
+               Watermark="Filter…" Margin="0,0,4,0"/>
+      <Button Grid.Column="3"
+              Content="✕" Command="{Binding ClearFiltersCommand}"
+              ToolTip.Tip="Clear all filters" Padding="8,4"/>
+    </Grid>
+
+    <!-- ═══ Status bar ═══ -->
+    <TextBlock Grid.Row="3" Text="{Binding StatusText}" Margin="8,0,8,4"
+               FontSize="14" Foreground="{DynamicResource SubtleForeground}"/>
+
+    <!-- ═══ Content area: list + splitter + editor (layout set in code-behind) ═══ -->
+    <Grid x:Name="ContentGrid" Grid.Row="4">
+
+      <!-- List panel -->
+      <Border x:Name="ListPanel">
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding GroupedItems}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TodoListGroup">
+                <StackPanel Margin="0,0,0,8">
+                  <Border Background="{DynamicResource SystemAccentColor}"
+                          Padding="8,4" CornerRadius="4" Margin="4,4,4,2">
+                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15"
+                               Foreground="White"/>
+                  </Border>
+                  <ListBox ItemsSource="{Binding Items}" Margin="4,0"
+                           SelectionMode="Single"
+                           DoubleTapped="OnListItemDoubleTapped">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:TodoListEntry">
+                        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="2">
+                          <CheckBox Grid.Column="0" IsChecked="{Binding Item.Done, Mode=OneWay}"
+                                    IsHitTestVisible="False" Margin="0,0,6,0"
+                                    VerticalAlignment="Center"/>
+                          <TextBlock Grid.Column="1"
+                                     Text="{Binding Item.Priority}" FontWeight="SemiBold"
+                                     Width="60" VerticalAlignment="Center"
+                                     Margin="0,0,6,0"/>
+                          <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Item.Title}" TextTrimming="CharacterEllipsis" FontSize="15"/>
+                            <TextBlock Text="{Binding Item.Id}" FontSize="13"
+                                       Foreground="{DynamicResource SubtleForeground}"/>
+                          </StackPanel>
+                          <TextBlock Grid.Column="3"
+                                     Text="{Binding Item.Section}" FontSize="13"
+                                     Foreground="{DynamicResource SubtleForeground}" VerticalAlignment="Center"
+                                     Margin="6,0,0,0"/>
+                        </Grid>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ContextMenu>
+                      <ContextMenu x:CompileBindings="False">
+                        <MenuItem Header="Open in Editor"
+                                  Command="{Binding DataContext.OpenSelectedTodoCommand, ElementName=TodoRoot}"/>
+                        <MenuItem Header="Copy ID"
+                                  Command="{Binding DataContext.CopySelectedIdCommand, ElementName=TodoRoot}"/>
+                        <Separator/>
+                        <MenuItem Header="Toggle Done"
+                                  Command="{Binding DataContext.ToggleDoneCommand, ElementName=TodoRoot}"/>
+                        <MenuItem Header="Analyze Requirements"
+                                  Command="{Binding DataContext.AnalyzeRequirementsCommand, ElementName=TodoRoot}"/>
+                        <Separator/>
+                        <MenuItem Header="Delete"
+                                  Command="{Binding DataContext.DeleteSelectedCommand, ElementName=TodoRoot}"/>
+                      </ContextMenu>
+                    </ListBox.ContextMenu>
+                  </ListBox>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Border>
+
+      <!-- Splitter -->
+      <GridSplitter x:Name="TodoSplitter" Background="Gray" Opacity="0.4"/>
+
+      <!-- Editor panel -->
+      <Border x:Name="EditorPanel" IsVisible="{Binding IsEditorVisible}">
+        <Grid RowDefinitions="Auto,*">
+          <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="2" Margin="4">
+            <Button Command="{Binding SaveEditorCommand}" Padding="6" ToolTip.Tip="Save to MCP" Width="30">
+              <PathIcon Data="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" Width="14" Height="14"/>
+            </Button>
+            <Button Command="{Binding RefreshEditorCommand}" Padding="6" ToolTip.Tip="Reload from MCP" Width="30">
+              <PathIcon Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" Width="14" Height="14"/>
+            </Button>
+            <Border Width="1" Background="Gray" Opacity="0.3" Margin="4,2"/>
+            <Button Click="OnEditorCut" Padding="6" ToolTip.Tip="Cut" Width="30">
+              <PathIcon Data="M19,3L13,9L15,11L22,4V3M12,12.5A0.5,0.5 0 0,1 11.5,12A0.5,0.5 0 0,1 12,11.5A0.5,0.5 0 0,1 12.5,12A0.5,0.5 0 0,1 12,12.5M6,20A2,2 0 0,1 4,18C4,16.89 4.9,16 6,16A2,2 0 0,1 8,18C8,19.11 7.1,20 6,20M6,8A2,2 0 0,1 4,6C4,4.89 4.9,4 6,4A2,2 0 0,1 8,6C8,7.11 7.1,8 6,8M9.64,7.64C9.87,7.14 10,6.59 10,6A4,4 0 0,0 6,2A4,4 0 0,0 2,6A4,4 0 0,0 6,10C6.59,10 7.14,9.87 7.64,9.64L10,12L7.64,14.36C7.14,14.13 6.59,14 6,14A4,4 0 0,0 2,18A4,4 0 0,0 6,22A4,4 0 0,0 10,18C10,17.41 9.87,16.86 9.64,16.36L12,14L19,21H22V20L9.64,7.64Z" Width="14" Height="14"/>
+            </Button>
+            <Button Click="OnEditorCopy" Padding="6" ToolTip.Tip="Copy" Width="30">
+              <PathIcon Data="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z" Width="14" Height="14"/>
+            </Button>
+            <Button Click="OnEditorPaste" Padding="6" ToolTip.Tip="Paste" Width="30">
+              <PathIcon Data="M19,20H5V4H7V7H17V4H19M12,2A1,1 0 0,1 13,3A1,1 0 0,1 12,4A1,1 0 0,1 11,3A1,1 0 0,1 12,2M19,2H14.82C14.4,0.84 13.3,0 12,0C10.7,0 9.6,0.84 9.18,2H5A2,2 0 0,0 3,4V20A2,2 0 0,0 5,22H19A2,2 0 0,0 21,20V4A2,2 0 0,0 19,2Z" Width="14" Height="14"/>
+            </Button>
+            <Border Width="1" Background="Gray" Opacity="0.3" Margin="4,2"/>
+            <Button Command="{Binding EditorZoomInCommand}" Padding="6" ToolTip.Tip="Increase font size" Width="30">
+              <PathIcon Data="M15.5,14L20.5,19L19,20.5L14,15.5V14.71L13.73,14.43C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.43,13.73L14.71,14H15.5M9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14M12,10H10V12H9V10H7V9H9V7H10V9H12V10Z" Width="14" Height="14"/>
+            </Button>
+            <Button Command="{Binding EditorZoomOutCommand}" Padding="6" ToolTip.Tip="Decrease font size" Width="30">
+              <PathIcon Data="M15.5,14L20.5,19L19,20.5L14,15.5V14.71L13.73,14.43C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.43,13.73L14.71,14H15.5M9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14M7,9H12V10H7V9Z" Width="14" Height="14"/>
+            </Button>
+            <Border Width="1" Background="Gray" Opacity="0.3" Margin="4,2"/>
+            <TextBlock Text="{Binding EditorTitle}" VerticalAlignment="Center"
+                       FontWeight="SemiBold" Margin="4,0,0,0"/>
+            <Button Command="{Binding CloseEditorCommand}" Padding="6" ToolTip.Tip="Close editor"
+                    HorizontalAlignment="Right" Width="30">
+              <PathIcon Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" Width="12" Height="12"/>
+            </Button>
+          </StackPanel>
+          <avedit:TextEditor x:Name="Editor" Grid.Row="1"
+                             FontFamily="Cascadia Code,Consolas,Menlo,monospace"
+                             FontSize="14"
+                             ShowLineNumbers="True"
+                             WordWrap="True"/>
+        </Grid>
+      </Border>
+
+    </Grid>
+
+  </Grid>
+</UserControl>

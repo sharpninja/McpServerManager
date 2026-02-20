@@ -1,0 +1,116 @@
+requesttracker:
+  medium-priority:
+  - id: RT-001
+    title: Find opportunities to unify Views between Desktop and Android and place them into a shared Avalonia library
+    estimate: ~4-6 hours (AI-assisted)
+    done: false
+    description:
+    - Audit Desktop and Android Views for duplication that can be extracted into a shared Avalonia UserControl library.
+    - TodoListView is nearly identical across both platforms - prime candidate for unification.
+    - Evaluate which platform-specific styling (DynamicResource, font sizes) can be handled via Avalonia styles/themes rather than separate AXAML files.
+    technical-details:
+    - Create a new shared project (e.g. RequestTracker.Views) targeting net9.0 with Avalonia references
+    - Move unified UserControls from Desktop/Android into the shared project
+    - Use Avalonia style selectors or DynamicResource for platform-specific theming
+    - Keep only platform-specific views (PhoneMainView, MainWindow) in their respective projects
+    implementation-tasks:
+    - task: Diff Desktop vs Android TodoListView to identify differences
+      done: false
+    - task: Create shared Avalonia library project
+      done: false
+    - task: Extract TodoListView into shared library with platform theming
+      done: false
+    - task: Evaluate RequestTrackerView and RequestTrackerTabletView for unification
+      done: false
+    - task: Update Desktop and Android projects to reference shared library
+      done: false
+    - task: Verify builds for Desktop and Android
+      done: false
+
+  low-priority:
+  - id: RT-002
+    title: Handle Pandoc not found gracefully
+    done: false
+    description:
+    - When Pandoc is not installed, markdown preview silently fails with a console error.
+    - Show a user-visible message or disable markdown preview when Pandoc is not available.
+    technical-details:
+    - MainWindowViewModel.cs lines ~1809 and ~1849 shell out to pandoc without checking if it exists
+    - On failure, only Console.WriteLine is called - no UI feedback
+    - Consider probing for pandoc at startup and setting a flag to disable/warn in the UI
+    implementation-tasks:
+    - task: Add Pandoc availability check at startup
+      done: false
+    - task: Show status bar warning or disable markdown tab when Pandoc is missing
+      done: false
+    - task: Replace Console.WriteLine with user-visible error in markdown preview failure path
+      done: false
+
+  - id: RT-003
+    title: Wire Todo tab auto-load and selection binding
+    done: false
+    description:
+    - The Todo tab does not auto-load items when first selected.
+    - ListBox SelectedItem within grouped ItemsControl does not propagate to ViewModel.SelectedEntry since each group has an independent ListBox.
+    technical-details:
+    - Need to trigger LoadTodosAsync when the Todo tab becomes visible (Loaded event or IsVisible trigger)
+    - Each priority group renders its own ListBox, so SelectedEntry binding needs a shared selection mechanism or code-behind event handler
+    implementation-tasks:
+    - task: Add auto-load on first tab activation (Loaded or IsVisibleChanged)
+      done: false
+    - task: Wire ListBox SelectionChanged in each group to update ViewModel.SelectedEntry
+      done: false
+    - task: Ensure only one item is selected across all group ListBoxes at a time
+      done: false
+
+  - id: RT-004
+    title: Wire New Todo creation through the YAML editor
+    done: false
+    description:
+    - The New button currently shows an inline form with title/priority only.
+    - The VS extension creates new todos by opening a blank YAML template in the editor.
+    - Align the creation flow so New opens a blank TodoMarkdown.BlankTemplate() in the editor and Save parses it.
+    implementation-tasks:
+    - task: Change NewTodoCommand to open BlankTemplate in editor instead of inline form
+      done: false
+    - task: Detect new-todo vs edit in SaveEditorAsync (check for NEW-TODO id prefix)
+      done: false
+    - task: Dispatch CreateTodoCommand for new items, UpdateTodoCommand for existing
+      done: false
+
+  completed:
+  - id: RT-100
+    title: Make the watched/root path configurable
+    done: true
+    description:
+    - Originally the target path was a constant in MainWindowViewModel.
+    - Now configurable via appsettings.config → Paths.SessionsRootPath.
+    source: ANALYSIS.md suggestion 1
+
+  - id: RT-101
+    title: Add a solution file
+    done: true
+    description:
+    - Added RequestTracker.slnx (new-format solution file) covering Core, Desktop, and Android projects.
+    source: ANALYSIS.md suggestion 2
+
+  - id: RT-102
+    title: Remove redundant Folder Include in csproj
+    done: true
+    description:
+    - Redundant Folder Include="Models\" entries were removed from csproj files.
+    source: ANALYSIS.md suggestion 3
+
+  - id: RT-103
+    title: Initialize _statusMessage to avoid null binding
+    done: true
+    description:
+    - _statusMessage is now initialized to "Ready" in MainWindowViewModel.cs.
+    source: ANALYSIS.md suggestion 4
+
+  - id: RT-104
+    title: Remove duplicate using System
+    done: true
+    description:
+    - Duplicate using System; directive was removed from MainWindowViewModel.cs.
+    source: ANALYSIS.md suggestion 5
