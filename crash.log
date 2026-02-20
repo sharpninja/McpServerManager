@@ -1,0 +1,7 @@
+System.NullReferenceException: Object reference not set to an instance of an object.
+   at RequestTracker.Desktop.Views.TodoListView..ctor() in E:\github\RequestTracker\src\RequestTracker.Desktop\Views\TodoListView.axaml.cs:line 25
+   at RequestTracker.Desktop.Views.MainWindow.!XamlIlPopulate(IServiceProvider, MainWindow) in E:\github\RequestTracker\src\RequestTracker.Desktop\Views/MainWindow.axaml:line 22
+   at RequestTracker.Desktop.Views.MainWindow.!XamlIlPopulateTrampoline(MainWindow)
+   at RequestTracker.Desktop.Views.MainWindow.InitializeComponent(Boolean loadXaml, Boolean attachDevTools) in E:\github\RequestTracker\src\RequestTracker.Desktop\obj\Debug\net9.0\Avalonia.Generators\Avalonia.Generators.NameGenerator.AvaloniaNameSourceGenerator\RequestTracker.Desktop.Views.MainWindow.g.cs:line 34
+   at RequestTracker.Desktop.Views.MainWindow..ctor() in E:\github\RequestTracker\src\RequestTracker.Desktop\Views\MainWindow.axaml.cs:line 20
+   at RequestTracker.Desktop.App.OnFrameworkInitializationCompleted() in E:\github\RequestTracker\src\RequestTracker.Desktop\App.axaml.cs:line 30

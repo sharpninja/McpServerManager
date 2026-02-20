@@ -34,9 +34,8 @@ public partial class TodoListView : UserControl
 
     private async void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (_hasAutoLoaded) return;
         _hasAutoLoaded = true;
-        if (DataContext is TodoListViewModel vm)
+        if (DataContext is TodoListViewModel vm && vm.GroupedItems.Count == 0 && !vm.IsLoading)
             await vm.LoadTodosCommand.ExecuteAsync(null);
     }
 
@@ -46,6 +45,9 @@ public partial class TodoListView : UserControl
         {
             vm.GetEditorText = () => Editor.Text;
             vm.PropertyChanged += OnViewModelPropertyChanged;
+            // Auto-load if DataContext arrived after Loaded event
+            if (_hasAutoLoaded && vm.GroupedItems.Count == 0 && !vm.IsLoading)
+                _ = vm.LoadTodosCommand.ExecuteAsync(null);
         }
     }
 

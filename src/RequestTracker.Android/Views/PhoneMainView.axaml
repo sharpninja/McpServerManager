@@ -26,7 +26,7 @@
                 <Border Background="{DynamicResource SystemAccentColor}" Padding="8,6"
                         beh:TappedBehavior.Command="{Binding TreeItemTappedCommand}"
                         beh:TappedBehavior.CommandParameter="{Binding Nodes[0]}">
-                    <TextBlock Text="All JSON" FontWeight="Bold" FontSize="17" Foreground="White"/>
+                    <SelectableTextBlock Text="All JSON" FontWeight="Bold" FontSize="17" Foreground="White"/>
                 </Border>
             <ItemsControl ItemsSource="{Binding Nodes[0].Children}" x:CompileBindings="False">
                 <ItemsControl.ItemTemplate>
@@ -36,7 +36,7 @@
                             <Border Background="{DynamicResource GroupHeaderBrush}" Padding="8,4"
                                     beh:TappedBehavior.Command="{Binding DataContext.TreeItemTappedCommand, ElementName=Root}"
                                     beh:TappedBehavior.CommandParameter="{Binding}">
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16"/>
+                                <SelectableTextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16"/>
                             </Border>
                             <!-- Sessions in group -->
                             <ItemsControl ItemsSource="{Binding Children}" IsVisible="{Binding IsExpanded}">
@@ -46,7 +46,7 @@
                                                 Background="Transparent"
                                                 beh:TappedBehavior.Command="{Binding DataContext.TreeItemTappedCommand, ElementName=Root}"
                                                 beh:TappedBehavior.CommandParameter="{Binding}">
-                                            <TextBlock Text="{Binding Name}" FontSize="15" TextTrimming="CharacterEllipsis"/>
+                                            <SelectableTextBlock Text="{Binding Name}" FontSize="15" TextTrimming="CharacterEllipsis"/>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -69,13 +69,13 @@
                     <ItemsControl ItemsSource="{Binding JsonLogSummary.SummaryLines}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" FontSize="15" Margin="0,1"/>
+                                <SelectableTextBlock Text="{Binding}" FontSize="15" Margin="0,1"/>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </Border>
                 <Grid Grid.Row="1" ColumnDefinitions="Auto, *" Margin="4">
-                    <TextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="15"/>
+                    <SelectableTextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="15"/>
                     <TextBox Grid.Column="1" Text="{Binding SearchQuery}" Watermark="Search..." FontSize="15"/>
                 </Grid>
                 <Border Grid.Row="2" MinHeight="80" Padding="4">
@@ -90,10 +90,10 @@
                                         beh:TappedBehavior.Command="{Binding DataContext.SearchRowDoubleTappedCommand, ElementName=Root}"
                                         beh:TappedBehavior.CommandParameter="{Binding}">
                                     <StackPanel Spacing="2">
-                                        <TextBlock Text="{Binding DisplayText}" FontSize="15" TextTrimming="CharacterEllipsis"/>
+                                        <SelectableTextBlock Text="{Binding DisplayText}" FontSize="15" TextTrimming="CharacterEllipsis"/>
                                         <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <TextBlock Text="{Binding Model}" FontSize="13" Foreground="{DynamicResource SubtleForeground}"/>
-                                            <TextBlock Text="{Binding TimestampDisplay}" FontSize="13" Foreground="{DynamicResource SubtleForeground}"/>
+                                            <SelectableTextBlock Text="{Binding Model}" FontSize="13" Foreground="{DynamicResource SubtleForeground}"/>
+                                            <SelectableTextBlock Text="{Binding TimestampDisplay}" FontSize="13" Foreground="{DynamicResource SubtleForeground}"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -107,9 +107,9 @@
                         <TreeView.ItemTemplate>
                             <TreeDataTemplate ItemsSource="{Binding Children}" DataType="jsonModels:JsonTreeNode">
                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="{DynamicResource JsonKeyBrush}" FontSize="15"/>
-                                    <TextBlock Text=":" Foreground="{DynamicResource SubtleForeground}"/>
-                                    <TextBlock Text="{Binding Value}" Foreground="{DynamicResource JsonValueBrush}" FontSize="15"/>
+                                    <SelectableTextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="{DynamicResource JsonKeyBrush}" FontSize="15"/>
+                                    <SelectableTextBlock Text=":" Foreground="{DynamicResource SubtleForeground}"/>
+                                    <SelectableTextBlock Text="{Binding Value}" Foreground="{DynamicResource JsonValueBrush}" FontSize="15"/>
                                 </StackPanel>
                             </TreeDataTemplate>
                         </TreeView.ItemTemplate>
@@ -142,8 +142,8 @@
         <!-- Status Bar -->
         <views:AnimatedStatusBar Grid.Row="3" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
             <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                <TextBlock Grid.Column="1" Text="{Binding AppVersionDisplay}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
+                <SelectableTextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <SelectableTextBlock Grid.Column="1" Text="{Binding AppVersionDisplay}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
             </Grid>
         </views:AnimatedStatusBar>
     </Grid>

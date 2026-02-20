@@ -55,7 +55,7 @@
     </Grid>
 
     <!-- ═══ Status bar ═══ -->
-    <TextBlock Grid.Row="3" Text="{Binding StatusText}" Margin="8,0,8,4"
+    <SelectableTextBlock Grid.Row="3" Text="{Binding StatusText}" Margin="8,0,8,4"
                FontSize="12" Foreground="Gray"/>
 
     <!-- ═══ Content area: list + splitter + editor ═══ -->
@@ -71,7 +71,7 @@
                 <StackPanel Margin="0,0,0,8">
                   <Border Background="{DynamicResource SystemAccentColor}"
                           Padding="8,4" CornerRadius="4" Margin="4,4,4,2">
-                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13"
+                    <SelectableTextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13"
                                Foreground="White"/>
                   </Border>
                   <ListBox ItemsSource="{Binding Items}" Margin="4,0"
@@ -83,13 +83,13 @@
                       <DataTemplate x:DataType="vm:TodoListEntry">
                         <Grid ColumnDefinitions="*,Auto" Margin="2">
                           <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Item.Id}" FontWeight="SemiBold" FontSize="13"
+                            <SelectableTextBlock Text="{Binding Item.Id}" FontWeight="SemiBold" FontSize="13"
                                        TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding Item.Title}" FontSize="12"
+                            <SelectableTextBlock Text="{Binding Item.Title}" FontSize="12"
                                        TextTrimming="CharacterEllipsis"
                                        Foreground="{DynamicResource SystemBaseMediumColor}"/>
                           </StackPanel>
-                          <TextBlock Grid.Column="1"
+                          <SelectableTextBlock Grid.Column="1"
                                      Text="{Binding Item.Section}" FontSize="11"
                                      Foreground="Gray" VerticalAlignment="Center"
                                      Margin="6,0,0,0"/>
@@ -107,6 +107,13 @@
                                   Command="{Binding DataContext.ToggleDoneCommand, ElementName=TodoRoot}"/>
                         <MenuItem Header="Analyze Requirements"
                                   Command="{Binding DataContext.AnalyzeRequirementsCommand, ElementName=TodoRoot}"/>
+                        <Separator/>
+                        <MenuItem Header="Copilot Status"
+                                  Command="{Binding DataContext.CopilotStatusCommand, ElementName=TodoRoot}"/>
+                        <MenuItem Header="Copilot Plan"
+                                  Command="{Binding DataContext.CopilotPlanCommand, ElementName=TodoRoot}"/>
+                        <MenuItem Header="Copilot Implement"
+                                  Command="{Binding DataContext.CopilotImplementCommand, ElementName=TodoRoot}"/>
                         <Separator/>
                         <MenuItem Header="Delete"
                                   Command="{Binding DataContext.DeleteSelectedCommand, ElementName=TodoRoot}"/>
@@ -156,7 +163,7 @@
               <PathIcon Data="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12.5,7H11V13L16.75,16.15L17.5,14.92L12.5,12.25V7Z" Width="14" Height="14"/>
             </Button>
             <Border Width="1" Background="Gray" Opacity="0.3" Margin="4,2"/>
-            <TextBlock Text="{Binding EditorTitle}" VerticalAlignment="Center"
+            <SelectableTextBlock Text="{Binding EditorTitle}" VerticalAlignment="Center"
                        FontWeight="SemiBold" Margin="4,0,0,0"/>
           </StackPanel>
           <avedit:TextEditor x:Name="Editor" Grid.Row="1"

@@ -22,7 +22,7 @@
     </StackPanel>
 
     <!-- Status -->
-    <TextBlock Grid.Row="1" Text="{Binding StatusText}" Margin="8,0,8,4"
+    <SelectableTextBlock Grid.Row="1" Text="{Binding StatusText}" Margin="8,0,8,4"
                FontSize="12" Foreground="Gray"/>
 
     <!-- Log list -->
@@ -31,10 +31,10 @@
              SelectedItem="{Binding SelectedEntry}"
              SelectionMode="Single"
              FontFamily="Cascadia Code,Consolas,Menlo,monospace"
-             FontSize="12">
+             FontSize="14">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="svc:LogEntry">
-          <TextBlock Text="{Binding Display}" TextWrapping="NoWrap"/>
+          <SelectableTextBlock Text="{Binding Display}" TextWrapping="NoWrap"/>
         </DataTemplate>
       </ListBox.ItemTemplate>
       <ListBox.ContextMenu>

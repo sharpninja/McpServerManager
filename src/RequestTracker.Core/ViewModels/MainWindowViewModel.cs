@@ -178,7 +178,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnIsBusyChanged(bool value)
     {
-        _logger.LogDebug($"[ViewModel] IsBusy changed to {value}, mediator.IsBusy={_mediator.IsBusy}");
+        _logger.LogInformation($"[ViewModel] IsBusy changed to {value}, mediator.IsBusy={_mediator.IsBusy}");
     }
 
     /// <summary>True when markdown preview was opened in the system browser.</summary>
@@ -948,7 +948,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSelectedNodeChanged(FileNode? value)
     {
-        _logger.LogDebug($"Selected Node Changed: {value?.Path}");
+        _logger.LogInformation($"Selected Node Changed: {value?.Path}");
 
         // Start or stop the auto-refresh timer based on whether an MCP node is selected.
         if (value != null && IsMcpVirtualNode(value))
@@ -1801,10 +1801,40 @@ public partial class MainWindowViewModel : ViewModelBase
         return null;
     }
 
+    private static bool? _isPandocAvailable;
+
+    private static bool IsPandocAvailable()
+    {
+        if (_isPandocAvailable.HasValue) return _isPandocAvailable.Value;
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "pandoc",
+                Arguments = "--version",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            using var p = System.Diagnostics.Process.Start(psi);
+            p?.WaitForExit(5000);
+            _isPandocAvailable = p is { ExitCode: 0 };
+        }
+        catch
+        {
+            _isPandocAvailable = false;
+        }
+        if (!_isPandocAvailable.Value)
+            _logger.LogWarning("Pandoc is not installed or not on PATH. Markdown preview will be limited.");
+        return _isPandocAvailable.Value;
+    }
+
     private bool ConvertMarkdownToHtml(string srcPath, string destPath)
     {
         try
         {
+            if (!IsPandocAvailable()) return false;
             string? cssPath = ResolveCssPath();
             if (cssPath == null) return false;
 
@@ -1824,7 +1854,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(htmlContent))
             {
-                _logger.LogError($"Pandoc failed: ExitCode={process.ExitCode}. stderr: {stderr}");
+                _logger.LogError("Pandoc failed: ExitCode={ExitCode}. stderr: {Stderr}", process.ExitCode, stderr);
                 return false;
             }
             File.WriteAllText(destPath, htmlContent);
@@ -1841,6 +1871,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         try
         {
+            if (!IsPandocAvailable()) return false;
             string? cssPath = ResolveCssPath();
             if (cssPath == null)
             {
@@ -1867,16 +1898,16 @@ public partial class MainWindowViewModel : ViewModelBase
 
             if (process.ExitCode != 0)
             {
-                _logger.LogError($"Pandoc failed: ExitCode={process.ExitCode}. stderr: {stderr}");
+                _logger.LogError("Pandoc failed: ExitCode={ExitCode}. stderr: {Stderr}", process.ExitCode, stderr);
                 return false;
             }
             if (string.IsNullOrWhiteSpace(htmlContent))
             {
-                _logger.LogError($"Pandoc produced no output. stderr: {stderr}");
+                _logger.LogError("Pandoc produced no output. stderr: {Stderr}", stderr);
                 return false;
             }
             await File.WriteAllTextAsync(destPath, htmlContent);
-            _logger.LogDebug($"Pandoc completed: wrote {htmlContent.Length} chars to {destPath}");
+            _logger.LogInformation("Pandoc completed: wrote {Length} chars to {DestPath}", htmlContent.Length, destPath);
             return true;
         }
         catch (Exception ex)
@@ -2862,7 +2893,7 @@ public partial class MainWindowViewModel : ViewModelBase
             // If the changed file is the current one, regenerate
             if (_currentMarkdownPath != null && e.FullPath.Equals(_currentMarkdownPath, StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogDebug($"Detected change in current file: {e.FullPath}");
+                _logger.LogInformation($"Detected change in current file: {e.FullPath}");
 
                 // Log the change
                 ChangeLog.Insert(0, $"[{DateTime.Now:HH:mm:ss}] Rebuilt: {Path.GetFileName(e.FullPath)}");

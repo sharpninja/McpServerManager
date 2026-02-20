@@ -37,7 +37,7 @@ public sealed class Mediator : IMediator
 
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("Mediator");
 
-    private static void Log(string message) => _logger.LogDebug(message);
+    private static void Log(string message) => _logger.LogInformation(message);
 
     public void TrackBackgroundWork(Task task)
     {

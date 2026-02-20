@@ -94,7 +94,7 @@ public partial class RequestTrackerView : UserControl
         if (MainGrid == null) return;
         if (isPortrait)
         {
-            if (MainGrid.RowDefinitions.Count >= 6)
+            if (MainGrid.RowDefinitions.Count >= 5)
             {
                 _layoutSettings.PortraitTreeRowHeight = GridLengthDto.FromGridLength(MainGrid.RowDefinitions[0].Height);
                 _layoutSettings.PortraitViewerRowHeight = GridLengthDto.FromGridLength(MainGrid.RowDefinitions[2].Height);
@@ -103,7 +103,7 @@ public partial class RequestTrackerView : UserControl
         }
         else
         {
-            if (MainGrid.ColumnDefinitions.Count >= 1 && MainGrid.RowDefinitions.Count >= 4)
+            if (MainGrid.ColumnDefinitions.Count >= 1 && MainGrid.RowDefinitions.Count >= 3)
             {
                 _layoutSettings.LandscapeLeftColWidth = GridLengthDto.FromGridLength(MainGrid.ColumnDefinitions[0].Width);
                 _layoutSettings.LandscapeHistoryRowHeight = GridLengthDto.FromGridLength(MainGrid.RowDefinitions[2].Height);
@@ -125,7 +125,6 @@ public partial class RequestTrackerView : UserControl
             MainGrid.RowDefinitions.Add(new RowDefinition(_layoutSettings.PortraitViewerRowHeight.ToGridLength()));
             MainGrid.RowDefinitions.Add(new RowDefinition(4, GridUnitType.Pixel));
             MainGrid.RowDefinitions.Add(new RowDefinition(_layoutSettings.PortraitHistoryRowHeight.ToGridLength()));
-            MainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
 
             Grid.SetColumn(TreePanel, 0); Grid.SetRow(TreePanel, 0);
             Grid.SetColumn(Splitter1, 0); Grid.SetRow(Splitter1, 1);
@@ -134,7 +133,6 @@ public partial class RequestTrackerView : UserControl
             Grid.SetColumn(Splitter2, 0); Grid.SetRow(Splitter2, 3); Grid.SetRowSpan(Splitter2, 1);
             Splitter2.ResizeDirection = GridResizeDirection.Rows;
             Grid.SetColumn(HistoryPanel, 0); Grid.SetRow(HistoryPanel, 4);
-            Grid.SetColumn(StatusBarBorder, 0); Grid.SetColumnSpan(StatusBarBorder, 1); Grid.SetRow(StatusBarBorder, 5);
         }
         else
         {
@@ -144,7 +142,6 @@ public partial class RequestTrackerView : UserControl
             MainGrid.RowDefinitions.Add(new RowDefinition(1, GridUnitType.Star));
             MainGrid.RowDefinitions.Add(new RowDefinition(4, GridUnitType.Pixel));
             MainGrid.RowDefinitions.Add(new RowDefinition(_layoutSettings.LandscapeHistoryRowHeight.ToGridLength()));
-            MainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
 
             Grid.SetColumn(TreePanel, 0); Grid.SetRow(TreePanel, 0);
             Grid.SetColumn(Splitter1, 0); Grid.SetRow(Splitter1, 1);
@@ -153,7 +150,6 @@ public partial class RequestTrackerView : UserControl
             Grid.SetColumn(Splitter2, 1); Grid.SetRow(Splitter2, 0); Grid.SetRowSpan(Splitter2, 3);
             Splitter2.ResizeDirection = GridResizeDirection.Columns;
             Grid.SetColumn(ViewerPanel, 2); Grid.SetRow(ViewerPanel, 0); Grid.SetRowSpan(ViewerPanel, 3);
-            Grid.SetColumn(StatusBarBorder, 0); Grid.SetColumnSpan(StatusBarBorder, 3); Grid.SetRow(StatusBarBorder, 3);
         }
     }
 }

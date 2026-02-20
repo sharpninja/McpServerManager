@@ -20,14 +20,14 @@
         <conv:FileNodeToArchiveVisibleConverter x:Key="FileNodeToArchiveVisible"/>
     </UserControl.Resources>
 
-    <Grid x:Name="MainGrid" ColumnDefinitions="225, 4, *" RowDefinitions="*, Auto" ClipToBounds="True">
+    <Grid x:Name="MainGrid" ColumnDefinitions="225, 4, *" RowDefinitions="*" ClipToBounds="True">
         <!-- Tree View -->
         <TreeView Grid.Column="0" Grid.Row="0"
                   ItemsSource="{Binding Nodes}" SelectedItem="{Binding SelectedNode}"
                   VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}" DataType="models:FileNode">
-                    <TextBlock Text="{Binding Name}"/>
+                    <SelectableTextBlock Text="{Binding Name}"/>
                 </TreeDataTemplate>
             </TreeView.ItemTemplate>
             <TreeView.ItemContainerTheme>
@@ -79,26 +79,26 @@
                         <ItemsControl ItemsSource="{Binding JsonLogSummary.SummaryLines}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding}" FontSize="16" Margin="0,1"/>
+                                    <SelectableTextBlock Text="{Binding}" FontSize="16" Margin="0,1"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </Border>
                     <!-- Search -->
                     <Grid Grid.Row="1" ColumnDefinitions="Auto, *" Margin="0,0,0,4">
-                        <TextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <SelectableTextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBox Grid.Column="1" Text="{Binding SearchQuery}" Watermark="Search..."/>
                     </Grid>
                     <!-- Search results -->
                     <Border Grid.Row="2" MinHeight="80" BorderBrush="{DynamicResource SearchBorderBrush}" BorderThickness="0,0,0,1" Padding="4" Margin="0,0,0,4">
                         <Grid RowDefinitions="Auto, Auto, *">
-                            <TextBlock Grid.Row="0" Text="Search index (double-tap to open)" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,4"/>
+                            <SelectableTextBlock Grid.Row="0" Text="Search index (double-tap to open)" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,4"/>
                             <Border Grid.Row="1" BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1">
                                 <Grid ColumnDefinitions="3*,4*,2*,2*" Margin="4,2">
-                                    <TextBlock Grid.Column="0" Text="Request ID" FontWeight="SemiBold" FontSize="15" FontFamily="Consolas, Monospace"/>
-                                    <TextBlock Grid.Column="1" Text="Display" FontWeight="SemiBold" FontSize="15" FontFamily="Consolas, Monospace"/>
-                                    <TextBlock Grid.Column="2" Text="Model" FontWeight="SemiBold" FontSize="15" FontFamily="Consolas, Monospace"/>
-                                    <TextBlock Grid.Column="3" Text="Timestamp" FontWeight="SemiBold" FontSize="15" FontFamily="Consolas, Monospace"/>
+                                    <SelectableTextBlock Grid.Column="0" Text="Request ID" FontWeight="SemiBold" FontSize="15" FontFamily="Consolas, Monospace"/>
+                                    <SelectableTextBlock Grid.Column="1" Text="Display" FontWeight="SemiBold" FontSize="15" FontFamily="Consolas, Monospace"/>
+                                    <SelectableTextBlock Grid.Column="2" Text="Model" FontWeight="SemiBold" FontSize="15" FontFamily="Consolas, Monospace"/>
+                                    <SelectableTextBlock Grid.Column="3" Text="Timestamp" FontWeight="SemiBold" FontSize="15" FontFamily="Consolas, Monospace"/>
                                 </Grid>
                             </Border>
                             <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
@@ -140,10 +140,10 @@
                                     <StackPanel Orientation="Horizontal" Spacing="5" Background="Transparent" x:CompileBindings="False"
                                                 beh:DoubleTappedBehavior.Command="{Binding DataContext.JsonNodeDoubleTappedCommand, ElementName=ContentRoot}"
                                                 beh:DoubleTappedBehavior.CommandParameter="{Binding}">
-                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="{DynamicResource JsonKeyBrush}"/>
-                                        <TextBlock Text=":" Foreground="{DynamicResource SubtleForeground}"/>
-                                        <TextBlock Text="{Binding Value}" Foreground="{DynamicResource JsonValueBrush}"/>
-                                        <TextBlock Text="{Binding Type}" Foreground="{DynamicResource SubtleForeground}" FontStyle="Italic" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                        <SelectableTextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="{DynamicResource JsonKeyBrush}"/>
+                                        <SelectableTextBlock Text=":" Foreground="{DynamicResource SubtleForeground}"/>
+                                        <SelectableTextBlock Text="{Binding Value}" Foreground="{DynamicResource JsonValueBrush}"/>
+                                        <SelectableTextBlock Text="{Binding Type}" Foreground="{DynamicResource SubtleForeground}" FontStyle="Italic" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0"/>
                                     </StackPanel>
                                 </TreeDataTemplate>
                             </TreeView.ItemTemplate>
@@ -160,7 +160,7 @@
              <!-- Markdown View -->
              <Border Grid.Row="1" BorderBrush="{DynamicResource SubtleForeground}" BorderThickness="1" Margin="5" IsVisible="{Binding IsMarkdownVisible}">
                 <Grid RowDefinitions="Auto, *">
-                    <TextBlock Text="Loading…" IsVisible="{Binding ShowMarkdownLoadingPlaceholder}"
+                    <SelectableTextBlock Text="Loading…" IsVisible="{Binding ShowMarkdownLoadingPlaceholder}"
                                VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource SubtleForeground}" Margin="12"/>
                     <Border Grid.Row="1" IsVisible="{Binding IsPreviewOpenedInBrowser}" Padding="0">
                         <Grid RowDefinitions="Auto, *">
@@ -189,12 +189,5 @@
              </Border>
         </Grid>
 
-        <!-- Status Bar -->
-        <views:AnimatedStatusBar Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
-            <Grid ColumnDefinitions="*,Auto">
-                <SelectableTextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontWeight="Bold" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1" Text="{Binding AppVersionDisplay}" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
-            </Grid>
-        </views:AnimatedStatusBar>
     </Grid>
 </UserControl>

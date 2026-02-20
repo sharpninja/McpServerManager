@@ -8,20 +8,20 @@
              x:DataType="vm:ConnectionViewModel">
 
     <StackPanel VerticalAlignment="Center" Spacing="12" Margin="16">
-        <TextBlock Text="Connect to Server"
+        <SelectableTextBlock Text="Connect to Server"
                    FontSize="23" FontWeight="SemiBold"/>
 
-        <TextBlock Text="Host" FontSize="15"/>
+        <SelectableTextBlock Text="Host" FontSize="15"/>
         <TextBox Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                  Watermark="e.g. 10.0.2.2"
                  IsEnabled="{Binding !IsConnecting}"/>
 
-        <TextBlock Text="Port" FontSize="15"/>
+        <SelectableTextBlock Text="Port" FontSize="15"/>
         <TextBox Text="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                  Watermark="e.g. 7147"
                  IsEnabled="{Binding !IsConnecting}"/>
 
-        <TextBlock Text="{Binding ErrorMessage}"
+        <SelectableTextBlock Text="{Binding ErrorMessage}"
                    Foreground="Red" TextWrapping="Wrap"
                    IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
@@ -32,7 +32,7 @@
                 IsEnabled="{Binding !IsConnecting}"
                 Margin="0,8,0,0"/>
 
-        <TextBlock Text="Connecting..."
+        <SelectableTextBlock Text="Connecting..."
                    Foreground="{DynamicResource SubtleForeground}"
                    HorizontalAlignment="Center"
                    IsVisible="{Binding IsConnecting}"/>

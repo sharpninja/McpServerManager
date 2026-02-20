@@ -79,15 +79,15 @@
       <Expander Header="{Binding ProcessingDialog.Count, StringFormat='Processing Dialog ({0})'}" IsExpanded="True" HorizontalAlignment="Stretch">
           <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Background="White" Padding="12" MinHeight="80">
               <Grid>
-                  <TextBlock Text="No processing dialog recorded." Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  <SelectableTextBlock Text="No processing dialog recorded." Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
                              IsVisible="{Binding ProcessingDialog, Converter={StaticResource CountToVisibility}, ConverterParameter='Invert'}"/>
                   <StackPanel IsVisible="{Binding ProcessingDialog, Converter={StaticResource CountToVisibility}}">
                       <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Padding="0,0,0,4" Margin="0,0,0,6">
                           <Grid ColumnDefinitions="160,90,100,*">
-                              <TextBlock Grid.Column="0" Text="Timestamp" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
-                              <TextBlock Grid.Column="1" Text="Role" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
-                              <TextBlock Grid.Column="2" Text="Category" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
-                              <TextBlock Grid.Column="3" Text="Content" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold" Margin="4,0"/>
+                              <SelectableTextBlock Grid.Column="0" Text="Timestamp" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <SelectableTextBlock Grid.Column="1" Text="Role" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <SelectableTextBlock Grid.Column="2" Text="Category" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <SelectableTextBlock Grid.Column="3" Text="Content" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold" Margin="4,0"/>
                           </Grid>
                       </Border>
                       <ItemsControl ItemsSource="{Binding ProcessingDialog}">
@@ -118,16 +118,16 @@
       <Expander Header="{Binding Actions.Count, StringFormat='Actions ({0})'}" IsExpanded="True" HorizontalAlignment="Stretch">
           <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Background="White" Padding="12" MinHeight="80">
               <Grid>
-                  <TextBlock Text="No actions recorded." Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  <SelectableTextBlock Text="No actions recorded." Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
                              IsVisible="{Binding Actions, Converter={StaticResource CountToVisibility}, ConverterParameter='Invert'}"/>
                   <StackPanel IsVisible="{Binding Actions, Converter={StaticResource CountToVisibility}}">
                       <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Padding="0,0,0,4" Margin="0,0,0,6">
                           <Grid ColumnDefinitions="40,100,*,90,120">
-                              <TextBlock Grid.Column="0" Text="#" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
-                              <TextBlock Grid.Column="1" Text="Type" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
-                              <TextBlock Grid.Column="2" Text="Description" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold" Margin="4,0"/>
-                              <TextBlock Grid.Column="3" Text="Status" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
-                              <TextBlock Grid.Column="4" Text="File Path" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <SelectableTextBlock Grid.Column="0" Text="#" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <SelectableTextBlock Grid.Column="1" Text="Type" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <SelectableTextBlock Grid.Column="2" Text="Description" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold" Margin="4,0"/>
+                              <SelectableTextBlock Grid.Column="3" Text="Status" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <SelectableTextBlock Grid.Column="4" Text="File Path" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
                           </Grid>
                       </Border>
                       <ItemsControl ItemsSource="{Binding Actions}">

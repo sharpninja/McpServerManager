@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using RequestTracker.Core.Commands;
 using RequestTracker.Core.Cqrs;
 using RequestTracker.Core.Models;
@@ -16,6 +17,7 @@ namespace RequestTracker.Core.ViewModels;
 
 public partial class TodoListViewModel : ViewModelBase
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("TodoListViewModel");
     private readonly Mediator _mediator = new();
     private readonly IClipboardService _clipboardService;
     private List<TodoListEntry> _allEntries = new();
@@ -43,6 +45,7 @@ public partial class TodoListViewModel : ViewModelBase
     [ObservableProperty] private string _editorTitle = "";
     [ObservableProperty] private bool _isEditorVisible;
     [ObservableProperty] private double _editorFontSize = 13;
+    [ObservableProperty] private bool _isCopilotRunning;
 
     /// <summary>Set by the view code-behind to read current TextEditor content.</summary>
     public Func<string>? GetEditorText { get; set; }
@@ -408,6 +411,97 @@ public partial class TodoListViewModel : ViewModelBase
 
     [RelayCommand]
     private void OpenAiChat() => OpenAiChatRequested?.Invoke(this, EventArgs.Empty);
+
+    // ── Copilot CLI Commands ────────────────────────────────────────────────
+
+    [RelayCommand]
+    private async Task CopilotStatusAsync()
+    {
+        if (SelectedEntry?.Item is not { } item) return;
+        await RunCopilotCommandAsync("status", item,
+            $"Analyze the current status of this todo item. Summarize what has been done, what remains, and any blockers.\n\n{TodoMarkdown.ToMarkdown(item)}");
+    }
+
+    [RelayCommand]
+    private async Task CopilotPlanAsync()
+    {
+        if (SelectedEntry?.Item is not { } item) return;
+        await RunCopilotCommandAsync("plan", item,
+            $"Create a detailed implementation plan for this todo item. Break it down into concrete steps with technical details.\n\n{TodoMarkdown.ToMarkdown(item)}");
+    }
+
+    [RelayCommand]
+    private async Task CopilotImplementAsync()
+    {
+        if (SelectedEntry?.Item is not { } item) return;
+        await RunCopilotCommandAsync("implement", item,
+            $"Implement this todo item. Make the necessary code changes.\n\n{TodoMarkdown.ToMarkdown(item)}");
+    }
+
+    private async Task RunCopilotCommandAsync(string action, McpTodoFlatItem item, string prompt)
+    {
+        _activeCts?.Cancel();
+        _activeCts = new CancellationTokenSource();
+        var ct = _activeCts.Token;
+
+        IsCopilotRunning = true;
+        EditorTitle = $"{item.Id} — copilot {action}";
+        EditorText = $"⏳ Running copilot {action} for {item.Id}…\n";
+        StatusText = $"Copilot {action}: {item.Id}…";
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"⏳ Running copilot {action} for {item.Id}…");
+        sb.AppendLine();
+
+        try
+        {
+            var result = await CopilotCliService.InvokeAsync(
+                prompt,
+                workingDirectory: null,
+                onStdoutLine: line =>
+                {
+                    sb.AppendLine(line);
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => EditorText = sb.ToString());
+                },
+                cancellationToken: ct);
+
+            sb.AppendLine();
+            sb.AppendLine(result.State == "success"
+                ? $"✅ Copilot {action} completed."
+                : $"⚠️ Copilot {action} finished with state: {result.State}");
+
+            if (!string.IsNullOrWhiteSpace(result.Stderr))
+            {
+                sb.AppendLine();
+                sb.AppendLine("--- stderr ---");
+                sb.AppendLine(result.Stderr.Trim());
+            }
+
+            EditorText = sb.ToString();
+            StatusText = result.State == "success"
+                ? $"Copilot {action} done: {item.Id}"
+                : $"Copilot {action} {result.State}: {item.Id}";
+        }
+        catch (OperationCanceledException)
+        {
+            sb.AppendLine();
+            sb.AppendLine("🛑 Cancelled.");
+            EditorText = sb.ToString();
+            StatusText = $"Copilot {action} cancelled";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Copilot {Action} failed for {Id}", action, item.Id);
+            sb.AppendLine();
+            sb.AppendLine($"❌ Error: {ex.Message}");
+            EditorText = sb.ToString();
+            StatusText = $"Copilot error: {ex.Message}";
+        }
+        finally
+        {
+            IsCopilotRunning = false;
+        }
+    }
 
     /// <summary>Builds a context string with current todo data for the AI assistant.</summary>
     public string GetTodoContextForAgent()

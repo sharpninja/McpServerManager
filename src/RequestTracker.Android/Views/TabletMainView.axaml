@@ -8,16 +8,26 @@
              x:Class="RequestTracker.Android.Views.TabletMainView"
              x:DataType="vm:MainWindowViewModel">
 
-    <TabControl>
-        <TabItem Header="Request Tracker">
-            <views:RequestTrackerTabletView/>
-        </TabItem>
-        <TabItem Header="Todos">
-            <views:TodoListView DataContext="{Binding TodoViewModel}"/>
-        </TabItem>
-        <TabItem Header="Logs">
-            <views:LogView DataContext="{Binding LogViewModel}"/>
-        </TabItem>
-    </TabControl>
+    <Grid RowDefinitions="*,Auto">
+        <TabControl Grid.Row="0">
+            <TabItem Header="Request Tracker">
+                <views:RequestTrackerTabletView/>
+            </TabItem>
+            <TabItem Header="Todos">
+                <views:TodoListView DataContext="{Binding TodoViewModel}"/>
+            </TabItem>
+            <TabItem Header="Logs">
+                <views:LogView DataContext="{Binding LogViewModel}"/>
+            </TabItem>
+        </TabControl>
+
+        <!-- Status Bar -->
+        <views:AnimatedStatusBar Grid.Row="1" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
+            <Grid ColumnDefinitions="*,Auto">
+                <SelectableTextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontWeight="Bold" VerticalAlignment="Center"/>
+                <SelectableTextBlock Grid.Column="1" Text="{Binding AppVersionDisplay}" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
+            </Grid>
+        </views:AnimatedStatusBar>
+    </Grid>
 
 </UserControl>

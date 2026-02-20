@@ -51,7 +51,7 @@
                   VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}" DataType="models:FileNode">
-                    <TextBlock Text="{Binding Name}"/>
+                    <SelectableTextBlock Text="{Binding Name}"/>
                 </TreeDataTemplate>
             </TreeView.ItemTemplate>
             <TreeView.ItemContainerTheme>
@@ -101,7 +101,7 @@
                 <Button Grid.Column="3" Click="OpenChatWindow" Margin="0,0,5,0" ToolTip.Tip="AI Assistant">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                         <PathIcon Data="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8 8,3.59 8,8 -3.59,8 -8,8zM12.5,7H11v6l5.25,3.15 0.75,-1.23 -4.5,-2.67z" Width="14" Height="14"/>
-                        <TextBlock Text="AI" VerticalAlignment="Center" FontSize="12"/>
+                        <SelectableTextBlock Text="AI" VerticalAlignment="Center" FontSize="12"/>
                     </StackPanel>
                 </Button>
                 <TextBox Grid.Column="4" Text="{Binding SelectedNodePathDisplay, Mode=OneWay, Converter={StaticResource PathToWsl}}" IsReadOnly="True" VerticalContentAlignment="Center"/>
@@ -111,7 +111,7 @@
              <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="5" IsVisible="{Binding IsMarkdownVisible}">
                 <Grid x:Name="MarkdownContentGrid" RowDefinitions="Auto, *">
                     <Border Grid.Row="0">
-                    <TextBlock Text="Loading…" IsVisible="{Binding ShowMarkdownLoadingPlaceholder}"
+                    <SelectableTextBlock Text="Loading…" IsVisible="{Binding ShowMarkdownLoadingPlaceholder}"
                                VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray" Margin="12"/>
                     </Border>
                     <Border Grid.Row="1" IsVisible="{Binding IsPreviewOpenedInBrowser}" Padding="0">
@@ -162,59 +162,59 @@
                         <ItemsControl ItemsSource="{Binding JsonLogSummary.SummaryLines}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding}" FontSize="14" Margin="0,1"/>
+                                    <SelectableTextBlock Text="{Binding}" FontSize="14" Margin="0,1"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </Border>
                     <!-- Search -->
                     <Grid Grid.Row="1" ColumnDefinitions="Auto, *" Margin="0,0,0,4">
-                        <TextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <SelectableTextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBox Grid.Column="1" Text="{Binding SearchQuery}" Watermark="Request ID, text, model, timestamp..."/>
                     </Grid>
                     <!-- Search results index. Height set from layout (default 200px); tree row is only * so it fills rest. -->
                     <Border Grid.Row="2" MinHeight="80" BorderBrush="#ddd" BorderThickness="0,0,0,1" Padding="4" Margin="0,0,0,4">
                         <Grid RowDefinitions="Auto, Auto, *">
-                            <TextBlock Grid.Row="0" Text="Search index (double-click to open request)" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
+                            <SelectableTextBlock Grid.Row="0" Text="Search index (double-click to open request)" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
                             <Border Grid.Row="1" BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Padding="0" Margin="0,0,0,0">
                                 <Grid RowDefinitions="Auto, Auto" ColumnDefinitions="250,*,100,100,130" Margin="4,2">
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Request ID" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="Display" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Model" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Grid.Row="0" Grid.Column="3" Text="Agent" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Grid.Row="0" Grid.Column="4" Text="Timestamp" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace" VerticalAlignment="Center"/>
+                                    <SelectableTextBlock Grid.Row="0" Grid.Column="0" Text="Request ID" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <SelectableTextBlock Grid.Row="0" Grid.Column="1" Text="Display" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <SelectableTextBlock Grid.Row="0" Grid.Column="2" Text="Model" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <SelectableTextBlock Grid.Row="0" Grid.Column="3" Text="Agent" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <SelectableTextBlock Grid.Row="0" Grid.Column="4" Text="Timestamp" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace" VerticalAlignment="Center"/>
                                     <ComboBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding DistinctRequestIds}" SelectedItem="{Binding RequestIdFilter}" FontSize="12" FontFamily="Consolas, Monospace" Margin="0,2,8,0">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Converter={StaticResource EmptyStringToAll}}" FontFamily="Consolas, Monospace" TextTrimming="CharacterEllipsis"/>
+                                                <SelectableTextBlock Text="{Binding Converter={StaticResource EmptyStringToAll}}" FontFamily="Consolas, Monospace" TextTrimming="CharacterEllipsis"/>
                                             </DataTemplate>
                                         </ComboBox.ItemTemplate>
                                     </ComboBox>
                                     <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding DistinctDisplayTexts}" SelectedItem="{Binding DisplayFilter}" FontSize="12" FontFamily="Consolas, Monospace" Margin="0,2,8,0">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Converter={StaticResource EmptyStringToAll}}" FontFamily="Consolas, Monospace" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" MaxWidth="400"/>
+                                                <SelectableTextBlock Text="{Binding Converter={StaticResource EmptyStringToAll}}" FontFamily="Consolas, Monospace" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" MaxWidth="400"/>
                                             </DataTemplate>
                                         </ComboBox.ItemTemplate>
                                     </ComboBox>
                                     <ComboBox Grid.Row="1" Grid.Column="2" ItemsSource="{Binding DistinctModels}" SelectedItem="{Binding ModelFilter}" FontSize="12" FontFamily="Consolas, Monospace" Margin="0,2,8,0">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Converter={StaticResource EmptyStringToAll}}" FontFamily="Consolas, Monospace" TextTrimming="CharacterEllipsis"/>
+                                                <SelectableTextBlock Text="{Binding Converter={StaticResource EmptyStringToAll}}" FontFamily="Consolas, Monospace" TextTrimming="CharacterEllipsis"/>
                                             </DataTemplate>
                                         </ComboBox.ItemTemplate>
                                     </ComboBox>
                                     <ComboBox Grid.Row="1" Grid.Column="3" ItemsSource="{Binding DistinctAgents}" SelectedItem="{Binding AgentFilter}" FontSize="12" FontFamily="Consolas, Monospace" Margin="0,2,8,0">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Converter={StaticResource EmptyStringToAll}}" FontFamily="Consolas, Monospace" TextTrimming="CharacterEllipsis"/>
+                                                <SelectableTextBlock Text="{Binding Converter={StaticResource EmptyStringToAll}}" FontFamily="Consolas, Monospace" TextTrimming="CharacterEllipsis"/>
                                             </DataTemplate>
                                         </ComboBox.ItemTemplate>
                                     </ComboBox>
                                     <ComboBox Grid.Row="1" Grid.Column="4" ItemsSource="{Binding DistinctTimestamps}" SelectedItem="{Binding TimestampFilter}" FontSize="12" FontFamily="Consolas, Monospace" Margin="0,2,0,0">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Converter={StaticResource EmptyStringToAll}}" FontFamily="Consolas, Monospace" TextTrimming="CharacterEllipsis"/>
+                                                <SelectableTextBlock Text="{Binding Converter={StaticResource EmptyStringToAll}}" FontFamily="Consolas, Monospace" TextTrimming="CharacterEllipsis"/>
                                             </DataTemplate>
                                         </ComboBox.ItemTemplate>
                                     </ComboBox>
@@ -261,10 +261,10 @@
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}" DataType="jsonModels:JsonTreeNode">
                                     <StackPanel Orientation="Horizontal" Spacing="5" Background="Transparent" DoubleTapped="OnJsonNodeDoubleTapped">
-                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#007acc"/>
-                                        <TextBlock Text=":" Foreground="Gray"/>
-                                        <TextBlock Text="{Binding Value}" Foreground="#ce9178"/>
-                                        <TextBlock Text="{Binding Type}" Foreground="Gray" FontStyle="Italic" FontSize="12" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                        <SelectableTextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#007acc"/>
+                                        <SelectableTextBlock Text=":" Foreground="Gray"/>
+                                        <SelectableTextBlock Text="{Binding Value}" Foreground="#ce9178"/>
+                                        <SelectableTextBlock Text="{Binding Type}" Foreground="Gray" FontStyle="Italic" FontSize="12" VerticalAlignment="Center" Margin="5,0,0,0"/>
                                     </StackPanel>
                                 </TreeDataTemplate>
                             </TreeView.ItemTemplate>
@@ -304,7 +304,7 @@
                                      FontWeight="Bold"
                                      VerticalAlignment="Center"
                                      HorizontalAlignment="Left"/>
-                <TextBlock Grid.Column="1"
+                <SelectableTextBlock Grid.Column="1"
                            Text="{Binding AppVersionDisplay}"
                            VerticalAlignment="Center"
                            HorizontalAlignment="Right"

@@ -14,16 +14,34 @@
         WindowState="Normal"
         ShowInTaskbar="True">
 
-    <TabControl x:Name="MainTabControl">
-        <TabItem Header="Request Tracker">
-            <views:RequestTrackerView x:Name="ContentView"/>
-        </TabItem>
-        <TabItem Header="Todos">
-            <views:TodoListView x:Name="TodoView" DataContext="{Binding TodoViewModel}"/>
-        </TabItem>
-        <TabItem Header="Logs">
-            <views:LogView x:Name="LogView" DataContext="{Binding LogViewModel}"/>
-        </TabItem>
-    </TabControl>
+    <Grid RowDefinitions="*,Auto">
+        <TabControl x:Name="MainTabControl" Grid.Row="0">
+            <TabItem Header="Request Tracker">
+                <views:RequestTrackerView x:Name="ContentView"/>
+            </TabItem>
+            <TabItem Header="Todos">
+                <views:TodoListView x:Name="TodoView" DataContext="{Binding TodoViewModel}"/>
+            </TabItem>
+            <TabItem Header="Logs">
+                <views:LogView x:Name="LogView" DataContext="{Binding LogViewModel}"/>
+            </TabItem>
+        </TabControl>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="1" Padding="8,6">
+            <Grid ColumnDefinitions="*,Auto">
+                <SelectableTextBlock Grid.Column="0"
+                                     Text="{Binding StatusMessage}"
+                                     FontWeight="Bold"
+                                     VerticalAlignment="Center"
+                                     HorizontalAlignment="Left"/>
+                <SelectableTextBlock Grid.Column="1"
+                           Text="{Binding AppVersionDisplay}"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Right"
+                           Foreground="Gray"/>
+            </Grid>
+        </Border>
+    </Grid>
 
 </Window>

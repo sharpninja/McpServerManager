@@ -39,7 +39,12 @@ public sealed class InitializeFromMcpHandler : ICommandHandler<InitializeFromMcp
         {
             try
             {
-                Services.OllamaLogAgentService.TryStartOllamaIfNeeded();
+                if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows)
+                    || System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux)
+                    || System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX))
+                {
+                    Services.OllamaLogAgentService.TryStartOllamaIfNeeded();
+                }
                 await vm.ReloadFromMcpAsyncInternal().ConfigureAwait(false);
             }
             catch (Exception ex)

@@ -45,7 +45,7 @@ public partial class AnimatedStatusBar : UserControl
         base.OnPropertyChanged(change);
         if (change.Property == IsBusyProperty)
         {
-            _logger.LogDebug("IsBusy changed to {IsBusy}", IsBusy);
+            _logger.LogInformation("IsBusy changed to {IsBusy}", IsBusy);
             if (IsBusy)
                 StartAnimation();
             else
@@ -98,7 +98,7 @@ public partial class AnimatedStatusBar : UserControl
         else
             ClearValue(BackgroundProperty);
 
-        _logger.LogDebug("StopAnimation: background reset to {BrushType}", brush?.GetType().Name ?? "cleared");
+        _logger.LogInformation("StopAnimation: background reset to {BrushType}", brush?.GetType().Name ?? "cleared");
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
