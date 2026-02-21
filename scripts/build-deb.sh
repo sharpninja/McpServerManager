@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build-deb.sh — Build a .deb package for RequestTracker Desktop (Linux)
+# build-deb.sh — Build a .deb package for McpServerManager Desktop (Linux)
 #
 # Usage:
 #   ./scripts/build-deb.sh [--version <semver>] [--configuration Release|Debug]
@@ -15,7 +15,7 @@ CONFIGURATION="Release"
 RID="linux-x64"
 NO_BUILD=false
 OUTPUT_DIR="$WORKSPACE_ROOT/artifacts"
-PROJECT="$WORKSPACE_ROOT/src/RequestTracker.Desktop/RequestTracker.Desktop.csproj"
+PROJECT="$WORKSPACE_ROOT/src/McpServerManager.Desktop/McpServerManager.Desktop.csproj"
 
 # Parse args
 while [[ $# -gt 0 ]]; do
@@ -43,7 +43,7 @@ if [ -z "$VERSION" ]; then
 fi
 echo "Version: $VERSION"
 
-PKG_NAME="requesttracker"
+PKG_NAME="mcpservermanager"
 PUBLISH_DIR="$OUTPUT_DIR/publish-linux"
 DEB_ROOT="$OUTPUT_DIR/deb-staging"
 DEB_FILE="$OUTPUT_DIR/${PKG_NAME}_${VERSION}_amd64.deb"
@@ -67,7 +67,7 @@ if [ ! -d "$PUBLISH_DIR" ]; then
 fi
 
 # Find the main executable
-EXE_NAME="RequestTracker.Desktop"
+EXE_NAME="McpServerManager.Desktop"
 if [ ! -f "$PUBLISH_DIR/$EXE_NAME" ]; then
     # Fallback: first executable
     EXE_NAME=$(find "$PUBLISH_DIR" -maxdepth 1 -type f -executable | head -1 | xargs basename)
@@ -76,7 +76,7 @@ fi
 # Clean staging
 rm -rf "$DEB_ROOT"
 mkdir -p "$DEB_ROOT/DEBIAN"
-mkdir -p "$DEB_ROOT/opt/requesttracker"
+mkdir -p "$DEB_ROOT/opt/mcpservermanager"
 mkdir -p "$DEB_ROOT/usr/bin"
 mkdir -p "$DEB_ROOT/usr/share/applications"
 mkdir -p "$DEB_ROOT/usr/share/icons/hicolor/128x128/apps"
@@ -84,39 +84,39 @@ mkdir -p "$DEB_ROOT/usr/share/icons/hicolor/256x256/apps"
 mkdir -p "$DEB_ROOT/usr/share/icons/hicolor/512x512/apps"
 
 # Copy published files
-cp -r "$PUBLISH_DIR"/* "$DEB_ROOT/opt/requesttracker/"
-chmod +x "$DEB_ROOT/opt/requesttracker/$EXE_NAME"
+cp -r "$PUBLISH_DIR"/* "$DEB_ROOT/opt/mcpservermanager/"
+chmod +x "$DEB_ROOT/opt/mcpservermanager/$EXE_NAME"
 
 # Symlink to /usr/bin
-ln -sf "/opt/requesttracker/$EXE_NAME" "$DEB_ROOT/usr/bin/requesttracker"
+ln -sf "/opt/mcpservermanager/$EXE_NAME" "$DEB_ROOT/usr/bin/mcpservermanager"
 
 # Icons
-ICON_DIR="$WORKSPACE_ROOT/src/RequestTracker.Core/Assets"
+ICON_DIR="$WORKSPACE_ROOT/src/McpServerManager.Core/Assets"
 if [ -f "$ICON_DIR/logo-128.png" ]; then
-    cp "$ICON_DIR/logo-128.png" "$DEB_ROOT/usr/share/icons/hicolor/128x128/apps/requesttracker.png"
+    cp "$ICON_DIR/logo-128.png" "$DEB_ROOT/usr/share/icons/hicolor/128x128/apps/mcpservermanager.png"
 fi
 if [ -f "$ICON_DIR/logo-256.png" ]; then
-    cp "$ICON_DIR/logo-256.png" "$DEB_ROOT/usr/share/icons/hicolor/256x256/apps/requesttracker.png"
+    cp "$ICON_DIR/logo-256.png" "$DEB_ROOT/usr/share/icons/hicolor/256x256/apps/mcpservermanager.png"
 fi
 if [ -f "$ICON_DIR/logo-512.png" ]; then
-    cp "$ICON_DIR/logo-512.png" "$DEB_ROOT/usr/share/icons/hicolor/512x512/apps/requesttracker.png"
+    cp "$ICON_DIR/logo-512.png" "$DEB_ROOT/usr/share/icons/hicolor/512x512/apps/mcpservermanager.png"
 fi
 
 # Desktop entry
-cat > "$DEB_ROOT/usr/share/applications/requesttracker.desktop" << EOF
+cat > "$DEB_ROOT/usr/share/applications/mcpservermanager.desktop" << EOF
 [Desktop Entry]
-Name=RequestTracker
+Name=McpServerManager
 Comment=Browse and analyze Copilot request/session logs
-Exec=/opt/requesttracker/$EXE_NAME
-Icon=requesttracker
+Exec=/opt/mcpservermanager/$EXE_NAME
+Icon=mcpservermanager
 Terminal=false
 Type=Application
 Categories=Development;Utility;
-StartupWMClass=RequestTracker.Desktop
+StartupWMClass=McpServerManager.Desktop
 EOF
 
 # DEBIAN/control
-INSTALLED_SIZE=$(du -sk "$DEB_ROOT/opt/requesttracker" | awk '{print $1}')
+INSTALLED_SIZE=$(du -sk "$DEB_ROOT/opt/mcpservermanager" | awk '{print $1}')
 cat > "$DEB_ROOT/DEBIAN/control" << EOF
 Package: $PKG_NAME
 Version: $VERSION
@@ -125,11 +125,11 @@ Priority: optional
 Architecture: amd64
 Installed-Size: $INSTALLED_SIZE
 Maintainer: sharpninja <ninja@thesharp.ninja>
-Description: RequestTracker Desktop
+Description: McpServerManager Desktop
  Avalonia desktop app for browsing, searching, and analyzing
  Copilot request/session logs. Supports portrait and landscape
  layouts with tree view, markdown/JSON viewer, and search history.
-Homepage: https://github.com/sharpninja/RequestTracker
+Homepage: https://github.com/sharpninja/McpServerManager
 EOF
 
 # DEBIAN/postinst

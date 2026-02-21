@@ -1,0 +1,61 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:McpServerManager.Core.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="using:McpServerManager.Desktop.Views"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="McpServerManager.Desktop.Views.MainWindow"
+        x:Name="Root"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="{Binding WindowTitle}"
+        Width="1000" Height="700"
+        WindowState="Normal"
+        ShowInTaskbar="True">
+
+    <Grid RowDefinitions="*,Auto">
+        <TabControl x:Name="MainTabControl" Grid.Row="0">
+            <TabItem Header="Request Tracker">
+                <views:McpServerManagerView x:Name="ContentView"/>
+            </TabItem>
+            <TabItem Header="Todos">
+                <views:TodoListView x:Name="TodoView" DataContext="{Binding TodoViewModel}"/>
+            </TabItem>
+            <TabItem Header="Workspaces">
+                <views:WorkspaceView x:Name="WorkspaceTabView" DataContext="{Binding WorkspaceViewModel}"/>
+            </TabItem>
+            <TabItem Header="Logs">
+                <views:LogView x:Name="LogView" DataContext="{Binding LogViewModel}"/>
+            </TabItem>
+        </TabControl>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="1" Padding="8,6">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <SelectableTextBlock Grid.Column="0"
+                                     Text="{Binding StatusMessage}"
+                                     FontWeight="Bold"
+                                     VerticalAlignment="Center"
+                                     HorizontalAlignment="Left"/>
+                <ComboBox Grid.Column="1"
+                          MinWidth="260"
+                          MaxWidth="420"
+                          ItemsSource="{Binding WorkspaceConnections}"
+                          SelectedItem="{Binding SelectedWorkspaceConnection, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:CompileBindings="False">
+                            <SelectableTextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <SelectableTextBlock Grid.Column="2"
+                           Text="{Binding AppVersionDisplay}"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Right"
+                           Foreground="Gray"/>
+            </Grid>
+        </Border>
+    </Grid>
+
+</Window>

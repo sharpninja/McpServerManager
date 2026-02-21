@@ -1,4 +1,4 @@
-requesttracker:
+mcpservermanager:
   medium-priority:
   - id: RT-001
     title: Find opportunities to unify Views between Desktop and Android and place them into a shared Avalonia library
@@ -9,7 +9,7 @@ requesttracker:
     - TodoListView is nearly identical across both platforms - prime candidate for unification.
     - Evaluate which platform-specific styling (DynamicResource, font sizes) can be handled via Avalonia styles/themes rather than separate AXAML files.
     technical-details:
-    - Create a new shared project (e.g. RequestTracker.Views) targeting net9.0 with Avalonia references
+    - Create a new shared project (e.g. McpServerManager.Views) targeting net9.0 with Avalonia references
     - Move unified UserControls from Desktop/Android into the shared project
     - Use Avalonia style selectors or DynamicResource for platform-specific theming
     - Keep only platform-specific views (PhoneMainView, MainWindow) in their respective projects
@@ -20,7 +20,7 @@ requesttracker:
       done: false
     - task: Extract TodoListView into shared library with platform theming
       done: false
-    - task: Evaluate RequestTrackerView and RequestTrackerTabletView for unification
+    - task: Evaluate McpServerManagerView and McpServerManagerTabletView for unification
       done: false
     - task: Update Desktop and Android projects to reference shared library
       done: false
@@ -91,7 +91,7 @@ requesttracker:
     title: Add a solution file
     done: true
     description:
-    - Added RequestTracker.slnx (new-format solution file) covering Core, Desktop, and Android projects.
+    - Added McpServerManager.slnx (new-format solution file) covering Core, Desktop, and Android projects.
     source: ANALYSIS.md suggestion 2
 
   - id: RT-102

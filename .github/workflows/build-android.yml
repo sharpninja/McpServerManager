@@ -90,7 +90,7 @@ jobs:
           if [ -f "${{ github.workspace }}/release.keystore" ]; then
             SIGNING_ARGS="/p:AndroidSigningKeyStore=${{ github.workspace }}/release.keystore /p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }} /p:AndroidSigningStorePass=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} /p:AndroidSigningKeyPass=${{ secrets.ANDROID_KEY_PASSWORD }}"
           fi
-          dotnet publish src/RequestTracker.Android/RequestTracker.Android.csproj \
+          dotnet publish src/McpServerManager.Android/McpServerManager.Android.csproj \
             -c Release -f net9.0-android \
             /p:ApplicationVersion=${{ needs.version.outputs.version-code }} \
             /p:ApplicationDisplayVersion=${{ needs.version.outputs.semver }} \
@@ -99,12 +99,12 @@ jobs:
       - name: Find and rename APK
         id: find-apk
         run: |
-          APK=$(find src/RequestTracker.Android/bin/Release -name "*-Signed.apk" | head -1)
-          [ -z "$APK" ] && APK=$(find src/RequestTracker.Android/bin/Release -name "*.apk" | head -1)
+          APK=$(find src/McpServerManager.Android/bin/Release -name "*-Signed.apk" | head -1)
+          [ -z "$APK" ] && APK=$(find src/McpServerManager.Android/bin/Release -name "*.apk" | head -1)
           if [ -z "$APK" ]; then
-            echo "ERROR: No APK found!"; find src/RequestTracker.Android/bin/Release -type f; exit 1
+            echo "ERROR: No APK found!"; find src/McpServerManager.Android/bin/Release -type f; exit 1
           fi
-          DEST="artifacts/RequestTracker-${{ needs.version.outputs.semver }}.apk"
+          DEST="artifacts/McpServerManager-${{ needs.version.outputs.semver }}.apk"
           mkdir -p artifacts
           cp "$APK" "$DEST"
           echo "apk-path=$DEST" >> "$GITHUB_OUTPUT"
@@ -172,7 +172,7 @@ jobs:
         shell: pwsh
         run: |
           $msix = Get-ChildItem artifacts -Filter '*.msix' | Select-Object -First 1
-          $dest = "artifacts/RequestTracker-${{ needs.version.outputs.semver }}-win-x64.msix"
+          $dest = "artifacts/McpServerManager-${{ needs.version.outputs.semver }}-win-x64.msix"
           if ($msix.FullName -ne (Resolve-Path $dest -ErrorAction SilentlyContinue)) {
             Move-Item $msix.FullName $dest -Force
           }
@@ -235,16 +235,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.version.outputs.semver }}
-          name: RequestTracker v${{ needs.version.outputs.semver }}
+          name: McpServerManager v${{ needs.version.outputs.semver }}
           body: |
-            ## RequestTracker v${{ needs.version.outputs.semver }}
+            ## McpServerManager v${{ needs.version.outputs.semver }}
 
             ### Downloads
             | Platform | File |
             |----------|------|
-            | 🤖 Android | `RequestTracker-${{ needs.version.outputs.semver }}.apk` |
-            | 🪟 Windows | `RequestTracker-${{ needs.version.outputs.semver }}-win-x64.msix` |
-            | 🐧 Linux | `requesttracker_${{ needs.version.outputs.semver }}_amd64.deb` |
+            | 🤖 Android | `McpServerManager-${{ needs.version.outputs.semver }}.apk` |
+            | 🪟 Windows | `McpServerManager-${{ needs.version.outputs.semver }}-win-x64.msix` |
+            | 🐧 Linux | `mcpservermanager_${{ needs.version.outputs.semver }}_amd64.deb` |
 
             ### Android APK
             - **Version Code**: ${{ needs.version.outputs.version-code }}
@@ -257,7 +257,7 @@ jobs:
 
             ### Install on Linux
             ```bash
-            sudo dpkg -i requesttracker_${{ needs.version.outputs.semver }}_amd64.deb
+            sudo dpkg -i mcpservermanager_${{ needs.version.outputs.semver }}_amd64.deb
             ```
           draft: false
           prerelease: ${{ contains(needs.version.outputs.semver, '-') }}
@@ -267,7 +267,7 @@ jobs:
         id: urls
         run: |
           TAG="v${{ needs.version.outputs.semver }}"
-          echo "apk-url=https://github.com/${{ github.repository }}/releases/download/${TAG}/RequestTracker-${{ needs.version.outputs.semver }}.apk" >> "$GITHUB_OUTPUT"
+          echo "apk-url=https://github.com/${{ github.repository }}/releases/download/${TAG}/McpServerManager-${{ needs.version.outputs.semver }}.apk" >> "$GITHUB_OUTPUT"
 
   # ── F-Droid repo deployment ───────────────────────────────────────────────
   deploy-fdroid:
@@ -330,7 +330,7 @@ jobs:
           rm -f fdroid-workspace/repo/index.* 2>/dev/null || true
           APK=$(find . -name "*.apk" -type f | head -1)
           cp "$APK" fdroid-workspace/repo/
-          cp fdroid/metadata/ninja.thesharp.requesttracker.yml fdroid-workspace/metadata/
+          cp fdroid/metadata/ninja.thesharp.mcpservermanager.yml fdroid-workspace/metadata/
 
       - name: Ensure repo icon exists
         run: |

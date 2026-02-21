@@ -4,10 +4,10 @@
 **McpServerManager** is an Avalonia UI application (.NET 9) for viewing and analyzing AI agent session logs. It connects to an MCP server (FunWasHad project at `localhost:7147`) to fetch session data and TODO items, displaying them in a JSON tree, search index grid, structured details view, and a full TODO management tab with an integrated YAML editor. Includes an integrated AI chat window (Ollama-backed, Desktop only). Runs on Desktop (Windows/Linux) and Android (tablet + phone).
 
 ## Repository Structure
-- `src/RequestTracker.Core/` — Shared library (net9.0): ViewModels, Models, Services, Commands, CQRS
-- `src/RequestTracker.Desktop/` — Desktop app (net9.0 WinExe, Avalonia)
-- `src/RequestTracker.Android/` — Android app (net9.0-android, Avalonia)
-- `src/RequestTracker/` — Legacy standalone desktop app (pre-refactor, still builds)
+- `src/McpServerManager.Core/` — Shared library (net9.0): ViewModels, Models, Services, Commands, CQRS
+- `src/McpServerManager.Desktop/` — Desktop app (net9.0 WinExe, Avalonia)
+- `src/McpServerManager.Android/` — Android app (net9.0-android, Avalonia)
+- `src/McpServerManager/` — Legacy standalone desktop app (pre-refactor, still builds)
 - `lib/Markdown.Avalonia/` — Git submodule for markdown rendering
 - `docs/` — Documentation: toc.yml, todo.md, EXCEPTION-EVALUATION.md, fdroid/
 - `todo.yaml` — Project backlog in YAML format
@@ -55,7 +55,7 @@
 #### Status Bar Moved to Main View
 - **Desktop**: `MainWindow.axaml` wraps TabControl in `Grid RowDefinitions="*,Auto"`, status bar in row 1
 - **Android**: `TabletMainView.axaml` same pattern with `AnimatedStatusBar`
-- Removed from `RequestTrackerView.axaml` and `RequestTrackerTabletView.axaml`
+- Removed from `McpServerManagerView.axaml` and `McpServerManagerTabletView.axaml`
 - Updated `SaveCurrentLayoutToSettings` row count checks (portrait ≥5, landscape ≥3)
 
 #### Todo Global Status Events
@@ -88,16 +88,16 @@
 #### Other Changes
 - All `ConfigureAwait(false)` → `ConfigureAwait(true)` across 12 files (53 occurrences)
 - Graceful Pandoc handling: `IsPandocAvailable()` static check with caching
-- Removed manual `InitializeComponent()` from TodoListView, LogView, and RequestTrackerView (was shadowing Avalonia's source-generated version)
+- Removed manual `InitializeComponent()` from TodoListView, LogView, and McpServerManagerView (was shadowing Avalonia's source-generated version)
 - Todo list item template: ID prominent (SemiBold, larger), no checkboxes or priority display
 - Log font size increased from 12 to 14 on both Desktop and Android
 
 ## Build Notes
-- **Desktop**: `dotnet build src\RequestTracker.Desktop\RequestTracker.Desktop.csproj`
-- **Android (emulator x64)**: `dotnet build src\RequestTracker.Android\RequestTracker.Android.csproj -t:Install -f net9.0-android -c Debug -p:AdbTarget="-s emulator-5554" -p:RuntimeIdentifier=android-x64`
-- **Android launch**: `adb -s emulator-5554 shell am force-stop ninja.thesharp.requesttracker && adb -s emulator-5554 shell am start -n ninja.thesharp.requesttracker/crc64f9c6b05aaee59f0e.MainActivity`
+- **Desktop**: `dotnet build src\McpServerManager.Desktop\McpServerManager.Desktop.csproj`
+- **Android (emulator x64)**: `dotnet build src\McpServerManager.Android\McpServerManager.Android.csproj -t:Install -f net9.0-android -c Debug -p:AdbTarget="-s emulator-5554" -p:RuntimeIdentifier=android-x64`
+- **Android launch**: `adb -s emulator-5554 shell am force-stop ninja.thesharp.mcpservermanager && adb -s emulator-5554 shell am start -n ninja.thesharp.mcpservermanager/crc64f9c6b05aaee59f0e.MainActivity`
 - **CRITICAL**: The Android emulator (emulator-5554) is **x86_64**. Must use `-p:RuntimeIdentifier=android-x64` or Fast Deployment puts assemblies in `arm64-v8a` which the emulator can't find → instant crash.
-- **Running instance locks DLLs** — kill the RequestTracker process before rebuilding (`Stop-Process -Id <PID>`)
+- **Running instance locks DLLs** — kill the McpServerManager process before rebuilding (`Stop-Process -Id <PID>`)
 - Avalonia 11.3.12, FluentAvaloniaUI 2.4.1 (2.5.0 needs .NET 10), AvaloniaEdit 11.0.0, CommunityToolkit.Mvvm 8.2.1
 - Markdown.Avalonia submodule needs Linux CI patching (`.props` only defines PackageTargetFrameworks for Windows_NT)
 

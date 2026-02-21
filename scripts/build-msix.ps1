@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 <#
 .SYNOPSIS
-  Build an MSIX package for RequestTracker Desktop using MsixTools.
+  Build an MSIX package for McpServerManager Desktop using MsixTools.
 .PARAMETER Configuration  Build configuration: Release (default) or Debug.
 .PARAMETER NoBuild        Skip dotnet publish; use existing publish output.
 .PARAMETER Clean          Delete bin/ and obj/ before publishing.

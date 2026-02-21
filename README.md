@@ -34,7 +34,7 @@ The application monitors a specified directory (e.g., `docs/requests`) for JSON 
 
 ## Configuration
 
-Edit `src/RequestTracker/appsettings.config` (copied next to the executable) to set `Mcp.BaseUrl`, `Paths.SessionsRootPath`, `Paths.HtmlCacheDirectory`, and `Paths.CssFallbackPath`. Session logs are loaded from `Mcp.BaseUrl` (`/mcp/sessionlog`), while `Paths.*` is still used for documents/source context and markdown CSS fallback. `Paths.HtmlCacheDirectory` supports environment variables such as `%TEMP%`.
+Edit `src/McpServerManager/appsettings.config` (copied next to the executable) to set `Mcp.BaseUrl`, `Paths.SessionsRootPath`, `Paths.HtmlCacheDirectory`, and `Paths.CssFallbackPath`. Session logs are loaded from `Mcp.BaseUrl` (`/mcp/sessionlog`), while `Paths.*` is still used for documents/source context and markdown CSS fallback. `Paths.HtmlCacheDirectory` supports environment variables such as `%TEMP%`.
 
 ## Tech Stack
 
@@ -47,7 +47,7 @@ Edit `src/RequestTracker/appsettings.config` (copied next to the executable) to 
 
 ```bash
 # From repo root
-cd src/RequestTracker
+cd src/McpServerManager
 dotnet run
 ```
 
@@ -56,7 +56,7 @@ dotnet run
 On WSL with WSLg enabled (Windows 11), the app window should appear on the Windows desktop. If it doesn’t:
 
 1. **Check WSLg**: Ensure you’re on Windows 11 with WSLg (no separate X server needed).
-2. **Run from project**: `cd src/RequestTracker && dotnet run -c Debug`
+2. **Run from project**: `cd src/McpServerManager && dotnet run -c Debug`
 3. **Or use the script**: From repo root, `chmod +x run-wslg.sh && ./run-wslg.sh`
 4. **Taskbar**: The window may show in the Windows taskbar; click it to bring it to front.
 

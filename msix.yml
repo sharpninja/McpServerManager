@@ -1,13 +1,13 @@
 package:
-  name: RequestTracker
-  displayName: RequestTracker
+  name: McpServerManager
+  displayName: McpServerManager
 
 desktop:
-  path: src/RequestTracker.Desktop/RequestTracker.Desktop.csproj
+  path: src/McpServerManager.Desktop/McpServerManager.Desktop.csproj
   framework: net9.0
   subDir: desktop
-  displayName: RequestTracker
-  appId: RequestTrackerDesktop
+  displayName: McpServerManager
+  appId: McpServerManagerDesktop
   description: Avalonia desktop app for browsing and analyzing Copilot request/session logs
 
 build:
@@ -21,4 +21,4 @@ output:
   dir: artifacts
 
 icons:
-  svg: src/RequestTracker.Core/Assets/logo.svg
+  svg: src/McpServerManager.Core/Assets/logo.svg
