@@ -2,12 +2,15 @@ using System;
 using System.IO;
 using System.Text.Json;
 using Avalonia.Controls;
+using McpServerManager.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace McpServerManager.Core.Models;
 
 /// <summary>Load/save LayoutSettings from the app's settings file (shared by main and chat window).</summary>
 public static class LayoutSettingsIo
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("LayoutSettings");
     private const string SettingsFileName = "layout_settings.json";
 
     public static string GetSettingsFilePath()
@@ -34,8 +37,9 @@ public static class LayoutSettingsIo
             }
             return settings;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "[LayoutSettings] Failed to load settings");
             return null;
         }
     }
@@ -48,6 +52,6 @@ public static class LayoutSettingsIo
             var json = JsonSerializer.Serialize(settings);
             File.WriteAllText(path, json);
         }
-        catch { }
+        catch (Exception ex) { _logger.LogWarning(ex, "[LayoutSettings] Failed to save settings"); }
     }
 }

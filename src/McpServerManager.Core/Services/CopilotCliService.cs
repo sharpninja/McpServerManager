@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace McpServerManager.Core.Services;
 
@@ -14,6 +15,7 @@ namespace McpServerManager.Core.Services;
 /// </summary>
 public static class CopilotCliService
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("CopilotCli");
     private static readonly Regex AnsiEscapePattern = new(@"\x1B\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
 
     /// <summary>
@@ -102,6 +104,7 @@ public static class CopilotCliService
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "[CopilotCli] Failed to spawn process");
             return new CopilotCliResult { State = "spawnError", Body = ex.Message };
         }
         finally

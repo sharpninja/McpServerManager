@@ -74,6 +74,7 @@ public sealed class OllamaLogAgentService : ILogAgentService
         }
         catch (HttpRequestException ex)
         {
+            _logger.LogWarning(ex, "[Ollama] Cannot reach Ollama server");
             return "Cannot reach Ollama. Is it running? (e.g. 'ollama serve' and 'ollama run " + modelToUse + "'). " + ex.Message;
         }
         catch (TaskCanceledException)
@@ -82,6 +83,7 @@ public sealed class OllamaLogAgentService : ILogAgentService
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "[Ollama] Unexpected error during chat");
             return "Error: " + ex.Message;
         }
     }
@@ -162,7 +164,8 @@ public sealed class OllamaLogAgentService : ILogAgentService
         }
         catch
         {
-            // Not running or not reachable
+            // Not running or not reachable – expected on cold start
+            _logger.LogDebug("[Ollama] Server not reachable; will attempt to start");
         }
 
         try

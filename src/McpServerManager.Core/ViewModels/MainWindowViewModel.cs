@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Linq;
 using System.Text;
@@ -307,13 +308,14 @@ public partial class MainWindowViewModel : ViewModelBase
         _activeMcpBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
         McpSessionService = new McpSessionLogService(_activeMcpBaseUrl);
         _mcpTodoService = new McpTodoService(_activeMcpBaseUrl);
-        _mcpWorkspaceService = new McpWorkspaceService(_activeMcpBaseUrl);
+        // Workspace endpoints always target the connection server, not the active workspace
+        _mcpWorkspaceService = new McpWorkspaceService(_defaultMcpBaseUrl);
 
         if (_hasRegisteredCqrsHandlers)
             RegisterMcpServiceHandlers();
 
         _todoViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl);
-        _workspaceViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl);
+        _workspaceViewModel?.SetMcpBaseUrl(_defaultMcpBaseUrl);
     }
 
     private void RegisterCqrsHandlers()
@@ -565,6 +567,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task SwitchWorkspaceConnectionAsync(WorkspaceConnectionOption option)
     {
+        _logger.LogInformation($"[Workspace Switch] Switching to '{option.DisplayName}' (BaseUrl={option.BaseUrl})");
         var selectedBaseUrl = NormalizeMcpBaseUrl(option.BaseUrl);
         IsSwitchingWorkspace = true;
 
@@ -572,10 +575,12 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             ApplyActiveMcpBaseUrl(selectedBaseUrl);
             await RefreshAllViewsForConnectionChangeAsync().ConfigureAwait(true);
+            _logger.LogInformation($"[Workspace Switch] Successfully connected to '{option.DisplayName}'");
             DispatchToUi(() => StatusMessage = $"Connected: {option.DisplayName}");
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, $"[Workspace Switch] Failed switching to '{option.DisplayName}'");
             DispatchToUi(() => StatusMessage = $"Workspace switch failed: {ex.Message}");
         }
         finally
@@ -586,13 +591,43 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task RefreshAllViewsForConnectionChangeAsync()
     {
-        await ReloadFromMcpAsyncInternal().ConfigureAwait(true);
+        _logger.LogDebug("[Workspace Switch] Refreshing session logs...");
+        try
+        {
+            await ReloadFromMcpAsyncInternal().ConfigureAwait(true);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "[Workspace Switch] Session log refresh failed (endpoint may not exist on target workspace); continuing with remaining views");
+        }
 
         if (_todoViewModel != null)
-            await _todoViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
+        {
+            _logger.LogDebug("[Workspace Switch] Refreshing todo view...");
+            try
+            {
+                await _todoViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(ex, "[Workspace Switch] Todo refresh failed; continuing");
+            }
+        }
 
         if (_workspaceViewModel != null)
-            await _workspaceViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
+        {
+            _logger.LogDebug("[Workspace Switch] Refreshing workspace view...");
+            try
+            {
+                await _workspaceViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(ex, "[Workspace Switch] Workspace view refresh failed; continuing");
+            }
+        }
+
+        _logger.LogDebug("[Workspace Switch] All views refreshed.");
     }
 
     partial void OnSearchQueryChanged(string value)
@@ -864,7 +899,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var entries = FilteredSearchEntries ?? SearchableEntries;
         var sb = new StringBuilder();
         string? resolvedPath = null;
-        try { resolvedPath = GetResolvedTargetPath(); } catch { }
+        try { resolvedPath = GetResolvedTargetPath(); } catch (Exception ex) { _logger.LogDebug(ex, "[Path] GetResolvedTargetPath failed"); }
 
         var agentConfig = AgentConfigIo.ReadContent();
         if (!string.IsNullOrWhiteSpace(agentConfig))
@@ -947,8 +982,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 {
                     content = File.ReadAllText(file.FullName);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _logger.LogDebug(ex, "[CodeFiles] Could not read {FileName}", file.Name);
                     content = $"(could not read {file.Name})";
                 }
                 string block = $"\n### {file.Name}\n{content}\n";
@@ -1036,7 +1072,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     filePaths.Add(file.FullName);
             }
         }
-        catch { /* ignore */ }
+        catch (Exception ex) { _logger.LogDebug(ex, "[CodeFiles] Error traversing directory"); }
     }
 
     private static string TruncateForContext(string s, int maxLen)
@@ -1499,7 +1535,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         string? resolvedPath = null;
-        try { resolvedPath = GetResolvedTargetPath(); } catch { }
+        try { resolvedPath = GetResolvedTargetPath(); } catch (Exception ex) { _logger.LogDebug(ex, "[Path] GetResolvedTargetPath failed"); }
         var documentsDto = resolvedPath != null ? BuildDocumentsDto(resolvedPath) : null;
         var sourceDto = resolvedPath != null ? BuildSourceDto(resolvedPath) : null;
         return (allJsonNode, documentsDto, sourceDto);
@@ -2423,7 +2459,7 @@ public partial class MainWindowViewModel : ViewModelBase
             if (actions.Count > 0)
                 unifiedLog.Entries[0].Actions = new ObservableCollection<UnifiedAction>(actions);
         }
-        catch { /* ignore */ }
+        catch (Exception ex) { _logger.LogDebug(ex, "[Actions] Failed to parse actions from JSON entry"); }
     }
 
     private void BuildCopilotSummaryAndIndex(CopilotSessionLog log, JsonLogSummary summary)
@@ -2681,7 +2717,7 @@ public partial class MainWindowViewModel : ViewModelBase
                              try {
                                  if (l > 1000000000000) tsStr = DateTimeOffset.FromUnixTimeMilliseconds(l).LocalDateTime.ToString("MM/dd HH:mm");
                                  else tsStr = DateTimeOffset.FromUnixTimeSeconds(l).LocalDateTime.ToString("MM/dd HH:mm");
-                             } catch {}
+                             } catch (Exception ex) { _logger.LogDebug(ex, "[Timestamp] Failed to parse unix time {Value}", l); }
                          }
                     }
                     timestampPrefix = $"[{tsStr}] ";
@@ -2893,7 +2929,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         Nodes.Clear();
         string? resolvedPath = null;
-        try { resolvedPath = GetResolvedTargetPath(); } catch { }
+        try { resolvedPath = GetResolvedTargetPath(); } catch (Exception ex) { _logger.LogDebug(ex, "[Path] GetResolvedTargetPath failed"); }
         var allJsonNode = new FileNode("ALL_JSON_VIRTUAL_NODE", false) { Name = "All JSON" };
         Nodes.Add(allJsonNode);
         if (resolvedPath != null)
@@ -3048,7 +3084,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void OnTreeChanged(object sender, FileSystemEventArgs e)
     {
         string? resolvedPath = null;
-        try { resolvedPath = GetResolvedTargetPath(); } catch { }
+        try { resolvedPath = GetResolvedTargetPath(); } catch (Exception ex) { _logger.LogDebug(ex, "[Path] GetResolvedTargetPath failed"); }
         if (resolvedPath == null) return;
         Task.Run(() =>
         {

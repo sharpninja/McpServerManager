@@ -4,12 +4,14 @@ using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using McpServerManager.Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace McpServerManager.Core.Services;
 
 /// <summary>Client for MCP workspace-management endpoints.</summary>
 public sealed class McpWorkspaceService
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("WorkspaceService");
     private readonly HttpClient _httpClient;
 
     public McpWorkspaceService(string baseUrl)
@@ -98,8 +100,9 @@ public sealed class McpWorkspaceService
         {
             return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken).ConfigureAwait(true) ?? new T();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, $"[WorkspaceService] JSON deserialization failed for {typeof(T).Name} (HTTP {(int)response.StatusCode}); returning default");
             return new T();
         }
     }

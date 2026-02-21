@@ -9,6 +9,7 @@ src/McpServerManager/crash.log
 docs/EXCEPTION-EVALUATION.md
 .nuget/
 .github/scripts/__pycache__/
+publish/
 
 # PNGs outside of Assets / Resources / docs
 *.png
