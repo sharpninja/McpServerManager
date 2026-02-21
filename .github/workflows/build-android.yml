@@ -140,15 +140,30 @@ jobs:
         shell: pwsh
         run: |
           Import-Module ./scripts/MsixTools/MsixTools.psd1 -Force
-          $msix = New-MsixPackage `
+          $msixOutput = New-MsixPackage `
             -WorkspaceRoot . `
             -ConfigPath msix.yml `
             -Version "${{ needs.version.outputs.semver }}" `
             -ExcludeService `
             -Force
-          if (-not (Test-Path $msix)) {
-            throw "MSIX output not found: $msix"
+
+          # New-MsixPackage may emit extra text output from child tooling.
+          # Resolve the actual MSIX path from output and fallback to artifacts scan.
+          $msixCandidates = @()
+          if ($null -ne $msixOutput) {
+            $msixCandidates += @($msixOutput) `
+              | ForEach-Object { "$_".Trim() } `
+              | Where-Object { $_ -match '\.msix$' }
           }
+
+          $msixCandidates += Get-ChildItem artifacts -Filter '*.msix' -File -ErrorAction SilentlyContinue `
+            | ForEach-Object { $_.FullName }
+
+          $msix = $msixCandidates | Select-Object -Unique | Select-Object -First 1
+          if (-not $msix -or -not (Test-Path -LiteralPath $msix)) {
+            throw "MSIX output not found. Candidates: $($msixCandidates -join '; ')"
+          }
+          Write-Host "MSIX path resolved: $msix"
           # New-MsixPackage can leave LASTEXITCODE from child tooling; clear it so
           # GitHub's pwsh wrapper does not treat the successful step as failed.
           $global:LASTEXITCODE = 0
