@@ -14,8 +14,8 @@ Description: |
   and analyzing Copilot request/session logs. Supports phone (portrait
   NavigationView) and tablet (desktop-like) layouts.
 
-WebSite: https://github.com/sharpninja/RequestTracker
+WebSite: https://github.com/sharpninja/McpServerManager
 
-SourceCode: https://github.com/sharpninja/RequestTracker
+SourceCode: https://github.com/sharpninja/McpServerManager
 
-IssueTracker: https://github.com/sharpninja/RequestTracker/issues
+IssueTracker: https://github.com/sharpninja/McpServerManager/issues

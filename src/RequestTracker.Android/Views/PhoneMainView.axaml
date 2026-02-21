@@ -141,9 +141,20 @@
 
         <!-- Status Bar -->
         <views:AnimatedStatusBar Grid.Row="3" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
-            <Grid ColumnDefinitions="*,Auto">
-                <SelectableTextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                <SelectableTextBlock Grid.Column="1" Text="{Binding AppVersionDisplay}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="4">
+                <ComboBox Grid.Row="0"
+                          Grid.Column="0"
+                          Grid.ColumnSpan="2"
+                          ItemsSource="{Binding WorkspaceConnections}"
+                          SelectedItem="{Binding SelectedWorkspaceConnection, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:CompileBindings="False">
+                            <SelectableTextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <SelectableTextBlock Grid.Row="1" Grid.Column="0" Text="{Binding StatusMessage}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <SelectableTextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AppVersionDisplay}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
             </Grid>
         </views:AnimatedStatusBar>
     </Grid>

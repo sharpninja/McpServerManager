@@ -22,6 +22,7 @@ public partial class TodoListViewModel : ViewModelBase
     private readonly IClipboardService _clipboardService;
     private List<TodoListEntry> _allEntries = new();
     private CancellationTokenSource? _activeCts;
+    private bool _isBusyHandlerRegistered;
 
     // ── Observable properties ───────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ public partial class TodoListViewModel : ViewModelBase
     [ObservableProperty] private int _selectedPriorityIndex;
     [ObservableProperty] private int _selectedScopeIndex;
     [ObservableProperty] private string _filterText = "";
+    [ObservableProperty] private bool _includeCompleted;
 
     // New-todo form
     [ObservableProperty] private bool _isCreatingNew;
@@ -61,21 +63,26 @@ public partial class TodoListViewModel : ViewModelBase
     public TodoListViewModel(IClipboardService clipboardService, string mcpBaseUrl)
     {
         _clipboardService = clipboardService;
-        RegisterCqrsHandlers(new McpTodoService(mcpBaseUrl));
+        SetMcpBaseUrl(mcpBaseUrl);
     }
 
     public TodoListViewModel(IClipboardService clipboardService)
     {
         _clipboardService = clipboardService;
-        RegisterCqrsHandlers(new McpTodoService(AppSettings.ResolveMcpBaseUrl()));
+        SetMcpBaseUrl(AppSettings.ResolveMcpBaseUrl());
     }
 
     private void RegisterCqrsHandlers(McpTodoService service)
     {
-        _mediator.IsBusyChanged += busy =>
+        if (!_isBusyHandlerRegistered)
         {
-            Avalonia.Threading.Dispatcher.UIThread.Post(() => IsLoading = busy);
-        };
+            _mediator.IsBusyChanged += busy =>
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => IsLoading = busy);
+            };
+            _isBusyHandlerRegistered = true;
+        }
+
         _mediator.RegisterQuery(new QueryTodosHandler(service));
         _mediator.RegisterQuery(new GetTodoByIdHandler(service));
         _mediator.Register<CreateTodoCommand, McpTodoMutationResult>(new CreateTodoHandler(service));
@@ -84,11 +91,19 @@ public partial class TodoListViewModel : ViewModelBase
         _mediator.Register<AnalyzeTodoRequirementsCommand, McpRequirementsAnalysisResult>(new AnalyzeTodoRequirementsHandler(service));
     }
 
+    public void SetMcpBaseUrl(string mcpBaseUrl)
+    {
+        RegisterCqrsHandlers(new McpTodoService(mcpBaseUrl));
+    }
+
+    public Task RefreshForConnectionChangeAsync() => LoadTodosAsync();
+
     // ── Filter change triggers ──────────────────────────────────────────────
 
     partial void OnSelectedPriorityIndexChanged(int value) => ApplyFilters();
     partial void OnSelectedScopeIndexChanged(int value) => ApplyFilters();
     partial void OnFilterTextChanged(string value) => ApplyFilters();
+    partial void OnIncludeCompletedChanged(bool value) => _ = LoadTodosAsync();
 
     // ── Commands ────────────────────────────────────────────────────────────
 
@@ -101,7 +116,7 @@ public partial class TodoListViewModel : ViewModelBase
         try
         {
             var result = await _mediator.QueryAsync<QueryTodosQuery, McpTodoQueryResult>(
-                new QueryTodosQuery { Done = false });
+                new QueryTodosQuery { Done = IncludeCompleted ? null : false });
 
             _allEntries = BuildEntries(result.Items);
             ApplyFilters();
@@ -130,6 +145,7 @@ public partial class TodoListViewModel : ViewModelBase
         SelectedPriorityIndex = 0;
         SelectedScopeIndex = 0;
         FilterText = "";
+        IncludeCompleted = false;
     }
 
     [RelayCommand]

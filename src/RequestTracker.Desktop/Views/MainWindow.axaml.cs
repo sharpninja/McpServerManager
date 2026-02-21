@@ -82,6 +82,7 @@ public partial class MainWindow : Window
 
         ContentView.ApplySettings(_layoutSettings);
         TodoView.ApplySettings(_layoutSettings);
+        WorkspaceTabView.ApplySettings(_layoutSettings);
         MainTabControl.SelectedIndex = _layoutSettings.SelectedTabIndex;
         MainTabControl.SelectionChanged += OnTabSelectionChanged;
 
@@ -89,6 +90,7 @@ public partial class MainWindow : Window
         var initialSize = ClientSize;
         ContentView.OnHostSizeChanged(initialSize);
         TodoView.OnHostSizeChanged(initialSize);
+        WorkspaceTabView.OnHostSizeChanged(initialSize);
 
         int sx = (int)_layoutSettings.WindowX;
         int sy = (int)_layoutSettings.WindowY;
@@ -174,6 +176,8 @@ public partial class MainWindow : Window
             toSave.SelectedTabIndex = _layoutSettings.SelectedTabIndex;
             toSave.TodoEditorLandscapeListWidth = _layoutSettings.TodoEditorLandscapeListWidth;
             toSave.TodoEditorPortraitListHeight = _layoutSettings.TodoEditorPortraitListHeight;
+            toSave.WorkspaceEditorLandscapeListWidth = _layoutSettings.WorkspaceEditorLandscapeListWidth;
+            toSave.WorkspaceEditorPortraitListHeight = _layoutSettings.WorkspaceEditorPortraitListHeight;
             _chatWindowWasOpenOnClosing = null;
             LayoutSettingsIo.Save(toSave);
         }
@@ -194,6 +198,7 @@ public partial class MainWindow : Window
 
         ContentView.SaveSettings();
         TodoView.SaveSettings();
+        WorkspaceTabView.SaveSettings();
 
         if (WindowState == WindowState.Normal)
         {
@@ -226,6 +231,7 @@ public partial class MainWindow : Window
         var size = ClientSize;
         ContentView.OnHostSizeChanged(size);
         TodoView.OnHostSizeChanged(size);
+        WorkspaceTabView.OnHostSizeChanged(size);
         SaveWindowStateToSettings();
         SaveSettings();
     }

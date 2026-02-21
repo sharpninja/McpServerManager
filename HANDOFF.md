@@ -1,7 +1,7 @@
 # Session Handoff — 2026-02-20 (Session 2)
 
 ## Project Overview
-**RequestTracker** is an Avalonia UI application (.NET 9) for viewing and analyzing AI agent session logs. It connects to an MCP server (FunWasHad project at `localhost:7147`) to fetch session data and TODO items, displaying them in a JSON tree, search index grid, structured details view, and a full TODO management tab with an integrated YAML editor. Includes an integrated AI chat window (Ollama-backed, Desktop only). Runs on Desktop (Windows/Linux) and Android (tablet + phone).
+**McpServerManager** is an Avalonia UI application (.NET 9) for viewing and analyzing AI agent session logs. It connects to an MCP server (FunWasHad project at `localhost:7147`) to fetch session data and TODO items, displaying them in a JSON tree, search index grid, structured details view, and a full TODO management tab with an integrated YAML editor. Includes an integrated AI chat window (Ollama-backed, Desktop only). Runs on Desktop (Windows/Linux) and Android (tablet + phone).
 
 ## Repository Structure
 - `src/RequestTracker.Core/` — Shared library (net9.0): ViewModels, Models, Services, Commands, CQRS
@@ -18,7 +18,7 @@
 - **3-project architecture**: Core (shared lib) → Desktop + Android. Views in platform projects, ViewModels in Core.
 - **TabControl shell**: Desktop `MainWindow` and Android `TabletMainView` use TabControl with 3 tabs: "Request Tracker", "Todos", "Logs"
 - **Status bar**: Lives in `MainWindow.axaml` (Desktop) and `TabletMainView.axaml` (Android) — below the TabControl, not inside individual views
-- **MCP server scope**: The MCP at `localhost:7147` belongs to FunWasHad, not this project. RequestTracker is a read/write client.
+- **MCP server scope**: The MCP at `localhost:7147` belongs to FunWasHad, not this project. McpServerManager is a read/write client.
 - **Config**: `appsettings.config` (JSON) for `Mcp.BaseUrl`, `Paths.SessionsRootPath`, `Paths.HtmlCacheDirectory`. Android has no appsettings.config — uses `ConnectionDialogView` to get MCP URL at startup (default `10.0.2.2:7147`).
 - **Layout persistence**: `LayoutSettingsIo` saves/restores window size, position, splitter heights, chat window state
 - **Logging**: `AppLogService` singleton implements `ILoggerFactory`/`ILoggerProvider`. All logging uses `ILogger` via `AppLogService.Instance.CreateLogger("Category")`. Logs feed `LogViewModel` for the Logs tab.

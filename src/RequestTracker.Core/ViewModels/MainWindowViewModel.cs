@@ -45,9 +45,15 @@ public partial class MainWindowViewModel : ViewModelBase
     private const string McpAgentPrefix = "MCP_AGENT://";
 
     private readonly IClipboardService _clipboardService;
-    private readonly string _mcpBaseUrl;
-    internal readonly McpSessionLogService McpSessionService;
-    private readonly McpTodoService _mcpTodoService;
+    private string _defaultMcpBaseUrl = "";
+    private Uri _defaultMcpBaseUri = new("http://localhost");
+    private string _activeMcpBaseUrl = "";
+    internal McpSessionLogService McpSessionService = null!;
+    private McpTodoService _mcpTodoService = null!;
+    private McpWorkspaceService _mcpWorkspaceService = null!;
+    private McpWorkspaceService _workspaceCatalogService = null!;
+    private bool _suppressWorkspaceSelectionChanged;
+    private bool _hasRegisteredCqrsHandlers;
     internal readonly Mediator _mediator = new();
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
 
@@ -57,7 +63,18 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private TodoListViewModel CreateTodoViewModel()
     {
-        var vm = new TodoListViewModel(_clipboardService, _mcpBaseUrl);
+        var vm = new TodoListViewModel(_clipboardService, _activeMcpBaseUrl);
+        vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
+        return vm;
+    }
+
+    /// <summary>ViewModel for the Workspace tab. Created lazily on first access.</summary>
+    public WorkspaceViewModel WorkspaceViewModel => _workspaceViewModel ??= CreateWorkspaceViewModel();
+    private WorkspaceViewModel? _workspaceViewModel;
+
+    private WorkspaceViewModel CreateWorkspaceViewModel()
+    {
+        var vm = new WorkspaceViewModel(_clipboardService, _activeMcpBaseUrl);
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
         return vm;
     }
@@ -183,6 +200,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _statusMessage = "Ready";
 
+    [ObservableProperty]
+    private ObservableCollection<WorkspaceConnectionOption> _workspaceConnections = new();
+
+    [ObservableProperty]
+    private WorkspaceConnectionOption? _selectedWorkspaceConnection;
+
+    [ObservableProperty]
+    private bool _isSwitchingWorkspace;
+
     /// <summary>True while an async operation (MCP refresh, JSON load, etc.) is in progress.</summary>
     [ObservableProperty]
     private bool _isBusy;
@@ -239,19 +265,55 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel(IClipboardService clipboardService)
     {
         _clipboardService = clipboardService;
-        _mcpBaseUrl = GetMcpBaseUrl();
-        McpSessionService = new McpSessionLogService(_mcpBaseUrl);
-        _mcpTodoService = new McpTodoService(_mcpBaseUrl);
+        InitializeMcpEndpoint(GetMcpBaseUrl());
         RegisterCqrsHandlers();
     }
 
     public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl)
     {
         _clipboardService = clipboardService;
-        _mcpBaseUrl = mcpBaseUrl;
-        McpSessionService = new McpSessionLogService(mcpBaseUrl);
-        _mcpTodoService = new McpTodoService(mcpBaseUrl);
+        InitializeMcpEndpoint(mcpBaseUrl);
         RegisterCqrsHandlers();
+    }
+
+    private void InitializeMcpEndpoint(string mcpBaseUrl)
+    {
+        _defaultMcpBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
+        _defaultMcpBaseUri = new Uri(_defaultMcpBaseUrl, UriKind.Absolute);
+        _workspaceCatalogService = new McpWorkspaceService(_defaultMcpBaseUrl);
+        ApplyActiveMcpBaseUrl(_defaultMcpBaseUrl);
+        ApplyWorkspaceConnectionOptions(
+            new[]
+            {
+                WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri)
+            },
+            _defaultMcpBaseUrl);
+    }
+
+    private static string NormalizeMcpBaseUrl(string mcpBaseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(mcpBaseUrl))
+            throw new InvalidOperationException("MCP base URL is required.");
+
+        var trimmed = mcpBaseUrl.Trim().TrimEnd('/');
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+            throw new InvalidOperationException("MCP base URL must be an absolute URI.");
+
+        return uri.ToString().TrimEnd('/');
+    }
+
+    private void ApplyActiveMcpBaseUrl(string mcpBaseUrl)
+    {
+        _activeMcpBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
+        McpSessionService = new McpSessionLogService(_activeMcpBaseUrl);
+        _mcpTodoService = new McpTodoService(_activeMcpBaseUrl);
+        _mcpWorkspaceService = new McpWorkspaceService(_activeMcpBaseUrl);
+
+        if (_hasRegisteredCqrsHandlers)
+            RegisterMcpServiceHandlers();
+
+        _todoViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl);
+        _workspaceViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl);
     }
 
     private void RegisterCqrsHandlers()
@@ -306,6 +368,12 @@ public partial class MainWindowViewModel : ViewModelBase
         // Refresh
         _mediator.Register(new Commands.RefreshHandler());
 
+        _hasRegisteredCqrsHandlers = true;
+        RegisterMcpServiceHandlers();
+    }
+
+    private void RegisterMcpServiceHandlers()
+    {
         // Todo CQRS
         var todoService = _mcpTodoService;
         _mediator.RegisterQuery(new Commands.QueryTodosHandler(todoService));
@@ -314,6 +382,18 @@ public partial class MainWindowViewModel : ViewModelBase
         _mediator.Register<Commands.UpdateTodoCommand, McpTodoMutationResult>(new Commands.UpdateTodoHandler(todoService));
         _mediator.Register<Commands.DeleteTodoCommand, McpTodoMutationResult>(new Commands.DeleteTodoHandler(todoService));
         _mediator.Register<Commands.AnalyzeTodoRequirementsCommand, McpRequirementsAnalysisResult>(new Commands.AnalyzeTodoRequirementsHandler(todoService));
+
+        // Workspace CQRS
+        var workspaceService = _mcpWorkspaceService;
+        _mediator.RegisterQuery(new Commands.QueryWorkspacesHandler(workspaceService));
+        _mediator.RegisterQuery(new Commands.GetWorkspaceByIdHandler(workspaceService));
+        _mediator.RegisterQuery(new Commands.GetWorkspaceStatusHandler(workspaceService));
+        _mediator.Register<Commands.CreateWorkspaceCommand, McpWorkspaceMutationResult>(new Commands.CreateWorkspaceHandler(workspaceService));
+        _mediator.Register<Commands.UpdateWorkspaceCommand, McpWorkspaceMutationResult>(new Commands.UpdateWorkspaceHandler(workspaceService));
+        _mediator.Register<Commands.DeleteWorkspaceCommand, McpWorkspaceMutationResult>(new Commands.DeleteWorkspaceHandler(workspaceService));
+        _mediator.Register<Commands.InitWorkspaceCommand, McpWorkspaceInitResult>(new Commands.InitWorkspaceHandler(workspaceService));
+        _mediator.Register<Commands.StartWorkspaceCommand, McpWorkspaceProcessStatus>(new Commands.StartWorkspaceHandler(workspaceService));
+        _mediator.Register<Commands.StopWorkspaceCommand, McpWorkspaceProcessStatus>(new Commands.StopWorkspaceHandler(workspaceService));
     }
 
     /// <summary>Command for tree item tap (handles directory expand/collapse and MCP node refresh).</summary>
@@ -413,6 +493,106 @@ public partial class MainWindowViewModel : ViewModelBase
     public void InitializeAfterWindowShown()
     {
         _ = _mediator.SendAsync(new Commands.InitializeFromMcpCommand(this));
+        _ = LoadWorkspaceConnectionsAsync();
+    }
+
+    partial void OnSelectedWorkspaceConnectionChanged(WorkspaceConnectionOption? value)
+    {
+        if (_suppressWorkspaceSelectionChanged || value == null)
+            return;
+
+        _ = SwitchWorkspaceConnectionAsync(value);
+    }
+
+    [RelayCommand]
+    private async Task LoadWorkspaceConnectionsAsync()
+    {
+        var currentBaseUrl = SelectedWorkspaceConnection?.BaseUrl ?? _activeMcpBaseUrl;
+
+        try
+        {
+            var query = await _workspaceCatalogService.QueryAsync().ConfigureAwait(true);
+            var options = BuildWorkspaceConnectionOptions(query.Items);
+            DispatchToUi(() => ApplyWorkspaceConnectionOptions(options, currentBaseUrl));
+        }
+        catch (Exception ex)
+        {
+            DispatchToUi(() => StatusMessage = $"Workspace list failed: {ex.Message}");
+        }
+    }
+
+    private List<WorkspaceConnectionOption> BuildWorkspaceConnectionOptions(List<McpWorkspaceItem>? workspaces)
+    {
+        var options = new List<WorkspaceConnectionOption>
+        {
+            WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri)
+        };
+
+        if (workspaces == null)
+            return options;
+
+        foreach (var workspace in workspaces)
+        {
+            if (workspace.WorkspacePort is < 1 or > 65535)
+                continue;
+
+            var candidate = WorkspaceConnectionOption.FromWorkspace(_defaultMcpBaseUri, workspace);
+            if (options.Any(existing => string.Equals(existing.BaseUrl, candidate.BaseUrl, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            options.Add(candidate);
+        }
+
+        return options;
+    }
+
+    private void ApplyWorkspaceConnectionOptions(IEnumerable<WorkspaceConnectionOption> options, string preferredBaseUrl)
+    {
+        var list = options.ToList();
+        if (list.Count == 0)
+            list.Add(WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri));
+
+        var normalizedPreferred = NormalizeMcpBaseUrl(preferredBaseUrl);
+        WorkspaceConnections = new ObservableCollection<WorkspaceConnectionOption>(list);
+        var selected = WorkspaceConnections.FirstOrDefault(item =>
+            string.Equals(item.BaseUrl, normalizedPreferred, StringComparison.OrdinalIgnoreCase))
+            ?? WorkspaceConnections[0];
+
+        _suppressWorkspaceSelectionChanged = true;
+        SelectedWorkspaceConnection = selected;
+        _suppressWorkspaceSelectionChanged = false;
+    }
+
+    private async Task SwitchWorkspaceConnectionAsync(WorkspaceConnectionOption option)
+    {
+        var selectedBaseUrl = NormalizeMcpBaseUrl(option.BaseUrl);
+        IsSwitchingWorkspace = true;
+
+        try
+        {
+            ApplyActiveMcpBaseUrl(selectedBaseUrl);
+            await RefreshAllViewsForConnectionChangeAsync().ConfigureAwait(true);
+            DispatchToUi(() => StatusMessage = $"Connected: {option.DisplayName}");
+        }
+        catch (Exception ex)
+        {
+            DispatchToUi(() => StatusMessage = $"Workspace switch failed: {ex.Message}");
+        }
+        finally
+        {
+            IsSwitchingWorkspace = false;
+        }
+    }
+
+    private async Task RefreshAllViewsForConnectionChangeAsync()
+    {
+        await ReloadFromMcpAsyncInternal().ConfigureAwait(true);
+
+        if (_todoViewModel != null)
+            await _todoViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
+
+        if (_workspaceViewModel != null)
+            await _workspaceViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
     }
 
     partial void OnSearchQueryChanged(string value)
@@ -2936,5 +3116,45 @@ public partial class MainWindowViewModel : ViewModelBase
                 GenerateAndNavigateInternal(node);
             }
         });
+    }
+}
+
+public sealed class WorkspaceConnectionOption
+{
+    public string Key { get; init; } = "";
+    public string DisplayName { get; init; } = "";
+    public string BaseUrl { get; init; } = "";
+
+    public static WorkspaceConnectionOption CreateDefault(Uri defaultBaseUri)
+    {
+        return new WorkspaceConnectionOption
+        {
+            Key = "__DEFAULT__",
+            DisplayName = $"Default ({defaultBaseUri.Host}:{defaultBaseUri.Port})",
+            BaseUrl = defaultBaseUri.GetLeftPart(UriPartial.Path).TrimEnd('/')
+        };
+    }
+
+    public static WorkspaceConnectionOption FromWorkspace(Uri defaultBaseUri, McpWorkspaceItem workspace)
+    {
+        var uriBuilder = new UriBuilder(defaultBaseUri)
+        {
+            Port = workspace.WorkspacePort
+        };
+
+        var key = string.IsNullOrWhiteSpace(workspace.WorkspacePath)
+            ? workspace.WorkspacePort.ToString()
+            : workspace.WorkspacePath.Trim();
+
+        var label = string.IsNullOrWhiteSpace(workspace.Name)
+            ? key
+            : workspace.Name.Trim();
+
+        return new WorkspaceConnectionOption
+        {
+            Key = key,
+            DisplayName = $"{label} ({uriBuilder.Host}:{uriBuilder.Port})",
+            BaseUrl = uriBuilder.Uri.GetLeftPart(UriPartial.Path).TrimEnd('/')
+        };
     }
 }

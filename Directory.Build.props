@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Avoid compiling generated sources from ad-hoc build output folders. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;artifacts\**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

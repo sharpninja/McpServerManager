@@ -36,10 +36,14 @@ public class LayoutSettings
     public GridLengthDto TodoEditorLandscapeListWidth { get; set; } = new(1, GridUnitType.Star);
     public GridLengthDto TodoEditorPortraitListHeight { get; set; } = new(1, GridUnitType.Star);
 
+    // Workspace editor splitter (default: 1/3 list, 2/3 editor)
+    public GridLengthDto WorkspaceEditorLandscapeListWidth { get; set; } = new(1, GridUnitType.Star);
+    public GridLengthDto WorkspaceEditorPortraitListHeight { get; set; } = new(1, GridUnitType.Star);
+
     /// <summary>True if the chat window was open when the app was last closed; reopen it on next launch.</summary>
     public bool ChatWindowWasOpen { get; set; }
 
-    /// <summary>Index of the last selected tab in MainTabControl (0 = Request Tracker, 1 = Todos).</summary>
+    /// <summary>Index of the last selected tab in MainTabControl.</summary>
     public int SelectedTabIndex { get; set; }
 }
 

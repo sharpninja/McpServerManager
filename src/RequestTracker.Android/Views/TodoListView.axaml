@@ -3,11 +3,15 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:RequestTracker.Core.ViewModels"
+             xmlns:conv="using:RequestTracker.Core.Converters"
              xmlns:avedit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="RequestTracker.Android.Views.TodoListView"
              x:Name="TodoRoot"
              x:DataType="vm:TodoListViewModel">
+  <UserControl.Resources>
+    <conv:DoneToBackgroundBrushConverter x:Key="DoneToBackgroundBrush"/>
+  </UserControl.Resources>
 
   <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
 
@@ -35,7 +39,7 @@
     </Border>
 
     <!-- ═══ Filter bar ═══ -->
-    <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto" Margin="4,0,4,4">
+    <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto,Auto" Margin="4,0,4,4">
       <ComboBox Grid.Column="0"
                 ItemsSource="{x:Static vm:TodoListViewModel.PriorityOptions}"
                 SelectedIndex="{Binding SelectedPriorityIndex}"
@@ -52,6 +56,12 @@
       <Button Grid.Column="3"
               Content="✕" Command="{Binding ClearFiltersCommand}"
               ToolTip.Tip="Clear all filters" Padding="8,4"/>
+      <ToggleButton Grid.Column="4"
+                    Content="Include Completed"
+                    IsChecked="{Binding IncludeCompleted}"
+                    Margin="4,0,0,0"
+                    Padding="8,4"
+                    ToolTip.Tip="Show completed todos in the list"/>
     </Grid>
 
     <!-- ═══ Status bar ═══ -->
@@ -81,19 +91,23 @@
                            Unloaded="OnGroupListBoxUnloaded">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:TodoListEntry">
-                        <Grid ColumnDefinitions="*,Auto" Margin="2">
-                          <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Item.Id}" FontWeight="SemiBold" FontSize="14"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding Item.Title}" FontSize="13"
-                                       TextTrimming="CharacterEllipsis"
-                                       Foreground="{DynamicResource SubtleForeground}"/>
-                          </StackPanel>
-                          <TextBlock Grid.Column="1"
-                                     Text="{Binding Item.Section}" FontSize="13"
-                                     Foreground="{DynamicResource SubtleForeground}" VerticalAlignment="Center"
-                                     Margin="6,0,0,0"/>
-                        </Grid>
+                        <Border Margin="2"
+                                Padding="0"
+                                Background="{Binding Item, Converter={StaticResource DoneToBackgroundBrush}}">
+                          <Grid ColumnDefinitions="*,Auto" Background="Transparent">
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                              <TextBlock Text="{Binding Item.Id}" FontWeight="SemiBold" FontSize="14"
+                                         TextTrimming="CharacterEllipsis"/>
+                              <TextBlock Text="{Binding Item.Title}" FontSize="13"
+                                         TextTrimming="CharacterEllipsis"
+                                         Foreground="{DynamicResource SubtleForeground}"/>
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Item.Section}" FontSize="13"
+                                       Foreground="{DynamicResource SubtleForeground}" VerticalAlignment="Center"
+                                       Margin="6,0,0,0"/>
+                          </Grid>
+                        </Border>
                       </DataTemplate>
                     </ListBox.ItemTemplate>
                     <ListBox.ContextMenu>
