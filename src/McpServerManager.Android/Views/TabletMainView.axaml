@@ -16,6 +16,9 @@
             <TabItem Header="Todos">
                 <views:TodoListView DataContext="{Binding TodoViewModel}"/>
             </TabItem>
+            <TabItem Header="Workspaces">
+                <views:WorkspaceView DataContext="{Binding WorkspaceViewModel}"/>
+            </TabItem>
             <TabItem Header="Logs">
                 <views:LogView DataContext="{Binding LogViewModel}"/>
             </TabItem>
