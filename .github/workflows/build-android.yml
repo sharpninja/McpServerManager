@@ -140,12 +140,18 @@ jobs:
         shell: pwsh
         run: |
           Import-Module ./scripts/MsixTools/MsixTools.psd1 -Force
-          New-MsixPackage `
+          $msix = New-MsixPackage `
             -WorkspaceRoot . `
             -ConfigPath msix.yml `
             -Version "${{ needs.version.outputs.semver }}" `
             -ExcludeService `
             -Force
+          if (-not (Test-Path $msix)) {
+            throw "MSIX output not found: $msix"
+          }
+          # New-MsixPackage can leave LASTEXITCODE from child tooling; clear it so
+          # GitHub's pwsh wrapper does not treat the successful step as failed.
+          $global:LASTEXITCODE = 0
 
       - name: Rename MSIX
         shell: pwsh
@@ -231,7 +237,7 @@ jobs:
 
             ### Install via F-Droid
             ```
-            https://sharpninja.github.io/RequestTracker/repo
+            https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo
             ```
 
             ### Install on Linux
