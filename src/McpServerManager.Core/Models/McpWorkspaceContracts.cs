@@ -24,11 +24,20 @@ public sealed class McpWorkspaceItem
     [JsonPropertyName("todoPath")]
     public string? TodoPath { get; set; }
 
+    [JsonPropertyName("dataDirectory")]
+    public string? DataDirectory { get; set; }
+
     [JsonPropertyName("workspacePort")]
     public int WorkspacePort { get; set; }
 
     [JsonPropertyName("tunnelProvider")]
     public string? TunnelProvider { get; set; }
+
+    [JsonPropertyName("isPrimary")]
+    public bool? IsPrimary { get; set; }
+
+    [JsonPropertyName("isEnabled")]
+    public bool? IsEnabled { get; set; }
 
     [JsonPropertyName("dateTimeCreated")]
     public DateTimeOffset? DateTimeCreated { get; set; }
@@ -38,6 +47,9 @@ public sealed class McpWorkspaceItem
 
     [JsonPropertyName("runAs")]
     public string? RunAs { get; set; }
+
+    [JsonPropertyName("promptTemplate")]
+    public string? PromptTemplate { get; set; }
 }
 
 public sealed class McpWorkspaceCreateRequest
@@ -54,11 +66,23 @@ public sealed class McpWorkspaceCreateRequest
     [JsonPropertyName("todoPath")]
     public string? TodoPath { get; set; }
 
+    [JsonPropertyName("dataDirectory")]
+    public string? DataDirectory { get; set; }
+
     [JsonPropertyName("tunnelProvider")]
     public string? TunnelProvider { get; set; }
 
     [JsonPropertyName("runAs")]
     public string? RunAs { get; set; }
+
+    [JsonPropertyName("isPrimary")]
+    public bool? IsPrimary { get; set; }
+
+    [JsonPropertyName("isEnabled")]
+    public bool? IsEnabled { get; set; }
+
+    [JsonPropertyName("promptTemplate")]
+    public string? PromptTemplate { get; set; }
 }
 
 public sealed class McpWorkspaceUpdateRequest
@@ -69,6 +93,9 @@ public sealed class McpWorkspaceUpdateRequest
     [JsonPropertyName("todoPath")]
     public string? TodoPath { get; set; }
 
+    [JsonPropertyName("dataDirectory")]
+    public string? DataDirectory { get; set; }
+
     [JsonPropertyName("workspacePort")]
     public int? WorkspacePort { get; set; }
 
@@ -77,6 +104,15 @@ public sealed class McpWorkspaceUpdateRequest
 
     [JsonPropertyName("runAs")]
     public string? RunAs { get; set; }
+
+    [JsonPropertyName("isPrimary")]
+    public bool? IsPrimary { get; set; }
+
+    [JsonPropertyName("isEnabled")]
+    public bool? IsEnabled { get; set; }
+
+    [JsonPropertyName("promptTemplate")]
+    public string? PromptTemplate { get; set; }
 }
 
 public sealed class McpWorkspaceMutationResult
@@ -109,6 +145,24 @@ public sealed class McpWorkspaceProcessStatus
     public string? Error { get; set; }
 }
 
+public sealed class McpWorkspaceHealthResult
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; set; }
+
+    [JsonPropertyName("statusCode")]
+    public int StatusCode { get; set; }
+
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
+
+    [JsonPropertyName("body")]
+    public string? Body { get; set; }
+
+    [JsonPropertyName("error")]
+    public string? Error { get; set; }
+}
+
 public sealed class McpWorkspaceInitResult
 {
     [JsonPropertyName("success")]
@@ -119,4 +173,19 @@ public sealed class McpWorkspaceInitResult
 
     [JsonPropertyName("filesCreated")]
     public List<string>? FilesCreated { get; set; }
+}
+
+public sealed class McpWorkspaceGlobalPromptResult
+{
+    [JsonPropertyName("template")]
+    public string? Template { get; set; }
+
+    [JsonPropertyName("isDefault")]
+    public bool IsDefault { get; set; }
+}
+
+public sealed class McpWorkspaceGlobalPromptUpdateRequest
+{
+    [JsonPropertyName("template")]
+    public string? Template { get; set; }
 }

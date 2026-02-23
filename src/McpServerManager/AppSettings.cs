@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using System.Runtime.InteropServices;
 using System.Linq;
+using System.Globalization;
 using McpServerManager.Converters;
 
 namespace McpServerManager;
@@ -72,12 +73,12 @@ public sealed class AppSettings
             throw new InvalidOperationException($"Setting '{settingName}' must be an absolute http/https URL.");
         }
 
-        // In Linux/WSL, localhost in app config points to the container/WSL namespace.
-        // Prefer the host-side nameserver IP so the desktop app can reach services running on the host.
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+        // In Debug Linux desktop/WSL runs, route localhost MCP traffic through the
+        // Windows host adapter IP (WSL default gateway) for reliable host reachability.
+        if (ShouldUseWslHostAdapterIpInLinuxDebug() &&
             (string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase) || uri.Host == "127.0.0.1"))
         {
-            var hostIp = TryGetHostNameserverIp();
+            var hostIp = TryGetWslHostAdapterIp() ?? TryGetHostNameserverIp();
             if (!string.IsNullOrEmpty(hostIp) && Uri.CheckHostName(hostIp) != UriHostNameType.Unknown)
             {
                 var ub = new UriBuilder(uri) { Host = hostIp };
@@ -112,6 +113,62 @@ public sealed class AppSettings
         {
             return null;
         }
+    }
+
+    private static string? TryGetWslHostAdapterIp()
+    {
+        try
+        {
+            const string routeFile = "/proc/net/route";
+            if (!File.Exists(routeFile))
+                return null;
+
+            foreach (var line in File.ReadLines(routeFile).Skip(1))
+            {
+                var parts = line.Split(
+                    new[] { '\t', ' ' },
+                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (parts.Length < 3)
+                    continue;
+
+                var destination = parts[1];
+                var gateway = parts[2];
+                if (!string.Equals(destination, "00000000", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (TryParseRouteHexIpv4(gateway, out var ip))
+                    return ip;
+            }
+        }
+        catch
+        {
+            // best-effort
+        }
+
+        return null;
+    }
+
+    private static bool TryParseRouteHexIpv4(string hexValue, out string ip)
+    {
+        ip = string.Empty;
+        if (string.IsNullOrWhiteSpace(hexValue) ||
+            hexValue.Length != 8 ||
+            !uint.TryParse(hexValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var raw))
+        {
+            return false;
+        }
+
+        ip = $"{raw & 0xFF}.{(raw >> 8) & 0xFF}.{(raw >> 16) & 0xFF}.{(raw >> 24) & 0xFF}";
+        return true;
+    }
+
+    private static bool ShouldUseWslHostAdapterIpInLinuxDebug()
+    {
+#if DEBUG
+        return RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+#else
+        return false;
+#endif
     }
 
     private static string NormalizePath(string value)

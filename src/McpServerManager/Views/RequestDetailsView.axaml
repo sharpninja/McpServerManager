@@ -98,7 +98,7 @@
                           </ItemsControl.ItemsPanel>
                           <ItemsControl.ItemTemplate>
                               <DataTemplate DataType="models:UnifiedProcessingDialogItem">
-                                  <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1">
+                                  <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Margin="2" Padding="4">
                                       <Grid ColumnDefinitions="160,90,100,*">
                                           <SelectableTextBlock Grid.Column="0" Text="{Binding TimestampDisplay}" FontFamily="Consolas, Monospace" FontSize="13"/>
                                           <SelectableTextBlock Grid.Column="1" Text="{Binding Role}" FontFamily="Consolas, Monospace" FontSize="13"/>
@@ -138,7 +138,7 @@
                           </ItemsControl.ItemsPanel>
                           <ItemsControl.ItemTemplate>
                               <DataTemplate DataType="models:UnifiedAction">
-                                  <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1">
+                                  <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Margin="2" Padding="4">
                                       <Grid ColumnDefinitions="40,100,*,90,120">
                                           <SelectableTextBlock Grid.Column="0" Text="{Binding Order}" FontFamily="Consolas, Monospace" FontSize="14"/>
                                           <SelectableTextBlock Grid.Column="1" Text="{Binding Type}" FontFamily="Consolas, Monospace" FontSize="14" TextWrapping="Wrap"/>
@@ -160,7 +160,9 @@
         <ItemsControl ItemsSource="{Binding ContextList}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <SelectableTextBlock Text="{Binding}" Margin="0,2" FontSize="14" TextWrapping="Wrap"/>
+              <Border Margin="2" Padding="4" Background="Transparent">
+                <SelectableTextBlock Text="{Binding}" FontSize="14" TextWrapping="Wrap"/>
+              </Border>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -181,7 +183,9 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                   <SelectableTextBlock Text="{Binding}" FontSize="14" TextWrapping="Wrap" Margin="0,2"/>
+                   <Border Margin="2" Padding="4" Background="Transparent">
+                     <SelectableTextBlock Text="{Binding}" FontSize="14" TextWrapping="Wrap"/>
+                   </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

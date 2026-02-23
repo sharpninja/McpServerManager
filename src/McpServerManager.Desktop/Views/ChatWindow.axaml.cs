@@ -25,9 +25,9 @@ public partial class ChatWindow : Window
     {
         if (ChatMainGrid == null) return;
         var s = LayoutSettingsIo.Load();
-        GridLength row1Length = s?.ChatTemplatePickerRowHeight != null
-            ? s.ChatTemplatePickerRowHeight.ToGridLength()
-            : new GridLength(1, GridUnitType.Star);
+        var row1Length = SplitterLayoutPersistence.Resolve(
+            s?.ChatTemplatePickerRowHeight,
+            new GridLength(1, GridUnitType.Star));
         ChatMainGrid.RowDefinitions.Clear();
         ChatMainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         ChatMainGrid.RowDefinitions.Add(new RowDefinition(row1Length));
@@ -111,8 +111,15 @@ public partial class ChatWindow : Window
     {
         try
         {
-            if (s == null || ChatMainGrid?.RowDefinitions == null || ChatMainGrid.RowDefinitions.Count < 5) return;
-            ChatMainGrid.RowDefinitions[1] = new RowDefinition(s.ChatTemplatePickerRowHeight.ToGridLength());
+            if (s == null) return;
+            if (!SplitterLayoutPersistence.TryApplyRowHeight(
+                    ChatMainGrid,
+                    1,
+                    s.ChatTemplatePickerRowHeight,
+                    new GridLength(1, GridUnitType.Star)))
+            {
+                return;
+            }
             ChatMainGrid.InvalidateMeasure();
             ChatMainGrid.InvalidateArrange();
         }
@@ -138,10 +145,11 @@ public partial class ChatWindow : Window
             s.ChatWindowHeight = Height;
             s.ChatWindowX = Position.X;
             s.ChatWindowY = Position.Y;
-            if (ChatMainGrid?.RowDefinitions != null && ChatMainGrid.RowDefinitions.Count >= 5
-                && PromptTemplatesExpander?.IsExpanded == true)
+            if (PromptTemplatesExpander?.IsExpanded == true
+                && SplitterLayoutPersistence.TryCaptureRowHeight(ChatMainGrid, 1, out var rowHeight)
+                && rowHeight != null)
             {
-                s.ChatTemplatePickerRowHeight = GridLengthDto.FromGridLength(ChatMainGrid.RowDefinitions[1].Height);
+                s.ChatTemplatePickerRowHeight = rowHeight;
             }
             LayoutSettingsIo.Save(s);
         }

@@ -26,7 +26,7 @@
 
         <!-- Status Bar -->
         <views:AnimatedStatusBar Grid.Row="1" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                 <SelectableTextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontWeight="Bold" VerticalAlignment="Center"/>
                 <ComboBox Grid.Column="1"
                           MinWidth="220"
@@ -39,7 +39,14 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                <SelectableTextBlock Grid.Column="2" Text="{Binding AppVersionDisplay}" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
+                <Ellipse Grid.Column="2"
+                         Width="12"
+                         Height="12"
+                         Fill="{Binding WorkspaceHealthIndicatorBrush}"
+                         VerticalAlignment="Center"
+                         HorizontalAlignment="Center"
+                         ToolTip.Tip="{Binding WorkspaceHealthIndicatorTooltip}"/>
+                <SelectableTextBlock Grid.Column="3" Text="{Binding AppVersionDisplay}" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
             </Grid>
         </views:AnimatedStatusBar>
     </Grid>

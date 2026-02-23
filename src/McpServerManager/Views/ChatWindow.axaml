@@ -46,7 +46,9 @@
                          Tapped="OnPromptListTapped" DoubleTapped="OnPromptListDoubleTapped">
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="models:PromptTemplate">
-                            <SelectableTextBlock Text="{Binding Name}" FontSize="14" Padding="2,0"/>
+                            <Border Margin="2" Padding="4" Background="Transparent">
+                                <SelectableTextBlock Text="{Binding Name}" FontSize="14"/>
+                            </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
@@ -58,7 +60,7 @@
             <ItemsControl ItemsSource="{Binding Messages}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="models:ChatMessage">
-                        <Border Margin="0,4" Padding="10,8" CornerRadius="4"
+                        <Border Margin="2" Padding="4" CornerRadius="4"
                                 Background="{Binding Role, Converter={StaticResource RoleToBrush}}">
                             <StackPanel Spacing="4">
                                 <SelectableTextBlock FontWeight="SemiBold" FontSize="14" Foreground="Gray"

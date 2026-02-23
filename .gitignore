@@ -16,3 +16,5 @@ publish/
 !**/Assets/**/*.png
 !**/Resources/**/*.png
 !docs/fdroid/icon.png
+
+AGENTS-README-FIRST.yaml

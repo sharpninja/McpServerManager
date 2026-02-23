@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,7 +36,7 @@ public sealed class McpSessionLogService
         while (offset < total)
         {
             var url = $"/mcp/sessionlog?limit={PageSize}&offset={offset}";
-            var page = await _httpClient.GetFromJsonAsync<McpSessionLogQueryResult>(url, cancellationToken).ConfigureAwait(true);
+            var page = await GetFreshJsonAsync<McpSessionLogQueryResult>(url, cancellationToken).ConfigureAwait(true);
             if (page == null || page.Items == null || page.Items.Count == 0)
                 break;
 
@@ -49,6 +50,29 @@ public sealed class McpSessionLogService
         }
 
         return sessions;
+    }
+
+    private async Task<T?> GetFreshJsonAsync<T>(string url, CancellationToken cancellationToken)
+    {
+        using var request = CreateNoCacheGet(url);
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(true);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken).ConfigureAwait(true);
+    }
+
+    private static HttpRequestMessage CreateNoCacheGet(string url)
+    {
+        var separator = url.Contains('?') ? '&' : '?';
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{url}{separator}_rt={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+        request.Headers.CacheControl = new CacheControlHeaderValue
+        {
+            NoCache = true,
+            NoStore = true,
+            MustRevalidate = true
+        };
+        request.Headers.Pragma.ParseAdd("no-cache");
+        return request;
     }
 
     private static UnifiedSessionLog Map(McpUnifiedSessionLogDto dto)

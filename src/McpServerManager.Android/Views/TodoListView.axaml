@@ -92,7 +92,7 @@
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:TodoListEntry">
                         <Border Margin="2"
-                                Padding="0"
+                                Padding="4"
                                 Background="{Binding Item, Converter={StaticResource DoneToBackgroundBrush}}">
                           <Grid ColumnDefinitions="*,Auto" Background="Transparent">
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">

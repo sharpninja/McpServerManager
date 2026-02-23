@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using McpServerManager.Core.Models;
@@ -45,14 +44,14 @@ public sealed class McpTodoService
         var url = "/mcp/todo";
         if (query.Count > 0) url += "?" + string.Join("&", query);
 
-        return await _httpClient.GetFromJsonAsync<McpTodoQueryResult>(url, cancellationToken).ConfigureAwait(true)
+        return await GetFreshJsonAsync<McpTodoQueryResult>(url, cancellationToken).ConfigureAwait(true)
                ?? new McpTodoQueryResult();
     }
 
     /// <summary>Get a single todo by id.</summary>
     public async Task<McpTodoFlatItem?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
-        return await _httpClient.GetFromJsonAsync<McpTodoFlatItem>($"/mcp/todo/{Uri.EscapeDataString(id)}", cancellationToken)
+        return await GetFreshJsonAsync<McpTodoFlatItem?>($"/mcp/todo/{Uri.EscapeDataString(id)}", cancellationToken)
             .ConfigureAwait(true);
     }
 
@@ -90,5 +89,28 @@ public sealed class McpTodoService
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<McpRequirementsAnalysisResult>(cancellationToken: cancellationToken).ConfigureAwait(true)
                ?? new McpRequirementsAnalysisResult();
+    }
+
+    private async Task<T?> GetFreshJsonAsync<T>(string url, CancellationToken cancellationToken)
+    {
+        using var request = CreateNoCacheGet(url);
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(true);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken).ConfigureAwait(true);
+    }
+
+    private static HttpRequestMessage CreateNoCacheGet(string url)
+    {
+        var separator = url.Contains('?') ? '&' : '?';
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{url}{separator}_rt={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+        request.Headers.CacheControl = new CacheControlHeaderValue
+        {
+            NoCache = true,
+            NoStore = true,
+            MustRevalidate = true
+        };
+        request.Headers.Pragma.ParseAdd("no-cache");
+        return request;
     }
 }

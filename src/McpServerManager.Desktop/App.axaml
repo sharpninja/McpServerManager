@@ -26,5 +26,17 @@
         <Style Selector="ComboBox">
             <Setter Property="FontFamily" Value="Segoe UI, sans-serif"/>
         </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+        <Style Selector="ComboBoxItem">
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+        <Style Selector="TreeViewItem">
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
     </Application.Styles>
 </Application>

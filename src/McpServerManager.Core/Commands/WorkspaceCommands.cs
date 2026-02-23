@@ -47,6 +47,34 @@ public sealed class GetWorkspaceStatusHandler : IQueryHandler<GetWorkspaceStatus
         => _service.GetStatusAsync(query.Key, cancellationToken);
 }
 
+public sealed class GetWorkspaceHealthQuery : IQuery<McpWorkspaceHealthResult>
+{
+    public string Key { get; }
+    public GetWorkspaceHealthQuery(string key) => Key = key;
+}
+
+public sealed class GetWorkspaceHealthHandler : IQueryHandler<GetWorkspaceHealthQuery, McpWorkspaceHealthResult>
+{
+    private readonly McpWorkspaceService _service;
+    public GetWorkspaceHealthHandler(McpWorkspaceService service) => _service = service;
+
+    public Task<McpWorkspaceHealthResult> ExecuteAsync(GetWorkspaceHealthQuery query, CancellationToken cancellationToken = default)
+        => _service.GetHealthAsync(query.Key, cancellationToken);
+}
+
+public sealed class GetWorkspaceGlobalPromptQuery : IQuery<McpWorkspaceGlobalPromptResult>;
+
+public sealed class GetWorkspaceGlobalPromptHandler : IQueryHandler<GetWorkspaceGlobalPromptQuery, McpWorkspaceGlobalPromptResult>
+{
+    private readonly McpWorkspaceService _service;
+    public GetWorkspaceGlobalPromptHandler(McpWorkspaceService service) => _service = service;
+
+    public Task<McpWorkspaceGlobalPromptResult> ExecuteAsync(
+        GetWorkspaceGlobalPromptQuery query,
+        CancellationToken cancellationToken = default)
+        => _service.GetGlobalPromptAsync(cancellationToken);
+}
+
 public sealed class CreateWorkspaceCommand : ICommand<McpWorkspaceMutationResult>
 {
     public McpWorkspaceCreateRequest Request { get; }
@@ -140,4 +168,23 @@ public sealed class StopWorkspaceHandler : ICommandHandler<StopWorkspaceCommand,
 
     public Task<McpWorkspaceProcessStatus> ExecuteAsync(StopWorkspaceCommand command, CancellationToken cancellationToken = default)
         => _service.StopAsync(command.Key, cancellationToken);
+}
+
+public sealed class UpdateWorkspaceGlobalPromptCommand : ICommand<McpWorkspaceGlobalPromptResult>
+{
+    public string? Template { get; }
+    public UpdateWorkspaceGlobalPromptCommand(string? template) => Template = template;
+}
+
+public sealed class UpdateWorkspaceGlobalPromptHandler : ICommandHandler<UpdateWorkspaceGlobalPromptCommand, McpWorkspaceGlobalPromptResult>
+{
+    private readonly McpWorkspaceService _service;
+    public UpdateWorkspaceGlobalPromptHandler(McpWorkspaceService service) => _service = service;
+
+    public Task<McpWorkspaceGlobalPromptResult> ExecuteAsync(
+        UpdateWorkspaceGlobalPromptCommand command,
+        CancellationToken cancellationToken = default)
+        => _service.UpdateGlobalPromptAsync(
+            new McpWorkspaceGlobalPromptUpdateRequest { Template = command.Template },
+            cancellationToken);
 }

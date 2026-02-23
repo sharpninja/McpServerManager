@@ -28,11 +28,14 @@
             <TabItem Header="Logs">
                 <views:LogView x:Name="LogView" DataContext="{Binding LogViewModel}"/>
             </TabItem>
+            <TabItem Header="AGENTS">
+                <views:AgentsReadmeView x:Name="AgentsReadmeTabView" DataContext="{Binding}"/>
+            </TabItem>
         </TabControl>
 
         <!-- Status Bar -->
         <Border Grid.Row="1" Padding="8,6">
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                 <SelectableTextBlock Grid.Column="0"
                                      Text="{Binding StatusMessage}"
                                      FontWeight="Bold"
@@ -49,7 +52,16 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                <SelectableTextBlock Grid.Column="2"
+                <Ellipse Grid.Column="2"
+                         Width="14"
+                         Height="14"
+                         Fill="{Binding WorkspaceHealthIndicatorBrush}"
+                         Stroke="Gray"
+                         StrokeThickness="1"
+                         VerticalAlignment="Center"
+                         HorizontalAlignment="Center"
+                         ToolTip.Tip="{Binding WorkspaceHealthIndicatorTooltip}"/>
+                <SelectableTextBlock Grid.Column="3"
                            Text="{Binding AppVersionDisplay}"
                            VerticalAlignment="Center"
                            HorizontalAlignment="Right"

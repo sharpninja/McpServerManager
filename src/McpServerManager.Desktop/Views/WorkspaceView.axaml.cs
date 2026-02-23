@@ -1,7 +1,9 @@
 using System;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using AvaloniaEdit;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.ViewModels;
 
@@ -13,12 +15,15 @@ public partial class WorkspaceView : UserControl
     private bool _isUpdatingLayout;
     private bool _hasAutoLoaded;
     private LayoutSettings _layoutSettings = new();
+    private WorkspaceViewModel? _currentViewModel;
 
     public WorkspaceView()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
         Loaded += OnLoaded;
+        ConfigurePromptEditor(GlobalPromptEditor);
+        ConfigurePromptEditor(WorkspacePromptEditor);
     }
 
     /// <summary>Inject saved layout settings for splitter persistence.</summary>
@@ -60,6 +65,16 @@ public partial class WorkspaceView : UserControl
 
     private async void OnDataContextChanged(object? sender, EventArgs e)
     {
+        if (!ReferenceEquals(_currentViewModel, DataContext))
+        {
+            if (_currentViewModel != null)
+                DetachViewModel(_currentViewModel);
+
+            _currentViewModel = DataContext as WorkspaceViewModel;
+            if (_currentViewModel != null)
+                AttachViewModel(_currentViewModel);
+        }
+
         await TryAutoLoadAsync();
     }
 
@@ -71,6 +86,50 @@ public partial class WorkspaceView : UserControl
         await vm.LoadWorkspacesCommand.ExecuteAsync(null);
     }
 
+    private void AttachViewModel(WorkspaceViewModel vm)
+    {
+        vm.GetWorkspacePromptEditorText = () => WorkspacePromptEditor.Text ?? "";
+        vm.GetGlobalPromptEditorText = () => GlobalPromptEditor.Text ?? "";
+        vm.PropertyChanged += OnViewModelPropertyChanged;
+        SetEditorTextIfDifferent(WorkspacePromptEditor, vm.EditorPromptTemplateText);
+        SetEditorTextIfDifferent(GlobalPromptEditor, vm.GlobalPromptTemplateText);
+    }
+
+    private void DetachViewModel(WorkspaceViewModel vm)
+    {
+        vm.PropertyChanged -= OnViewModelPropertyChanged;
+        vm.GetWorkspacePromptEditorText = null;
+        vm.GetGlobalPromptEditorText = null;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not WorkspaceViewModel vm) return;
+
+        if (e.PropertyName == nameof(WorkspaceViewModel.EditorPromptTemplateText))
+        {
+            SetEditorTextIfDifferent(WorkspacePromptEditor, vm.EditorPromptTemplateText);
+        }
+        else if (e.PropertyName == nameof(WorkspaceViewModel.GlobalPromptTemplateText))
+        {
+            SetEditorTextIfDifferent(GlobalPromptEditor, vm.GlobalPromptTemplateText);
+        }
+    }
+
+    private static void ConfigurePromptEditor(TextEditor editor)
+    {
+        editor.FontFamily = new Avalonia.Media.FontFamily("Cascadia Code,Consolas,Menlo,monospace");
+        editor.WordWrap = true;
+        editor.Text = "";
+    }
+
+    private static void SetEditorTextIfDifferent(TextEditor editor, string? text)
+    {
+        var next = text ?? "";
+        if (!string.Equals(editor.Text ?? "", next, StringComparison.Ordinal))
+            editor.Text = next;
+    }
+
     private void UpdateLayoutForOrientation(bool isPortrait)
     {
         ContentGrid.ColumnDefinitions.Clear();
@@ -78,7 +137,10 @@ public partial class WorkspaceView : UserControl
 
         if (isPortrait)
         {
-            ContentGrid.RowDefinitions.Add(new RowDefinition(_layoutSettings.WorkspaceEditorPortraitListHeight.ToGridLength()));
+            ContentGrid.RowDefinitions.Add(new RowDefinition(
+                SplitterLayoutPersistence.Resolve(
+                    _layoutSettings.WorkspaceEditorPortraitListHeight,
+                    new GridLength(1, GridUnitType.Star))));
             ContentGrid.RowDefinitions.Add(new RowDefinition(4, GridUnitType.Pixel));
             ContentGrid.RowDefinitions.Add(new RowDefinition(2, GridUnitType.Star));
             ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
@@ -90,7 +152,10 @@ public partial class WorkspaceView : UserControl
         }
         else
         {
-            ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(_layoutSettings.WorkspaceEditorLandscapeListWidth.ToGridLength()));
+            ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(
+                SplitterLayoutPersistence.Resolve(
+                    _layoutSettings.WorkspaceEditorLandscapeListWidth,
+                    new GridLength(1, GridUnitType.Star))));
             ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(4, GridUnitType.Pixel));
             ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(2, GridUnitType.Star));
             ContentGrid.RowDefinitions.Add(new RowDefinition(1, GridUnitType.Star));
@@ -107,15 +172,13 @@ public partial class WorkspaceView : UserControl
         if (ContentGrid == null) return;
         if (wasPortrait)
         {
-            if (ContentGrid.RowDefinitions.Count >= 1)
-                _layoutSettings.WorkspaceEditorPortraitListHeight =
-                    GridLengthDto.FromGridLength(ContentGrid.RowDefinitions[0].Height);
+            if (SplitterLayoutPersistence.TryCaptureRowHeight(ContentGrid, 0, out var rowHeight) && rowHeight != null)
+                _layoutSettings.WorkspaceEditorPortraitListHeight = rowHeight;
         }
         else
         {
-            if (ContentGrid.ColumnDefinitions.Count >= 1)
-                _layoutSettings.WorkspaceEditorLandscapeListWidth =
-                    GridLengthDto.FromGridLength(ContentGrid.ColumnDefinitions[0].Width);
+            if (SplitterLayoutPersistence.TryCaptureColumnWidth(ContentGrid, 0, out var columnWidth) && columnWidth != null)
+                _layoutSettings.WorkspaceEditorLandscapeListWidth = columnWidth;
         }
     }
 }

@@ -204,7 +204,11 @@ public partial class MainWindowViewModel : ViewModelBase
             ? assembly.GetName().Version?.ToString()
             : informationalVersion;
 
-        return string.IsNullOrWhiteSpace(version) ? "unknown" : version;
+        if (string.IsNullOrWhiteSpace(version))
+            return "unknown";
+
+        var markerIndex = version.IndexOf(".Sha", StringComparison.OrdinalIgnoreCase);
+        return markerIndex > 0 ? version[..markerIndex] : version;
     }
 
     /// <summary>Called by MainWindow when it has opened. Builds the file tree off the UI thread and applies on UI; starts the watcher.</summary>

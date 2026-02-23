@@ -19,34 +19,43 @@ jobs:
   version:
     runs-on: ubuntu-latest
     outputs:
-      semver: ${{ steps.gitversion.outputs.semVer }}
+      semver: ${{ steps.gitversion.outputs.semver }}
       major: ${{ steps.gitversion.outputs.major }}
       minor: ${{ steps.gitversion.outputs.minor }}
       patch: ${{ steps.gitversion.outputs.patch }}
-      commits: ${{ steps.gitversion.outputs.commitsSinceVersionSource }}
+      commits: ${{ steps.gitversion.outputs.commitssinceversionsource }}
       version-code: ${{ steps.version-code.outputs.code }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: gittools/actions/gitversion/setup@v3.2.1
+      - uses: actions/setup-dotnet@v4
         with:
-          versionSpec: '6.x'
+          dotnet-version: '9.0.x'
+
+      - name: Restore local tools
+        run: dotnet tool restore
 
       - id: gitversion
-        uses: gittools/actions/gitversion/execute@v3.2.1
-        with:
-          useConfigFile: false
+        name: Run GitVersion CLI
+        shell: bash
+        run: |
+          dotnet tool run dotnet-gitversion -- /output json > gitversion.json
+          echo "semver=$(jq -r '.SemVer' gitversion.json)" >> "$GITHUB_OUTPUT"
+          echo "major=$(jq -r '.Major' gitversion.json)" >> "$GITHUB_OUTPUT"
+          echo "minor=$(jq -r '.Minor' gitversion.json)" >> "$GITHUB_OUTPUT"
+          echo "patch=$(jq -r '.Patch' gitversion.json)" >> "$GITHUB_OUTPUT"
+          echo "commitssinceversionsource=$(jq -r '.CommitsSinceVersionSource' gitversion.json)" >> "$GITHUB_OUTPUT"
 
       - name: Calculate Android version code
         id: version-code
         run: |
-          CODE=$(( ${{ steps.gitversion.outputs.major }} * 10000 + ${{ steps.gitversion.outputs.minor }} * 1000 + ${{ steps.gitversion.outputs.patch }} * 100 + ${{ steps.gitversion.outputs.commitsSinceVersionSource }} ))
+          CODE=$(( ${{ steps.gitversion.outputs.major }} * 10000 + ${{ steps.gitversion.outputs.minor }} * 1000 + ${{ steps.gitversion.outputs.patch }} * 100 + ${{ steps.gitversion.outputs.commitssinceversionsource }} ))
           if [ "$CODE" -lt 1 ]; then CODE=1; fi
           echo "code=$CODE" >> "$GITHUB_OUTPUT"
 
-      - run: echo "SemVer=${{ steps.gitversion.outputs.semVer }}  VersionCode=${{ steps.version-code.outputs.code }}"
+      - run: echo "SemVer=${{ steps.gitversion.outputs.semver }}  VersionCode=${{ steps.version-code.outputs.code }}"
 
   # ── Android APK ───────────────────────────────────────────────────────────
   build-android:
@@ -64,6 +73,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
+
+      - name: Restore local tools
+        run: dotnet tool restore
 
       - name: Patch Markdown.Avalonia for Linux
         run: |
@@ -136,6 +148,9 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Restore local tools
+        run: dotnet tool restore
+
       - name: Build MSIX package
         shell: pwsh
         run: |
@@ -196,6 +211,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
+
+      - name: Restore local tools
+        run: dotnet tool restore
 
       - name: Patch Markdown.Avalonia for Linux
         run: |

@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
+             xmlns:avedit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
              x:Class="McpServerManager.Desktop.Views.WorkspaceView"
              x:Name="WorkspaceRoot"
@@ -15,6 +16,7 @@
       <Button Content="Reload" Command="{Binding OpenSelectedWorkspaceCommand}" Padding="8,4"/>
       <Button Content="Copy Key" Command="{Binding CopySelectedKeyCommand}" Padding="8,4"/>
       <Button Content="Status" Command="{Binding GetSelectedStatusCommand}" Padding="8,4"/>
+      <Button Content="Health" Command="{Binding CheckSelectedWorkspaceHealthCommand}" Padding="8,4"/>
       <Button Content="Init" Command="{Binding InitSelectedWorkspaceCommand}" Padding="8,4"/>
       <Button Content="Start" Command="{Binding StartSelectedWorkspaceCommand}" Padding="8,4"/>
       <Button Content="Stop" Command="{Binding StopSelectedWorkspaceCommand}" Padding="8,4"/>
@@ -46,7 +48,7 @@
                  Margin="0">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:WorkspaceListEntry">
-              <Border Padding="6" Margin="0,0,0,3" CornerRadius="4" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+              <Border Padding="4" Margin="2" CornerRadius="4" Background="Transparent">
                 <StackPanel Spacing="1">
                     <TextBlock Text="{Binding Key}"
                                FontWeight="SemiBold"
@@ -72,46 +74,111 @@
                     ResizeDirection="Columns"/>
 
       <Border x:Name="EditorPanel" Grid.Column="2" Padding="8">
-        <ScrollViewer>
-          <StackPanel Spacing="8">
-            <SelectableTextBlock Text="{Binding EditorModeText}" FontWeight="SemiBold"/>
-
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
-              <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Key"/>
-              <TextBox Grid.Row="0" Grid.Column="1"
-                       Text="{Binding EditorKey}"
-                       IsReadOnly="True"/>
-
-              <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Name"/>
-              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding EditorName, Mode=TwoWay}"/>
-
-              <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Workspace Path"/>
-              <TextBox Grid.Row="2" Grid.Column="1"
-                       Text="{Binding EditorWorkspacePath, Mode=TwoWay}"
-                       IsReadOnly="{Binding IsEditingExisting}"/>
-
-              <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Text="Todo Path"/>
-              <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding EditorTodoPath, Mode=TwoWay}"/>
-
-              <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Workspace Port"/>
-              <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding EditorWorkspacePortText, Mode=TwoWay}"/>
-
-              <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Text="Tunnel Provider"/>
-              <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding EditorTunnelProvider, Mode=TwoWay}"/>
-
-              <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Text="Run As"/>
-              <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding EditorRunAs, Mode=TwoWay}"/>
-            </Grid>
-
-            <TextBlock Text="{Binding ProcessStatusText}" TextWrapping="Wrap" Foreground="Gray"/>
-
-            <StackPanel Orientation="Horizontal" Spacing="4">
-              <Button Content="Save" Command="{Binding SaveEditorCommand}" Padding="12,4"/>
-              <Button Content="Reload Selected" Command="{Binding OpenSelectedWorkspaceCommand}" Padding="12,4"/>
-              <Button Content="New Draft" Command="{Binding NewWorkspaceCommand}" Padding="12,4"/>
+        <Grid RowDefinitions="Auto,Auto,220,8,*">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
+            <StackPanel Grid.Column="0" Spacing="2">
+              <SelectableTextBlock Text="Global Prompt Template" FontWeight="SemiBold"/>
+              <TextBlock Text="{Binding GlobalPromptStatusText}" FontSize="11" Foreground="Gray"/>
             </StackPanel>
-          </StackPanel>
-        </ScrollViewer>
+            <Button Grid.Column="1" Content="Load" Command="{Binding LoadGlobalPromptCommand}" Padding="10,4"/>
+            <Button Grid.Column="2" Content="Save" Command="{Binding SaveGlobalPromptCommand}" Padding="10,4"/>
+            <Button Grid.Column="3" Content="Reset" Command="{Binding ResetGlobalPromptCommand}" Padding="10,4"/>
+            <Button Grid.Column="4" Content="Reload" Command="{Binding LoadGlobalPromptCommand}" Padding="10,4"/>
+          </Grid>
+
+          <TextBlock Grid.Row="1"
+                     Text="Default template applied to workspaces without a workspace-specific prompt."
+                     FontSize="11"
+                     Foreground="Gray"
+                     Margin="0,4,0,4"
+                     TextWrapping="Wrap"/>
+
+          <Border Grid.Row="2"
+                  BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
+                  BorderThickness="1"
+                  CornerRadius="4">
+            <avedit:TextEditor x:Name="GlobalPromptEditor"
+                               FontFamily="Cascadia Code,Consolas,Menlo,monospace"
+                               FontSize="13"
+                               ShowLineNumbers="True"
+                               WordWrap="True"/>
+          </Border>
+
+          <Border Grid.Row="3"
+                  Height="1"
+                  Background="{DynamicResource SystemBaseMediumLowColor}"
+                  Margin="0,3,0,4"/>
+
+          <ScrollViewer Grid.Row="4">
+            <StackPanel Spacing="8">
+              <SelectableTextBlock Text="{Binding EditorModeText}" FontWeight="SemiBold"/>
+
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Key"/>
+                <TextBox Grid.Row="0" Grid.Column="1"
+                         Text="{Binding EditorKey}"
+                         IsReadOnly="True"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Name"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding EditorName, Mode=TwoWay}"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Workspace Path"/>
+                <TextBox Grid.Row="2" Grid.Column="1"
+                         Text="{Binding EditorWorkspacePath, Mode=TwoWay}"
+                         IsReadOnly="{Binding IsEditingExisting}"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Text="Todo Path"/>
+                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding EditorTodoPath, Mode=TwoWay}"/>
+
+                <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Data Directory"/>
+                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding EditorDataDirectory, Mode=TwoWay}"/>
+
+                <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Text="Workspace Port"/>
+                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding EditorWorkspacePortText, Mode=TwoWay}"/>
+
+                <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Text="Tunnel Provider"/>
+                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding EditorTunnelProvider, Mode=TwoWay}"/>
+
+                <TextBlock Grid.Row="7" Grid.Column="0" VerticalAlignment="Center" Text="Run As"/>
+                <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding EditorRunAs, Mode=TwoWay}"/>
+
+                <TextBlock Grid.Row="8" Grid.Column="0" VerticalAlignment="Center" Text="Is Primary"/>
+                <CheckBox Grid.Row="8" Grid.Column="1"
+                          IsChecked="{Binding EditorIsPrimary, Mode=TwoWay}"
+                          VerticalAlignment="Center"/>
+
+                <TextBlock Grid.Row="9" Grid.Column="0" VerticalAlignment="Center" Text="Is Enabled"/>
+                <CheckBox Grid.Row="9" Grid.Column="1"
+                          IsChecked="{Binding EditorIsEnabled, Mode=TwoWay}"
+                          VerticalAlignment="Center"/>
+              </Grid>
+
+              <SelectableTextBlock Text="Workspace Prompt Template" FontWeight="SemiBold"/>
+              <TextBlock Text="Leave blank to inherit the global prompt template."
+                         FontSize="11"
+                         Foreground="Gray"
+                         TextWrapping="Wrap"/>
+              <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
+                      BorderThickness="1"
+                      CornerRadius="4">
+                <avedit:TextEditor x:Name="WorkspacePromptEditor"
+                                   Height="220"
+                                   FontFamily="Cascadia Code,Consolas,Menlo,monospace"
+                                   FontSize="13"
+                                   ShowLineNumbers="True"
+                                   WordWrap="True"/>
+              </Border>
+
+              <TextBlock Text="{Binding ProcessStatusText}" TextWrapping="Wrap" Foreground="Gray"/>
+
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <Button Content="Save" Command="{Binding SaveEditorCommand}" Padding="12,4"/>
+                <Button Content="Reload Selected" Command="{Binding OpenSelectedWorkspaceCommand}" Padding="12,4"/>
+                <Button Content="New Draft" Command="{Binding NewWorkspaceCommand}" Padding="12,4"/>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
       </Border>
     </Grid>
   </Grid>

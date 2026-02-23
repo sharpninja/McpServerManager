@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -28,6 +29,7 @@ namespace McpServerManager.Core.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
+    private const string AgentsReadmeFileName = "AGENTS-README-FIRST.yaml";
 
     private static readonly JsonSerializerOptions CopilotJsonOptions = new()
     {
@@ -77,6 +79,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var vm = new WorkspaceViewModel(_clipboardService, _activeMcpBaseUrl);
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
+        vm.WorkspaceCatalogChanged += change => _ = RefreshWorkspacePickerAfterCatalogChangeAsync(change);
         return vm;
     }
 
@@ -89,6 +92,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private IReadOnlyList<UnifiedSessionLog>? _cachedSessionsForAutoLoad;
     private Timer? _mcpAutoRefreshTimer;
     private bool _isRefreshing;
+    private Timer? _workspaceHealthTimer;
+    private bool _isWorkspaceHealthCheckRunning;
+    private bool _pendingWorkspaceHealthRefresh;
+    private FileSystemWatcher? _agentsReadmeWatcher;
+    private string? _agentsReadmeWatchedFilePath;
+    private int _agentsReadmeReloadVersion;
 
     [ObservableProperty]
     private ObservableCollection<FileNode> _nodes = new();
@@ -208,7 +217,28 @@ public partial class MainWindowViewModel : ViewModelBase
     private WorkspaceConnectionOption? _selectedWorkspaceConnection;
 
     [ObservableProperty]
+    private IBrush _workspaceHealthIndicatorBrush = Brushes.Gray;
+
+    [ObservableProperty]
+    private string _workspaceHealthIndicatorTooltip = "Select a workspace";
+
+    [ObservableProperty]
     private bool _isSwitchingWorkspace;
+
+    [ObservableProperty]
+    private string _agentsReadmeFilePath = "";
+
+    [ObservableProperty]
+    private string _agentsReadmeFileTimestampText = "";
+
+    [ObservableProperty]
+    private string _agentsReadmeLoadedAtLocalText = "";
+
+    [ObservableProperty]
+    private string _agentsReadmeStatusText = "Waiting for workspace selection...";
+
+    [ObservableProperty]
+    private string _agentsReadmeContent = "";
 
     /// <summary>True while an async operation (MCP refresh, JSON load, etc.) is in progress.</summary>
     [ObservableProperty]
@@ -286,9 +316,10 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyWorkspaceConnectionOptions(
             new[]
             {
-                WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri)
+                WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, primaryWorkspaceRootPath: null)
             },
-            _defaultMcpBaseUrl);
+            preferredSelection: null,
+            preferredBaseUrl: _defaultMcpBaseUrl);
     }
 
     private static string NormalizeMcpBaseUrl(string mcpBaseUrl)
@@ -390,6 +421,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _mediator.RegisterQuery(new Commands.QueryWorkspacesHandler(workspaceService));
         _mediator.RegisterQuery(new Commands.GetWorkspaceByIdHandler(workspaceService));
         _mediator.RegisterQuery(new Commands.GetWorkspaceStatusHandler(workspaceService));
+        _mediator.RegisterQuery(new Commands.GetWorkspaceHealthHandler(workspaceService));
         _mediator.Register<Commands.CreateWorkspaceCommand, McpWorkspaceMutationResult>(new Commands.CreateWorkspaceHandler(workspaceService));
         _mediator.Register<Commands.UpdateWorkspaceCommand, McpWorkspaceMutationResult>(new Commands.UpdateWorkspaceHandler(workspaceService));
         _mediator.Register<Commands.DeleteWorkspaceCommand, McpWorkspaceMutationResult>(new Commands.DeleteWorkspaceHandler(workspaceService));
@@ -488,7 +520,11 @@ public partial class MainWindowViewModel : ViewModelBase
             ? assembly.GetName().Version?.ToString()
             : informationalVersion;
 
-        return string.IsNullOrWhiteSpace(version) ? "unknown" : version;
+        if (string.IsNullOrWhiteSpace(version))
+            return "unknown";
+
+        var markerIndex = version.IndexOf(".Sha", StringComparison.OrdinalIgnoreCase);
+        return markerIndex > 0 ? version[..markerIndex] : version;
     }
 
     /// <summary>Called by MainWindow when it has opened. Builds the file tree off the UI thread and applies on UI; starts the watcher.</summary>
@@ -500,34 +536,342 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSelectedWorkspaceConnectionChanged(WorkspaceConnectionOption? value)
     {
-        if (_suppressWorkspaceSelectionChanged || value == null)
+        if (value == null)
+        {
+            UpdateAgentsReadmeWatcherForSelection(null);
+            StopWorkspaceHealthRefresh();
+            UpdateWorkspaceHealthIndicator(null, "Select a workspace");
+            return;
+        }
+
+        UpdateAgentsReadmeWatcherForSelection(value);
+
+        StartWorkspaceHealthRefresh();
+        _ = RefreshSelectedWorkspaceHealthAsync();
+
+        if (_suppressWorkspaceSelectionChanged)
             return;
 
         _ = SwitchWorkspaceConnectionAsync(value);
     }
 
+    private async Task RefreshSelectedWorkspaceHealthAsync()
+    {
+        var selected = SelectedWorkspaceConnection;
+        if (selected == null)
+        {
+            UpdateWorkspaceHealthIndicator(null, "Select a workspace");
+            return;
+        }
+
+        if (_isWorkspaceHealthCheckRunning)
+        {
+            _pendingWorkspaceHealthRefresh = true;
+            return;
+        }
+
+        _pendingWorkspaceHealthRefresh = false;
+        _isWorkspaceHealthCheckRunning = true;
+        var baseUrl = NormalizeMcpBaseUrl(selected.BaseUrl);
+        var displayName = selected.DisplayName;
+
+        try
+        {
+            var service = new McpWorkspaceService(baseUrl);
+            var health = await service.GetHealthAsync().ConfigureAwait(true);
+
+            var current = SelectedWorkspaceConnection;
+            if (current == null ||
+                !string.Equals(NormalizeMcpBaseUrl(current.BaseUrl), baseUrl, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            UpdateWorkspaceHealthIndicator(health.Success, FormatWorkspaceHealthTooltip(displayName, health));
+        }
+        catch (Exception ex)
+        {
+            var current = SelectedWorkspaceConnection;
+            if (current == null ||
+                !string.Equals(NormalizeMcpBaseUrl(current.BaseUrl), baseUrl, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            UpdateWorkspaceHealthIndicator(false, $"Unhealthy: {displayName} ({ex.Message})");
+        }
+        finally
+        {
+            _isWorkspaceHealthCheckRunning = false;
+            if (_pendingWorkspaceHealthRefresh)
+            {
+                _pendingWorkspaceHealthRefresh = false;
+                DispatchToUi(() => _ = RefreshSelectedWorkspaceHealthAsync());
+            }
+        }
+    }
+
+    private void StartWorkspaceHealthRefresh()
+    {
+        StopWorkspaceHealthRefresh();
+        var interval = TimeSpan.FromMinutes(1);
+        _workspaceHealthTimer = new Timer(_ =>
+        {
+            DispatchToUi(() => _ = RefreshSelectedWorkspaceHealthAsync());
+        }, null, interval, interval);
+    }
+
+    private void StopWorkspaceHealthRefresh()
+    {
+        _workspaceHealthTimer?.Dispose();
+        _workspaceHealthTimer = null;
+    }
+
+    private void UpdateWorkspaceHealthIndicator(bool? isHealthy, string tooltip)
+    {
+        WorkspaceHealthIndicatorBrush = isHealthy switch
+        {
+            true => Brushes.LimeGreen,
+            false => Brushes.IndianRed,
+            _ => Brushes.Gray
+        };
+        WorkspaceHealthIndicatorTooltip = tooltip;
+    }
+
+    private void UpdateAgentsReadmeWatcherForSelection(WorkspaceConnectionOption? selection)
+    {
+        var workspaceRootPath = selection?.WorkspaceRootPath;
+        if (string.IsNullOrWhiteSpace(workspaceRootPath))
+        {
+            ReplaceAgentsReadmeWatcher(null);
+            DispatchToUi(() =>
+            {
+                AgentsReadmeFilePath = "";
+                AgentsReadmeFileTimestampText = "";
+                AgentsReadmeLoadedAtLocalText = "";
+                AgentsReadmeContent = "";
+                AgentsReadmeStatusText = selection == null
+                    ? "Waiting for workspace selection..."
+                    : $"AGENTS file unavailable: no workspace root path for {selection.DisplayName}.";
+            });
+            return;
+        }
+
+        var filePath = Path.Combine(workspaceRootPath.Trim(), AgentsReadmeFileName);
+        ReplaceAgentsReadmeWatcher(filePath);
+        DispatchToUi(() => AgentsReadmeFilePath = filePath);
+        QueueAgentsReadmeReload(filePath);
+    }
+
+    private void ReplaceAgentsReadmeWatcher(string? filePath)
+    {
+        if (string.Equals(_agentsReadmeWatchedFilePath, filePath, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (_agentsReadmeWatcher != null)
+        {
+            try
+            {
+                _agentsReadmeWatcher.EnableRaisingEvents = false;
+                _agentsReadmeWatcher.Changed -= OnAgentsReadmeFileChanged;
+                _agentsReadmeWatcher.Created -= OnAgentsReadmeFileChanged;
+                _agentsReadmeWatcher.Deleted -= OnAgentsReadmeFileChanged;
+                _agentsReadmeWatcher.Renamed -= OnAgentsReadmeFileRenamed;
+                _agentsReadmeWatcher.Error -= OnAgentsReadmeWatcherError;
+                _agentsReadmeWatcher.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Error disposing AGENTS file watcher");
+            }
+            finally
+            {
+                _agentsReadmeWatcher = null;
+            }
+        }
+
+        _agentsReadmeWatchedFilePath = filePath;
+        Interlocked.Increment(ref _agentsReadmeReloadVersion);
+
+        if (string.IsNullOrWhiteSpace(filePath))
+            return;
+
+        var directory = Path.GetDirectoryName(filePath);
+        var filter = Path.GetFileName(filePath);
+        if (string.IsNullOrWhiteSpace(directory) || string.IsNullOrWhiteSpace(filter) || !Directory.Exists(directory))
+            return;
+
+        try
+        {
+            _agentsReadmeWatcher = new FileSystemWatcher(directory, filter)
+            {
+                IncludeSubdirectories = false,
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.CreationTime | NotifyFilters.Size
+            };
+            _agentsReadmeWatcher.Changed += OnAgentsReadmeFileChanged;
+            _agentsReadmeWatcher.Created += OnAgentsReadmeFileChanged;
+            _agentsReadmeWatcher.Deleted += OnAgentsReadmeFileChanged;
+            _agentsReadmeWatcher.Renamed += OnAgentsReadmeFileRenamed;
+            _agentsReadmeWatcher.Error += OnAgentsReadmeWatcherError;
+            _agentsReadmeWatcher.EnableRaisingEvents = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to start AGENTS file watcher for {FilePath}", filePath);
+            DispatchToUi(() => AgentsReadmeStatusText = $"AGENTS watcher failed: {ex.Message}");
+        }
+    }
+
+    private void OnAgentsReadmeFileChanged(object sender, FileSystemEventArgs e)
+    {
+        var watched = _agentsReadmeWatchedFilePath;
+        if (string.IsNullOrWhiteSpace(watched))
+            return;
+
+        if (!string.Equals(e.FullPath, watched, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        QueueAgentsReadmeReload(watched);
+    }
+
+    private void OnAgentsReadmeFileRenamed(object sender, RenamedEventArgs e)
+    {
+        var watched = _agentsReadmeWatchedFilePath;
+        if (string.IsNullOrWhiteSpace(watched))
+            return;
+
+        if (!string.Equals(e.FullPath, watched, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(e.OldFullPath, watched, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        QueueAgentsReadmeReload(watched);
+    }
+
+    private void OnAgentsReadmeWatcherError(object sender, ErrorEventArgs e)
+    {
+        var ex = e.GetException();
+        _logger.LogWarning(ex, "AGENTS file watcher error");
+        DispatchToUi(() =>
+        {
+            AgentsReadmeStatusText = $"AGENTS watcher error: {ex?.Message ?? "Unknown error"}";
+        });
+    }
+
+    private void QueueAgentsReadmeReload(string filePath)
+    {
+        var version = Interlocked.Increment(ref _agentsReadmeReloadVersion);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(150).ConfigureAwait(false);
+                if (version != Volatile.Read(ref _agentsReadmeReloadVersion))
+                    return;
+
+                await LoadAgentsReadmeFileAsync(filePath).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "AGENTS file reload scheduling failed");
+            }
+        });
+    }
+
+    private async Task LoadAgentsReadmeFileAsync(string filePath)
+    {
+        var loadedAtLocal = DateTimeOffset.Now;
+        string content = "";
+        string status;
+        string fileTimestampText = "";
+
+        try
+        {
+            if (!File.Exists(filePath))
+            {
+                status = $"AGENTS file not found: {filePath}";
+            }
+            else
+            {
+                content = await ReadTextFileWithEncodingAsync(filePath).ConfigureAwait(false);
+                var lastWriteUtc = File.GetLastWriteTimeUtc(filePath);
+                if (lastWriteUtc != DateTime.MinValue)
+                    fileTimestampText = lastWriteUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");
+
+                status = "AGENTS file loaded.";
+            }
+        }
+        catch (Exception ex)
+        {
+            status = $"AGENTS file load failed: {ex.Message}";
+        }
+
+        await DispatchToUiAsync(() =>
+        {
+            if (!string.Equals(_agentsReadmeWatchedFilePath, filePath, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            AgentsReadmeFilePath = filePath;
+            AgentsReadmeFileTimestampText = fileTimestampText;
+            AgentsReadmeLoadedAtLocalText = loadedAtLocal.ToString("yyyy-MM-dd HH:mm:ss zzz");
+            AgentsReadmeContent = content;
+            AgentsReadmeStatusText = status;
+        }).ConfigureAwait(true);
+    }
+
+    private static string FormatWorkspaceHealthTooltip(string displayName, McpWorkspaceHealthResult health)
+    {
+        var status = health.StatusCode > 0 ? $"HTTP {health.StatusCode}" : "HTTP n/a";
+        var endpoint = string.IsNullOrWhiteSpace(health.Url) ? "" : $" @ {health.Url}";
+        var error = string.IsNullOrWhiteSpace(health.Error) ? "" : $" ({health.Error})";
+        return $"{(health.Success ? "Healthy" : "Unhealthy")}: {displayName} - {status}{endpoint}{error}";
+    }
+
     [RelayCommand]
     private async Task LoadWorkspaceConnectionsAsync()
     {
-        var currentBaseUrl = SelectedWorkspaceConnection?.BaseUrl ?? _activeMcpBaseUrl;
+        var preferredSelection = SelectedWorkspaceConnection;
+        var preferredBaseUrl = preferredSelection?.BaseUrl ?? _activeMcpBaseUrl;
+
+        try
+        {
+            await LoadWorkspaceConnectionsAsync(preferredSelection, preferredBaseUrl, suppressStatusFailure: false)
+                .ConfigureAwait(true);
+        }
+        catch
+        {
+            // Failure status is already handled by the shared loader for command-driven refreshes.
+        }
+    }
+
+    private async Task LoadWorkspaceConnectionsAsync(
+        WorkspaceConnectionOption? preferredSelection,
+        string preferredBaseUrl,
+        bool suppressStatusFailure)
+    {
+        preferredBaseUrl = string.IsNullOrWhiteSpace(preferredBaseUrl)
+            ? _activeMcpBaseUrl
+            : preferredBaseUrl;
 
         try
         {
             var query = await _workspaceCatalogService.QueryAsync().ConfigureAwait(true);
             var options = BuildWorkspaceConnectionOptions(query.Items);
-            DispatchToUi(() => ApplyWorkspaceConnectionOptions(options, currentBaseUrl));
+            DispatchToUi(() => ApplyWorkspaceConnectionOptions(options, preferredSelection, preferredBaseUrl));
         }
         catch (Exception ex)
         {
-            DispatchToUi(() => StatusMessage = $"Workspace list failed: {ex.Message}");
+            if (!suppressStatusFailure)
+                DispatchToUi(() => StatusMessage = $"Workspace list failed: {ex.Message}");
+            throw;
         }
     }
 
     private List<WorkspaceConnectionOption> BuildWorkspaceConnectionOptions(List<McpWorkspaceItem>? workspaces)
     {
+        var defaultWorkspaceRootPath = workspaces?
+            .FirstOrDefault(item => item.IsPrimary == true && !string.IsNullOrWhiteSpace(item.WorkspacePath))
+            ?.WorkspacePath?
+            .Trim();
+
         var options = new List<WorkspaceConnectionOption>
         {
-            WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri)
+            WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, defaultWorkspaceRootPath)
         };
 
         if (workspaces == null)
@@ -539,25 +883,26 @@ public partial class MainWindowViewModel : ViewModelBase
                 continue;
 
             var candidate = WorkspaceConnectionOption.FromWorkspace(_defaultMcpBaseUri, workspace);
-            if (options.Any(existing => string.Equals(existing.BaseUrl, candidate.BaseUrl, StringComparison.OrdinalIgnoreCase)))
-                continue;
-
             options.Add(candidate);
         }
 
         return options;
     }
 
-    private void ApplyWorkspaceConnectionOptions(IEnumerable<WorkspaceConnectionOption> options, string preferredBaseUrl)
+    private void ApplyWorkspaceConnectionOptions(
+        IEnumerable<WorkspaceConnectionOption> options,
+        WorkspaceConnectionOption? preferredSelection,
+        string preferredBaseUrl)
     {
         var list = options.ToList();
         if (list.Count == 0)
-            list.Add(WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri));
+            list.Add(WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, primaryWorkspaceRootPath: null));
 
         var normalizedPreferred = NormalizeMcpBaseUrl(preferredBaseUrl);
         WorkspaceConnections = new ObservableCollection<WorkspaceConnectionOption>(list);
-        var selected = WorkspaceConnections.FirstOrDefault(item =>
-            string.Equals(item.BaseUrl, normalizedPreferred, StringComparison.OrdinalIgnoreCase))
+        var selected = FindWorkspaceConnectionOption(preferredSelection)
+            ?? WorkspaceConnections.FirstOrDefault(item =>
+                string.Equals(NormalizeMcpBaseUrl(item.BaseUrl), normalizedPreferred, StringComparison.OrdinalIgnoreCase))
             ?? WorkspaceConnections[0];
 
         _suppressWorkspaceSelectionChanged = true;
@@ -565,14 +910,64 @@ public partial class MainWindowViewModel : ViewModelBase
         _suppressWorkspaceSelectionChanged = false;
     }
 
+    private async Task RefreshWorkspacePickerAfterCatalogChangeAsync(WorkspaceCatalogChangeEvent change)
+    {
+        var preferredSelection = SelectedWorkspaceConnection;
+        var preferredBaseUrl = preferredSelection?.BaseUrl ?? _activeMcpBaseUrl;
+
+        try
+        {
+            await LoadWorkspaceConnectionsAsync(preferredSelection, preferredBaseUrl, suppressStatusFailure: true)
+                .ConfigureAwait(true);
+
+            if (change.ChangeKind == WorkspaceCatalogChangeKind.Deleted)
+                return;
+
+            await DispatchToUiAsync(() =>
+            {
+                var present = WorkspaceConnections.Any(item =>
+                    !item.IsDefault &&
+                    !string.IsNullOrWhiteSpace(item.WorkspaceKey) &&
+                    string.Equals(item.WorkspaceKey, change.WorkspaceKey, StringComparison.OrdinalIgnoreCase));
+
+                if (present)
+                    return;
+
+                if (change.WorkspacePort is < 1 or > 65535)
+                {
+                    var portLabel = change.WorkspacePort?.ToString() ?? "n/a";
+                    StatusMessage = $"Saved {change.WorkspaceKey}, but workspace picker skipped it due to invalid port ({portLabel}).";
+                    return;
+                }
+
+                StatusMessage = $"Saved {change.WorkspaceKey}, but workspace picker did not include it after refresh.";
+            }).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            DispatchToUi(() =>
+            {
+                StatusMessage = $"Workspace picker refresh failed after {change.ChangeKind.ToString().ToLowerInvariant()} {change.WorkspaceKey}: {ex.Message}";
+            });
+        }
+    }
+
     private async Task SwitchWorkspaceConnectionAsync(WorkspaceConnectionOption option)
     {
         _logger.LogInformation($"[Workspace Switch] Switching to '{option.DisplayName}' (BaseUrl={option.BaseUrl})");
+        var previousBaseUrl = _activeMcpBaseUrl;
+        var previousSelection = FindWorkspaceConnectionOptionByBaseUrl(previousBaseUrl);
         var selectedBaseUrl = NormalizeMcpBaseUrl(option.BaseUrl);
         IsSwitchingWorkspace = true;
 
         try
         {
+            var preflight = await ProbeWorkspaceConnectionHealthAsync(selectedBaseUrl).ConfigureAwait(true);
+            if (!preflight.Success)
+            {
+                throw new InvalidOperationException($"Health check failed ({FormatHealthFailure(preflight)})");
+            }
+
             ApplyActiveMcpBaseUrl(selectedBaseUrl);
             await RefreshAllViewsForConnectionChangeAsync().ConfigureAwait(true);
             _logger.LogInformation($"[Workspace Switch] Successfully connected to '{option.DisplayName}'");
@@ -581,7 +976,13 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, $"[Workspace Switch] Failed switching to '{option.DisplayName}'");
-            DispatchToUi(() => StatusMessage = $"Workspace switch failed: {ex.Message}");
+            ApplyActiveMcpBaseUrl(previousBaseUrl);
+            var revertedDisplayName = previousSelection?.DisplayName ?? previousBaseUrl;
+            await DispatchToUiAsync(() =>
+            {
+                RestoreWorkspaceSelection(previousSelection, previousBaseUrl);
+                StatusMessage = $"Workspace switch failed: {option.DisplayName} ({ex.Message}). Reverted to {revertedDisplayName}.";
+            }).ConfigureAwait(true);
         }
         finally
         {
@@ -596,7 +997,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             await ReloadFromMcpAsyncInternal().ConfigureAwait(true);
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             _logger.LogWarning(ex, "[Workspace Switch] Session log refresh failed (endpoint may not exist on target workspace); continuing with remaining views");
         }
@@ -608,7 +1009,7 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 await _todoViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
             }
-            catch (HttpRequestException ex)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
                 _logger.LogWarning(ex, "[Workspace Switch] Todo refresh failed; continuing");
             }
@@ -621,13 +1022,80 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 await _workspaceViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
             }
-            catch (HttpRequestException ex)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
                 _logger.LogWarning(ex, "[Workspace Switch] Workspace view refresh failed; continuing");
             }
         }
 
         _logger.LogDebug("[Workspace Switch] All views refreshed.");
+    }
+
+    private async Task<McpWorkspaceHealthResult> ProbeWorkspaceConnectionHealthAsync(string baseUrl)
+    {
+        var service = new McpWorkspaceService(baseUrl);
+        return await service.GetHealthAsync().ConfigureAwait(true);
+    }
+
+    private static string FormatHealthFailure(McpWorkspaceHealthResult health)
+    {
+        var status = health.StatusCode > 0 ? $"HTTP {health.StatusCode}" : "HTTP n/a";
+        var target = string.IsNullOrWhiteSpace(health.Url) ? "" : $" @ {health.Url}";
+        var error = string.IsNullOrWhiteSpace(health.Error) ? "" : $" - {health.Error}";
+        return $"{status}{target}{error}";
+    }
+
+    private WorkspaceConnectionOption? FindWorkspaceConnectionOptionByBaseUrl(string baseUrl)
+    {
+        var normalized = NormalizeMcpBaseUrl(baseUrl);
+        return WorkspaceConnections.FirstOrDefault(item =>
+            string.Equals(NormalizeMcpBaseUrl(item.BaseUrl), normalized, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private WorkspaceConnectionOption? FindWorkspaceConnectionOption(WorkspaceConnectionOption? preferredSelection)
+    {
+        if (preferredSelection == null)
+            return null;
+
+        if (preferredSelection.IsDefault)
+        {
+            return WorkspaceConnections.FirstOrDefault(item =>
+                item.IsDefault &&
+                string.Equals(NormalizeMcpBaseUrl(item.BaseUrl), NormalizeMcpBaseUrl(preferredSelection.BaseUrl), StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(preferredSelection.WorkspaceKey))
+        {
+            var byWorkspaceKey = WorkspaceConnections.FirstOrDefault(item =>
+                !item.IsDefault &&
+                string.Equals(item.WorkspaceKey, preferredSelection.WorkspaceKey, StringComparison.OrdinalIgnoreCase));
+            if (byWorkspaceKey != null)
+                return byWorkspaceKey;
+        }
+
+        return FindWorkspaceConnectionOptionByBaseUrl(preferredSelection.BaseUrl);
+    }
+
+    private void RestoreWorkspaceSelection(WorkspaceConnectionOption? preferredSelection, string baseUrl)
+    {
+        var match = FindWorkspaceConnectionOption(preferredSelection)
+            ?? FindWorkspaceConnectionOptionByBaseUrl(baseUrl);
+
+        match ??= WorkspaceConnections.FirstOrDefault();
+        if (match == null)
+            return;
+
+        _suppressWorkspaceSelectionChanged = true;
+        try
+        {
+            SelectedWorkspaceConnection = match;
+        }
+        finally
+        {
+            _suppressWorkspaceSelectionChanged = false;
+        }
+
+        _ = RefreshSelectedWorkspaceHealthAsync();
     }
 
     partial void OnSearchQueryChanged(string value)
@@ -1586,6 +2054,30 @@ public partial class MainWindowViewModel : ViewModelBase
             action();
         else
             Dispatcher.UIThread.Post(() => action());
+    }
+
+    internal Task DispatchToUiAsync(Action action)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            action();
+            return Task.CompletedTask;
+        }
+
+        var tcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                action();
+                tcs.TrySetResult(null);
+            }
+            catch (Exception ex)
+            {
+                tcs.TrySetException(ex);
+            }
+        });
+        return tcs.Task;
     }
 
     /// <summary>Reads a text file with encoding detection (BOM) and strips BOM so Markdown.Avalonia displays correctly.</summary>
@@ -3158,24 +3650,35 @@ public partial class MainWindowViewModel : ViewModelBase
 public sealed class WorkspaceConnectionOption
 {
     public string Key { get; init; } = "";
+    public string? WorkspaceKey { get; init; }
+    public string? WorkspaceRootPath { get; init; }
     public string DisplayName { get; init; } = "";
     public string BaseUrl { get; init; } = "";
+    public bool IsDefault { get; init; }
+    public bool IsPrimary { get; init; }
+    public bool IsEnabled { get; init; } = true;
 
-    public static WorkspaceConnectionOption CreateDefault(Uri defaultBaseUri)
+    public static WorkspaceConnectionOption CreateDefault(Uri defaultBaseUri, string? primaryWorkspaceRootPath)
     {
         return new WorkspaceConnectionOption
         {
             Key = "__DEFAULT__",
+            WorkspaceKey = null,
+            WorkspaceRootPath = string.IsNullOrWhiteSpace(primaryWorkspaceRootPath) ? null : primaryWorkspaceRootPath.Trim(),
             DisplayName = $"Default ({defaultBaseUri.Host}:{defaultBaseUri.Port})",
-            BaseUrl = defaultBaseUri.GetLeftPart(UriPartial.Path).TrimEnd('/')
+            BaseUrl = defaultBaseUri.GetLeftPart(UriPartial.Path).TrimEnd('/'),
+            IsDefault = true,
+            IsPrimary = false,
+            IsEnabled = true
         };
     }
 
     public static WorkspaceConnectionOption FromWorkspace(Uri defaultBaseUri, McpWorkspaceItem workspace)
     {
+        var isPrimary = workspace.IsPrimary ?? false;
         var uriBuilder = new UriBuilder(defaultBaseUri)
         {
-            Port = workspace.WorkspacePort
+            Port = isPrimary ? defaultBaseUri.Port : workspace.WorkspacePort
         };
 
         var key = string.IsNullOrWhiteSpace(workspace.WorkspacePath)
@@ -3185,12 +3688,24 @@ public sealed class WorkspaceConnectionOption
         var label = string.IsNullOrWhiteSpace(workspace.Name)
             ? key
             : workspace.Name.Trim();
+        var isEnabled = workspace.IsEnabled ?? true;
+        var flags = new List<string>();
+        if (isPrimary)
+            flags.Add("Primary");
+        if (!isEnabled)
+            flags.Add("Disabled");
+        var flagsSuffix = flags.Count == 0 ? "" : $" [{string.Join(", ", flags)}]";
 
         return new WorkspaceConnectionOption
         {
             Key = key,
-            DisplayName = $"{label} ({uriBuilder.Host}:{uriBuilder.Port})",
-            BaseUrl = uriBuilder.Uri.GetLeftPart(UriPartial.Path).TrimEnd('/')
+            WorkspaceKey = key,
+            WorkspaceRootPath = string.IsNullOrWhiteSpace(workspace.WorkspacePath) ? null : workspace.WorkspacePath.Trim(),
+            DisplayName = $"{label} ({uriBuilder.Host}:{uriBuilder.Port}){flagsSuffix}",
+            BaseUrl = uriBuilder.Uri.GetLeftPart(UriPartial.Path).TrimEnd('/'),
+            IsDefault = false,
+            IsPrimary = isPrimary,
+            IsEnabled = isEnabled
         };
     }
 }

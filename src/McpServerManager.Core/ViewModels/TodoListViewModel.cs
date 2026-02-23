@@ -108,36 +108,10 @@ public partial class TodoListViewModel : ViewModelBase
     // ── Commands ────────────────────────────────────────────────────────────
 
     [RelayCommand]
-    private async Task LoadTodosAsync()
-    {
-        IsLoading = true;
-        StatusText = "Loading…";
-        GlobalStatusChanged?.Invoke("Loading todos…");
-        try
-        {
-            var result = await _mediator.QueryAsync<QueryTodosQuery, McpTodoQueryResult>(
-                new QueryTodosQuery { Done = IncludeCompleted ? null : false });
-
-            _allEntries = BuildEntries(result.Items);
-            ApplyFilters();
-            StatusText = $"{result.TotalCount} item(s)";
-            GlobalStatusChanged?.Invoke($"Loaded {result.TotalCount} todo(s).");
-        }
-        catch (Exception ex)
-        {
-            _allEntries = new List<TodoListEntry>();
-            ApplyFilters();
-            StatusText = "Error: " + ex.Message;
-            GlobalStatusChanged?.Invoke($"Todo load failed: {ex.Message}");
-        }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
+    private async Task LoadTodosAsync() => await LoadTodosCoreAsync(forceEditorReload: false);
 
     [RelayCommand]
-    private async Task RefreshAsync() => await LoadTodosAsync();
+    private async Task RefreshAsync() => await LoadTodosCoreAsync(forceEditorReload: true);
 
     [RelayCommand]
     private void ClearFilters()
@@ -409,25 +383,9 @@ public partial class TodoListViewModel : ViewModelBase
     [RelayCommand]
     private async Task RefreshEditorAsync()
     {
-        if (string.IsNullOrEmpty(EditorTitle)) return;
-        try
-        {
-            var fresh = await _mediator.QueryAsync<GetTodoByIdQuery, McpTodoFlatItem?>(
-                new GetTodoByIdQuery(EditorTitle));
-            if (fresh != null)
-            {
-                EditorText = TodoMarkdown.ToMarkdown(fresh);
-                StatusText = $"Refreshed {EditorTitle}";
-            }
-            else
-            {
-                StatusText = $"Todo {EditorTitle} not found";
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusText = $"Error refreshing: {ex.Message}";
-        }
+        var editorTodoId = GetCurrentEditorTodoId();
+        if (string.IsNullOrWhiteSpace(editorTodoId)) return;
+        await TryRefreshEditorByIdAsync(editorTodoId, updateStatus: true);
     }
 
     [RelayCommand]
@@ -635,6 +593,105 @@ public partial class TodoListViewModel : ViewModelBase
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private async Task LoadTodosCoreAsync(bool forceEditorReload)
+    {
+        var previouslySelectedId = SelectedEntry?.Item?.Id;
+        var editorTodoId = forceEditorReload ? GetCurrentEditorTodoId() : null;
+
+        IsLoading = true;
+        StatusText = forceEditorReload ? "Refreshing…" : "Loading…";
+        GlobalStatusChanged?.Invoke(forceEditorReload ? "Refreshing todos…" : "Loading todos…");
+        try
+        {
+            var result = await _mediator.QueryAsync<QueryTodosQuery, McpTodoQueryResult>(
+                new QueryTodosQuery { Done = IncludeCompleted ? null : false });
+
+            _allEntries = BuildEntries(result.Items);
+            ApplyFilters();
+            RestoreSelectionById(previouslySelectedId);
+
+            var refreshNote = "";
+            if (forceEditorReload && !string.IsNullOrWhiteSpace(editorTodoId))
+            {
+                var refreshed = await TryRefreshEditorByIdAsync(editorTodoId, updateStatus: false);
+                refreshNote = refreshed ? " • editor refreshed" : " • editor not found";
+            }
+
+            StatusText = $"{result.TotalCount} item(s){refreshNote}";
+            GlobalStatusChanged?.Invoke(forceEditorReload
+                ? $"Refreshed {result.TotalCount} todo(s)."
+                : $"Loaded {result.TotalCount} todo(s).");
+        }
+        catch (Exception ex)
+        {
+            _allEntries = new List<TodoListEntry>();
+            ApplyFilters();
+            SelectedEntry = null;
+            StatusText = "Error: " + ex.Message;
+            GlobalStatusChanged?.Invoke($"Todo load failed: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void RestoreSelectionById(string? todoId)
+    {
+        if (string.IsNullOrWhiteSpace(todoId))
+        {
+            SelectedEntry = null;
+            return;
+        }
+
+        SelectedEntry = _allEntries.FirstOrDefault(e =>
+            string.Equals(e.Item?.Id, todoId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string? GetCurrentEditorTodoId()
+    {
+        var editorContent = GetEditorText?.Invoke() ?? EditorText;
+        var markdownId = TodoMarkdown.ExtractId(editorContent);
+        if (!string.IsNullOrWhiteSpace(markdownId) &&
+            !string.Equals(markdownId, "NEW-TODO", StringComparison.OrdinalIgnoreCase))
+            return markdownId;
+
+        if (string.IsNullOrWhiteSpace(EditorTitle) ||
+            string.Equals(EditorTitle, "NEW-TODO", StringComparison.OrdinalIgnoreCase) ||
+            EditorTitle.Contains(" — ", StringComparison.Ordinal))
+            return null;
+
+        return EditorTitle.Trim();
+    }
+
+    private async Task<bool> TryRefreshEditorByIdAsync(string todoId, bool updateStatus)
+    {
+        try
+        {
+            var fresh = await _mediator.QueryAsync<GetTodoByIdQuery, McpTodoFlatItem?>(
+                new GetTodoByIdQuery(todoId));
+            if (fresh == null)
+            {
+                if (updateStatus)
+                    StatusText = $"Todo {todoId} not found";
+                return false;
+            }
+
+            EditorText = TodoMarkdown.ToMarkdown(fresh);
+            EditorTitle = fresh.Id;
+            RestoreSelectionById(fresh.Id);
+            if (updateStatus)
+                StatusText = $"Refreshed {fresh.Id}";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            if (updateStatus)
+                StatusText = $"Error refreshing: {ex.Message}";
+            return false;
+        }
+    }
 
     private static List<TodoListEntry> BuildEntries(List<McpTodoFlatItem>? items)
     {

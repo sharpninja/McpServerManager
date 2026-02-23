@@ -23,6 +23,9 @@ public partial class McpServerManagerView : UserControl
     public void ApplySettings(LayoutSettings settings)
     {
         _layoutSettings = settings;
+        // A pre-open SizeChanged can set layout using defaults before settings are injected.
+        // Force the next host-size pass to rebuild rows/columns from persisted values.
+        _wasPortrait = null;
         ApplyJsonViewerSplitterSettings();
     }
 
@@ -60,13 +63,20 @@ public partial class McpServerManagerView : UserControl
     {
         try
         {
-            if (JsonViewerGrid?.RowDefinitions == null || JsonViewerGrid.RowDefinitions.Count < 5)
-                return;
-            var searchIndexLength = _layoutSettings.JsonViewerSearchIndexRowHeight.ToGridLength();
-            if (searchIndexLength.GridUnitType == GridUnitType.Star)
-                searchIndexLength = new GridLength(200, GridUnitType.Pixel);
-            JsonViewerGrid.RowDefinitions[2].Height = searchIndexLength;
-            JsonViewerGrid.RowDefinitions[4].Height = new GridLength(1, GridUnitType.Star);
+            _ = SplitterLayoutPersistence.TryApplyRowHeight(
+                JsonViewerGrid,
+                2,
+                _layoutSettings.JsonViewerSearchIndexRowHeight,
+                new GridLength(200, GridUnitType.Pixel),
+                coerce: static length => length.GridUnitType == GridUnitType.Star
+                    ? new GridLength(200, GridUnitType.Pixel)
+                    : length);
+
+            _ = SplitterLayoutPersistence.TryApplyRowHeight(
+                JsonViewerGrid,
+                4,
+                _layoutSettings.JsonViewerTreeRowHeight,
+                new GridLength(1, GridUnitType.Star));
         }
         catch (Exception ex)
         {
@@ -78,10 +88,10 @@ public partial class McpServerManagerView : UserControl
     {
         try
         {
-            if (JsonViewerGrid?.RowDefinitions == null || JsonViewerGrid.RowDefinitions.Count < 5)
-                return;
-            _layoutSettings.JsonViewerSearchIndexRowHeight = GridLengthDto.FromGridLength(JsonViewerGrid.RowDefinitions[2].Height);
-            _layoutSettings.JsonViewerTreeRowHeight = GridLengthDto.FromGridLength(JsonViewerGrid.RowDefinitions[4].Height);
+            if (SplitterLayoutPersistence.TryCaptureRowHeight(JsonViewerGrid, 2, out var searchIndex) && searchIndex != null)
+                _layoutSettings.JsonViewerSearchIndexRowHeight = searchIndex;
+            if (SplitterLayoutPersistence.TryCaptureRowHeight(JsonViewerGrid, 4, out var treeRow) && treeRow != null)
+                _layoutSettings.JsonViewerTreeRowHeight = treeRow;
         }
         catch (Exception ex)
         {
@@ -94,20 +104,19 @@ public partial class McpServerManagerView : UserControl
         if (MainGrid == null) return;
         if (isPortrait)
         {
-            if (MainGrid.RowDefinitions.Count >= 5)
-            {
-                _layoutSettings.PortraitTreeRowHeight = GridLengthDto.FromGridLength(MainGrid.RowDefinitions[0].Height);
-                _layoutSettings.PortraitViewerRowHeight = GridLengthDto.FromGridLength(MainGrid.RowDefinitions[2].Height);
-                _layoutSettings.PortraitHistoryRowHeight = GridLengthDto.FromGridLength(MainGrid.RowDefinitions[4].Height);
-            }
+            if (SplitterLayoutPersistence.TryCaptureRowHeight(MainGrid, 0, out var treeHeight) && treeHeight != null)
+                _layoutSettings.PortraitTreeRowHeight = treeHeight;
+            if (SplitterLayoutPersistence.TryCaptureRowHeight(MainGrid, 2, out var viewerHeight) && viewerHeight != null)
+                _layoutSettings.PortraitViewerRowHeight = viewerHeight;
+            if (SplitterLayoutPersistence.TryCaptureRowHeight(MainGrid, 4, out var historyHeight) && historyHeight != null)
+                _layoutSettings.PortraitHistoryRowHeight = historyHeight;
         }
         else
         {
-            if (MainGrid.ColumnDefinitions.Count >= 1 && MainGrid.RowDefinitions.Count >= 3)
-            {
-                _layoutSettings.LandscapeLeftColWidth = GridLengthDto.FromGridLength(MainGrid.ColumnDefinitions[0].Width);
-                _layoutSettings.LandscapeHistoryRowHeight = GridLengthDto.FromGridLength(MainGrid.RowDefinitions[2].Height);
-            }
+            if (SplitterLayoutPersistence.TryCaptureColumnWidth(MainGrid, 0, out var leftWidth) && leftWidth != null)
+                _layoutSettings.LandscapeLeftColWidth = leftWidth;
+            if (SplitterLayoutPersistence.TryCaptureRowHeight(MainGrid, 2, out var historyHeight) && historyHeight != null)
+                _layoutSettings.LandscapeHistoryRowHeight = historyHeight;
         }
     }
 
@@ -120,11 +129,20 @@ public partial class McpServerManagerView : UserControl
         if (isPortrait)
         {
             MainGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
-            MainGrid.RowDefinitions.Add(new RowDefinition(_layoutSettings.PortraitTreeRowHeight.ToGridLength()));
+            MainGrid.RowDefinitions.Add(new RowDefinition(
+                SplitterLayoutPersistence.Resolve(
+                    _layoutSettings.PortraitTreeRowHeight,
+                    new GridLength(1, GridUnitType.Star))));
             MainGrid.RowDefinitions.Add(new RowDefinition(4, GridUnitType.Pixel));
-            MainGrid.RowDefinitions.Add(new RowDefinition(_layoutSettings.PortraitViewerRowHeight.ToGridLength()));
+            MainGrid.RowDefinitions.Add(new RowDefinition(
+                SplitterLayoutPersistence.Resolve(
+                    _layoutSettings.PortraitViewerRowHeight,
+                    new GridLength(1, GridUnitType.Star))));
             MainGrid.RowDefinitions.Add(new RowDefinition(4, GridUnitType.Pixel));
-            MainGrid.RowDefinitions.Add(new RowDefinition(_layoutSettings.PortraitHistoryRowHeight.ToGridLength()));
+            MainGrid.RowDefinitions.Add(new RowDefinition(
+                SplitterLayoutPersistence.Resolve(
+                    _layoutSettings.PortraitHistoryRowHeight,
+                    new GridLength(150, GridUnitType.Pixel))));
 
             Grid.SetColumn(TreePanel, 0); Grid.SetRow(TreePanel, 0);
             Grid.SetColumn(Splitter1, 0); Grid.SetRow(Splitter1, 1);
@@ -136,12 +154,18 @@ public partial class McpServerManagerView : UserControl
         }
         else
         {
-            MainGrid.ColumnDefinitions.Add(new ColumnDefinition(_layoutSettings.LandscapeLeftColWidth.ToGridLength()));
+            MainGrid.ColumnDefinitions.Add(new ColumnDefinition(
+                SplitterLayoutPersistence.Resolve(
+                    _layoutSettings.LandscapeLeftColWidth,
+                    new GridLength(300, GridUnitType.Pixel))));
             MainGrid.ColumnDefinitions.Add(new ColumnDefinition(4, GridUnitType.Pixel));
             MainGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
             MainGrid.RowDefinitions.Add(new RowDefinition(1, GridUnitType.Star));
             MainGrid.RowDefinitions.Add(new RowDefinition(4, GridUnitType.Pixel));
-            MainGrid.RowDefinitions.Add(new RowDefinition(_layoutSettings.LandscapeHistoryRowHeight.ToGridLength()));
+            MainGrid.RowDefinitions.Add(new RowDefinition(
+                SplitterLayoutPersistence.Resolve(
+                    _layoutSettings.LandscapeHistoryRowHeight,
+                    new GridLength(150, GridUnitType.Pixel))));
 
             Grid.SetColumn(TreePanel, 0); Grid.SetRow(TreePanel, 0);
             Grid.SetColumn(Splitter1, 0); Grid.SetRow(Splitter1, 1);

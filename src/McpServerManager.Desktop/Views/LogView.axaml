@@ -34,7 +34,9 @@
              FontSize="14">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="svc:LogEntry">
-          <TextBlock Text="{Binding Display}" TextWrapping="NoWrap"/>
+          <Border Margin="2" Padding="4" Background="Transparent">
+            <TextBlock Text="{Binding Display}" TextWrapping="NoWrap"/>
+          </Border>
         </DataTemplate>
       </ListBox.ItemTemplate>
       <ListBox.ContextMenu>

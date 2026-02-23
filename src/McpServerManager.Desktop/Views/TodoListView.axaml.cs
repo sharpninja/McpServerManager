@@ -133,7 +133,10 @@ public partial class TodoListView : UserControl
         if (isPortrait)
         {
             // Stacked: list on top (1/3), splitter, editor below (2/3)
-            ContentGrid.RowDefinitions.Add(new RowDefinition(_layoutSettings.TodoEditorPortraitListHeight.ToGridLength()));
+            ContentGrid.RowDefinitions.Add(new RowDefinition(
+                SplitterLayoutPersistence.Resolve(
+                    _layoutSettings.TodoEditorPortraitListHeight,
+                    new GridLength(1, GridUnitType.Star))));
             ContentGrid.RowDefinitions.Add(new RowDefinition(4, GridUnitType.Pixel));
             ContentGrid.RowDefinitions.Add(new RowDefinition(2, GridUnitType.Star));
             ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
@@ -146,7 +149,10 @@ public partial class TodoListView : UserControl
         else
         {
             // Side-by-side: list left (1/3), splitter, editor right (2/3)
-            ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(_layoutSettings.TodoEditorLandscapeListWidth.ToGridLength()));
+            ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(
+                SplitterLayoutPersistence.Resolve(
+                    _layoutSettings.TodoEditorLandscapeListWidth,
+                    new GridLength(1, GridUnitType.Star))));
             ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(4, GridUnitType.Pixel));
             ContentGrid.ColumnDefinitions.Add(new ColumnDefinition(2, GridUnitType.Star));
             ContentGrid.RowDefinitions.Add(new RowDefinition(1, GridUnitType.Star));
@@ -163,13 +169,13 @@ public partial class TodoListView : UserControl
         if (ContentGrid == null) return;
         if (wasPortrait)
         {
-            if (ContentGrid.RowDefinitions.Count >= 1)
-                _layoutSettings.TodoEditorPortraitListHeight = GridLengthDto.FromGridLength(ContentGrid.RowDefinitions[0].Height);
+            if (SplitterLayoutPersistence.TryCaptureRowHeight(ContentGrid, 0, out var rowHeight) && rowHeight != null)
+                _layoutSettings.TodoEditorPortraitListHeight = rowHeight;
         }
         else
         {
-            if (ContentGrid.ColumnDefinitions.Count >= 1)
-                _layoutSettings.TodoEditorLandscapeListWidth = GridLengthDto.FromGridLength(ContentGrid.ColumnDefinitions[0].Width);
+            if (SplitterLayoutPersistence.TryCaptureColumnWidth(ContentGrid, 0, out var columnWidth) && columnWidth != null)
+                _layoutSettings.TodoEditorLandscapeListWidth = columnWidth;
         }
     }
 }

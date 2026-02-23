@@ -42,11 +42,11 @@
                             <ItemsControl ItemsSource="{Binding Children}" IsVisible="{Binding IsExpanded}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="models:FileNode">
-                                        <Border Padding="16,6,8,6" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="0,0,0,1"
+                                        <Border Margin="2" Padding="4" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="0,0,0,1"
                                                 Background="Transparent"
                                                 beh:TappedBehavior.Command="{Binding DataContext.TreeItemTappedCommand, ElementName=Root}"
                                                 beh:TappedBehavior.CommandParameter="{Binding}">
-                                            <TextBlock Text="{Binding Name}" FontSize="15" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Name}" FontSize="15" TextTrimming="CharacterEllipsis" Margin="12,0,0,0"/>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -69,7 +69,9 @@
                     <ItemsControl ItemsSource="{Binding JsonLogSummary.SummaryLines}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" FontSize="15" Margin="0,1"/>
+                                <Border Margin="2" Padding="4" Background="Transparent">
+                                    <TextBlock Text="{Binding}" FontSize="15"/>
+                                </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -85,7 +87,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="jsonModels:SearchableEntry">
-                                <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Padding="4"
+                                <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Margin="2" Padding="4"
                                         Background="Transparent"
                                         beh:TappedBehavior.Command="{Binding DataContext.SearchRowDoubleTappedCommand, ElementName=Root}"
                                         beh:TappedBehavior.CommandParameter="{Binding}">
@@ -141,10 +143,10 @@
 
         <!-- Status Bar -->
         <views:AnimatedStatusBar Grid.Row="3" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
-            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="4">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto" RowSpacing="4" ColumnSpacing="6">
                 <ComboBox Grid.Row="0"
                           Grid.Column="0"
-                          Grid.ColumnSpan="2"
+                          Grid.ColumnSpan="3"
                           ItemsSource="{Binding WorkspaceConnections}"
                           SelectedItem="{Binding SelectedWorkspaceConnection, Mode=TwoWay}">
                     <ComboBox.ItemTemplate>
@@ -154,7 +156,15 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
                 <SelectableTextBlock Grid.Row="1" Grid.Column="0" Text="{Binding StatusMessage}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                <SelectableTextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AppVersionDisplay}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
+                <Ellipse Grid.Row="1"
+                         Grid.Column="1"
+                         Width="10"
+                         Height="10"
+                         Fill="{Binding WorkspaceHealthIndicatorBrush}"
+                         VerticalAlignment="Center"
+                         HorizontalAlignment="Center"
+                         ToolTip.Tip="{Binding WorkspaceHealthIndicatorTooltip}"/>
+                <SelectableTextBlock Grid.Row="1" Grid.Column="2" Text="{Binding AppVersionDisplay}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
             </Grid>
         </views:AnimatedStatusBar>
     </Grid>

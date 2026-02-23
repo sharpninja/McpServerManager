@@ -79,7 +79,9 @@
                         <ItemsControl ItemsSource="{Binding JsonLogSummary.SummaryLines}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <SelectableTextBlock Text="{Binding}" FontSize="16" Margin="0,1"/>
+                                    <Border Margin="2" Padding="4" Background="Transparent">
+                                        <SelectableTextBlock Text="{Binding}" FontSize="16"/>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -108,7 +110,7 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="jsonModels:SearchableEntry">
-                                            <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1"
+                                            <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Margin="2" Padding="4"
                                                     beh:TappedBehavior.Command="{Binding DataContext.SearchRowDoubleTappedCommand, ElementName=ContentRoot}"
                                                     beh:TappedBehavior.CommandParameter="{Binding}">
                                                 <Border.Background>
@@ -117,7 +119,7 @@
                                                         <Binding Path="DataContext.SelectedSearchEntry" ElementName="ContentRoot"/>
                                                     </MultiBinding>
                                                 </Border.Background>
-                                                <Grid ColumnDefinitions="3*,4*,2*,2*" Margin="4,2">
+                                                <Grid ColumnDefinitions="3*,4*,2*,2*" Margin="0">
                                                     <SelectableTextBlock Grid.Column="0" Text="{Binding RequestId}" FontFamily="Consolas, Monospace" FontSize="15" TextTrimming="CharacterEllipsis"/>
                                                     <SelectableTextBlock Grid.Column="1" Text="{Binding DisplayText}" FontFamily="Consolas, Monospace" FontSize="15" TextTrimming="CharacterEllipsis"/>
                                                     <SelectableTextBlock Grid.Column="2" Text="{Binding Model}" FontFamily="Consolas, Monospace" FontSize="15" TextTrimming="CharacterEllipsis"/>

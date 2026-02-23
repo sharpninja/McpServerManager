@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
+             xmlns:avedit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
              x:Class="McpServerManager.Android.Views.WorkspaceView"
              x:DataType="vm:WorkspaceViewModel">
@@ -14,6 +15,7 @@
       <Button Content="Reload" Command="{Binding OpenSelectedWorkspaceCommand}" Padding="8,4"/>
       <Button Content="Copy Key" Command="{Binding CopySelectedKeyCommand}" Padding="8,4"/>
       <Button Content="Status" Command="{Binding GetSelectedStatusCommand}" Padding="8,4"/>
+      <Button Content="Health" Command="{Binding CheckSelectedWorkspaceHealthCommand}" Padding="8,4"/>
       <Button Content="Init" Command="{Binding InitSelectedWorkspaceCommand}" Padding="8,4"/>
       <Button Content="Start" Command="{Binding StartSelectedWorkspaceCommand}" Padding="8,4"/>
       <Button Content="Stop" Command="{Binding StopSelectedWorkspaceCommand}" Padding="8,4"/>
@@ -44,7 +46,7 @@
                  Margin="0">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:WorkspaceListEntry">
-              <Border Padding="6" Margin="0,0,0,3" CornerRadius="4" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+              <Border Padding="4" Margin="2" CornerRadius="4" Background="Transparent">
                 <StackPanel Spacing="1">
                     <TextBlock Text="{Binding Key}"
                                FontWeight="SemiBold"
@@ -73,7 +75,7 @@
           <StackPanel Spacing="8">
             <SelectableTextBlock Text="{Binding EditorModeText}" FontWeight="SemiBold"/>
 
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
               <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Key"/>
               <TextBox Grid.Row="0" Grid.Column="1"
                        Text="{Binding EditorKey}"
@@ -90,15 +92,44 @@
               <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Text="Todo Path"/>
               <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding EditorTodoPath, Mode=TwoWay}"/>
 
-              <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Workspace Port"/>
-              <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding EditorWorkspacePortText, Mode=TwoWay}"/>
+              <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Data Directory"/>
+              <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding EditorDataDirectory, Mode=TwoWay}"/>
 
-              <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Text="Tunnel Provider"/>
-              <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding EditorTunnelProvider, Mode=TwoWay}"/>
+              <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Text="Workspace Port"/>
+              <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding EditorWorkspacePortText, Mode=TwoWay}"/>
 
-              <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Text="Run As"/>
-              <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding EditorRunAs, Mode=TwoWay}"/>
+              <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Text="Tunnel Provider"/>
+              <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding EditorTunnelProvider, Mode=TwoWay}"/>
+
+              <TextBlock Grid.Row="7" Grid.Column="0" VerticalAlignment="Center" Text="Run As"/>
+              <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding EditorRunAs, Mode=TwoWay}"/>
+
+              <TextBlock Grid.Row="8" Grid.Column="0" VerticalAlignment="Center" Text="Is Primary"/>
+              <CheckBox Grid.Row="8" Grid.Column="1"
+                        IsChecked="{Binding EditorIsPrimary, Mode=TwoWay}"
+                        VerticalAlignment="Center"/>
+
+              <TextBlock Grid.Row="9" Grid.Column="0" VerticalAlignment="Center" Text="Is Enabled"/>
+              <CheckBox Grid.Row="9" Grid.Column="1"
+                        IsChecked="{Binding EditorIsEnabled, Mode=TwoWay}"
+                        VerticalAlignment="Center"/>
             </Grid>
+
+            <SelectableTextBlock Text="Workspace Prompt Template" FontWeight="SemiBold"/>
+            <TextBlock Text="Leave blank to inherit the global prompt template."
+                       FontSize="11"
+                       Foreground="Gray"
+                       TextWrapping="Wrap"/>
+            <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
+                    BorderThickness="1"
+                    CornerRadius="4">
+              <avedit:TextEditor x:Name="WorkspacePromptEditor"
+                                 Height="220"
+                                 FontFamily="Cascadia Code,Consolas,Menlo,monospace"
+                                 FontSize="13"
+                                 ShowLineNumbers="True"
+                                 WordWrap="True"/>
+            </Border>
 
             <TextBlock Text="{Binding ProcessStatusText}" TextWrapping="Wrap" Foreground="Gray"/>
 

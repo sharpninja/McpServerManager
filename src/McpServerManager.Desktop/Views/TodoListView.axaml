@@ -78,63 +78,65 @@
           <ItemsControl ItemsSource="{Binding GroupedItems}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:TodoListGroup">
-                <StackPanel Margin="0,0,0,8">
-                  <Border Background="{DynamicResource SystemAccentColor}"
-                          Padding="8,4" CornerRadius="4" Margin="4,4,4,2">
-                    <SelectableTextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13"
-                               Foreground="White"/>
-                  </Border>
-                  <ListBox ItemsSource="{Binding Items}" Margin="4,0"
-                           SelectionMode="Single"
-                           SelectionChanged="OnGroupListBoxSelectionChanged"
-                           Loaded="OnGroupListBoxLoaded"
-                           Unloaded="OnGroupListBoxUnloaded">
-                    <ListBox.ItemTemplate>
-                      <DataTemplate x:DataType="vm:TodoListEntry">
-                        <Border Margin="2"
-                                Padding="0"
-                                Background="{Binding Item, Converter={StaticResource DoneToBackgroundBrush}}">
-                          <Grid ColumnDefinitions="*,Auto" Background="Transparent">
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                              <TextBlock Text="{Binding Item.Id}" FontWeight="SemiBold" FontSize="13"
-                                         TextTrimming="CharacterEllipsis"/>
-                              <TextBlock Text="{Binding Item.Title}" FontSize="12"
-                                         TextTrimming="CharacterEllipsis"
-                                         Foreground="{DynamicResource SystemBaseMediumColor}"/>
-                            </StackPanel>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Item.Section}" FontSize="11"
-                                       Foreground="Gray" VerticalAlignment="Center"
-                                       Margin="6,0,0,0"/>
-                          </Grid>
-                        </Border>
-                      </DataTemplate>
-                    </ListBox.ItemTemplate>
-                    <ListBox.ContextMenu>
-                      <ContextMenu x:CompileBindings="False">
-                        <MenuItem Header="Open in Editor"
-                                  Command="{Binding DataContext.OpenSelectedTodoCommand, ElementName=TodoRoot}"/>
-                        <MenuItem Header="Copy ID"
-                                  Command="{Binding DataContext.CopySelectedIdCommand, ElementName=TodoRoot}"/>
-                        <Separator/>
-                        <MenuItem Header="Toggle Done"
-                                  Command="{Binding DataContext.ToggleDoneCommand, ElementName=TodoRoot}"/>
-                        <MenuItem Header="Analyze Requirements"
-                                  Command="{Binding DataContext.AnalyzeRequirementsCommand, ElementName=TodoRoot}"/>
-                        <Separator/>
-                        <MenuItem Header="Copilot Status"
-                                  Command="{Binding DataContext.CopilotStatusCommand, ElementName=TodoRoot}"/>
-                        <MenuItem Header="Copilot Plan"
-                                  Command="{Binding DataContext.CopilotPlanCommand, ElementName=TodoRoot}"/>
-                        <MenuItem Header="Copilot Implement"
-                                  Command="{Binding DataContext.CopilotImplementCommand, ElementName=TodoRoot}"/>
-                        <Separator/>
-                        <MenuItem Header="Delete"
-                                  Command="{Binding DataContext.DeleteSelectedCommand, ElementName=TodoRoot}"/>
-                      </ContextMenu>
-                    </ListBox.ContextMenu>
-                  </ListBox>
-                </StackPanel>
+                <Border Margin="2" Padding="4" Background="Transparent">
+                  <StackPanel>
+                    <Border Background="{DynamicResource SystemAccentColor}"
+                            Padding="4" CornerRadius="4" Margin="0,0,0,2">
+                      <SelectableTextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13"
+                                 Foreground="White"/>
+                    </Border>
+                    <ListBox ItemsSource="{Binding Items}" Margin="0"
+                             SelectionMode="Single"
+                             SelectionChanged="OnGroupListBoxSelectionChanged"
+                             Loaded="OnGroupListBoxLoaded"
+                             Unloaded="OnGroupListBoxUnloaded">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TodoListEntry">
+                          <Border Margin="2"
+                                  Padding="4"
+                                  Background="{Binding Item, Converter={StaticResource DoneToBackgroundBrush}}">
+                            <Grid ColumnDefinitions="*,Auto" Background="Transparent">
+                              <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Item.Id}" FontWeight="SemiBold" FontSize="13"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding Item.Title}" FontSize="12"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource SystemBaseMediumColor}"/>
+                              </StackPanel>
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding Item.Section}" FontSize="11"
+                                         Foreground="Gray" VerticalAlignment="Center"
+                                         Margin="4,0,0,0"/>
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                      <ListBox.ContextMenu>
+                        <ContextMenu x:CompileBindings="False">
+                          <MenuItem Header="Open in Editor"
+                                    Command="{Binding DataContext.OpenSelectedTodoCommand, ElementName=TodoRoot}"/>
+                          <MenuItem Header="Copy ID"
+                                    Command="{Binding DataContext.CopySelectedIdCommand, ElementName=TodoRoot}"/>
+                          <Separator/>
+                          <MenuItem Header="Toggle Done"
+                                    Command="{Binding DataContext.ToggleDoneCommand, ElementName=TodoRoot}"/>
+                          <MenuItem Header="Analyze Requirements"
+                                    Command="{Binding DataContext.AnalyzeRequirementsCommand, ElementName=TodoRoot}"/>
+                          <Separator/>
+                          <MenuItem Header="Copilot Status"
+                                    Command="{Binding DataContext.CopilotStatusCommand, ElementName=TodoRoot}"/>
+                          <MenuItem Header="Copilot Plan"
+                                    Command="{Binding DataContext.CopilotPlanCommand, ElementName=TodoRoot}"/>
+                          <MenuItem Header="Copilot Implement"
+                                    Command="{Binding DataContext.CopilotImplementCommand, ElementName=TodoRoot}"/>
+                          <Separator/>
+                          <MenuItem Header="Delete"
+                                    Command="{Binding DataContext.DeleteSelectedCommand, ElementName=TodoRoot}"/>
+                        </ContextMenu>
+                      </ListBox.ContextMenu>
+                    </ListBox>
+                  </StackPanel>
+                </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
