@@ -4,3 +4,6 @@
 [submodule "scripts/MsixTools"]
 	path = scripts/MsixTools
 	url = https://github.com/sharpninja/MsixTools.git
+[submodule "lib/McpServer"]
+	path = lib/McpServer
+	url = https://github.com/sharpninja/McpServer.git

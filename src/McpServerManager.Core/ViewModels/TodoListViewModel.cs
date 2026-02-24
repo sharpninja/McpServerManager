@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -60,10 +61,10 @@ public partial class TodoListViewModel : ViewModelBase
 
     // ── Constructor ─────────────────────────────────────────────────────────
 
-    public TodoListViewModel(IClipboardService clipboardService, string mcpBaseUrl)
+    public TodoListViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey = null)
     {
         _clipboardService = clipboardService;
-        SetMcpBaseUrl(mcpBaseUrl);
+        SetMcpBaseUrl(mcpBaseUrl, mcpApiKey);
     }
 
     public TodoListViewModel(IClipboardService clipboardService)
@@ -89,11 +90,12 @@ public partial class TodoListViewModel : ViewModelBase
         _mediator.Register<UpdateTodoCommand, McpTodoMutationResult>(new UpdateTodoHandler(service));
         _mediator.Register<DeleteTodoCommand, McpTodoMutationResult>(new DeleteTodoHandler(service));
         _mediator.Register<AnalyzeTodoRequirementsCommand, McpRequirementsAnalysisResult>(new AnalyzeTodoRequirementsHandler(service));
+        _mediator.Register<StreamTodoPromptCommand, IAsyncEnumerable<string>>(new StreamTodoPromptHandler(service));
     }
 
-    public void SetMcpBaseUrl(string mcpBaseUrl)
+    public void SetMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null)
     {
-        RegisterCqrsHandlers(new McpTodoService(mcpBaseUrl));
+        RegisterCqrsHandlers(new McpTodoService(mcpBaseUrl, mcpApiKey));
     }
 
     public Task RefreshForConnectionChangeAsync() => LoadTodosAsync();
@@ -408,90 +410,136 @@ public partial class TodoListViewModel : ViewModelBase
     private async Task CopilotStatusAsync()
     {
         if (SelectedEntry?.Item is not { } item) return;
-        await RunCopilotCommandAsync("status", item,
-            $"Analyze the current status of this todo item. Summarize what has been done, what remains, and any blockers.\n\n{TodoMarkdown.ToMarkdown(item)}");
+        await RunTodoPromptCommandAsync("status", item, TodoPromptActionKind.Status);
     }
 
     [RelayCommand]
     private async Task CopilotPlanAsync()
     {
         if (SelectedEntry?.Item is not { } item) return;
-        await RunCopilotCommandAsync("plan", item,
-            $"Create a detailed implementation plan for this todo item. Break it down into concrete steps with technical details.\n\n{TodoMarkdown.ToMarkdown(item)}");
+        await RunTodoPromptCommandAsync("plan", item, TodoPromptActionKind.Plan);
     }
 
     [RelayCommand]
     private async Task CopilotImplementAsync()
     {
         if (SelectedEntry?.Item is not { } item) return;
-        await RunCopilotCommandAsync("implement", item,
-            $"Implement this todo item. Make the necessary code changes.\n\n{TodoMarkdown.ToMarkdown(item)}");
+        await RunTodoPromptCommandAsync("implement", item, TodoPromptActionKind.Implement);
     }
 
-    private async Task RunCopilotCommandAsync(string action, McpTodoFlatItem item, string prompt)
+    private async Task RunTodoPromptCommandAsync(string action, McpTodoFlatItem item, TodoPromptActionKind promptAction)
     {
         _activeCts?.Cancel();
         _activeCts = new CancellationTokenSource();
         var ct = _activeCts.Token;
 
         IsCopilotRunning = true;
-        EditorTitle = $"{item.Id} — copilot {action}";
-        EditorText = $"⏳ Running copilot {action} for {item.Id}…\n";
-        StatusText = $"Copilot {action}: {item.Id}…";
+        EditorTitle = $"{item.Id} — {action} prompt";
+        EditorText = $"⏳ Requesting {action} prompt for {item.Id} from MCP server…\n";
+        StatusText = $"{Capitalize(action)} prompt: {item.Id}…";
 
         var sb = new StringBuilder();
-        sb.AppendLine($"⏳ Running copilot {action} for {item.Id}…");
+        sb.AppendLine($"⏳ Requesting {action} prompt for {item.Id} from MCP server…");
         sb.AppendLine();
 
         try
         {
-            var result = await CopilotCliService.InvokeAsync(
-                prompt,
-                workingDirectory: null,
-                onStdoutLine: line =>
-                {
-                    sb.AppendLine(line);
-                    Avalonia.Threading.Dispatcher.UIThread.Post(() => EditorText = sb.ToString());
-                },
-                cancellationToken: ct);
+            var stream = await _mediator.SendAsync<StreamTodoPromptCommand, IAsyncEnumerable<string>>(
+                new StreamTodoPromptCommand(item.Id, promptAction), ct);
 
-            sb.AppendLine();
-            sb.AppendLine(result.State == "success"
-                ? $"✅ Copilot {action} completed."
-                : $"⚠️ Copilot {action} finished with state: {result.State}");
-
-            if (!string.IsNullOrWhiteSpace(result.Stderr))
+            var receivedAnyLine = false;
+            var receivedErrorLine = false;
+            var uiFlushStopwatch = Stopwatch.StartNew();
+            var linesSinceUiFlush = 0;
+            await foreach (var line in stream.WithCancellation(ct))
             {
-                sb.AppendLine();
-                sb.AppendLine("--- stderr ---");
-                sb.AppendLine(result.Stderr.Trim());
+                receivedAnyLine = true;
+                if (!string.IsNullOrWhiteSpace(line) &&
+                    line.StartsWith("error:", StringComparison.OrdinalIgnoreCase))
+                {
+                    receivedErrorLine = true;
+                }
+
+                sb.AppendLine(line);
+                linesSinceUiFlush++;
+
+                // Flush to the UI thread periodically to show real-time streaming.
+                // The await foreach runs on a threadpool thread (SSE reader uses ConfigureAwait(false)),
+                // so we must dispatch EditorText updates explicitly.
+                if (linesSinceUiFlush >= 4 || uiFlushStopwatch.ElapsedMilliseconds >= 80)
+                {
+                    var snapshot = sb.ToString();
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => EditorText = snapshot);
+                    linesSinceUiFlush = 0;
+                    uiFlushStopwatch.Restart();
+                }
             }
 
-            EditorText = sb.ToString();
-            StatusText = result.State == "success"
-                ? $"Copilot {action} done: {item.Id}"
-                : $"Copilot {action} {result.State}: {item.Id}";
+            if (!receivedAnyLine)
+            {
+                sb.AppendLine("❌ Error: MCP server returned no prompt output.");
+                sb.AppendLine("The server likely failed before emitting any SSE data.");
+                var text = sb.ToString();
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    EditorText = text;
+                    StatusText = $"{Capitalize(action)} prompt error: no output from MCP server";
+                });
+            }
+            else if (receivedErrorLine)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"❌ {Capitalize(action)} prompt failed.");
+                var text = sb.ToString();
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    EditorText = text;
+                    StatusText = $"{Capitalize(action)} prompt error: {item.Id}";
+                });
+            }
+            else
+            {
+                sb.AppendLine();
+                sb.AppendLine($"✅ {Capitalize(action)} prompt completed.");
+                var text = sb.ToString();
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    EditorText = text;
+                    StatusText = $"{Capitalize(action)} prompt done: {item.Id}";
+                });
+            }
         }
         catch (OperationCanceledException)
         {
             sb.AppendLine();
             sb.AppendLine("🛑 Cancelled.");
-            EditorText = sb.ToString();
-            StatusText = $"Copilot {action} cancelled";
+            var text = sb.ToString();
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                EditorText = text;
+                StatusText = $"{Capitalize(action)} prompt cancelled";
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Copilot {Action} failed for {Id}", action, item.Id);
+            _logger.LogError(ex, "TODO prompt {Action} failed for {Id}", action, item.Id);
             sb.AppendLine();
             sb.AppendLine($"❌ Error: {ex.Message}");
-            EditorText = sb.ToString();
-            StatusText = $"Copilot error: {ex.Message}";
+            var text = sb.ToString();
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                EditorText = text;
+                StatusText = $"{Capitalize(action)} prompt error: {ex.Message}";
+            });
         }
         finally
         {
-            IsCopilotRunning = false;
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => IsCopilotRunning = false);
         }
     }
+
+    private static string Capitalize(string value)
+        => string.IsNullOrEmpty(value) ? value : char.ToUpperInvariant(value[0]) + value.Substring(1);
 
     /// <summary>Builds a context string with current todo data for the AI assistant.</summary>
     public string GetTodoContextForAgent()

@@ -1,11 +1,14 @@
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using McpServer.Client;
 using McpServerManager.Core.Models;
 using Microsoft.Extensions.Logging;
+using ClientModels = McpServer.Client.Models;
 
 namespace McpServerManager.Core.Services;
 
@@ -13,16 +16,23 @@ namespace McpServerManager.Core.Services;
 public sealed class McpWorkspaceService
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("WorkspaceService");
-    private readonly HttpClient _httpClient;
+    private readonly McpServerClient _client;
+    private readonly Uri _baseUri;
+    private readonly HttpClient _healthHttpClient;
 
-    public McpWorkspaceService(string baseUrl)
+    public McpWorkspaceService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null)
     {
-        if (string.IsNullOrWhiteSpace(baseUrl))
-            throw new ArgumentException("Base URL is required.", nameof(baseUrl));
+        _client = McpServerRestClientFactory.Create(
+            baseUrl,
+            timeout: TimeSpan.FromSeconds(5),
+            apiKey: apiKey,
+            workspaceRootPath: workspaceRootPath);
 
-        _httpClient = new HttpClient
+        var normalizedBaseUrl = McpServerRestClientFactory.NormalizeBaseUrl(baseUrl);
+        _baseUri = new Uri(normalizedBaseUrl, UriKind.Absolute);
+        _healthHttpClient = new HttpClient
         {
-            BaseAddress = new Uri(baseUrl.TrimEnd('/')),
+            BaseAddress = _baseUri,
             Timeout = TimeSpan.FromSeconds(5)
         };
     }
@@ -30,71 +40,84 @@ public sealed class McpWorkspaceService
     /// <summary>List workspaces.</summary>
     public async Task<McpWorkspaceQueryResult> QueryAsync(CancellationToken cancellationToken = default)
     {
-        return await GetFreshJsonAsync<McpWorkspaceQueryResult>("/mcp/workspace", cancellationToken).ConfigureAwait(true)
-               ?? new McpWorkspaceQueryResult();
+        var result = await _client.Workspace.ListAsync(cancellationToken).ConfigureAwait(true);
+        return new McpWorkspaceQueryResult
+        {
+            TotalCount = result.TotalCount,
+            Items = result.Items?.Select(Map).ToList() ?? new()
+        };
     }
 
     /// <summary>Get a single workspace by key.</summary>
     public async Task<McpWorkspaceItem?> GetByIdAsync(string key, CancellationToken cancellationToken = default)
     {
-        return await GetFreshJsonAsync<McpWorkspaceItem>($"/mcp/workspace/{Uri.EscapeDataString(key)}", cancellationToken)
-            .ConfigureAwait(true);
+        var result = await _client.Workspace.GetAsync(EncodeKey(key), cancellationToken).ConfigureAwait(true);
+        return Map(result);
     }
 
     /// <summary>Create a workspace.</summary>
     public async Task<McpWorkspaceMutationResult> CreateAsync(McpWorkspaceCreateRequest request, CancellationToken cancellationToken = default)
     {
-        using var response = await _httpClient.PostAsJsonAsync("/mcp/workspace", request, cancellationToken).ConfigureAwait(true);
-        return await ReadJsonOrDefaultAsync<McpWorkspaceMutationResult>(response, cancellationToken).ConfigureAwait(true);
+        var result = await _client.Workspace.CreateAsync(Map(request), cancellationToken).ConfigureAwait(true);
+        return Map(result);
     }
 
     /// <summary>Update an existing workspace.</summary>
     public async Task<McpWorkspaceMutationResult> UpdateAsync(string key, McpWorkspaceUpdateRequest request, CancellationToken cancellationToken = default)
     {
-        using var response = await _httpClient.PutAsJsonAsync($"/mcp/workspace/{Uri.EscapeDataString(key)}", request, cancellationToken).ConfigureAwait(true);
-        return await ReadJsonOrDefaultAsync<McpWorkspaceMutationResult>(response, cancellationToken).ConfigureAwait(true);
+        var result = await _client.Workspace.UpdateAsync(EncodeKey(key), Map(request), cancellationToken).ConfigureAwait(true);
+        return Map(result);
     }
 
     /// <summary>Delete a workspace.</summary>
     public async Task<McpWorkspaceMutationResult> DeleteAsync(string key, CancellationToken cancellationToken = default)
     {
-        using var response = await _httpClient.DeleteAsync($"/mcp/workspace/{Uri.EscapeDataString(key)}", cancellationToken).ConfigureAwait(true);
-        return await ReadJsonOrDefaultAsync<McpWorkspaceMutationResult>(response, cancellationToken).ConfigureAwait(true);
+        var result = await _client.Workspace.DeleteAsync(EncodeKey(key), cancellationToken).ConfigureAwait(true);
+        return Map(result);
     }
 
     /// <summary>Read current process status for a workspace.</summary>
     public async Task<McpWorkspaceProcessStatus> GetStatusAsync(string key, CancellationToken cancellationToken = default)
     {
-        return await GetFreshJsonAsync<McpWorkspaceProcessStatus>($"/mcp/workspace/{Uri.EscapeDataString(key)}/status", cancellationToken)
-            .ConfigureAwait(true) ?? new McpWorkspaceProcessStatus();
+        var result = await _client.Workspace.GetStatusAsync(EncodeKey(key), cancellationToken).ConfigureAwait(true);
+        return Map(result);
     }
 
     /// <summary>Initialize workspace files.</summary>
     public async Task<McpWorkspaceInitResult> InitAsync(string key, CancellationToken cancellationToken = default)
     {
-        using var response = await _httpClient.PostAsync($"/mcp/workspace/{Uri.EscapeDataString(key)}/init", null, cancellationToken).ConfigureAwait(true);
-        return await ReadJsonOrDefaultAsync<McpWorkspaceInitResult>(response, cancellationToken).ConfigureAwait(true);
+        var result = await _client.Workspace.InitAsync(EncodeKey(key), cancellationToken).ConfigureAwait(true);
+        return new McpWorkspaceInitResult
+        {
+            Success = result.Success,
+            Error = result.Error,
+            FilesCreated = result.FilesCreated?.ToList()
+        };
     }
 
     /// <summary>Start workspace process.</summary>
     public async Task<McpWorkspaceProcessStatus> StartAsync(string key, CancellationToken cancellationToken = default)
     {
-        using var response = await _httpClient.PostAsync($"/mcp/workspace/{Uri.EscapeDataString(key)}/start", null, cancellationToken).ConfigureAwait(true);
-        return await ReadJsonOrDefaultAsync<McpWorkspaceProcessStatus>(response, cancellationToken).ConfigureAwait(true);
+        var result = await _client.Workspace.StartAsync(EncodeKey(key), cancellationToken).ConfigureAwait(true);
+        return Map(result);
     }
 
     /// <summary>Stop workspace process.</summary>
     public async Task<McpWorkspaceProcessStatus> StopAsync(string key, CancellationToken cancellationToken = default)
     {
-        using var response = await _httpClient.PostAsync($"/mcp/workspace/{Uri.EscapeDataString(key)}/stop", null, cancellationToken).ConfigureAwait(true);
-        return await ReadJsonOrDefaultAsync<McpWorkspaceProcessStatus>(response, cancellationToken).ConfigureAwait(true);
+        var result = await _client.Workspace.StopAsync(EncodeKey(key), cancellationToken).ConfigureAwait(true);
+        return Map(result);
     }
 
     /// <summary>Read the global marker prompt template (primary workspace only).</summary>
     public async Task<McpWorkspaceGlobalPromptResult> GetGlobalPromptAsync(CancellationToken cancellationToken = default)
     {
-        return await GetFreshJsonAsync<McpWorkspaceGlobalPromptResult>("/mcp/workspace/prompt", cancellationToken)
-            .ConfigureAwait(true) ?? new McpWorkspaceGlobalPromptResult();
+        var result = await _client.Workspace.GetGlobalPromptAsync(cancellationToken).ConfigureAwait(true);
+        return new McpWorkspaceGlobalPromptResult
+        {
+            Template = result.Template,
+            IsDefault = result.IsDefault
+        };
     }
 
     /// <summary>Update the global marker prompt template (primary workspace only).</summary>
@@ -102,8 +125,15 @@ public sealed class McpWorkspaceService
         McpWorkspaceGlobalPromptUpdateRequest request,
         CancellationToken cancellationToken = default)
     {
-        using var response = await _httpClient.PutAsJsonAsync("/mcp/workspace/prompt", request, cancellationToken).ConfigureAwait(true);
-        return await ReadJsonOrDefaultAsync<McpWorkspaceGlobalPromptResult>(response, cancellationToken).ConfigureAwait(true);
+        var result = await _client.Workspace.UpdateGlobalPromptAsync(
+            new ClientModels.GlobalPromptUpdateRequest { Template = request.Template },
+            cancellationToken).ConfigureAwait(true);
+
+        return new McpWorkspaceGlobalPromptResult
+        {
+            Template = result.Template,
+            IsDefault = result.IsDefault
+        };
     }
 
     /// <summary>Probe the selected workspace health endpoint.</summary>
@@ -117,22 +147,19 @@ public sealed class McpWorkspaceService
             return new McpWorkspaceHealthResult { Success = false, Error = $"Workspace '{key}' not found." };
 
         if (workspace.WorkspacePort is < 1 or > 65535)
+        {
             return new McpWorkspaceHealthResult
             {
                 Success = false,
                 Error = $"Workspace '{key}' has invalid port '{workspace.WorkspacePort}'."
             };
+        }
 
-        var baseUri = _httpClient.BaseAddress;
-        if (baseUri == null)
-            return new McpWorkspaceHealthResult { Success = false, Error = "Workspace service base address is not configured." };
-
-        // Common health endpoints. Try /health first, then /mcp/health.
         var candidates = new[] { "/health", "/mcp/health" };
         McpWorkspaceHealthResult? lastResult = null;
         foreach (var candidate in candidates)
         {
-            lastResult = await ProbeHealthAsync(baseUri, workspace.WorkspacePort, candidate, cancellationToken).ConfigureAwait(true);
+            lastResult = await ProbeHealthAsync(_baseUri, workspace.WorkspacePort, candidate, cancellationToken).ConfigureAwait(true);
             if (lastResult.Success || lastResult.StatusCode != 404)
                 return lastResult;
         }
@@ -143,81 +170,16 @@ public sealed class McpWorkspaceService
     /// <summary>Probe health for this service base URL (selected connection target).</summary>
     public async Task<McpWorkspaceHealthResult> GetHealthAsync(CancellationToken cancellationToken = default)
     {
-        var baseUri = _httpClient.BaseAddress;
-        if (baseUri == null)
-            return new McpWorkspaceHealthResult { Success = false, Error = "Workspace service base address is not configured." };
-
         var candidates = new[] { "/health", "/mcp/health" };
         McpWorkspaceHealthResult? lastResult = null;
         foreach (var candidate in candidates)
         {
-            lastResult = await ProbeHealthAtBaseAsync(baseUri, candidate, cancellationToken).ConfigureAwait(true);
+            lastResult = await ProbeHealthAtBaseAsync(_baseUri, candidate, cancellationToken).ConfigureAwait(true);
             if (lastResult.Success || lastResult.StatusCode != 404)
                 return lastResult;
         }
 
         return lastResult ?? new McpWorkspaceHealthResult { Success = false, Error = "No health endpoint response." };
-    }
-
-    private static async Task<T> ReadJsonOrDefaultAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
-        where T : new()
-    {
-        response.EnsureSuccessStatusCode();
-        if (response.Content == null)
-            return new T();
-
-        try
-        {
-            return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken).ConfigureAwait(true) ?? new T();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, $"[WorkspaceService] JSON deserialization failed for {typeof(T).Name} (HTTP {(int)response.StatusCode}); returning default");
-            return new T();
-        }
-    }
-
-    private async Task<T?> GetFreshJsonAsync<T>(string url, CancellationToken cancellationToken)
-    {
-        using var request = CreateNoCacheGet(url);
-        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-            .ConfigureAwait(true);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken).ConfigureAwait(true);
-    }
-
-    private static HttpRequestMessage CreateNoCacheGet(string url)
-    {
-        var separator = url.Contains('?') ? '&' : '?';
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{url}{separator}_rt={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
-        ApplyNoCacheHeaders(request.Headers);
-        return request;
-    }
-
-    private static HttpRequestMessage CreateNoCacheGet(Uri uri)
-    {
-        var builder = new UriBuilder(uri);
-        var existingQuery = builder.Query.TrimStart('?');
-        var stamp = $"_rt={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
-        builder.Query = string.IsNullOrWhiteSpace(existingQuery)
-            ? stamp
-            : $"{existingQuery}&{stamp}";
-
-        var request = new HttpRequestMessage(HttpMethod.Get, builder.Uri);
-        ApplyNoCacheHeaders(request.Headers);
-        return request;
-    }
-
-    private static void ApplyNoCacheHeaders(HttpRequestHeaders headers)
-    {
-        if (headers == null) return;
-        headers.CacheControl = new CacheControlHeaderValue
-        {
-            NoCache = true,
-            NoStore = true,
-            MustRevalidate = true
-        };
-        headers.Pragma.ParseAdd("no-cache");
     }
 
     private Task<McpWorkspaceHealthResult> ProbeHealthAtBaseAsync(
@@ -243,7 +205,7 @@ public sealed class McpWorkspaceService
             };
 
             using var request = CreateNoCacheGet(uriBuilder.Uri);
-            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            using var response = await _healthHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                 .ConfigureAwait(true);
             var body = response.Content == null
                 ? ""
@@ -268,5 +230,118 @@ public sealed class McpWorkspaceService
                 Error = ex.Message
             };
         }
+    }
+
+    private static HttpRequestMessage CreateNoCacheGet(Uri uri)
+    {
+        var builder = new UriBuilder(uri);
+        var existingQuery = builder.Query.TrimStart('?');
+        var stamp = $"_rt={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+        builder.Query = string.IsNullOrWhiteSpace(existingQuery)
+            ? stamp
+            : $"{existingQuery}&{stamp}";
+
+        var request = new HttpRequestMessage(HttpMethod.Get, builder.Uri);
+        request.Headers.CacheControl = new CacheControlHeaderValue
+        {
+            NoCache = true,
+            NoStore = true,
+            MustRevalidate = true
+        };
+        request.Headers.Pragma.ParseAdd("no-cache");
+        return request;
+    }
+
+    private static McpWorkspaceMutationResult Map(ClientModels.WorkspaceMutationResult result)
+    {
+        return new McpWorkspaceMutationResult
+        {
+            Success = result.Success,
+            Error = result.Error,
+            Workspace = result.Workspace == null ? null : Map(result.Workspace)
+        };
+    }
+
+    private static McpWorkspaceProcessStatus Map(ClientModels.WorkspaceProcessStatus result)
+    {
+        return new McpWorkspaceProcessStatus
+        {
+            IsRunning = result.IsRunning,
+            Pid = result.Pid,
+            Uptime = result.Uptime,
+            Port = result.Port,
+            Error = result.Error
+        };
+    }
+
+    private static McpWorkspaceItem Map(ClientModels.WorkspaceDto item)
+    {
+        return new McpWorkspaceItem
+        {
+            WorkspacePath = item.WorkspacePath,
+            Name = item.Name,
+            TodoPath = item.TodoPath,
+            DataDirectory = item.DataDirectory,
+            WorkspacePort = item.WorkspacePort,
+            TunnelProvider = item.TunnelProvider,
+            IsPrimary = item.IsPrimary,
+            IsEnabled = item.IsEnabled,
+            DateTimeCreated = item.DateTimeCreated,
+            DateTimeModified = item.DateTimeModified,
+            RunAs = item.RunAs,
+            PromptTemplate = item.PromptTemplate,
+            StatusPrompt = item.StatusPrompt,
+            ImplementPrompt = item.ImplementPrompt,
+            PlanPrompt = item.PlanPrompt
+        };
+    }
+
+    private static ClientModels.WorkspaceCreateRequest Map(McpWorkspaceCreateRequest request)
+    {
+        return new ClientModels.WorkspaceCreateRequest
+        {
+            WorkspacePath = request.WorkspacePath ?? string.Empty,
+            Name = request.Name,
+            WorkspacePort = request.WorkspacePort ?? 0,
+            TodoPath = request.TodoPath,
+            DataDirectory = request.DataDirectory,
+            TunnelProvider = request.TunnelProvider,
+            RunAs = request.RunAs,
+            IsPrimary = request.IsPrimary ?? false,
+            IsEnabled = request.IsEnabled ?? true,
+            PromptTemplate = request.PromptTemplate,
+            StatusPrompt = request.StatusPrompt,
+            ImplementPrompt = request.ImplementPrompt,
+            PlanPrompt = request.PlanPrompt
+        };
+    }
+
+    private static ClientModels.WorkspaceUpdateRequest Map(McpWorkspaceUpdateRequest request)
+    {
+        return new ClientModels.WorkspaceUpdateRequest
+        {
+            Name = request.Name,
+            TodoPath = request.TodoPath,
+            DataDirectory = request.DataDirectory,
+            WorkspacePort = request.WorkspacePort,
+            TunnelProvider = request.TunnelProvider,
+            RunAs = request.RunAs,
+            IsPrimary = request.IsPrimary,
+            IsEnabled = request.IsEnabled,
+            PromptTemplate = request.PromptTemplate,
+            StatusPrompt = request.StatusPrompt,
+            ImplementPrompt = request.ImplementPrompt,
+            PlanPrompt = request.PlanPrompt
+        };
+    }
+
+    /// <summary>Base64URL-encode a raw workspace path for use as an API route key.</summary>
+    private static string EncodeKey(string key)
+    {
+        var bytes = Encoding.UTF8.GetBytes(key);
+        return Convert.ToBase64String(bytes)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
     }
 }
