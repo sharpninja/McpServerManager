@@ -18,6 +18,9 @@ public partial class WorkspaceView : UserControl
         DataContextChanged += OnDataContextChanged;
         Loaded += OnLoaded;
         ConfigurePromptEditor(WorkspacePromptEditor);
+        ConfigurePromptEditor(WorkspaceStatusPromptEditor);
+        ConfigurePromptEditor(WorkspaceImplementPromptEditor);
+        ConfigurePromptEditor(WorkspacePlanPromptEditor);
     }
 
     private async void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -51,14 +54,23 @@ public partial class WorkspaceView : UserControl
     private void AttachViewModel(WorkspaceViewModel vm)
     {
         vm.GetWorkspacePromptEditorText = () => WorkspacePromptEditor.Text ?? "";
+        vm.GetWorkspaceStatusPromptEditorText = () => WorkspaceStatusPromptEditor.Text ?? "";
+        vm.GetWorkspaceImplementPromptEditorText = () => WorkspaceImplementPromptEditor.Text ?? "";
+        vm.GetWorkspacePlanPromptEditorText = () => WorkspacePlanPromptEditor.Text ?? "";
         vm.PropertyChanged += OnViewModelPropertyChanged;
         SetEditorTextIfDifferent(WorkspacePromptEditor, vm.EditorPromptTemplateText);
+        SetEditorTextIfDifferent(WorkspaceStatusPromptEditor, vm.EditorStatusPromptText);
+        SetEditorTextIfDifferent(WorkspaceImplementPromptEditor, vm.EditorImplementPromptText);
+        SetEditorTextIfDifferent(WorkspacePlanPromptEditor, vm.EditorPlanPromptText);
     }
 
     private void DetachViewModel(WorkspaceViewModel vm)
     {
         vm.PropertyChanged -= OnViewModelPropertyChanged;
         vm.GetWorkspacePromptEditorText = null;
+        vm.GetWorkspaceStatusPromptEditorText = null;
+        vm.GetWorkspaceImplementPromptEditorText = null;
+        vm.GetWorkspacePlanPromptEditorText = null;
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -66,11 +78,17 @@ public partial class WorkspaceView : UserControl
         if (sender is not WorkspaceViewModel vm) return;
         if (e.PropertyName == nameof(WorkspaceViewModel.EditorPromptTemplateText))
             SetEditorTextIfDifferent(WorkspacePromptEditor, vm.EditorPromptTemplateText);
+        else if (e.PropertyName == nameof(WorkspaceViewModel.EditorStatusPromptText))
+            SetEditorTextIfDifferent(WorkspaceStatusPromptEditor, vm.EditorStatusPromptText);
+        else if (e.PropertyName == nameof(WorkspaceViewModel.EditorImplementPromptText))
+            SetEditorTextIfDifferent(WorkspaceImplementPromptEditor, vm.EditorImplementPromptText);
+        else if (e.PropertyName == nameof(WorkspaceViewModel.EditorPlanPromptText))
+            SetEditorTextIfDifferent(WorkspacePlanPromptEditor, vm.EditorPlanPromptText);
     }
 
     private static void ConfigurePromptEditor(TextEditor editor)
     {
-        editor.FontFamily = new Avalonia.Media.FontFamily("Cascadia Code,Consolas,Menlo,monospace");
+        editor.FontFamily = new Avalonia.Media.FontFamily("avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code");
         editor.WordWrap = true;
         editor.Text = "";
     }

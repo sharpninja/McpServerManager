@@ -122,7 +122,27 @@ public partial class TodoListView : UserControl
     }
 
     private void OnEditorCut(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.Cut();
-    private void OnEditorCopy(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.Copy();
+
+    private async void OnEditorCopy(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var selectedText = Editor.SelectedText;
+        if (string.IsNullOrEmpty(selectedText))
+            return;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.Clipboard == null)
+            return;
+
+        try
+        {
+            await topLevel.Clipboard.SetTextAsync(selectedText);
+        }
+        catch
+        {
+            // Avoid UI lockups/fault propagation from platform clipboard failures.
+        }
+    }
+
     private void OnEditorPaste(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.Paste();
 
     private void UpdateLayoutForOrientation(bool isPortrait)

@@ -1,0 +1,22 @@
+<Project>
+  <!--
+    Keep Microsoft.Extensions.* versions aligned across app projects.
+    The McpServer.Client integration resolved 10.x packages in Core while Android/Avalonia
+    still pulled 9.x transitive references, causing CS1705 assembly version conflicts.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Abstractions" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Primitives" Version="10.0.2" />
+  </ItemGroup>
+</Project>

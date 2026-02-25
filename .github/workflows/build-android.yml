@@ -30,6 +30,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Architecture compliance guardrails (Phase 0)
+        shell: pwsh
+        run: ./tools/compliance/Invoke-ArchitectureChecks.ps1
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'

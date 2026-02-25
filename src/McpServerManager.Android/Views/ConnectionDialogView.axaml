@@ -5,18 +5,31 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
              x:Class="McpServerManager.Android.Views.ConnectionDialogView"
-             x:DataType="vm:ConnectionViewModel">
+             x:DataType="vm:ConnectionViewModel"
+             FontSize="17">
+
+    <UserControl.Styles>
+        <Style Selector="Button">
+            <Setter Property="FontSize" Value="18"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="FontSize" Value="18"/>
+        </Style>
+        <Style Selector="SelectableTextBlock">
+            <Setter Property="FontSize" Value="17"/>
+        </Style>
+    </UserControl.Styles>
 
     <StackPanel VerticalAlignment="Center" Spacing="12" Margin="16">
         <SelectableTextBlock Text="Connect to Server"
-                   FontSize="23" FontWeight="SemiBold"/>
+                   FontSize="28" FontWeight="SemiBold"/>
 
-        <SelectableTextBlock Text="Host" FontSize="15"/>
+        <SelectableTextBlock Text="Host" FontSize="18"/>
         <TextBox Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                  Watermark="e.g. 10.0.2.2"
                  IsEnabled="{Binding !IsConnecting}"/>
 
-        <SelectableTextBlock Text="Port" FontSize="15"/>
+        <SelectableTextBlock Text="Port" FontSize="18"/>
         <TextBox Text="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                  Watermark="e.g. 7147"
                  IsEnabled="{Binding !IsConnecting}"/>

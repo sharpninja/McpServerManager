@@ -49,8 +49,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private readonly IClipboardService _clipboardService;
     private string _defaultMcpBaseUrl = "";
+    private string? _defaultMcpApiKey;
     private Uri _defaultMcpBaseUri = new("http://localhost");
     private string _activeMcpBaseUrl = "";
+    private string? _activeMcpApiKey;
     internal McpSessionLogService McpSessionService = null!;
     private McpTodoService _mcpTodoService = null!;
     private McpWorkspaceService _mcpWorkspaceService = null!;
@@ -66,7 +68,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private TodoListViewModel CreateTodoViewModel()
     {
-        var vm = new TodoListViewModel(_clipboardService, _activeMcpBaseUrl);
+        var vm = new TodoListViewModel(_clipboardService, _activeMcpBaseUrl, _activeMcpApiKey);
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
         return vm;
     }
@@ -77,7 +79,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private WorkspaceViewModel CreateWorkspaceViewModel()
     {
-        var vm = new WorkspaceViewModel(_clipboardService, _activeMcpBaseUrl);
+        var vm = new WorkspaceViewModel(_clipboardService, _defaultMcpBaseUrl, _defaultMcpApiKey);
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
         vm.WorkspaceCatalogChanged += change => _ = RefreshWorkspacePickerAfterCatalogChangeAsync(change);
         return vm;
@@ -310,13 +312,14 @@ public partial class MainWindowViewModel : ViewModelBase
     private void InitializeMcpEndpoint(string mcpBaseUrl)
     {
         _defaultMcpBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
+        _defaultMcpApiKey = McpServerRestClientFactory.TryResolveApiKey(_defaultMcpBaseUrl);
         _defaultMcpBaseUri = new Uri(_defaultMcpBaseUrl, UriKind.Absolute);
-        _workspaceCatalogService = new McpWorkspaceService(_defaultMcpBaseUrl);
-        ApplyActiveMcpBaseUrl(_defaultMcpBaseUrl);
+        _workspaceCatalogService = new McpWorkspaceService(_defaultMcpBaseUrl, _defaultMcpApiKey);
+        ApplyActiveMcpBaseUrl(_defaultMcpBaseUrl, _defaultMcpApiKey);
         ApplyWorkspaceConnectionOptions(
             new[]
             {
-                WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, primaryWorkspaceRootPath: null)
+                WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, primaryWorkspaceRootPath: null, apiKey: _defaultMcpApiKey)
             },
             preferredSelection: null,
             preferredBaseUrl: _defaultMcpBaseUrl);
@@ -334,19 +337,48 @@ public partial class MainWindowViewModel : ViewModelBase
         return uri.ToString().TrimEnd('/');
     }
 
-    private void ApplyActiveMcpBaseUrl(string mcpBaseUrl)
+    private void ApplyActiveMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null)
     {
         _activeMcpBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
-        McpSessionService = new McpSessionLogService(_activeMcpBaseUrl);
-        _mcpTodoService = new McpTodoService(_activeMcpBaseUrl);
+        _activeMcpApiKey = string.IsNullOrWhiteSpace(mcpApiKey)
+            ? McpServerRestClientFactory.TryResolveApiKey(_activeMcpBaseUrl)
+            : mcpApiKey?.Trim();
+
+        McpSessionService = new McpSessionLogService(_activeMcpBaseUrl, _activeMcpApiKey);
+        _mcpTodoService = new McpTodoService(_activeMcpBaseUrl, _activeMcpApiKey);
         // Workspace endpoints always target the connection server, not the active workspace
-        _mcpWorkspaceService = new McpWorkspaceService(_defaultMcpBaseUrl);
+        _mcpWorkspaceService = new McpWorkspaceService(_defaultMcpBaseUrl, _defaultMcpApiKey);
 
         if (_hasRegisteredCqrsHandlers)
             RegisterMcpServiceHandlers();
 
-        _todoViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl);
-        _workspaceViewModel?.SetMcpBaseUrl(_defaultMcpBaseUrl);
+        _todoViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey);
+        _workspaceViewModel?.SetMcpBaseUrl(_defaultMcpBaseUrl, _defaultMcpApiKey);
+    }
+
+    private async Task<string?> ResolveActiveConnectionApiKeyAsync(WorkspaceConnectionOption option, string baseUrl)
+    {
+        // Workspace default API keys are per-workspace and rotate on server restart.
+        // Prefer fetching the current default key from /api-key for the selected connection.
+        var fetchedDefaultKey = await McpServerRestClientFactory
+            .TryFetchDefaultApiKeyAsync(baseUrl)
+            .ConfigureAwait(true);
+
+        if (!string.IsNullOrWhiteSpace(fetchedDefaultKey))
+            return fetchedDefaultKey;
+
+        // Fall back to any key resolved from the local marker file (Desktop/dev scenarios).
+        if (!string.IsNullOrWhiteSpace(option.ApiKey))
+            return option.ApiKey;
+
+        if (!string.IsNullOrWhiteSpace(option.WorkspaceRootPath))
+        {
+            var markerKey = McpServerRestClientFactory.TryResolveApiKeyForWorkspaceRoot(option.WorkspaceRootPath, baseUrl);
+            if (!string.IsNullOrWhiteSpace(markerKey))
+                return markerKey;
+        }
+
+        return null;
     }
 
     private void RegisterCqrsHandlers()
@@ -871,7 +903,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var options = new List<WorkspaceConnectionOption>
         {
-            WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, defaultWorkspaceRootPath)
+            WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, defaultWorkspaceRootPath, _defaultMcpApiKey)
         };
 
         if (workspaces == null)
@@ -896,7 +928,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var list = options.ToList();
         if (list.Count == 0)
-            list.Add(WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, primaryWorkspaceRootPath: null));
+            list.Add(WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, primaryWorkspaceRootPath: null, apiKey: _defaultMcpApiKey));
 
         var normalizedPreferred = NormalizeMcpBaseUrl(preferredBaseUrl);
         WorkspaceConnections = new ObservableCollection<WorkspaceConnectionOption>(list);
@@ -908,6 +940,15 @@ public partial class MainWindowViewModel : ViewModelBase
         _suppressWorkspaceSelectionChanged = true;
         SelectedWorkspaceConnection = selected;
         _suppressWorkspaceSelectionChanged = false;
+
+        // Initial picker population suppresses selection-changed switching to avoid duplicate work,
+        // but we still need one real connection switch to resolve the active API key and refresh views.
+        var selectedBaseUrl = NormalizeMcpBaseUrl(selected.BaseUrl);
+        var activeBaseUrl = string.IsNullOrWhiteSpace(_activeMcpBaseUrl) ? "" : NormalizeMcpBaseUrl(_activeMcpBaseUrl);
+        var needsInitialSwitch = string.IsNullOrWhiteSpace(_activeMcpApiKey)
+            || !string.Equals(activeBaseUrl, selectedBaseUrl, StringComparison.OrdinalIgnoreCase);
+        if (needsInitialSwitch && !IsSwitchingWorkspace)
+            _ = SwitchWorkspaceConnectionAsync(selected);
     }
 
     private async Task RefreshWorkspacePickerAfterCatalogChangeAsync(WorkspaceCatalogChangeEvent change)
@@ -956,6 +997,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _logger.LogInformation($"[Workspace Switch] Switching to '{option.DisplayName}' (BaseUrl={option.BaseUrl})");
         var previousBaseUrl = _activeMcpBaseUrl;
+        var previousApiKey = _activeMcpApiKey;
         var previousSelection = FindWorkspaceConnectionOptionByBaseUrl(previousBaseUrl);
         var selectedBaseUrl = NormalizeMcpBaseUrl(option.BaseUrl);
         IsSwitchingWorkspace = true;
@@ -968,7 +1010,8 @@ public partial class MainWindowViewModel : ViewModelBase
                 throw new InvalidOperationException($"Health check failed ({FormatHealthFailure(preflight)})");
             }
 
-            ApplyActiveMcpBaseUrl(selectedBaseUrl);
+            var selectedApiKey = await ResolveActiveConnectionApiKeyAsync(option, selectedBaseUrl).ConfigureAwait(true);
+            ApplyActiveMcpBaseUrl(selectedBaseUrl, selectedApiKey);
             await RefreshAllViewsForConnectionChangeAsync().ConfigureAwait(true);
             _logger.LogInformation($"[Workspace Switch] Successfully connected to '{option.DisplayName}'");
             DispatchToUi(() => StatusMessage = $"Connected: {option.DisplayName}");
@@ -976,7 +1019,7 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, $"[Workspace Switch] Failed switching to '{option.DisplayName}'");
-            ApplyActiveMcpBaseUrl(previousBaseUrl);
+            ApplyActiveMcpBaseUrl(previousBaseUrl, previousApiKey);
             var revertedDisplayName = previousSelection?.DisplayName ?? previousBaseUrl;
             await DispatchToUiAsync(() =>
             {
@@ -3652,21 +3695,28 @@ public sealed class WorkspaceConnectionOption
     public string Key { get; init; } = "";
     public string? WorkspaceKey { get; init; }
     public string? WorkspaceRootPath { get; init; }
+    public string? ApiKey { get; init; }
     public string DisplayName { get; init; } = "";
     public string BaseUrl { get; init; } = "";
     public bool IsDefault { get; init; }
     public bool IsPrimary { get; init; }
     public bool IsEnabled { get; init; } = true;
 
-    public static WorkspaceConnectionOption CreateDefault(Uri defaultBaseUri, string? primaryWorkspaceRootPath)
+    public static WorkspaceConnectionOption CreateDefault(Uri defaultBaseUri, string? primaryWorkspaceRootPath, string? apiKey = null)
     {
+        var normalizedBaseUrl = defaultBaseUri.GetLeftPart(UriPartial.Path).TrimEnd('/');
+        var resolvedApiKey = string.IsNullOrWhiteSpace(apiKey)
+            ? McpServerRestClientFactory.TryResolveApiKeyForWorkspaceRoot(primaryWorkspaceRootPath, normalizedBaseUrl)
+            : apiKey?.Trim();
+
         return new WorkspaceConnectionOption
         {
             Key = "__DEFAULT__",
             WorkspaceKey = null,
             WorkspaceRootPath = string.IsNullOrWhiteSpace(primaryWorkspaceRootPath) ? null : primaryWorkspaceRootPath.Trim(),
+            ApiKey = string.IsNullOrWhiteSpace(resolvedApiKey) ? null : resolvedApiKey,
             DisplayName = $"Default ({defaultBaseUri.Host}:{defaultBaseUri.Port})",
-            BaseUrl = defaultBaseUri.GetLeftPart(UriPartial.Path).TrimEnd('/'),
+            BaseUrl = normalizedBaseUrl,
             IsDefault = true,
             IsPrimary = false,
             IsEnabled = true
@@ -3695,14 +3745,18 @@ public sealed class WorkspaceConnectionOption
         if (!isEnabled)
             flags.Add("Disabled");
         var flagsSuffix = flags.Count == 0 ? "" : $" [{string.Join(", ", flags)}]";
+        var baseUrl = uriBuilder.Uri.GetLeftPart(UriPartial.Path).TrimEnd('/');
+        var workspaceRootPath = string.IsNullOrWhiteSpace(workspace.WorkspacePath) ? null : workspace.WorkspacePath.Trim();
+        var apiKey = McpServerRestClientFactory.TryResolveApiKeyForWorkspaceRoot(workspaceRootPath, baseUrl);
 
         return new WorkspaceConnectionOption
         {
             Key = key,
             WorkspaceKey = key,
-            WorkspaceRootPath = string.IsNullOrWhiteSpace(workspace.WorkspacePath) ? null : workspace.WorkspacePath.Trim(),
+            WorkspaceRootPath = workspaceRootPath,
+            ApiKey = apiKey,
             DisplayName = $"{label} ({uriBuilder.Host}:{uriBuilder.Port}){flagsSuffix}",
-            BaseUrl = uriBuilder.Uri.GetLeftPart(UriPartial.Path).TrimEnd('/'),
+            BaseUrl = baseUrl,
             IsDefault = false,
             IsPrimary = isPrimary,
             IsEnabled = isEnabled

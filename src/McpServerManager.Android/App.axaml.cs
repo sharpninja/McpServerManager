@@ -9,6 +9,7 @@ using McpServerManager.Android.Views;
 using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
 using System;
+using System.Globalization;
 using System.Linq;
 
 namespace McpServerManager.Android;
@@ -33,10 +34,17 @@ public partial class App : Application
                 var connectionView = new ConnectionDialogView { DataContext = connectionVm };
                 singleView.MainView = connectionView;
 
-                connectionVm.Connected += mcpBaseUrl =>
+                void OpenMainView(string mcpBaseUrl, bool persistConnection)
                 {
                     try
                     {
+                        if (persistConnection && Uri.TryCreate(mcpBaseUrl, UriKind.Absolute, out var uri))
+                        {
+                            AndroidConnectionPreferencesService.Save(
+                                uri.Host,
+                                uri.Port.ToString(CultureInfo.InvariantCulture));
+                        }
+
                         var clipboardService = new AndroidClipboardService();
                         var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl);
                         singleView.MainView = new AdaptiveMainView { DataContext = vm };
@@ -47,8 +55,23 @@ public partial class App : Application
                         _logger.LogError(ex, "Connection failed");
                         connectionVm.ErrorMessage = $"Connection failed: {ex.Message}";
                         connectionVm.IsConnecting = false;
+                        singleView.MainView = connectionView;
                     }
+                }
+
+                connectionVm.Connected += mcpBaseUrl =>
+                {
+                    OpenMainView(mcpBaseUrl, persistConnection: true);
                 };
+
+                if (AndroidConnectionPreferencesService.TryLoad(out var savedHost, out var savedPort))
+                {
+                    connectionVm.Host = savedHost;
+                    connectionVm.Port = savedPort;
+                    connectionVm.ErrorMessage = "";
+                    connectionVm.IsConnecting = true;
+                    OpenMainView($"http://{savedHost}:{savedPort}", persistConnection: false);
+                }
             }
             catch (Exception ex)
             {

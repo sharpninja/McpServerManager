@@ -1,8 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -17,12 +14,11 @@ namespace McpServerManager.Core.ViewModels;
 
 public partial class ChatWindowViewModel : ViewModelBase
 {
-    private readonly ILogAgentService _agentService;
+    private readonly IMediator _mediator;
     private readonly Func<string> _getContext;
     private readonly Action<string?>? _onModelChanged;
     private readonly string? _initialModelFromConfig;
     private CancellationTokenSource? _sendCts;
-    internal readonly Mediator _mediator = new();
 
     [ObservableProperty]
     private ObservableCollection<ChatMessage> _messages = new();
@@ -42,121 +38,64 @@ public partial class ChatWindowViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<PromptTemplate> _promptTemplates = new();
 
-    public ChatWindowViewModel(ILogAgentService agentService, Func<string> getContext, string? initialModelFromConfig = null, Action<string?>? onModelChanged = null)
+    public ChatWindowViewModel(
+        IMediator mediator,
+        Func<string> getContext,
+        string? initialModelFromConfig = null,
+        Action<string?>? onModelChanged = null)
     {
-        _agentService = agentService ?? throw new ArgumentNullException(nameof(agentService));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _getContext = getContext ?? (() => "");
         _initialModelFromConfig = initialModelFromConfig;
         _onModelChanged = onModelChanged;
-        RegisterCqrsHandlers();
     }
 
     /// <summary>Parameterless constructor for design-time only.</summary>
-    public ChatWindowViewModel() : this(new OllamaLogAgentService(), () => "", null, null) { }
+    public ChatWindowViewModel() : this(new Mediator(), () => "", null, null) { }
 
-    private void RegisterCqrsHandlers()
+    [RelayCommand]
+    private async Task OpenAgentConfig()
     {
-        _mediator.Register(new ChatSendMessageHandler());
-        _mediator.Register(new ChatLoadModelsHandler());
-        _mediator.Register(new ChatCancelSendHandler());
-        _mediator.Register(new ChatSubmitPromptHandler());
-        _mediator.Register(new ChatPopulatePromptHandler());
-        _mediator.Register(new ChatLoadPromptsHandler());
-        _mediator.Register(new ChatOpenAgentConfigHandler());
-        _mediator.Register(new ChatOpenPromptTemplatesHandler());
+        _ = await _mediator.SendAsync<ChatOpenAgentConfigCommand, ChatFileOpenResult>(new ChatOpenAgentConfigCommand()).ConfigureAwait(true);
     }
 
     [RelayCommand]
-    private void OpenAgentConfig() => _mediator.SendAsync(new ChatOpenAgentConfigCommand(this));
-
-    internal void OpenAgentConfigInternal()
+    private async Task OpenPromptTemplates()
     {
-        AgentConfigIo.EnsureExists();
-        OpenFileInDefaultEditor(AgentConfigIo.GetFilePath(), "config");
-    }
-
-    [RelayCommand]
-    private void OpenPromptTemplates() => _mediator.SendAsync(new ChatOpenPromptTemplatesCommand(this));
-
-    internal void OpenPromptTemplatesInternal()
-    {
-        PromptTemplatesIo.EnsureExists();
-        OpenFileInDefaultEditor(PromptTemplatesIo.GetFilePath(), "prompts");
-    }
-
-    private static void OpenFileInDefaultEditor(string path, string label)
-    {
-        if (!File.Exists(path))
-            return;
-        try
-        {
-            var fullPath = Path.GetFullPath(path);
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = $"/c start \"\" \"{fullPath}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                });
-            }
-            else
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "xdg-open",
-                    Arguments = fullPath,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                });
-            }
-        }
-        catch
-        {
-            // Ignore
-        }
+        _ = await _mediator.SendAsync<ChatOpenPromptTemplatesCommand, ChatFileOpenResult>(new ChatOpenPromptTemplatesCommand()).ConfigureAwait(true);
     }
 
     /// <summary>Loads prompt templates from agent config. Call when the chat window is opened.</summary>
-    public void LoadPrompts() => _mediator.SendAsync(new ChatLoadPromptsCommand(this));
+    public void LoadPrompts() => _ = LoadPromptsAsync();
 
-    internal void LoadPromptsInternal()
+    public async Task LoadPromptsAsync()
     {
-        var list = PromptTemplatesIo.GetPrompts();
+        var prompts = await _mediator.SendAsync<ChatLoadPromptsCommand, System.Collections.Generic.IReadOnlyList<PromptTemplate>>(
+            new ChatLoadPromptsCommand()).ConfigureAwait(true);
+
         DispatchToUi(() =>
         {
             PromptTemplates.Clear();
-            foreach (var p in list)
+            foreach (var p in prompts)
                 PromptTemplates.Add(p);
         });
     }
 
-    /// <summary>Returns the prompt template text as-is. Context is sent to the model separately with each query, not inserted into templates.</summary>
-    private static string GetPromptText(PromptTemplate prompt)
+    [RelayCommand]
+    private async Task PopulatePrompt(PromptTemplate? prompt)
     {
-        if (prompt == null || string.IsNullOrEmpty(prompt.Template)) return "";
-        return prompt.Template.Trim();
+        var promptText = await _mediator.SendAsync<ChatPopulatePromptCommand, string>(new ChatPopulatePromptCommand(prompt)).ConfigureAwait(true);
+        if (string.IsNullOrEmpty(promptText)) return;
+        CurrentInput = promptText;
     }
 
     [RelayCommand]
-    private void PopulatePrompt(PromptTemplate? prompt) => _mediator.SendAsync(new ChatPopulatePromptCommand(this, prompt));
-
-    internal void PopulatePromptInternal(PromptTemplate? prompt)
+    private async Task SubmitPromptAsync(PromptTemplate? prompt)
     {
-        if (prompt == null) return;
-        CurrentInput = GetPromptText(prompt);
-    }
-
-    [RelayCommand]
-    private async Task SubmitPromptAsync(PromptTemplate? prompt) => await _mediator.SendAsync(new ChatSubmitPromptCommand(this, prompt));
-
-    internal async Task SubmitPromptAsyncInternal(PromptTemplate? prompt)
-    {
-        if (prompt == null) return;
-        CurrentInput = GetPromptText(prompt);
-        if (string.IsNullOrWhiteSpace(CurrentInput)) return;
-        await SendAsyncInternal().ConfigureAwait(true);
+        var prepared = await _mediator.SendAsync<ChatSubmitPromptCommand, ChatPreparedPromptResult>(new ChatSubmitPromptCommand(prompt)).ConfigureAwait(true);
+        if (!prepared.ShouldSend) return;
+        CurrentInput = prepared.PromptText;
+        await SendCurrentInputAsync().ConfigureAwait(true);
     }
 
     partial void OnSelectedModelChanged(string? value)
@@ -165,46 +104,39 @@ public partial class ChatWindowViewModel : ViewModelBase
     }
 
     /// <summary>Loads available Ollama models and sets SelectedModel to the first or default. Call when the chat window is opened.</summary>
-    public async Task LoadModelsAsync() => await _mediator.SendAsync(new ChatLoadModelsCommand(this));
-
-    internal async Task LoadModelsAsyncInternal()
+    public async Task LoadModelsAsync()
     {
-        try
+        var result = await _mediator.QueryAsync<ChatLoadModelsQuery, ChatLoadModelsResult>(
+            new ChatLoadModelsQuery(_initialModelFromConfig)).ConfigureAwait(true);
+
+        DispatchToUi(() =>
         {
-            var models = await OllamaLogAgentService.GetAvailableModelsAsync(null, CancellationToken.None).ConfigureAwait(true);
-            DispatchToUi(() =>
+            AvailableModels.Clear();
+            if (!result.IsReachable)
             {
-                AvailableModels.Clear();
-                if (models.Length == 0)
-                {
-                    AvailableModels.Add("(No models - start Ollama)");
-                    SelectedModel = null;
-                }
-                else
-                {
-                    foreach (var m in models) AvailableModels.Add(m);
-                    var preferred = !string.IsNullOrEmpty(_initialModelFromConfig) && AvailableModels.Contains(_initialModelFromConfig)
-                        ? _initialModelFromConfig
-                        : (models.Length > 0 ? models[0] : null);
-                    SelectedModel = preferred;
-                }
-            });
-        }
-        catch
-        {
-            DispatchToUi(() =>
-            {
-                AvailableModels.Clear();
                 AvailableModels.Add("(Ollama not reachable)");
                 SelectedModel = null;
-            });
-        }
+                return;
+            }
+
+            if (result.Models.Count == 0)
+            {
+                AvailableModels.Add("(No models - start Ollama)");
+                SelectedModel = null;
+                return;
+            }
+
+            foreach (var model in result.Models)
+                AvailableModels.Add(model);
+
+            SelectedModel = result.SelectedModel;
+        });
     }
 
     [RelayCommand(CanExecute = nameof(CanSend))]
-    private async Task SendAsync() => await _mediator.SendAsync(new ChatSendMessageCommand(this));
+    private async Task SendAsync() => await SendCurrentInputAsync().ConfigureAwait(true);
 
-    internal async Task SendAsyncInternal()
+    private async Task SendCurrentInputAsync()
     {
         var text = (CurrentInput ?? "").Trim();
         if (string.IsNullOrEmpty(text)) return;
@@ -236,23 +168,19 @@ public partial class ChatWindowViewModel : ViewModelBase
         try
         {
             var model = SelectedModel;
-            var reply = await Task.Run(() => _agentService.SendMessageAsync(text, context, model, progress, token), token).ConfigureAwait(true);
+            var request = new ChatSendRequest(text, context, model);
+            var result = await _mediator.SendAsync<ChatSendMessageCommand, ChatSendMessageResult>(
+                new ChatSendMessageCommand(request, progress),
+                token).ConfigureAwait(true);
 
-            if (token.IsCancellationRequested) return;
+            if (token.IsCancellationRequested && !result.WasCancelled) return;
 
             DispatchToUi(() =>
             {
-                if (token.IsCancellationRequested) return;
-                assistantMsg.Text = reply ?? "";
-                IsLoading = false;
-                SendCommand.NotifyCanExecuteChanged();
-            });
-        }
-        catch (OperationCanceledException)
-        {
-            DispatchToUi(() =>
-            {
-                assistantMsg.Text = "[Cancelled]";
+                if (token.IsCancellationRequested && !result.WasCancelled) return;
+                assistantMsg.Text = result.WasCancelled
+                    ? "[Cancelled]"
+                    : (result.Success ? (result.ReplyText ?? "") : "Error: " + (result.ErrorMessage ?? "Unknown error"));
                 IsLoading = false;
                 SendCommand.NotifyCanExecuteChanged();
             });

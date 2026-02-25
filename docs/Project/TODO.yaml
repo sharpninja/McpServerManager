@@ -3,11 +3,13 @@ mvp-app:
   - id: MVP-APP-006
     title: Bring codebase into full CQRS/code-behind compliance (refactor-first, no wrapper masking)
     estimate: ~40-80 hours (multi-session architecture refactor + regression validation)
+    note: 'Phase 0 + Chat refactor complete: Chat prompt/config/model/send flows, CQRS handlers, VM factory, and Desktop chat code-behind extraction are compliant. Remaining work is MainWindow/Todo/Workspace and cross-cutting validation.'
     done: false
     description:
     - 'Refactor the codebase to full CQRS and code-behind compliance: ViewModels own UI state/projection only; all app logic moves to handlers/services.'
     - Enforce correctness, completeness, and adherence; do not preserve non-compliant behavior behind wrapper handlers or proxy internal methods.
     - Use the current HANDOFF audit and blame map as the baseline and update it continuously until final pass criteria are met for the declared scope.
+    remaining: 24 tasks remain (MainWindow/Todo/Workspace compliance refactors, central composition, checks, and validation).
     technical-details:
     - 'Target rule: no commands/queries carrying ViewModel references and no handlers invoking ViewModel internal methods.'
     - 'Target rule: no network/file/process/watcher/composition logic inside ViewModels except documented, approved exceptions.'
@@ -15,41 +17,41 @@ mvp-app:
     - Migration must preserve behavior via phased refactors with build validation and manual smoke testing after each subsystem.
     implementation-tasks:
     - task: Publish a formal compliance spec defining allowed ViewModel responsibilities, allowed code-behind responsibilities, CQRS handler rules, and forbidden patterns.
-      done: false
+      done: true
     - task: Convert the current audit into a tracked compliance matrix with status, target design, and replacement owner for each violation.
-      done: false
+      done: true
     - task: 'Freeze architecture drift by documenting a temporary rule: no new ViewModel app logic and no commands/queries carrying ViewModel references.'
-      done: false
+      done: true
     - task: 'Inventory every Core ViewModel app-logic method and classify by domain: network, filesystem, process, parsing, watcher, orchestration, composition.'
-      done: false
+      done: true
     - task: Inventory every Core handler that calls ViewModel internals or accesses ViewModel fields/services and map a replacement design.
-      done: false
+      done: true
     - task: Inventory all Desktop and Android code-behind paths and classify as UI-only, documented exception, or extraction required.
-      done: false
+      done: true
     - task: Inventory all legacy project violations and decide per area whether to refactor or deprecate from compliance scope.
-      done: false
+      done: true
     - task: Document and approve the final compliance-scope decision for the legacy project so success criteria are unambiguous.
-      done: false
+      done: true
     - task: Define chat application service interfaces for prompt/config file operations, model discovery, and send orchestration.
-      done: false
+      done: true
     - task: Define MainWindow application service interfaces for session loading, aggregation, JSON parsing/tree building, file previews, archive, shell launch, and AGENTS watcher.
       done: false
     - task: Define workspace catalog and health orchestration service interfaces currently owned by MainWindowViewModel.
       done: false
     - task: Define a compliant composition factory for ChatWindowViewModel creation outside Desktop MainWindow code-behind.
-      done: false
+      done: true
     - task: Refactor ChatCommands payloads to primitives/DTOs only and remove ChatWindowViewModel references from commands.
-      done: false
+      done: true
     - task: Replace ChatCommands handlers with service-backed handlers that return structured results rather than mutating ViewModel internals.
-      done: false
+      done: true
     - task: Move chat prompt/config file IO and shell-open logic out of ChatWindowViewModel into dedicated services with explicit success/failure results.
-      done: false
+      done: true
     - task: Move chat model discovery out of ChatWindowViewModel into a query handler and service adapter.
-      done: false
+      done: true
     - task: Move chat send pipeline orchestration out of ChatWindowViewModel into a command handler/app service while preserving streaming and cancellation.
-      done: false
+      done: true
     - task: Refactor ChatWindowViewModel to command/query dispatch plus UI state projection only and delete obsolete internal app-logic methods.
-      done: false
+      done: true
     - task: Refactor MainWindow AllCommands so commands do not carry MainWindowViewModel and handlers do not call ViewModel internals.
       done: false
     - task: Refactor MainWindow AsyncCommands so handlers no longer access vm._mediator, vm services, or vm internal builder methods.
@@ -79,17 +81,17 @@ mvp-app:
     - task: Introduce a central composition layer for Core ViewModels and handler/service registration that supports endpoint changes compliantly.
       done: false
     - task: Refactor Desktop MainWindow code-behind to remove chat service creation, config IO reads, and ChatWindowViewModel construction.
-      done: false
+      done: true
     - task: Re-audit Desktop and Android code-behind and document any remaining explicit exceptions with rationale and approval.
       done: false
     - task: If legacy remains in scope, refactor legacy ViewModels and code-behind using the same patterns; otherwise mark legacy deprecated and excluded in docs/CI.
-      done: false
+      done: true
     - task: Add architecture checks that fail CI when commands contain ViewModel properties or handlers invoke ViewModel internal methods.
-      done: false
+      done: true
     - task: Add architecture checks that flag filesystem/process/network APIs in ViewModels except approved exceptions.
-      done: false
+      done: true
     - task: Add a PR review checklist requiring confirmation of ViewModel, CQRS handler, and code-behind boundary compliance.
-      done: false
+      done: true
     - task: Update HANDOFF audit and blame sections after each refactor phase to keep the remaining violation map current.
       done: false
     - task: Validate Desktop build and run manual smoke tests for Request Tracker, Todos, Workspaces, Logs, Chat, and AGENTS after each subsystem migration.

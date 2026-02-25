@@ -50,6 +50,15 @@ public sealed class McpWorkspaceItem
 
     [JsonPropertyName("promptTemplate")]
     public string? PromptTemplate { get; set; }
+
+    [JsonPropertyName("statusPrompt")]
+    public string? StatusPrompt { get; set; }
+
+    [JsonPropertyName("implementPrompt")]
+    public string? ImplementPrompt { get; set; }
+
+    [JsonPropertyName("planPrompt")]
+    public string? PlanPrompt { get; set; }
 }
 
 public sealed class McpWorkspaceCreateRequest
@@ -83,6 +92,15 @@ public sealed class McpWorkspaceCreateRequest
 
     [JsonPropertyName("promptTemplate")]
     public string? PromptTemplate { get; set; }
+
+    [JsonPropertyName("statusPrompt")]
+    public string? StatusPrompt { get; set; }
+
+    [JsonPropertyName("implementPrompt")]
+    public string? ImplementPrompt { get; set; }
+
+    [JsonPropertyName("planPrompt")]
+    public string? PlanPrompt { get; set; }
 }
 
 public sealed class McpWorkspaceUpdateRequest
@@ -113,6 +131,15 @@ public sealed class McpWorkspaceUpdateRequest
 
     [JsonPropertyName("promptTemplate")]
     public string? PromptTemplate { get; set; }
+
+    [JsonPropertyName("statusPrompt")]
+    public string? StatusPrompt { get; set; }
+
+    [JsonPropertyName("implementPrompt")]
+    public string? ImplementPrompt { get; set; }
+
+    [JsonPropertyName("planPrompt")]
+    public string? PlanPrompt { get; set; }
 }
 
 public sealed class McpWorkspaceMutationResult

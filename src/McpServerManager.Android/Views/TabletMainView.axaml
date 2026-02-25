@@ -27,7 +27,13 @@
         <!-- Status Bar -->
         <views:AnimatedStatusBar Grid.Row="1" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
             <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                <SelectableTextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontWeight="Bold" VerticalAlignment="Center"/>
+                <SelectableTextBlock x:Name="StatusMessageText"
+                                     Grid.Column="0"
+                                     Text="{Binding StatusMessage}"
+                                     FontWeight="Bold"
+                                     VerticalAlignment="Center"
+                                     TextTrimming="CharacterEllipsis"
+                                     PointerPressed="StatusMessageText_OnPointerPressed"/>
                 <ComboBox Grid.Column="1"
                           MinWidth="220"
                           MaxWidth="340"
@@ -49,6 +55,46 @@
                 <SelectableTextBlock Grid.Column="3" Text="{Binding AppVersionDisplay}" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
             </Grid>
         </views:AnimatedStatusBar>
+
+        <!-- Modal-style status dialog for full error text -->
+        <Border x:Name="StatusDialogOverlay"
+                Grid.RowSpan="2"
+                IsVisible="False"
+                Background="#80000000"
+                PointerPressed="StatusDialogOverlay_OnPointerPressed">
+            <Grid VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20" MaxWidth="700">
+                <Border Background="{DynamicResource ThemeBackgroundBrush}"
+                        BorderBrush="{DynamicResource ItemBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14"
+                        MinWidth="420"
+                        PointerPressed="StatusDialogContent_OnPointerPressed">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
+                        <TextBlock Grid.Row="0" Text="Status Message" FontWeight="Bold" FontSize="17"/>
+                        <TextBlock Grid.Row="1"
+                                   Text="Full text from the status bar"
+                                   Foreground="{DynamicResource SubtleForeground}"
+                                   FontSize="12"/>
+                        <Border Grid.Row="2"
+                                MaxHeight="420"
+                                Padding="8"
+                                Background="Transparent"
+                                BorderBrush="{DynamicResource ItemBorderBrush}"
+                                BorderThickness="1">
+                            <ScrollViewer>
+                                <SelectableTextBlock x:Name="StatusDialogText"
+                                                     TextWrapping="Wrap"
+                                                     FontSize="14"/>
+                            </ScrollViewer>
+                        </Border>
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                            <Button Content="Close" Click="CloseStatusDialog_OnClick"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
     </Grid>
 
 </UserControl>

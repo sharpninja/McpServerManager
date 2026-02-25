@@ -48,6 +48,7 @@ public partial class TodoListViewModel : ViewModelBase
     [ObservableProperty] private string _editorTitle = "";
     [ObservableProperty] private double _editorFontSize = 13;
     [ObservableProperty] private bool _isCopilotRunning;
+    [ObservableProperty] private McpTodoFlatItem? _currentTodoDetail;
 
     /// <summary>Set by the view code-behind to read current TextEditor content.</summary>
     public Func<string>? GetEditorText { get; set; }
@@ -146,6 +147,8 @@ public partial class TodoListViewModel : ViewModelBase
             {
                 StatusText = item.Done ? $"Reopened {item.Id}" : $"Completed {item.Id}";
                 await LoadTodosAsync();
+                if (string.Equals(CurrentTodoDetail?.Id, item.Id, StringComparison.OrdinalIgnoreCase))
+                    await TryRefreshEditorByIdAsync(item.Id, updateStatus: false);
             }
             else
             {
@@ -169,6 +172,12 @@ public partial class TodoListViewModel : ViewModelBase
             if (result.Success)
             {
                 StatusText = $"Deleted {item.Id}";
+                if (string.Equals(CurrentTodoDetail?.Id, item.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    CurrentTodoDetail = null;
+                    EditorText = "";
+                    EditorTitle = "";
+                }
                 await LoadTodosAsync();
             }
             else
@@ -287,12 +296,14 @@ public partial class TodoListViewModel : ViewModelBase
                 new GetTodoByIdQuery(item.Id));
             if (fresh != null)
             {
+                CurrentTodoDetail = fresh;
                 EditorText = TodoMarkdown.ToMarkdown(fresh);
                 EditorTitle = fresh.Id;
                 GlobalStatusChanged?.Invoke($"Opened {fresh.Id}.");
             }
             else
             {
+                CurrentTodoDetail = null;
                 StatusText = $"Todo {item.Id} not found";
                 GlobalStatusChanged?.Invoke($"Todo {item.Id} not found.");
             }
@@ -343,6 +354,7 @@ public partial class TodoListViewModel : ViewModelBase
                     GlobalStatusChanged?.Invoke($"Created todo {newId}.");
                     EditorTitle = newId;
                     await LoadTodosAsync();
+                    await TryRefreshEditorByIdAsync(newId, updateStatus: false);
                 }
                 else
                 {
@@ -360,6 +372,7 @@ public partial class TodoListViewModel : ViewModelBase
                     StatusText = $"Saved {id}";
                     GlobalStatusChanged?.Invoke($"Saved todo {id}.");
                     await LoadTodosAsync();
+                    await TryRefreshEditorByIdAsync(id!, updateStatus: false);
                 }
                 else
                 {
@@ -380,6 +393,7 @@ public partial class TodoListViewModel : ViewModelBase
     {
         EditorText = "";
         EditorTitle = "";
+        CurrentTodoDetail = null;
     }
 
     [RelayCommand]
@@ -721,11 +735,18 @@ public partial class TodoListViewModel : ViewModelBase
                 new GetTodoByIdQuery(todoId));
             if (fresh == null)
             {
+                CurrentTodoDetail = null;
+                if (string.Equals(EditorTitle, todoId, StringComparison.OrdinalIgnoreCase))
+                {
+                    EditorText = "";
+                    EditorTitle = "";
+                }
                 if (updateStatus)
                     StatusText = $"Todo {todoId} not found";
                 return false;
             }
 
+            CurrentTodoDetail = fresh;
             EditorText = TodoMarkdown.ToMarkdown(fresh);
             EditorTitle = fresh.Id;
             RestoreSelectionById(fresh.Id);

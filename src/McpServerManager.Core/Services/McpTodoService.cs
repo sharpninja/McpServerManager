@@ -1,28 +1,33 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using McpServer.Client;
 using McpServerManager.Core.Models;
+using ClientModels = McpServer.Client.Models;
 
 namespace McpServerManager.Core.Services;
 
 public sealed class McpTodoService
 {
-    private readonly HttpClient _httpClient;
+    private readonly McpServerClient _client;
+    private readonly McpServerClient _promptClient;
 
-    public McpTodoService(string baseUrl)
+    public McpTodoService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null)
     {
-        if (string.IsNullOrWhiteSpace(baseUrl))
-            throw new ArgumentException("Base URL is required.", nameof(baseUrl));
+        _client = McpServerRestClientFactory.Create(
+            baseUrl,
+            timeout: TimeSpan.FromSeconds(5),
+            apiKey: apiKey,
+            workspaceRootPath: workspaceRootPath);
 
-        _httpClient = new HttpClient
-        {
-            BaseAddress = new Uri(baseUrl.TrimEnd('/')),
-            Timeout = TimeSpan.FromSeconds(5)
-        };
+        // Prompt endpoints stream SSE responses and can run much longer than CRUD calls.
+        _promptClient = McpServerRestClientFactory.Create(
+            baseUrl,
+            timeout: TimeSpan.FromMinutes(15),
+            apiKey: apiKey,
+            workspaceRootPath: workspaceRootPath);
     }
 
     /// <summary>List / filter todos.</summary>
@@ -34,83 +39,161 @@ public sealed class McpTodoService
         bool? done = null,
         CancellationToken cancellationToken = default)
     {
-        var query = new List<string>();
-        if (!string.IsNullOrWhiteSpace(keyword)) query.Add($"keyword={Uri.EscapeDataString(keyword)}");
-        if (!string.IsNullOrWhiteSpace(priority)) query.Add($"priority={Uri.EscapeDataString(priority)}");
-        if (!string.IsNullOrWhiteSpace(section)) query.Add($"section={Uri.EscapeDataString(section)}");
-        if (!string.IsNullOrWhiteSpace(id)) query.Add($"id={Uri.EscapeDataString(id)}");
-        if (done.HasValue) query.Add($"done={done.Value.ToString().ToLowerInvariant()}");
-
-        var url = "/mcp/todo";
-        if (query.Count > 0) url += "?" + string.Join("&", query);
-
-        return await GetFreshJsonAsync<McpTodoQueryResult>(url, cancellationToken).ConfigureAwait(true)
-               ?? new McpTodoQueryResult();
+        var result = await _client.Todo.QueryAsync(keyword, priority, section, id, done, cancellationToken)
+            .ConfigureAwait(true);
+        return Map(result);
     }
 
     /// <summary>Get a single todo by id.</summary>
     public async Task<McpTodoFlatItem?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
-        return await GetFreshJsonAsync<McpTodoFlatItem?>($"/mcp/todo/{Uri.EscapeDataString(id)}", cancellationToken)
-            .ConfigureAwait(true);
+        var item = await _client.Todo.GetAsync(id, cancellationToken).ConfigureAwait(true);
+        return Map(item);
     }
 
     /// <summary>Create a new todo.</summary>
     public async Task<McpTodoMutationResult> CreateAsync(McpTodoCreateRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.PostAsJsonAsync("/mcp/todo", request, cancellationToken).ConfigureAwait(true);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<McpTodoMutationResult>(cancellationToken: cancellationToken).ConfigureAwait(true)
-               ?? new McpTodoMutationResult();
+        var result = await _client.Todo.CreateAsync(Map(request), cancellationToken).ConfigureAwait(true);
+        return Map(result);
     }
 
     /// <summary>Update an existing todo (partial update).</summary>
     public async Task<McpTodoMutationResult> UpdateAsync(string id, McpTodoUpdateRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.PutAsJsonAsync($"/mcp/todo/{Uri.EscapeDataString(id)}", request, cancellationToken).ConfigureAwait(true);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<McpTodoMutationResult>(cancellationToken: cancellationToken).ConfigureAwait(true)
-               ?? new McpTodoMutationResult();
+        var result = await _client.Todo.UpdateAsync(id, Map(request), cancellationToken).ConfigureAwait(true);
+        return Map(result);
     }
 
     /// <summary>Delete a todo by id.</summary>
     public async Task<McpTodoMutationResult> DeleteAsync(string id, CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.DeleteAsync($"/mcp/todo/{Uri.EscapeDataString(id)}", cancellationToken).ConfigureAwait(true);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<McpTodoMutationResult>(cancellationToken: cancellationToken).ConfigureAwait(true)
-               ?? new McpTodoMutationResult();
+        var result = await _client.Todo.DeleteAsync(id, cancellationToken).ConfigureAwait(true);
+        return Map(result);
     }
 
     /// <summary>Run AI requirements analysis on a todo.</summary>
     public async Task<McpRequirementsAnalysisResult> AnalyzeRequirementsAsync(string id, CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.PostAsync($"/mcp/todo/{Uri.EscapeDataString(id)}/requirements", null, cancellationToken).ConfigureAwait(true);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<McpRequirementsAnalysisResult>(cancellationToken: cancellationToken).ConfigureAwait(true)
-               ?? new McpRequirementsAnalysisResult();
-    }
-
-    private async Task<T?> GetFreshJsonAsync<T>(string url, CancellationToken cancellationToken)
-    {
-        using var request = CreateNoCacheGet(url);
-        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-            .ConfigureAwait(true);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken).ConfigureAwait(true);
-    }
-
-    private static HttpRequestMessage CreateNoCacheGet(string url)
-    {
-        var separator = url.Contains('?') ? '&' : '?';
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{url}{separator}_rt={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
-        request.Headers.CacheControl = new CacheControlHeaderValue
+        var result = await _client.Todo.AnalyzeRequirementsAsync(id, cancellationToken).ConfigureAwait(true);
+        return new McpRequirementsAnalysisResult
         {
-            NoCache = true,
-            NoStore = true,
-            MustRevalidate = true
+            Success = result.Success,
+            FunctionalRequirements = result.FunctionalRequirements?.ToList(),
+            TechnicalRequirements = result.TechnicalRequirements?.ToList(),
+            Error = result.Error,
+            CopilotResponse = result.CopilotResponse
         };
-        request.Headers.Pragma.ParseAdd("no-cache");
-        return request;
+    }
+
+    public IAsyncEnumerable<string> StreamStatusPromptAsync(string id, CancellationToken cancellationToken = default)
+        => _promptClient.Todo.StreamStatusAsync(id, cancellationToken);
+
+    public IAsyncEnumerable<string> StreamImplementPromptAsync(string id, CancellationToken cancellationToken = default)
+        => _promptClient.Todo.StreamImplementAsync(id, cancellationToken);
+
+    public IAsyncEnumerable<string> StreamPlanPromptAsync(string id, CancellationToken cancellationToken = default)
+        => _promptClient.Todo.StreamPlanAsync(id, cancellationToken);
+
+    private static McpTodoQueryResult Map(ClientModels.TodoQueryResult result)
+    {
+        return new McpTodoQueryResult
+        {
+            TotalCount = result.TotalCount,
+            Items = result.Items?.Select(Map).ToList() ?? new List<McpTodoFlatItem>()
+        };
+    }
+
+    private static McpTodoMutationResult Map(ClientModels.TodoMutationResult result)
+    {
+        return new McpTodoMutationResult
+        {
+            Success = result.Success,
+            Error = result.Error,
+            Item = result.Item == null ? null : Map(result.Item)
+        };
+    }
+
+    private static McpTodoFlatItem Map(ClientModels.TodoFlatItem item)
+    {
+        return new McpTodoFlatItem
+        {
+            Id = item.Id,
+            Title = item.Title,
+            Section = item.Section,
+            Priority = item.Priority,
+            Done = item.Done,
+            Estimate = item.Estimate,
+            Note = item.Note,
+            Description = item.Description?.ToList(),
+            TechnicalDetails = item.TechnicalDetails?.ToList(),
+            ImplementationTasks = item.ImplementationTasks?.Select(Map).ToList(),
+            CompletedDate = item.CompletedDate,
+            DoneSummary = item.DoneSummary,
+            Remaining = item.Remaining,
+            PriorityNote = item.PriorityNote,
+            Reference = item.Reference,
+            DependsOn = item.DependsOn?.ToList(),
+            FunctionalRequirements = item.FunctionalRequirements?.ToList(),
+            TechnicalRequirements = item.TechnicalRequirements?.ToList()
+        };
+    }
+
+    private static McpTodoFlatTask Map(ClientModels.TodoFlatTask task)
+    {
+        return new McpTodoFlatTask
+        {
+            Task = task.Task,
+            Done = task.Done
+        };
+    }
+
+    private static ClientModels.TodoCreateRequest Map(McpTodoCreateRequest request)
+    {
+        return new ClientModels.TodoCreateRequest
+        {
+            Id = request.Id,
+            Title = request.Title,
+            Section = request.Section,
+            Priority = request.Priority,
+            Estimate = request.Estimate,
+            Description = request.Description?.ToList(),
+            TechnicalDetails = request.TechnicalDetails?.ToList(),
+            ImplementationTasks = request.ImplementationTasks?.Select(Map).ToList(),
+            DependsOn = request.DependsOn?.ToList(),
+            FunctionalRequirements = request.FunctionalRequirements?.ToList(),
+            TechnicalRequirements = request.TechnicalRequirements?.ToList()
+        };
+    }
+
+    private static ClientModels.TodoUpdateRequest Map(McpTodoUpdateRequest request)
+    {
+        return new ClientModels.TodoUpdateRequest
+        {
+            Title = request.Title,
+            Priority = request.Priority,
+            Section = request.Section,
+            Done = request.Done,
+            Estimate = request.Estimate,
+            Description = request.Description?.ToList(),
+            TechnicalDetails = request.TechnicalDetails?.ToList(),
+            ImplementationTasks = request.ImplementationTasks?.Select(Map).ToList(),
+            Note = request.Note,
+            CompletedDate = request.CompletedDate,
+            DoneSummary = request.DoneSummary,
+            Remaining = request.Remaining,
+            DependsOn = request.DependsOn?.ToList(),
+            FunctionalRequirements = request.FunctionalRequirements?.ToList(),
+            TechnicalRequirements = request.TechnicalRequirements?.ToList()
+        };
+    }
+
+    private static ClientModels.TodoFlatTask Map(McpTodoFlatTask task)
+    {
+        return new ClientModels.TodoFlatTask
+        {
+            Task = task.Task ?? string.Empty,
+            Done = task.Done
+        };
     }
 }

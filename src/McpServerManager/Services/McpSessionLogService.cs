@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServerManager.Models;
+using McpServer.Client;
+using McpServer.Client.Models;
 using McpServerManager.Models.Json;
 
 namespace McpServerManager.Services;
@@ -12,18 +11,11 @@ namespace McpServerManager.Services;
 public sealed class McpSessionLogService
 {
     private const int PageSize = 1000;
-    private readonly HttpClient _httpClient;
+    private readonly McpServerClient _client;
 
-    public McpSessionLogService(string baseUrl)
+    public McpSessionLogService(string baseUrl, string? apiKey = null)
     {
-        if (string.IsNullOrWhiteSpace(baseUrl))
-            throw new ArgumentException("Base URL is required.", nameof(baseUrl));
-
-        _httpClient = new HttpClient
-        {
-            BaseAddress = new Uri(baseUrl.TrimEnd('/')),
-            Timeout = TimeSpan.FromSeconds(30)
-        };
+        _client = McpServerRestClientFactory.Create(baseUrl, TimeSpan.FromSeconds(30), apiKey);
     }
 
     public async Task<IReadOnlyList<UnifiedSessionLog>> GetAllSessionsAsync(CancellationToken cancellationToken)
@@ -34,9 +26,12 @@ public sealed class McpSessionLogService
 
         while (offset < total)
         {
-            var url = $"/mcp/sessionlog?limit={PageSize}&offset={offset}";
-            var page = await _httpClient.GetFromJsonAsync<McpSessionLogQueryResult>(url, cancellationToken).ConfigureAwait(true);
-            if (page == null || page.Items == null || page.Items.Count == 0)
+            var page = await _client.SessionLog.QueryAsync(
+                limit: PageSize,
+                offset: offset,
+                cancellationToken: cancellationToken).ConfigureAwait(true);
+
+            if (page.Items == null || page.Items.Count == 0)
                 break;
 
             total = page.TotalCount;
@@ -51,7 +46,7 @@ public sealed class McpSessionLogService
         return sessions;
     }
 
-    private static UnifiedSessionLog Map(McpUnifiedSessionLogDto dto)
+    private static UnifiedSessionLog Map(UnifiedSessionLogDto dto)
     {
         var log = new UnifiedSessionLog
         {
@@ -98,7 +93,7 @@ public sealed class McpSessionLogService
         return log;
     }
 
-    private static UnifiedRequestEntry MapEntry(McpUnifiedRequestEntryDto dto, string sourceType)
+    private static UnifiedRequestEntry MapEntry(UnifiedRequestEntryDto dto, string sourceType)
     {
         var entry = new UnifiedRequestEntry
         {

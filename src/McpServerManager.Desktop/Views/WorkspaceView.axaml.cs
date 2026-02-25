@@ -24,6 +24,9 @@ public partial class WorkspaceView : UserControl
         Loaded += OnLoaded;
         ConfigurePromptEditor(GlobalPromptEditor);
         ConfigurePromptEditor(WorkspacePromptEditor);
+        ConfigurePromptEditor(WorkspaceStatusPromptEditor);
+        ConfigurePromptEditor(WorkspaceImplementPromptEditor);
+        ConfigurePromptEditor(WorkspacePlanPromptEditor);
     }
 
     /// <summary>Inject saved layout settings for splitter persistence.</summary>
@@ -89,9 +92,15 @@ public partial class WorkspaceView : UserControl
     private void AttachViewModel(WorkspaceViewModel vm)
     {
         vm.GetWorkspacePromptEditorText = () => WorkspacePromptEditor.Text ?? "";
+        vm.GetWorkspaceStatusPromptEditorText = () => WorkspaceStatusPromptEditor.Text ?? "";
+        vm.GetWorkspaceImplementPromptEditorText = () => WorkspaceImplementPromptEditor.Text ?? "";
+        vm.GetWorkspacePlanPromptEditorText = () => WorkspacePlanPromptEditor.Text ?? "";
         vm.GetGlobalPromptEditorText = () => GlobalPromptEditor.Text ?? "";
         vm.PropertyChanged += OnViewModelPropertyChanged;
         SetEditorTextIfDifferent(WorkspacePromptEditor, vm.EditorPromptTemplateText);
+        SetEditorTextIfDifferent(WorkspaceStatusPromptEditor, vm.EditorStatusPromptText);
+        SetEditorTextIfDifferent(WorkspaceImplementPromptEditor, vm.EditorImplementPromptText);
+        SetEditorTextIfDifferent(WorkspacePlanPromptEditor, vm.EditorPlanPromptText);
         SetEditorTextIfDifferent(GlobalPromptEditor, vm.GlobalPromptTemplateText);
     }
 
@@ -99,6 +108,9 @@ public partial class WorkspaceView : UserControl
     {
         vm.PropertyChanged -= OnViewModelPropertyChanged;
         vm.GetWorkspacePromptEditorText = null;
+        vm.GetWorkspaceStatusPromptEditorText = null;
+        vm.GetWorkspaceImplementPromptEditorText = null;
+        vm.GetWorkspacePlanPromptEditorText = null;
         vm.GetGlobalPromptEditorText = null;
     }
 
@@ -109,6 +121,18 @@ public partial class WorkspaceView : UserControl
         if (e.PropertyName == nameof(WorkspaceViewModel.EditorPromptTemplateText))
         {
             SetEditorTextIfDifferent(WorkspacePromptEditor, vm.EditorPromptTemplateText);
+        }
+        else if (e.PropertyName == nameof(WorkspaceViewModel.EditorStatusPromptText))
+        {
+            SetEditorTextIfDifferent(WorkspaceStatusPromptEditor, vm.EditorStatusPromptText);
+        }
+        else if (e.PropertyName == nameof(WorkspaceViewModel.EditorImplementPromptText))
+        {
+            SetEditorTextIfDifferent(WorkspaceImplementPromptEditor, vm.EditorImplementPromptText);
+        }
+        else if (e.PropertyName == nameof(WorkspaceViewModel.EditorPlanPromptText))
+        {
+            SetEditorTextIfDifferent(WorkspacePlanPromptEditor, vm.EditorPlanPromptText);
         }
         else if (e.PropertyName == nameof(WorkspaceViewModel.GlobalPromptTemplateText))
         {

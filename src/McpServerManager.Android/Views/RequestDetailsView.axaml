@@ -153,7 +153,10 @@
       </Expander>
 
       <!-- Original JSON -->
-      <Expander Header="Original JSON" HorizontalAlignment="Stretch" x:CompileBindings="False">
+      <Expander x:Name="OriginalJsonExpander"
+                Header="Original JSON"
+                HorizontalAlignment="Stretch"
+                x:CompileBindings="False">
         <Border Background="{DynamicResource ContentBgBrush}" Padding="2" CornerRadius="4">
           <SelectableTextBlock Text="{Binding OriginalEntry, Converter={StaticResource ObjectToJson}}"
                      TextWrapping="Wrap" FontSize="15"/>

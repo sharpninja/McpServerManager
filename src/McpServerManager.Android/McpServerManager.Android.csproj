@@ -18,6 +18,12 @@
     <AndroidSigningKeyPass Condition="'$(AndroidSigningKeyPass)' != ''">$(AndroidSigningKeyPass)</AndroidSigningKeyPass>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <!-- Manual APK installs (adb install) do not provision Fast Deployment override assemblies. -->
+    <AndroidFastDeploymentType>None</AndroidFastDeploymentType>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.12" />
     <PackageReference Include="Avalonia.Android" Version="11.3.12" />

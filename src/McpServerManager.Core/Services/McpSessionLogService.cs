@@ -1,30 +1,25 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServerManager.Core.Models;
+using McpServer.Client;
 using McpServerManager.Core.Models.Json;
+using ClientModels = McpServer.Client.Models;
 
 namespace McpServerManager.Core.Services;
 
 public sealed class McpSessionLogService
 {
     private const int PageSize = 1000;
-    private readonly HttpClient _httpClient;
+    private readonly McpServerClient _client;
 
-    public McpSessionLogService(string baseUrl)
+    public McpSessionLogService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null)
     {
-        if (string.IsNullOrWhiteSpace(baseUrl))
-            throw new ArgumentException("Base URL is required.", nameof(baseUrl));
-
-        _httpClient = new HttpClient
-        {
-            BaseAddress = new Uri(baseUrl.TrimEnd('/')),
-            Timeout = TimeSpan.FromSeconds(30)
-        };
+        _client = McpServerRestClientFactory.Create(
+            baseUrl,
+            timeout: TimeSpan.FromSeconds(30),
+            apiKey: apiKey,
+            workspaceRootPath: workspaceRootPath);
     }
 
     public async Task<IReadOnlyList<UnifiedSessionLog>> GetAllSessionsAsync(CancellationToken cancellationToken)
@@ -35,9 +30,12 @@ public sealed class McpSessionLogService
 
         while (offset < total)
         {
-            var url = $"/mcp/sessionlog?limit={PageSize}&offset={offset}";
-            var page = await GetFreshJsonAsync<McpSessionLogQueryResult>(url, cancellationToken).ConfigureAwait(true);
-            if (page == null || page.Items == null || page.Items.Count == 0)
+            var page = await _client.SessionLog.QueryAsync(
+                limit: PageSize,
+                offset: offset,
+                cancellationToken: cancellationToken).ConfigureAwait(true);
+
+            if (page.Items == null || page.Items.Count == 0)
                 break;
 
             total = page.TotalCount;
@@ -52,30 +50,7 @@ public sealed class McpSessionLogService
         return sessions;
     }
 
-    private async Task<T?> GetFreshJsonAsync<T>(string url, CancellationToken cancellationToken)
-    {
-        using var request = CreateNoCacheGet(url);
-        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-            .ConfigureAwait(true);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken).ConfigureAwait(true);
-    }
-
-    private static HttpRequestMessage CreateNoCacheGet(string url)
-    {
-        var separator = url.Contains('?') ? '&' : '?';
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{url}{separator}_rt={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
-        request.Headers.CacheControl = new CacheControlHeaderValue
-        {
-            NoCache = true,
-            NoStore = true,
-            MustRevalidate = true
-        };
-        request.Headers.Pragma.ParseAdd("no-cache");
-        return request;
-    }
-
-    private static UnifiedSessionLog Map(McpUnifiedSessionLogDto dto)
+    private static UnifiedSessionLog Map(ClientModels.UnifiedSessionLogDto dto)
     {
         var log = new UnifiedSessionLog
         {
@@ -122,7 +97,7 @@ public sealed class McpSessionLogService
         return log;
     }
 
-    private static UnifiedRequestEntry MapEntry(McpUnifiedRequestEntryDto dto, string sourceType)
+    private static UnifiedRequestEntry MapEntry(ClientModels.UnifiedRequestEntryDto dto, string sourceType)
     {
         var entry = new UnifiedRequestEntry
         {

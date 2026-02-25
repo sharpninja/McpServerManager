@@ -1,0 +1,258 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:McpServerManager.Core.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:models="using:McpServerManager.Core.Models"
+             xmlns:jsonModels="using:McpServerManager.Core.Models.Json"
+             xmlns:conv="using:McpServerManager.Core.Converters"
+             xmlns:views="using:McpServerManager.Android.Views"
+             xmlns:beh="using:McpServerManager.Core.Behaviors"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="720"
+             x:Class="McpServerManager.Android.Views.PhoneSessionLogView"
+             x:Name="Root"
+             x:DataType="vm:MainWindowViewModel"
+             FontSize="16">
+
+    <UserControl.Resources>
+        <conv:EqualityToBrushConverter x:Key="EqualityToBrush"/>
+        <conv:EmptyStringToAllConverter x:Key="EmptyStringToAll"/>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="Button">
+            <Setter Property="FontSize" Value="17"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="FontSize" Value="17"/>
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+        <Style Selector="SelectableTextBlock">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ClipToBounds="True">
+        <!-- Session list screen -->
+        <Grid x:Name="ListScreen" RowDefinitions="Auto,Auto,*" IsVisible="True">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="6,6,6,4">
+                <Button Content="↻ Refresh" Command="{Binding RefreshCommand}" Padding="10,6"/>
+            </StackPanel>
+
+            <SelectableTextBlock Grid.Row="1"
+                                 Text="{Binding StatusMessage}"
+                                 Margin="10,0,10,4"
+                                 FontSize="15"
+                                 Foreground="{DynamicResource SubtleForeground}"
+                                 TextTrimming="CharacterEllipsis"/>
+
+            <Border Grid.Row="2"
+                    Margin="6,0,6,6"
+                    CornerRadius="6"
+                    Background="{DynamicResource SystemAltHighColor}">
+                <ScrollViewer>
+                    <StackPanel>
+                        <Button Margin="4,4,4,2"
+                                Padding="0"
+                                BorderThickness="0"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Background="Transparent"
+                                Click="OnAllJsonHeaderClick">
+                            <Border Background="{DynamicResource SystemAccentColor}"
+                                    Padding="8,6"
+                                    CornerRadius="4">
+                                <TextBlock Text="All JSON" FontWeight="Bold" FontSize="19" Foreground="White"/>
+                            </Border>
+                        </Button>
+
+                        <ItemsControl ItemsSource="{Binding Nodes[0].Children}" x:CompileBindings="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="models:FileNode">
+                                    <StackPanel Margin="0,0,0,6">
+                                        <Border Background="{DynamicResource GroupHeaderBrush}"
+                                                Padding="8,5"
+                                                CornerRadius="4"
+                                                Margin="4,2,4,2"
+                                                beh:TappedBehavior.Command="{Binding DataContext.TreeItemTappedCommand, ElementName=Root}"
+                                                beh:TappedBehavior.CommandParameter="{Binding}">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="17"/>
+                                        </Border>
+
+                                        <ItemsControl ItemsSource="{Binding Children}" IsVisible="{Binding IsExpanded}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="models:FileNode">
+                                                    <Button Margin="4,0,4,2"
+                                                            Padding="0"
+                                                            BorderThickness="0"
+                                                            HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Stretch"
+                                                            Background="Transparent"
+                                                            Tag="{Binding}"
+                                                            Click="OnSessionLeafClick">
+                                                        <Border Padding="8,6"
+                                                                CornerRadius="4"
+                                                                BorderBrush="{DynamicResource ItemBorderBrush}"
+                                                                BorderThickness="0,0,0,1"
+                                                                Background="Transparent">
+                                                            <TextBlock Text="{Binding Name}"
+                                                                       FontSize="17"
+                                                                       Margin="8,0,0,0"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </Border>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- Viewer/detail screen -->
+        <Grid x:Name="DetailScreen" RowDefinitions="Auto,Auto,Auto,Auto,*" IsVisible="False" ClipToBounds="True">
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="6,6,6,4">
+                <Button Grid.Column="0" Content="← Sessions" Click="OnSessionDetailBackClick" Padding="10,6"/>
+                <StackPanel Grid.Column="1" Spacing="0" VerticalAlignment="Center">
+                    <SelectableTextBlock x:Name="DetailTitleText"
+                                         FontWeight="Bold"
+                                         FontSize="17"
+                                         TextTrimming="CharacterEllipsis"/>
+                    <SelectableTextBlock x:Name="DetailSubtitleText"
+                                         FontSize="14"
+                                         Foreground="{DynamicResource SubtleForeground}"
+                                         TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Grid>
+
+            <ScrollViewer Grid.Row="1"
+                          Margin="6,0,6,4"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Content="Refresh" Command="{Binding RefreshCommand}" Padding="10,6"/>
+                    <Button Content="Tree Back" Command="{Binding NavigateBackCommand}" Padding="10,6"/>
+                    <Button Content="Tree Fwd" Command="{Binding NavigateForwardCommand}" Padding="10,6"/>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Grid Grid.Row="2"
+                  ColumnDefinitions="*,*,*"
+                  ColumnSpacing="6"
+                  Margin="6,0,6,4"
+                  IsVisible="{Binding IsRequestDetailsVisible}">
+                <Button Grid.Column="0"
+                        Content="Prev Req"
+                        Command="{Binding NavigateToPreviousRequestCommand}"
+                        Padding="10,6"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"/>
+                <Button Grid.Column="1"
+                        Content="Next Req"
+                        Command="{Binding NavigateToNextRequestCommand}"
+                        Padding="10,6"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"/>
+                <Button Grid.Column="2"
+                        Content="Copy JSON"
+                        Command="{Binding CopyOriginalJsonCommand}"
+                        CommandParameter="{Binding SelectedUnifiedRequest}"
+                        Padding="10,6"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"/>
+            </Grid>
+
+            <SelectableTextBlock Grid.Row="3"
+                                 Text="{Binding StatusMessage}"
+                                 Margin="10,0,10,4"
+                                 FontSize="15"
+                                 Foreground="{DynamicResource SubtleForeground}"
+                                 TextTrimming="CharacterEllipsis"/>
+
+            <Border Grid.Row="4"
+                    Margin="6,0,6,6"
+                    Padding="6"
+                    Background="{DynamicResource SystemAltHighColor}"
+                    CornerRadius="6">
+                <Grid ClipToBounds="True">
+                    <!-- JSON view -->
+                    <Grid IsVisible="{Binding IsJsonVisible}" RowDefinitions="Auto,Auto,*">
+                        <Border Grid.Row="0" Padding="4" Margin="0,0,0,2">
+                            <ItemsControl ItemsSource="{Binding JsonLogSummary.SummaryLines}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="2" Padding="4" Background="Transparent">
+                                            <TextBlock Text="{Binding}" FontSize="16"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+
+                        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" Margin="4">
+                            <SelectableTextBlock Grid.Column="0"
+                                                 Text="Search:"
+                                                 VerticalAlignment="Center"
+                                                 Margin="0,0,8,0"
+                                                 FontSize="16"/>
+                            <TextBox Grid.Column="1" Text="{Binding SearchQuery}" Watermark="Search..." FontSize="16"/>
+                        </Grid>
+
+                        <Border Grid.Row="2" MinHeight="80" Padding="4">
+                            <ScrollViewer>
+                                <ItemsControl ItemsSource="{Binding FilteredSearchEntries}" x:CompileBindings="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><StackPanel Spacing="2"/></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="jsonModels:SearchableEntry">
+                                            <Border BorderBrush="{DynamicResource EntryBorderBrush}"
+                                                    BorderThickness="0,0,0,1"
+                                                    Margin="2"
+                                                    Padding="6"
+                                                    Background="Transparent"
+                                                    beh:TappedBehavior.Command="{Binding DataContext.SearchRowDoubleTappedCommand, ElementName=Root}"
+                                                    beh:TappedBehavior.CommandParameter="{Binding}">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="{Binding DisplayText}" FontSize="16" TextTrimming="CharacterEllipsis"/>
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <TextBlock Text="{Binding Model}" FontSize="14" Foreground="{DynamicResource SubtleForeground}"/>
+                                                        <TextBlock Text="{Binding TimestampDisplay}" FontSize="14" Foreground="{DynamicResource SubtleForeground}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
+
+                    <!-- Markdown/source preview -->
+                    <Grid IsVisible="{Binding IsMarkdownVisible}">
+                        <TextBox IsReadOnly="True"
+                                 Text="{Binding CurrentPreviewMarkdownText}"
+                                 TextWrapping="Wrap"
+                                 FontSize="16"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Margin="4"/>
+                    </Grid>
+
+                    <!-- Request details -->
+                    <Grid IsVisible="{Binding IsRequestDetailsVisible}">
+                        <views:RequestDetailsView DataContext="{Binding SelectedUnifiedRequest}"
+                                                  ShowOriginalJson="False"
+                                                  Margin="0"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -590,3 +590,83 @@ This provides a concrete, correct pattern to apply next to `MainWindowViewModel`
 ## Connected Devices
 - `emulator-5554` — Android tablet emulator (x86_64, 1600x2560)
 - `ZD222QH58Q` — Physical Android device (not used this session)
+
+## MVP-APP-006 Phase 0 Compliance Tranche (Audit + Guardrails)
+
+Status: completed baseline governance/inventory phase (refactor not started in this tranche)
+
+### Artifacts added
+
+- Compliance spec + freeze rule:
+  - `docs/architecture/compliance/COMPLIANCE-SPEC.md`
+- Compliance matrix (violation families, target design, replacement owner):
+  - `docs/architecture/compliance/COMPLIANCE-MATRIX.md`
+- Core ViewModel app-logic inventory:
+  - `docs/architecture/compliance/INVENTORY-CORE-VIEWMODEL-APP-LOGIC.md`
+- Core handler/ViewModel coupling inventory:
+  - `docs/architecture/compliance/INVENTORY-CORE-HANDLER-VM-COUPLING.md`
+- Desktop/Android code-behind classification inventory:
+  - `docs/architecture/compliance/INVENTORY-CODE-BEHIND.md`
+- Legacy project scope decision + inventory:
+  - `docs/architecture/compliance/LEGACY-COMPLIANCE-SCOPE.md`
+- PR compliance checklist:
+  - `.github/pull_request_template.md`
+- CI guardrail scripts:
+  - `tools/compliance/Check-CqrsBoundaries.ps1`
+  - `tools/compliance/Check-ViewModelBoundaries.ps1`
+  - `tools/compliance/Invoke-ArchitectureChecks.ps1`
+
+### CI enforcement change
+
+- Added Phase 0 architecture guardrail step to:
+  - `.github/workflows/build-android.yml`
+- The guardrails intentionally fail while known violations remain. This is expected and aligns with the no-wrapper/no-masking directive.
+
+### Scope decision (legacy)
+
+- Active compliance scope for `MVP-APP-006` is `Core`, `Desktop`, and `Android`.
+- `src/McpServerManager` remains visible in audit documentation but is excluded from Phase 0 guardrail execution pending explicit deprecation/refactor work.
+
+### Relationship to existing audit/blame sections
+
+- The detailed findings and blame attribution earlier in this file remain the line-level source of truth for current non-compliance.
+- The new docs above convert those findings into a tracked matrix and executable guardrails.
+
+## MVP-APP-006 Chat Refactor Tranche (Post-Phase 0)
+
+Status: Chat compliance tranche completed for tasks 9, 12, 13, 14, 15, 16, 17, 18, and 33 (MainWindow/Todo/Workspace epic work remains)
+
+### Completed in this tranche
+
+- Added chat application service interfaces and default implementations for:
+  - prompt template loading
+  - chat-related local file open/config file operations
+  - model discovery
+  - send orchestration contract (wrapper introduced for later migration)
+- Replaced `Core/Commands/ChatCommands.cs` wrapper handlers with DTO/result-based handlers:
+  - no `ChatWindowViewModel` command payload properties remain
+  - no handlers call `ViewModel.*Internal(...)`
+- Converted chat model discovery to a CQRS **query** handler/service path
+- Refactored `Core/ViewModels/ChatWindowViewModel.cs` so these flows dispatch/apply results instead of owning file-open/prompt-load/model-discovery logic
+- Moved chat send backend orchestration to CQRS command handler + app service (`ChatSendMessageHandler`)
+- Added compliant `ChatWindowViewModelFactory` to own chat mediator/handler registration and config IO integration
+- Refactored Desktop `MainWindow` code-behind to use the chat factory (removed direct chat service/config/VM construction)
+
+### Remaining Chat-specific non-compliance in active scope
+
+- None identified in the active Chat subsystem path after this tranche.
+- `CancelSend()` remains in `ChatWindowViewModel` as UI cancellation-token ownership (allowed by current compliance spec).
+- Legacy chat window path in `src/McpServerManager` remains out of active scope (see legacy scope decision doc).
+
+### Files changed in this tranche
+
+- `src/McpServerManager.Core/Services/ChatApplicationServices.cs`
+- `src/McpServerManager.Core/Services/ChatWindowViewModelFactory.cs`
+- `src/McpServerManager.Core/Commands/ChatCommands.cs`
+- `src/McpServerManager.Core/ViewModels/ChatWindowViewModel.cs`
+- `src/McpServerManager.Desktop/Views/MainWindow.axaml.cs`
+
+### Validation
+
+- `dotnet build src/McpServerManager.Core/McpServerManager.Core.csproj -c Debug --no-restore` ⚠️ one run failed due transient file lock (`CS2012`, Defender lock on `obj` DLL); subsequent Desktop build succeeded and compiled Core
+- `dotnet build src/McpServerManager.Desktop/McpServerManager.Desktop.csproj -c Debug --no-restore` ✅

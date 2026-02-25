@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private LayoutSettings _layoutSettings = new();
     private ChatWindow? _chatWindow;
     private bool? _chatWindowWasOpenOnClosing;
+    private readonly IChatWindowViewModelFactory _chatWindowViewModelFactory = new ChatWindowViewModelFactory();
 
     public MainWindow()
     {
@@ -245,9 +246,7 @@ public partial class MainWindow : Window
             _chatWindow.Activate();
             return;
         }
-        var agentService = new McpServerManager.Core.Services.OllamaLogAgentService();
-        var configModel = McpServerManager.Core.Models.AgentConfigIo.GetModelFromConfig();
-        var chatVm = new ChatWindowViewModel(agentService, mainVm.GetLogContextForAgent, configModel, model => McpServerManager.Core.Models.AgentConfigIo.SetModelInConfig(model));
+        var chatVm = _chatWindowViewModelFactory.Create(mainVm.GetLogContextForAgent);
         mainVm.SetContextConsumer(s => chatVm.NotifyContextChanged(s));
         mainVm.SetModelConsumer(m => { if (_chatWindow?.DataContext is ChatWindowViewModel cvm) cvm.SelectedModel = m; });
         _chatWindow = new ChatWindow { DataContext = chatVm };

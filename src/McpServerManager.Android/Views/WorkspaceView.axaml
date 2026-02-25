@@ -125,7 +125,55 @@
                     CornerRadius="4">
               <avedit:TextEditor x:Name="WorkspacePromptEditor"
                                  Height="220"
-                                 FontFamily="Cascadia Code,Consolas,Menlo,monospace"
+                                 FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
+                                 FontSize="13"
+                                 ShowLineNumbers="True"
+                                 WordWrap="True"/>
+            </Border>
+
+            <SelectableTextBlock Text="Status Prompt Override" FontWeight="SemiBold"/>
+            <TextBlock Text="Optional workspace-specific override for status generation. Leave blank to inherit."
+                       FontSize="11"
+                       Foreground="Gray"
+                       TextWrapping="Wrap"/>
+            <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
+                    BorderThickness="1"
+                    CornerRadius="4">
+              <avedit:TextEditor x:Name="WorkspaceStatusPromptEditor"
+                                 Height="160"
+                                 FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
+                                 FontSize="13"
+                                 ShowLineNumbers="True"
+                                 WordWrap="True"/>
+            </Border>
+
+            <SelectableTextBlock Text="Implement Prompt Override" FontWeight="SemiBold"/>
+            <TextBlock Text="Optional workspace-specific override for implement generation. Leave blank to inherit."
+                       FontSize="11"
+                       Foreground="Gray"
+                       TextWrapping="Wrap"/>
+            <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
+                    BorderThickness="1"
+                    CornerRadius="4">
+              <avedit:TextEditor x:Name="WorkspaceImplementPromptEditor"
+                                 Height="160"
+                                 FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
+                                 FontSize="13"
+                                 ShowLineNumbers="True"
+                                 WordWrap="True"/>
+            </Border>
+
+            <SelectableTextBlock Text="Plan Prompt Override" FontWeight="SemiBold"/>
+            <TextBlock Text="Optional workspace-specific override for plan generation. Leave blank to inherit."
+                       FontSize="11"
+                       Foreground="Gray"
+                       TextWrapping="Wrap"/>
+            <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
+                    BorderThickness="1"
+                    CornerRadius="4">
+              <avedit:TextEditor x:Name="WorkspacePlanPromptEditor"
+                                 Height="160"
+                                 FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
                                  FontSize="13"
                                  ShowLineNumbers="True"
                                  WordWrap="True"/>

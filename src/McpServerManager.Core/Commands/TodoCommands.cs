@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using McpServerManager.Core.Cqrs;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Services;
@@ -112,4 +113,43 @@ public sealed class AnalyzeTodoRequirementsHandler : ICommandHandler<AnalyzeTodo
 
     public Task<McpRequirementsAnalysisResult> ExecuteAsync(AnalyzeTodoRequirementsCommand command, CancellationToken cancellationToken = default)
         => _service.AnalyzeRequirementsAsync(command.Id, cancellationToken);
+}
+
+public enum TodoPromptActionKind
+{
+    Status,
+    Implement,
+    Plan
+}
+
+/// <summary>Stream a TODO prompt response (status/implement/plan) from the MCP server.</summary>
+public sealed class StreamTodoPromptCommand : ICommand<IAsyncEnumerable<string>>
+{
+    public string Id { get; }
+    public TodoPromptActionKind Action { get; }
+
+    public StreamTodoPromptCommand(string id, TodoPromptActionKind action)
+    {
+        Id = id;
+        Action = action;
+    }
+}
+
+public sealed class StreamTodoPromptHandler : ICommandHandler<StreamTodoPromptCommand, IAsyncEnumerable<string>>
+{
+    private readonly McpTodoService _service;
+    public StreamTodoPromptHandler(McpTodoService service) => _service = service;
+
+    public Task<IAsyncEnumerable<string>> ExecuteAsync(StreamTodoPromptCommand command, CancellationToken cancellationToken = default)
+    {
+        IAsyncEnumerable<string> stream = command.Action switch
+        {
+            TodoPromptActionKind.Status => _service.StreamStatusPromptAsync(command.Id, cancellationToken),
+            TodoPromptActionKind.Implement => _service.StreamImplementPromptAsync(command.Id, cancellationToken),
+            TodoPromptActionKind.Plan => _service.StreamPlanPromptAsync(command.Id, cancellationToken),
+            _ => throw new System.ArgumentOutOfRangeException(nameof(command.Action), command.Action, "Unsupported TODO prompt action.")
+        };
+
+        return Task.FromResult(stream);
+    }
 }

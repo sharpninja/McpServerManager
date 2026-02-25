@@ -176,7 +176,7 @@
           <!-- Editor or placeholder -->
           <Panel Grid.Row="1">
             <avedit:TextEditor x:Name="Editor"
-                               FontFamily="Cascadia Code,Consolas,Menlo,monospace"
+                               FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
                                FontSize="14"
                                ShowLineNumbers="True"
                                WordWrap="True"/>

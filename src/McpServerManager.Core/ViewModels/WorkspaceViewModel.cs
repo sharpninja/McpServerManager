@@ -25,6 +25,7 @@ public partial class WorkspaceViewModel : ViewModelBase
     private Timer? _healthTimer;
     private bool _isHealthCheckRunning;
     private bool _hasLoadedGlobalPrompt;
+    private long _selectionDetailsLoadSequence;
 
     [ObservableProperty] private ObservableCollection<WorkspaceListEntry> _filteredItems = new();
     [ObservableProperty] private WorkspaceListEntry? _selectedEntry;
@@ -46,6 +47,9 @@ public partial class WorkspaceViewModel : ViewModelBase
     [ObservableProperty] private bool _editorIsPrimary;
     [ObservableProperty] private bool _editorIsEnabled = true;
     [ObservableProperty] private string _editorPromptTemplateText = "";
+    [ObservableProperty] private string _editorStatusPromptText = "";
+    [ObservableProperty] private string _editorImplementPromptText = "";
+    [ObservableProperty] private string _editorPlanPromptText = "";
 
     [ObservableProperty] private string _globalPromptTemplateText = "";
     [ObservableProperty] private string _globalPromptStatusText = "Global prompt not loaded";
@@ -63,13 +67,22 @@ public partial class WorkspaceViewModel : ViewModelBase
     /// <summary>Set by the view code-behind to read current per-workspace prompt editor content.</summary>
     public Func<string>? GetWorkspacePromptEditorText { get; set; }
 
+    /// <summary>Set by the view code-behind to read current workspace status prompt editor content.</summary>
+    public Func<string>? GetWorkspaceStatusPromptEditorText { get; set; }
+
+    /// <summary>Set by the view code-behind to read current workspace implement prompt editor content.</summary>
+    public Func<string>? GetWorkspaceImplementPromptEditorText { get; set; }
+
+    /// <summary>Set by the view code-behind to read current workspace plan prompt editor content.</summary>
+    public Func<string>? GetWorkspacePlanPromptEditorText { get; set; }
+
     /// <summary>Set by the desktop view code-behind to read current global prompt editor content.</summary>
     public Func<string>? GetGlobalPromptEditorText { get; set; }
 
-    public WorkspaceViewModel(IClipboardService clipboardService, string mcpBaseUrl)
+    public WorkspaceViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey = null)
     {
         _clipboardService = clipboardService;
-        SetMcpBaseUrl(mcpBaseUrl);
+        SetMcpBaseUrl(mcpBaseUrl, mcpApiKey);
         NewWorkspace();
     }
 
@@ -106,11 +119,11 @@ public partial class WorkspaceViewModel : ViewModelBase
             new UpdateWorkspaceGlobalPromptHandler(service));
     }
 
-    public void SetMcpBaseUrl(string mcpBaseUrl)
+    public void SetMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null)
     {
         _hasLoadedGlobalPrompt = false;
         GlobalPromptStatusText = "Global prompt not loaded";
-        RegisterCqrsHandlers(new McpWorkspaceService(mcpBaseUrl));
+        RegisterCqrsHandlers(new McpWorkspaceService(mcpBaseUrl, mcpApiKey));
     }
 
     public Task RefreshForConnectionChangeAsync() => LoadWorkspacesCoreAsync(forceEditorReload: true);
@@ -131,15 +144,17 @@ public partial class WorkspaceViewModel : ViewModelBase
     partial void OnSelectedEntryChanged(WorkspaceListEntry? value)
     {
         CheckSelectedWorkspaceHealthCommand.NotifyCanExecuteChanged();
-        if (value?.Item == null)
+        if (value == null)
         {
+            _selectionDetailsLoadSequence++;
             StopHealthTimer();
             UpdateHealthIndicator(null, "Select a workspace");
             return;
         }
 
-        PopulateEditor(value.Item);
+        var loadSequence = ++_selectionDetailsLoadSequence;
         SetEditingWorkspaceKey(value.Key);
+        _ = LoadSelectedWorkspaceDetailsAsync(value.Key, loadSequence);
         StartHealthTimer();
         _ = CheckWorkspaceHealthForSelectionAsync(updateStatusText: false);
     }
@@ -227,6 +242,9 @@ public partial class WorkspaceViewModel : ViewModelBase
         EditorIsPrimary = false;
         EditorIsEnabled = true;
         EditorPromptTemplateText = "";
+        EditorStatusPromptText = "";
+        EditorImplementPromptText = "";
+        EditorPlanPromptText = "";
         StatusText = "New workspace draft";
     }
 
@@ -409,7 +427,10 @@ public partial class WorkspaceViewModel : ViewModelBase
             RunAs = NullIfWhiteSpace(EditorRunAs),
             IsPrimary = EditorIsPrimary,
             IsEnabled = EditorIsEnabled,
-            PromptTemplate = BlankToNullPreserveContent(GetWorkspacePromptEditorText?.Invoke() ?? EditorPromptTemplateText)
+            PromptTemplate = BlankToNullPreserveContent(GetWorkspacePromptEditorText?.Invoke() ?? EditorPromptTemplateText),
+            StatusPrompt = BlankToNullPreserveContent(GetWorkspaceStatusPromptEditorText?.Invoke() ?? EditorStatusPromptText),
+            ImplementPrompt = BlankToNullPreserveContent(GetWorkspaceImplementPromptEditorText?.Invoke() ?? EditorImplementPromptText),
+            PlanPrompt = BlankToNullPreserveContent(GetWorkspacePlanPromptEditorText?.Invoke() ?? EditorPlanPromptText)
         };
 
         try
@@ -460,7 +481,10 @@ public partial class WorkspaceViewModel : ViewModelBase
             RunAs = NullIfWhiteSpace(EditorRunAs),
             IsPrimary = EditorIsPrimary,
             IsEnabled = EditorIsEnabled,
-            PromptTemplate = BlankToNullPreserveContent(GetWorkspacePromptEditorText?.Invoke() ?? EditorPromptTemplateText)
+            PromptTemplate = BlankToNullPreserveContent(GetWorkspacePromptEditorText?.Invoke() ?? EditorPromptTemplateText),
+            StatusPrompt = BlankToNullPreserveContent(GetWorkspaceStatusPromptEditorText?.Invoke() ?? EditorStatusPromptText),
+            ImplementPrompt = BlankToNullPreserveContent(GetWorkspaceImplementPromptEditorText?.Invoke() ?? EditorImplementPromptText),
+            PlanPrompt = BlankToNullPreserveContent(GetWorkspacePlanPromptEditorText?.Invoke() ?? EditorPlanPromptText)
         };
 
         try
@@ -557,6 +581,9 @@ public partial class WorkspaceViewModel : ViewModelBase
         EditorIsPrimary = item.IsPrimary ?? false;
         EditorIsEnabled = item.IsEnabled ?? true;
         EditorPromptTemplateText = item.PromptTemplate ?? "";
+        EditorStatusPromptText = item.StatusPrompt ?? "";
+        EditorImplementPromptText = item.ImplementPrompt ?? "";
+        EditorPlanPromptText = item.PlanPrompt ?? "";
     }
 
     private async Task LoadWorkspacesCoreAsync(bool forceEditorReload)
@@ -579,7 +606,9 @@ public partial class WorkspaceViewModel : ViewModelBase
             SelectEntryByKey(selectedKey);
 
             var refreshNote = "";
-            if (forceEditorReload && !string.IsNullOrWhiteSpace(selectedKey))
+            if (forceEditorReload &&
+                !string.IsNullOrWhiteSpace(selectedKey) &&
+                !string.Equals(SelectedEntry?.Key, selectedKey, StringComparison.OrdinalIgnoreCase))
             {
                 var refreshed = await TryReloadWorkspaceEditorByKeyAsync(selectedKey, updateStatus: false);
                 refreshNote = refreshed ? " • editor refreshed" : " • editor not found";
@@ -635,6 +664,44 @@ public partial class WorkspaceViewModel : ViewModelBase
             if (updateStatus)
                 StatusText = "Error: " + ex.Message;
             return false;
+        }
+    }
+
+    private async Task LoadSelectedWorkspaceDetailsAsync(string key, long loadSequence)
+    {
+        try
+        {
+            var fresh = await _mediator.QueryAsync<GetWorkspaceByIdQuery, McpWorkspaceItem?>(
+                new GetWorkspaceByIdQuery(key));
+
+            if (loadSequence != _selectionDetailsLoadSequence)
+                return;
+
+            if (!string.Equals(SelectedEntry?.Key, key, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (fresh == null)
+            {
+                StatusText = $"Workspace {key} not found";
+                return;
+            }
+
+            PopulateEditor(fresh);
+            var resolvedKey = ResolveKey(fresh) ?? key;
+            SetEditingWorkspaceKey(resolvedKey);
+
+            if (!string.Equals(resolvedKey, key, StringComparison.OrdinalIgnoreCase))
+                SelectEntryByKey(resolvedKey);
+        }
+        catch (Exception ex)
+        {
+            if (loadSequence != _selectionDetailsLoadSequence)
+                return;
+
+            if (!string.Equals(SelectedEntry?.Key, key, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            StatusText = "Error: " + ex.Message;
         }
     }
 

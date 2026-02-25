@@ -20,11 +20,11 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Handlebars.Net" Version="2.1.6" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
     <PackageReference Include="YamlDotNet" Version="15.1.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Client\McpServer.Client.csproj" />
     <ProjectReference Include="..\..\lib\Markdown.Avalonia\Markdown.Avalonia\Markdown.Avalonia.csproj" />
   </ItemGroup>
 </Project>

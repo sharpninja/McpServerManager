@@ -3,6 +3,7 @@ using Android.Content.PM;
 using Android.Content.Res;
 using Avalonia;
 using Avalonia.Android;
+using Avalonia.Threading;
 using McpServerManager.Android.Services;
 
 namespace McpServerManager.Android;
@@ -26,4 +27,24 @@ public class MainActivity : AvaloniaMainActivity<App>
         base.OnConfigurationChanged(newConfig);
         DeviceFormFactor.NotifyDisplayChanged();
     }
+
+#pragma warning disable CS0618 // OnBackPressed is deprecated; used here to preserve expected Android back behavior in Avalonia phone views.
+    public override void OnBackPressed()
+    {
+        bool handled;
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            handled = AndroidBackNavigationService.TryHandleBack();
+        }
+        else
+        {
+            handled = Dispatcher.UIThread.InvokeAsync(AndroidBackNavigationService.TryHandleBack).GetAwaiter().GetResult();
+        }
+
+        if (handled)
+            return;
+
+        base.OnBackPressed();
+    }
+#pragma warning restore CS0618
 }

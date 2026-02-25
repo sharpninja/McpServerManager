@@ -3,146 +3,48 @@
              xmlns:vm="using:McpServerManager.Core.ViewModels"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:models="using:McpServerManager.Core.Models"
-             xmlns:jsonModels="using:McpServerManager.Core.Models.Json"
-             xmlns:conv="using:McpServerManager.Core.Converters"
-             xmlns:beh="using:McpServerManager.Core.Behaviors"
              xmlns:views="using:McpServerManager.Android.Views"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
              x:Class="McpServerManager.Android.Views.PhoneMainView"
-             x:Name="Root"
-             x:DataType="vm:MainWindowViewModel">
+             x:DataType="vm:MainWindowViewModel"
+             FontSize="16">
 
-    <UserControl.Resources>
-        <conv:EqualityToBrushConverter x:Key="EqualityToBrush"/>
-        <conv:EmptyStringToAllConverter x:Key="EmptyStringToAll"/>
-    </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="Button">
+            <Setter Property="FontSize" Value="17"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="FontSize" Value="17"/>
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="FontSize" Value="17"/>
+        </Style>
+        <Style Selector="ToggleButton">
+            <Setter Property="FontSize" Value="17"/>
+        </Style>
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="18"/>
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+        <Style Selector="SelectableTextBlock">
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+    </UserControl.Styles>
 
-    <Grid RowDefinitions="180, 4, *, Auto" ClipToBounds="True">
-        <!-- Session List grouped by agent (children of All JSON node) -->
-        <ScrollViewer Grid.Row="0">
-            <StackPanel>
-                <!-- All JSON header -->
-                <Border Background="{DynamicResource SystemAccentColor}" Padding="8,6"
-                        beh:TappedBehavior.Command="{Binding TreeItemTappedCommand}"
-                        beh:TappedBehavior.CommandParameter="{Binding Nodes[0]}">
-                    <TextBlock Text="All JSON" FontWeight="Bold" FontSize="17" Foreground="White"/>
-                </Border>
-            <ItemsControl ItemsSource="{Binding Nodes[0].Children}" x:CompileBindings="False">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="models:FileNode">
-                        <StackPanel>
-                            <!-- Group Header (agent name) -->
-                            <Border Background="{DynamicResource GroupHeaderBrush}" Padding="8,4"
-                                    beh:TappedBehavior.Command="{Binding DataContext.TreeItemTappedCommand, ElementName=Root}"
-                                    beh:TappedBehavior.CommandParameter="{Binding}">
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16"/>
-                            </Border>
-                            <!-- Sessions in group -->
-                            <ItemsControl ItemsSource="{Binding Children}" IsVisible="{Binding IsExpanded}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="models:FileNode">
-                                        <Border Margin="2" Padding="4" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="0,0,0,1"
-                                                Background="Transparent"
-                                                beh:TappedBehavior.Command="{Binding DataContext.TreeItemTappedCommand, ElementName=Root}"
-                                                beh:TappedBehavior.CommandParameter="{Binding}">
-                                            <TextBlock Text="{Binding Name}" FontSize="15" TextTrimming="CharacterEllipsis" Margin="12,0,0,0"/>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            </StackPanel>
-        </ScrollViewer>
-
-        <!-- Splitter -->
-        <Border Grid.Row="1" Background="{DynamicResource SeparatorBrush}"/>
-
-        <!-- Viewer Pane -->
-        <Grid Grid.Row="2" ClipToBounds="True">
-            <!-- JSON view -->
-            <Grid IsVisible="{Binding IsJsonVisible}" RowDefinitions="Auto, Auto, *, Auto, *">
-                <Border Grid.Row="0" Padding="4" Margin="0,0,0,2">
-                    <ItemsControl ItemsSource="{Binding JsonLogSummary.SummaryLines}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Margin="2" Padding="4" Background="Transparent">
-                                    <TextBlock Text="{Binding}" FontSize="15"/>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Border>
-                <Grid Grid.Row="1" ColumnDefinitions="Auto, *" Margin="4">
-                    <SelectableTextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="15"/>
-                    <TextBox Grid.Column="1" Text="{Binding SearchQuery}" Watermark="Search..." FontSize="15"/>
-                </Grid>
-                <Border Grid.Row="2" MinHeight="80" Padding="4">
-                    <ItemsControl ItemsSource="{Binding FilteredSearchEntries}" x:CompileBindings="False">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><StackPanel Spacing="2"/></ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="jsonModels:SearchableEntry">
-                                <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Margin="2" Padding="4"
-                                        Background="Transparent"
-                                        beh:TappedBehavior.Command="{Binding DataContext.SearchRowDoubleTappedCommand, ElementName=Root}"
-                                        beh:TappedBehavior.CommandParameter="{Binding}">
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="{Binding DisplayText}" FontSize="15" TextTrimming="CharacterEllipsis"/>
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <TextBlock Text="{Binding Model}" FontSize="13" Foreground="{DynamicResource SubtleForeground}"/>
-                                            <TextBlock Text="{Binding TimestampDisplay}" FontSize="13" Foreground="{DynamicResource SubtleForeground}"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Border>
-                <Border Grid.Row="3" Height="2" Background="{DynamicResource SeparatorBrush}" Margin="0,2"/>
-                <Border Grid.Row="4" MinHeight="100">
-                    <TreeView ItemsSource="{Binding JsonTree}" SelectedItem="{Binding SelectedJsonNode}">
-                        <TreeView.ItemTemplate>
-                            <TreeDataTemplate ItemsSource="{Binding Children}" DataType="jsonModels:JsonTreeNode">
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="{DynamicResource JsonKeyBrush}" FontSize="15"/>
-                                    <TextBlock Text=":" Foreground="{DynamicResource SubtleForeground}"/>
-                                    <TextBlock Text="{Binding Value}" Foreground="{DynamicResource JsonValueBrush}" FontSize="15"/>
-                                </StackPanel>
-                            </TreeDataTemplate>
-                        </TreeView.ItemTemplate>
-                        <TreeView.ItemContainerTheme>
-                            <ControlTheme TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}" x:DataType="jsonModels:JsonTreeNode">
-                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                            </ControlTheme>
-                        </TreeView.ItemContainerTheme>
-                    </TreeView>
-                </Border>
-            </Grid>
-
-            <!-- Markdown view -->
-            <Grid IsVisible="{Binding IsMarkdownVisible}">
-                <TextBox IsReadOnly="True" Text="{Binding CurrentPreviewMarkdownText}" TextWrapping="Wrap"
-                         Background="Transparent" BorderThickness="0" Margin="4"/>
-            </Grid>
-
-            <!-- Request Details -->
-            <Grid IsVisible="{Binding IsRequestDetailsVisible}" RowDefinitions="Auto, *">
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="4">
-                    <Button Content="← Back" Command="{Binding CloseRequestDetailsCommand}"/>
-                    <Button Content="← Prev" Command="{Binding NavigateToPreviousRequestCommand}"/>
-                    <Button Content="Next →" Command="{Binding NavigateToNextRequestCommand}"/>
-                </StackPanel>
-                <ContentControl Grid.Row="1" Content="{Binding SelectedUnifiedRequest}"/>
-            </Grid>
-        </Grid>
+    <Grid RowDefinitions="*,Auto" ClipToBounds="True">
+        <TabControl Grid.Row="0" TabStripPlacement="Bottom" SelectedIndex="0">
+            <TabItem Header="Todos">
+                <views:PhoneTodoView DataContext="{Binding TodoViewModel}"/>
+            </TabItem>
+            <TabItem Header="Session Log">
+                <views:PhoneSessionLogView/>
+            </TabItem>
+        </TabControl>
 
         <!-- Status Bar -->
-        <views:AnimatedStatusBar Grid.Row="3" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
+        <views:AnimatedStatusBar Grid.Row="1" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
             <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto" RowSpacing="4" ColumnSpacing="6">
                 <ComboBox Grid.Row="0"
                           Grid.Column="0"
@@ -155,7 +57,14 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                <SelectableTextBlock Grid.Row="1" Grid.Column="0" Text="{Binding StatusMessage}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <SelectableTextBlock x:Name="StatusMessageText"
+                                     Grid.Row="1" Grid.Column="0"
+                                     Text="{Binding StatusMessage}"
+                                     FontWeight="Bold"
+                                     FontSize="15"
+                                     VerticalAlignment="Center"
+                                     TextTrimming="CharacterEllipsis"
+                                     PointerPressed="StatusMessageText_OnPointerPressed"/>
                 <Ellipse Grid.Row="1"
                          Grid.Column="1"
                          Width="10"
@@ -164,8 +73,49 @@
                          VerticalAlignment="Center"
                          HorizontalAlignment="Center"
                          ToolTip.Tip="{Binding WorkspaceHealthIndicatorTooltip}"/>
-                <SelectableTextBlock Grid.Row="1" Grid.Column="2" Text="{Binding AppVersionDisplay}" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
+                <SelectableTextBlock Grid.Row="1" Grid.Column="2" Text="{Binding AppVersionDisplay}" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
             </Grid>
         </views:AnimatedStatusBar>
+
+        <!-- Modal-style status dialog for full error text -->
+        <Border x:Name="StatusDialogOverlay"
+                Grid.RowSpan="2"
+                IsVisible="False"
+                Background="#80000000"
+                PointerPressed="StatusDialogOverlay_OnPointerPressed">
+            <Grid VerticalAlignment="Center" HorizontalAlignment="Center" Margin="12" MaxWidth="520">
+                <Border Background="{DynamicResource ThemeBackgroundBrush}"
+                        BorderBrush="{DynamicResource ItemBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12"
+                        PointerPressed="StatusDialogContent_OnPointerPressed">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
+                        <TextBlock Grid.Row="0" Text="Status Message" FontWeight="Bold" FontSize="18"/>
+                        <TextBlock Grid.Row="1"
+                                   Text="Full text from the status bar"
+                                   Foreground="{DynamicResource SubtleForeground}"
+                                   FontSize="14"/>
+                        <Border Grid.Row="2"
+                                MinWidth="280"
+                                MaxWidth="480"
+                                MaxHeight="360"
+                                Padding="8"
+                                Background="Transparent"
+                                BorderBrush="{DynamicResource ItemBorderBrush}"
+                                BorderThickness="1">
+                            <ScrollViewer>
+                                <SelectableTextBlock x:Name="StatusDialogText"
+                                                     TextWrapping="Wrap"
+                                                     FontSize="16"/>
+                            </ScrollViewer>
+                        </Border>
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                            <Button Content="Close" Click="CloseStatusDialog_OnClick"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

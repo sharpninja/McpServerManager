@@ -30,7 +30,7 @@
              ItemsSource="{Binding LogEntries}"
              SelectedItem="{Binding SelectedEntry}"
              SelectionMode="Single"
-             FontFamily="Cascadia Code,Consolas,Menlo,monospace"
+             FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
              FontSize="14">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="svc:LogEntry">
