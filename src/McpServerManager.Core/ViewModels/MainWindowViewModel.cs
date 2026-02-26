@@ -358,24 +358,24 @@ public partial class MainWindowViewModel : ViewModelBase
         return uri.ToString().TrimEnd('/');
     }
 
-    private void ApplyActiveMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null)
+    private void ApplyActiveMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? workspaceRootPath = null)
     {
         _activeMcpBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
         _activeMcpApiKey = string.IsNullOrWhiteSpace(mcpApiKey)
             ? McpServerRestClientFactory.TryResolveApiKey(_activeMcpBaseUrl)
             : mcpApiKey?.Trim();
 
-        McpSessionService = new McpSessionLogService(_activeMcpBaseUrl, _activeMcpApiKey);
-        _mcpTodoService = new McpTodoService(_activeMcpBaseUrl, _activeMcpApiKey);
+        McpSessionService = new McpSessionLogService(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath);
+        _mcpTodoService = new McpTodoService(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath);
         // Workspace endpoints always target the connection server, not the active workspace
         _mcpWorkspaceService = new McpWorkspaceService(_defaultMcpBaseUrl, _defaultMcpApiKey);
 
         if (_hasRegisteredCqrsHandlers)
             RegisterMcpServiceHandlers();
 
-        _todoViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey);
+        _todoViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath);
         _workspaceViewModel?.SetMcpBaseUrl(_defaultMcpBaseUrl, _defaultMcpApiKey);
-        _voiceConversationViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey);
+        _voiceConversationViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath);
     }
 
     private async Task<string?> ResolveActiveConnectionApiKeyAsync(WorkspaceConnectionOption option, string baseUrl)
@@ -938,9 +938,9 @@ public partial class MainWindowViewModel : ViewModelBase
             await LoadWorkspaceConnectionsAsync(preferredSelection, preferredBaseUrl, suppressStatusFailure: false)
                 .ConfigureAwait(true);
         }
-        catch
+        catch (Exception ex)
         {
-            // Failure status is already handled by the shared loader for command-driven refreshes.
+            _logger.LogWarning(ex, "LoadWorkspaceConnectionsAsync failed");
         }
     }
 
@@ -984,9 +984,6 @@ public partial class MainWindowViewModel : ViewModelBase
 
         foreach (var workspace in workspaces)
         {
-            if (workspace.WorkspacePort is < 1 or > 65535)
-                continue;
-
             var candidate = WorkspaceConnectionOption.FromWorkspace(_defaultMcpBaseUri, workspace);
             options.Add(candidate);
         }
@@ -1071,7 +1068,11 @@ public partial class MainWindowViewModel : ViewModelBase
         _logger.LogInformation($"[Workspace Switch] Switching to '{option.DisplayName}' (BaseUrl={option.BaseUrl})");
         var previousBaseUrl = _activeMcpBaseUrl;
         var previousApiKey = _activeMcpApiKey;
-        var previousSelection = FindWorkspaceConnectionOptionByBaseUrl(previousBaseUrl);
+        var previousSelection = FindWorkspaceConnectionOption(
+            WorkspaceConnections.FirstOrDefault(c =>
+                !string.IsNullOrWhiteSpace(c.WorkspaceKey) &&
+                string.Equals(c.WorkspaceKey, SelectedWorkspaceConnection?.WorkspaceKey, StringComparison.OrdinalIgnoreCase))
+            ?? FindWorkspaceConnectionOptionByBaseUrl(previousBaseUrl));
         var selectedBaseUrl = NormalizeMcpBaseUrl(option.BaseUrl);
         IsSwitchingWorkspace = true;
 
@@ -1084,7 +1085,7 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             var selectedApiKey = await ResolveActiveConnectionApiKeyAsync(option, selectedBaseUrl).ConfigureAwait(true);
-            ApplyActiveMcpBaseUrl(selectedBaseUrl, selectedApiKey);
+            ApplyActiveMcpBaseUrl(selectedBaseUrl, selectedApiKey, option.WorkspaceRootPath);
             await RefreshAllViewsForConnectionChangeAsync().ConfigureAwait(true);
             _logger.LogInformation($"[Workspace Switch] Successfully connected to '{option.DisplayName}'");
             DispatchToUi(() => StatusMessage = $"Connected: {option.DisplayName}");
@@ -1092,7 +1093,7 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, $"[Workspace Switch] Failed switching to '{option.DisplayName}'");
-            ApplyActiveMcpBaseUrl(previousBaseUrl, previousApiKey);
+            ApplyActiveMcpBaseUrl(previousBaseUrl, previousApiKey, previousSelection?.WorkspaceRootPath);
             var revertedDisplayName = previousSelection?.DisplayName ?? previousBaseUrl;
             await DispatchToUiAsync(() =>
             {
@@ -3812,13 +3813,9 @@ public sealed class WorkspaceConnectionOption
     public static WorkspaceConnectionOption FromWorkspace(Uri defaultBaseUri, McpWorkspaceItem workspace)
     {
         var isPrimary = workspace.IsPrimary ?? false;
-        var uriBuilder = new UriBuilder(defaultBaseUri)
-        {
-            Port = isPrimary ? defaultBaseUri.Port : workspace.WorkspacePort
-        };
 
         var key = string.IsNullOrWhiteSpace(workspace.WorkspacePath)
-            ? workspace.WorkspacePort.ToString()
+            ? (workspace.Name ?? "unknown")
             : workspace.WorkspacePath.Trim();
 
         var label = string.IsNullOrWhiteSpace(workspace.Name)
@@ -3831,7 +3828,7 @@ public sealed class WorkspaceConnectionOption
         if (!isEnabled)
             flags.Add("Disabled");
         var flagsSuffix = flags.Count == 0 ? "" : $" [{string.Join(", ", flags)}]";
-        var baseUrl = uriBuilder.Uri.GetLeftPart(UriPartial.Path).TrimEnd('/');
+        var baseUrl = defaultBaseUri.GetLeftPart(UriPartial.Path).TrimEnd('/');
         var workspaceRootPath = string.IsNullOrWhiteSpace(workspace.WorkspacePath) ? null : workspace.WorkspacePath.Trim();
         var apiKey = McpServerRestClientFactory.TryResolveApiKeyForWorkspaceRoot(workspaceRootPath, baseUrl);
 
@@ -3841,7 +3838,7 @@ public sealed class WorkspaceConnectionOption
             WorkspaceKey = key,
             WorkspaceRootPath = workspaceRootPath,
             ApiKey = apiKey,
-            DisplayName = $"{label} ({uriBuilder.Host}:{uriBuilder.Port}){flagsSuffix}",
+            DisplayName = $"{label}{flagsSuffix}",
             BaseUrl = baseUrl,
             IsDefault = false,
             IsPrimary = isPrimary,

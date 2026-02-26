@@ -60,11 +60,11 @@ public partial class VoiceConversationViewModel : ViewModelBase
     /// <summary>
     /// Updates the MCP endpoint used by the voice client and clears the current session state.
     /// </summary>
-    public void SetMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null)
+    public void SetMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? workspaceRootPath = null)
     {
         _mcpBaseUrl = mcpBaseUrl;
         _mcpApiKey = mcpApiKey;
-        _voiceService = new McpVoiceConversationService(mcpBaseUrl, mcpApiKey);
+        _voiceService = new McpVoiceConversationService(mcpBaseUrl, mcpApiKey, workspaceRootPath);
         _activeTurnCts?.Cancel();
         ClearSessionState();
         StatusText = "Voice endpoint updated. Create a new voice session.";

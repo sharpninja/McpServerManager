@@ -26,7 +26,8 @@ internal static class McpServerRestClientFactory
         {
             BaseUrl = new Uri(normalizedBaseUrl, UriKind.Absolute),
             ApiKey = string.IsNullOrWhiteSpace(resolvedApiKey) ? null : resolvedApiKey,
-            Timeout = timeout
+            Timeout = timeout,
+            WorkspacePath = string.IsNullOrWhiteSpace(workspaceRootPath) ? null : workspaceRootPath.Trim()
         };
 
         return McpServerClientFactory.Create(options);
