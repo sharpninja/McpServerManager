@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -118,6 +119,17 @@ public partial class ConnectionViewModel : ViewModelBase
 
         try
         {
+            // Verify the server is reachable before attempting auth
+            using var probe = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+            try
+            {
+                using var healthResponse = await probe.GetAsync($"{url}/health").ConfigureAwait(true);
+            }
+            catch (Exception probeEx)
+            {
+                throw new InvalidOperationException($"Server unreachable at {url}: {probeEx.Message}", probeEx);
+            }
+
             var authToken = await TryAuthenticateWithOidcAsync(url).ConfigureAwait(true);
             _logger.LogInformation("ConnectAsync auth stage complete for {Url}. TokenPresent={HasToken}", url, !string.IsNullOrWhiteSpace(authToken));
             Connected?.Invoke(new ConnectionEstablishedInfo(url, authToken));
