@@ -119,11 +119,11 @@ public partial class WorkspaceViewModel : ViewModelBase
             new UpdateWorkspaceGlobalPromptHandler(service));
     }
 
-    public void SetMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null)
+    public void SetMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? bearerToken = null)
     {
         _hasLoadedGlobalPrompt = false;
         GlobalPromptStatusText = "Global prompt not loaded";
-        RegisterCqrsHandlers(new McpWorkspaceService(mcpBaseUrl, mcpApiKey));
+        RegisterCqrsHandlers(new McpWorkspaceService(mcpBaseUrl, mcpApiKey, bearerToken: bearerToken));
     }
 
     public Task RefreshForConnectionChangeAsync() => LoadWorkspacesCoreAsync(forceEditorReload: true);

@@ -15,7 +15,8 @@ internal static class McpServerRestClientFactory
         string baseUrl,
         TimeSpan timeout,
         string? apiKey = null,
-        string? workspaceRootPath = null)
+        string? workspaceRootPath = null,
+        string? bearerToken = null)
     {
         var normalizedBaseUrl = NormalizeBaseUrl(baseUrl);
         var resolvedApiKey = string.IsNullOrWhiteSpace(apiKey)
@@ -26,6 +27,7 @@ internal static class McpServerRestClientFactory
         {
             BaseUrl = new Uri(normalizedBaseUrl, UriKind.Absolute),
             ApiKey = string.IsNullOrWhiteSpace(resolvedApiKey) ? null : resolvedApiKey,
+            BearerToken = string.IsNullOrWhiteSpace(bearerToken) ? null : bearerToken.Trim(),
             Timeout = timeout,
             WorkspacePath = string.IsNullOrWhiteSpace(workspaceRootPath) ? null : workspaceRootPath.Trim()
         };

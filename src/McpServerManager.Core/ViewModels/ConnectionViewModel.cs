@@ -8,7 +8,7 @@ using McpServerManager.Core.Services;
 
 namespace McpServerManager.Core.ViewModels;
 
-public sealed record ConnectionEstablishedInfo(string BaseUrl, string? ApiKey);
+public sealed record ConnectionEstablishedInfo(string BaseUrl, string? ApiKey, string? BearerToken = null);
 
 public partial class ConnectionViewModel : ViewModelBase
 {
@@ -46,6 +46,7 @@ public partial class ConnectionViewModel : ViewModelBase
     private Action<string?>? _cachedOidcTokenWriter;
     private Func<bool>? _oidcPostTokenForegroundActivator;
     private Func<Task<string?>>? _qrCodeScanner;
+    private string? _oidcBearerToken;
 
     [ObservableProperty]
     private bool _canScanQrCode;
@@ -172,8 +173,8 @@ public partial class ConnectionViewModel : ViewModelBase
             }
 
             var authToken = await TryAuthenticateWithOidcAsync(url).ConfigureAwait(true);
-            _logger.LogInformation("ConnectAsync auth stage complete for {Url}. TokenPresent={HasToken}", url, !string.IsNullOrWhiteSpace(authToken));
-            Connected?.Invoke(new ConnectionEstablishedInfo(url, authToken));
+            _logger.LogInformation("ConnectAsync auth stage complete for {Url}. TokenPresent={HasToken}, BearerTokenPresent={HasBearer}", url, !string.IsNullOrWhiteSpace(authToken), !string.IsNullOrWhiteSpace(_oidcBearerToken));
+            Connected?.Invoke(new ConnectionEstablishedInfo(url, authToken, _oidcBearerToken));
             _logger.LogInformation("ConnectAsync raised Connected event for {Url}", url);
         }
         catch (Exception ex)
@@ -221,6 +222,7 @@ public partial class ConnectionViewModel : ViewModelBase
         if (!McpOidcAuthService.IsEnabled(authConfig))
         {
             _logger.LogInformation("OIDC not enabled/configured for {BaseUrl}; continuing without interactive auth", mcpBaseUrl);
+            _oidcBearerToken = null;
             return await TryFetchDefaultApiKeyFallbackAsync(mcpBaseUrl).ConfigureAwait(true);
         }
 
@@ -238,6 +240,7 @@ public partial class ConnectionViewModel : ViewModelBase
             {
                 OidcStatusMessage = "Opening MCP…";
                 _logger.LogInformation("Cached OIDC token reuse succeeded; MCP API key acquired");
+                _oidcBearerToken = cachedOidcToken;
                 return cachedApiKeyResult.ApiKey;
             }
 
@@ -302,6 +305,7 @@ public partial class ConnectionViewModel : ViewModelBase
             .ConfigureAwait(true);
 
         _logger.LogInformation("OIDC sign-in complete. Access token acquired for {BaseUrl}", mcpBaseUrl);
+        _oidcBearerToken = token.AccessToken;
         WriteCachedOidcToken(token.AccessToken);
         TryBringAppToForegroundAfterOidcTokenAcquired();
 

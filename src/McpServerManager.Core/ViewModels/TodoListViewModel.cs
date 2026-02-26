@@ -94,9 +94,9 @@ public partial class TodoListViewModel : ViewModelBase
         _mediator.Register<StreamTodoPromptCommand, IAsyncEnumerable<string>>(new StreamTodoPromptHandler(service));
     }
 
-    public void SetMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? workspaceRootPath = null)
+    public void SetMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? workspaceRootPath = null, string? bearerToken = null)
     {
-        RegisterCqrsHandlers(new McpTodoService(mcpBaseUrl, mcpApiKey, workspaceRootPath));
+        RegisterCqrsHandlers(new McpTodoService(mcpBaseUrl, mcpApiKey, workspaceRootPath, bearerToken));
     }
 
     public Task RefreshForConnectionChangeAsync() => LoadTodosAsync();

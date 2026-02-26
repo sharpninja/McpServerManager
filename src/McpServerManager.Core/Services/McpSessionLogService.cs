@@ -13,13 +13,14 @@ public sealed class McpSessionLogService
     private const int PageSize = 1000;
     private readonly McpServerClient _client;
 
-    public McpSessionLogService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null)
+    public McpSessionLogService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null, string? bearerToken = null)
     {
         _client = McpServerRestClientFactory.Create(
             baseUrl,
             timeout: TimeSpan.FromSeconds(30),
             apiKey: apiKey,
-            workspaceRootPath: workspaceRootPath);
+            workspaceRootPath: workspaceRootPath,
+            bearerToken: bearerToken);
     }
 
     public async Task<IReadOnlyList<UnifiedSessionLog>> GetAllSessionsAsync(CancellationToken cancellationToken)

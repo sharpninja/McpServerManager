@@ -20,15 +20,17 @@ public sealed class McpVoiceConversationService
     private readonly string _baseUrl;
     private readonly string? _apiKey;
     private readonly string? _workspaceRootPath;
+    private readonly string? _bearerToken;
 
     /// <summary>
     /// Creates a new MCP voice conversation client.
     /// </summary>
-    public McpVoiceConversationService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null)
+    public McpVoiceConversationService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null, string? bearerToken = null)
     {
         _baseUrl = McpServerRestClientFactory.NormalizeBaseUrl(baseUrl);
         _apiKey = string.IsNullOrWhiteSpace(apiKey) ? null : apiKey.Trim();
         _workspaceRootPath = workspaceRootPath;
+        _bearerToken = string.IsNullOrWhiteSpace(bearerToken) ? null : bearerToken.Trim();
     }
 
     /// <summary>
@@ -135,6 +137,9 @@ public sealed class McpVoiceConversationService
 
         if (!string.IsNullOrWhiteSpace(apiKey))
             client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
+
+        if (!string.IsNullOrWhiteSpace(_bearerToken))
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _bearerToken);
 
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         return client;

@@ -20,13 +20,14 @@ public sealed class McpWorkspaceService
     private readonly Uri _baseUri;
     private readonly HttpClient _healthHttpClient;
 
-    public McpWorkspaceService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null)
+    public McpWorkspaceService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null, string? bearerToken = null)
     {
         _client = McpServerRestClientFactory.Create(
             baseUrl,
             timeout: TimeSpan.FromSeconds(5),
             apiKey: apiKey,
-            workspaceRootPath: workspaceRootPath);
+            workspaceRootPath: workspaceRootPath,
+            bearerToken: bearerToken);
 
         var normalizedBaseUrl = McpServerRestClientFactory.NormalizeBaseUrl(baseUrl);
         _baseUri = new Uri(normalizedBaseUrl, UriKind.Absolute);

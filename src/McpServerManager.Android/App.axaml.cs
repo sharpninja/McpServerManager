@@ -55,11 +55,11 @@ public partial class App : Application
                 singleView.MainView = connectionView;
                 var persistNextConnection = true;
 
-                void OpenMainView(string mcpBaseUrl, string? mcpApiKey, bool persistConnection)
+                void OpenMainView(string mcpBaseUrl, string? mcpApiKey, string? bearerToken, bool persistConnection)
                 {
                     try
                     {
-                        _logger.LogInformation("Opening main Android view for {McpBaseUrl}. TokenPresent={HasToken}, PersistConnection={PersistConnection}", mcpBaseUrl, !string.IsNullOrWhiteSpace(mcpApiKey), persistConnection);
+                        _logger.LogInformation("Opening main Android view for {McpBaseUrl}. TokenPresent={HasToken}, BearerPresent={HasBearer}, PersistConnection={PersistConnection}", mcpBaseUrl, !string.IsNullOrWhiteSpace(mcpApiKey), !string.IsNullOrWhiteSpace(bearerToken), persistConnection);
                         if (persistConnection && Uri.TryCreate(mcpBaseUrl, UriKind.Absolute, out var uri))
                         {
                             AndroidConnectionPreferencesService.Save(
@@ -68,7 +68,7 @@ public partial class App : Application
                         }
 
                         var clipboardService = new AndroidClipboardService();
-                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey);
+                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken);
                         vm.LogoutRequested += (_, _) =>
                         {
                             _logger.LogInformation("Logout requested; clearing tokens and returning to connection dialog");
@@ -92,10 +92,10 @@ public partial class App : Application
 
                 connectionVm.Connected += connection =>
                 {
-                    _logger.LogInformation("Connection dialog signaled Connected for {McpBaseUrl}. TokenPresent={HasToken}", connection.BaseUrl, !string.IsNullOrWhiteSpace(connection.ApiKey));
+                    _logger.LogInformation("Connection dialog signaled Connected for {McpBaseUrl}. TokenPresent={HasToken}, BearerPresent={HasBearer}", connection.BaseUrl, !string.IsNullOrWhiteSpace(connection.ApiKey), !string.IsNullOrWhiteSpace(connection.BearerToken));
                     var shouldPersist = persistNextConnection;
                     persistNextConnection = true;
-                    OpenMainView(connection.BaseUrl, connection.ApiKey, persistConnection: shouldPersist);
+                    OpenMainView(connection.BaseUrl, connection.ApiKey, connection.BearerToken, persistConnection: shouldPersist);
                 };
 
                 if (AndroidConnectionPreferencesService.TryLoad(out var savedHost, out var savedPort))

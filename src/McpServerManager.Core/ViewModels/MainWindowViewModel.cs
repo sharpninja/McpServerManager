@@ -53,6 +53,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private Uri _defaultMcpBaseUri = new("http://localhost");
     private string _activeMcpBaseUrl = "";
     private string? _activeMcpApiKey;
+    private string? _activeBearerToken;
     private bool _preferExplicitApiKeys;
     internal McpSessionLogService McpSessionService = null!;
     private McpTodoService _mcpTodoService = null!;
@@ -321,8 +322,14 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey)
+        : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null)
+    {
+    }
+
+    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey, string? bearerToken)
     {
         _clipboardService = clipboardService;
+        _activeBearerToken = string.IsNullOrWhiteSpace(bearerToken) ? null : bearerToken.Trim();
         InitializeMcpEndpoint(mcpBaseUrl, mcpApiKey);
         RegisterCqrsHandlers();
     }
@@ -335,7 +342,7 @@ public partial class MainWindowViewModel : ViewModelBase
             ? McpServerRestClientFactory.TryResolveApiKey(_defaultMcpBaseUrl)
             : initialApiKey.Trim();
         _defaultMcpBaseUri = new Uri(_defaultMcpBaseUrl, UriKind.Absolute);
-        _workspaceCatalogService = new McpWorkspaceService(_defaultMcpBaseUrl, _defaultMcpApiKey);
+        _workspaceCatalogService = new McpWorkspaceService(_defaultMcpBaseUrl, _defaultMcpApiKey, bearerToken: _activeBearerToken);
         ApplyActiveMcpBaseUrl(_defaultMcpBaseUrl, _defaultMcpApiKey);
         ApplyWorkspaceConnectionOptions(
             new[]
@@ -365,17 +372,17 @@ public partial class MainWindowViewModel : ViewModelBase
             ? McpServerRestClientFactory.TryResolveApiKey(_activeMcpBaseUrl)
             : mcpApiKey?.Trim();
 
-        McpSessionService = new McpSessionLogService(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath);
-        _mcpTodoService = new McpTodoService(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath);
+        McpSessionService = new McpSessionLogService(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath, _activeBearerToken);
+        _mcpTodoService = new McpTodoService(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath, _activeBearerToken);
         // Workspace endpoints always target the connection server, not the active workspace
-        _mcpWorkspaceService = new McpWorkspaceService(_defaultMcpBaseUrl, _defaultMcpApiKey);
+        _mcpWorkspaceService = new McpWorkspaceService(_defaultMcpBaseUrl, _defaultMcpApiKey, bearerToken: _activeBearerToken);
 
         if (_hasRegisteredCqrsHandlers)
             RegisterMcpServiceHandlers();
 
-        _todoViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath);
-        _workspaceViewModel?.SetMcpBaseUrl(_defaultMcpBaseUrl, _defaultMcpApiKey);
-        _voiceConversationViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath);
+        _todoViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath, _activeBearerToken);
+        _workspaceViewModel?.SetMcpBaseUrl(_defaultMcpBaseUrl, _defaultMcpApiKey, bearerToken: _activeBearerToken);
+        _voiceConversationViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath, _activeBearerToken);
     }
 
     private async Task<string?> ResolveActiveConnectionApiKeyAsync(WorkspaceConnectionOption option, string baseUrl)

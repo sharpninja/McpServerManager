@@ -14,20 +14,22 @@ public sealed class McpTodoService
     private readonly McpServerClient _client;
     private readonly McpServerClient _promptClient;
 
-    public McpTodoService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null)
+    public McpTodoService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null, string? bearerToken = null)
     {
         _client = McpServerRestClientFactory.Create(
             baseUrl,
             timeout: TimeSpan.FromSeconds(5),
             apiKey: apiKey,
-            workspaceRootPath: workspaceRootPath);
+            workspaceRootPath: workspaceRootPath,
+            bearerToken: bearerToken);
 
         // Prompt endpoints stream SSE responses and can run much longer than CRUD calls.
         _promptClient = McpServerRestClientFactory.Create(
             baseUrl,
             timeout: TimeSpan.FromMinutes(15),
             apiKey: apiKey,
-            workspaceRootPath: workspaceRootPath);
+            workspaceRootPath: workspaceRootPath,
+            bearerToken: bearerToken);
     }
 
     /// <summary>List / filter todos.</summary>
