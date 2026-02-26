@@ -89,6 +89,18 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>ViewModel for the Log tab. Created lazily on first access.</summary>
     public LogViewModel LogViewModel => _logViewModel ??= new LogViewModel(_clipboardService);
     private LogViewModel? _logViewModel;
+
+    /// <summary>ViewModel for the Voice tab. Created lazily on first access.</summary>
+    public VoiceConversationViewModel VoiceConversationViewModel => _voiceConversationViewModel ??= CreateVoiceConversationViewModel();
+    private VoiceConversationViewModel? _voiceConversationViewModel;
+
+    private VoiceConversationViewModel CreateVoiceConversationViewModel()
+    {
+        var vm = new VoiceConversationViewModel(_activeMcpBaseUrl, _activeMcpApiKey);
+        vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
+        return vm;
+    }
+
     internal List<UnifiedSessionLog> _mcpSessions = new();
     internal Dictionary<string, UnifiedSessionLog> _mcpSessionsByPath = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>Cached sessions from ReloadFromMcpAsyncInternal, consumed once by the auto-triggered ALL_JSON load.</summary>
@@ -363,6 +375,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _todoViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey);
         _workspaceViewModel?.SetMcpBaseUrl(_defaultMcpBaseUrl, _defaultMcpApiKey);
+        _voiceConversationViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey);
     }
 
     private async Task<string?> ResolveActiveConnectionApiKeyAsync(WorkspaceConnectionOption option, string baseUrl)
@@ -1128,6 +1141,19 @@ public partial class MainWindowViewModel : ViewModelBase
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
                 _logger.LogWarning(ex, "[Workspace Switch] Workspace view refresh failed; continuing");
+            }
+        }
+
+        if (_voiceConversationViewModel != null)
+        {
+            _logger.LogDebug("[Workspace Switch] Refreshing voice view...");
+            try
+            {
+                await _voiceConversationViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                _logger.LogWarning(ex, "[Workspace Switch] Voice refresh failed; continuing");
             }
         }
 

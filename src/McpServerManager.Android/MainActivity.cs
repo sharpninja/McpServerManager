@@ -21,6 +21,7 @@ public class MainActivity : AvaloniaMainActivity<App>
     {
         global::Android.Util.Log.Info("McpSM", "[MainActivity] OnCreate entered");
         base.OnCreate(savedInstanceState);
+        AndroidActivityHost.Register(this);
         global::Android.Util.Log.Info("McpSM", "[MainActivity] OnCreate completed");
     }
 
@@ -35,6 +36,18 @@ public class MainActivity : AvaloniaMainActivity<App>
     {
         base.OnConfigurationChanged(newConfig);
         DeviceFormFactor.NotifyDisplayChanged();
+    }
+
+    protected override void OnResume()
+    {
+        base.OnResume();
+        AndroidActivityHost.Register(this);
+    }
+
+    public override void OnRequestPermissionsResult(int requestCode, string[]? permissions, Permission[] grantResults)
+    {
+        AndroidActivityHost.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+        base.OnRequestPermissionsResult(requestCode, permissions ?? [], grantResults);
     }
 
 #pragma warning disable CS0618 // OnBackPressed is deprecated; used here to preserve expected Android back behavior in Avalonia phone views.

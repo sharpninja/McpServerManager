@@ -35,6 +35,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Porcupine" Version="4.0.2">
+      <ExcludeAssets>buildTransitive</ExcludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
@@ -43,5 +46,15 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\Fonts\FiraCode-Regular.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AndroidAsset Include="Assets\Voice\WakeWords\*.ppn" />
+    <AndroidAsset Include="Assets\Voice\Porcupine\*.pv" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Place ABI-specific Porcupine native libs under Assets/Voice/Porcupine/Native/<abi>/libpv_porcupine.so -->
+    <AndroidNativeLibrary Include="Assets\Voice\Porcupine\Native\**\libpv_porcupine.so" />
   </ItemGroup>
 </Project>

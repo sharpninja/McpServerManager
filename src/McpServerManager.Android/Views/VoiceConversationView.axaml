@@ -1,0 +1,170 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:McpServerManager.Core.ViewModels"
+             xmlns:models="using:McpServerManager.Core.Models"
+             mc:Ignorable="d"
+             x:Class="McpServerManager.Android.Views.VoiceConversationView"
+             x:DataType="vm:VoiceConversationViewModel"
+             d:DesignWidth="900"
+             d:DesignHeight="700">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" RowSpacing="8" Margin="8">
+        <Border Grid.Row="0" Classes="phone-outline-card" Padding="10">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <SelectableTextBlock Text="{Binding SessionId}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <SelectableTextBlock Text="{Binding StatusText}" Classes="subtle-text" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <Button Grid.Column="1" Content="Start Session" Command="{Binding CreateSessionCommand}" MinWidth="110"/>
+                <Button Grid.Column="2" Content="Refresh" Command="{Binding RefreshStatusCommand}" MinWidth="90"/>
+                <Button Grid.Column="3" Content="End Session" Command="{Binding EndSessionCommand}" MinWidth="110"/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Classes="phone-outline-card" Padding="10">
+            <Grid ColumnDefinitions="Auto,120,Auto,*,Auto" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Language"/>
+                <TextBox Grid.Column="1" Text="{Binding Language, Mode=TwoWay}" Watermark="en-US"/>
+
+                <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="Last Turn"/>
+                <SelectableTextBlock Grid.Column="3"
+                                     Text="{Binding LastTurnId}"
+                                     VerticalAlignment="Center"
+                                     TextTrimming="CharacterEllipsis"/>
+
+                <SelectableTextBlock Grid.Column="4"
+                                     VerticalAlignment="Center"
+                                     Text="{Binding LastLatencyMs, StringFormat='{}{0} ms'}"/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Classes="phone-outline-card" Padding="10">
+            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                <TextBlock Grid.Row="0" Text="Manual Transcript Input (temporary Android integration slice)" FontWeight="SemiBold"/>
+                <Grid Grid.Row="1" ColumnDefinitions="Auto,220,Auto,*" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Wake Phrase"/>
+                    <ComboBox Grid.Column="1"
+                              x:Name="WakePhraseComboBox"
+                              HorizontalAlignment="Stretch"
+                              SelectionChanged="OnWakePhraseSelectionChanged"/>
+                    <CheckBox Grid.Column="2"
+                              x:Name="AutoListenOnWakeCheckBox"
+                              VerticalAlignment="Center"
+                              Content="Auto listen + send"
+                              IsChecked="True"/>
+                    <SelectableTextBlock Grid.Column="3"
+                                         VerticalAlignment="Center"
+                                         Classes="subtle-text"
+                                         Text="User-selectable wake phrase (saved on device)."/>
+                </Grid>
+                <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBox Grid.Column="0"
+                             MinHeight="80"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Text="{Binding TranscriptInput, Mode=TwoWay}"
+                             Watermark="Type transcript text here, then send to MCP voice endpoint..."/>
+                    <StackPanel Grid.Column="1" Spacing="8">
+                        <Button Content="Listen" Click="OnListenFillInputClick" MinWidth="96"/>
+                        <Button Content="Listen + Send" Click="OnListenAndSendClick" MinWidth="96"/>
+                        <Button Content="Wake Start" Click="OnWakeStartClick" MinWidth="96"/>
+                        <Button Content="Wake Stop" Click="OnWakeStopClick" MinWidth="96"/>
+                        <Button Content="Sim Wake" Click="OnSimWakeClick" MinWidth="96"/>
+                        <Button Content="Send Turn" Command="{Binding SubmitTurnCommand}" MinWidth="96"/>
+                        <Button Content="Interrupt" Command="{Binding InterruptCommand}" Click="OnInterruptClicked" MinWidth="96"/>
+                        <Button Content="Clear Input" Command="{Binding ClearTurnInputCommand}" MinWidth="96"/>
+                        <Button Content="Refresh Transcript" Command="{Binding RefreshTranscriptCommand}" MinWidth="96"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="3" Classes="phone-outline-card" Padding="10">
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <TextBlock Text="Assistant Display Text" FontWeight="SemiBold"/>
+                    <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" Padding="8" MinHeight="64">
+                        <ScrollViewer MaxHeight="120">
+                            <SelectableTextBlock Text="{Binding AssistantDisplayText}" TextWrapping="Wrap"/>
+                        </ScrollViewer>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Spacing="4">
+                    <TextBlock Text="Assistant Speak Text" FontWeight="SemiBold"/>
+                    <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" Padding="8" MinHeight="64">
+                        <ScrollViewer MaxHeight="120">
+                            <SelectableTextBlock Text="{Binding AssistantSpeakText}" TextWrapping="Wrap"/>
+                        </ScrollViewer>
+                    </Border>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Speak Reply" Click="OnSpeakReplyClick" MinWidth="96"/>
+                        <Button Content="Stop Audio" Click="OnStopAudioClick" MinWidth="96"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="4" ColumnDefinitions="2*,*" ColumnSpacing="8">
+            <Border Grid.Column="0" Classes="phone-outline-card" Padding="10">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                    <TextBlock Grid.Row="0" Text="Transcript History" FontWeight="SemiBold"/>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding TranscriptItems}" SelectionMode="Single">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:McpVoiceTranscriptEntry">
+                                <Border Padding="6" Margin="0,0,0,6" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1">
+                                    <Grid RowDefinitions="Auto,Auto" RowSpacing="4">
+                                        <SelectableTextBlock Grid.Row="0"
+                                                             FontWeight="SemiBold"
+                                                             Text="{Binding Role, StringFormat='{}{0}'}"/>
+                                        <SelectableTextBlock Grid.Row="0"
+                                                             HorizontalAlignment="Right"
+                                                             Classes="subtle-text"
+                                                             Text="{Binding TimestampUtc}"
+                                                             TextTrimming="CharacterEllipsis"/>
+                                        <SelectableTextBlock Grid.Row="1"
+                                                             TextWrapping="Wrap"
+                                                             Text="{Binding Text}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Classes="phone-outline-card" Padding="10">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                    <TextBlock Grid.Row="0" Text="Last Tool Calls" FontWeight="SemiBold"/>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding LastToolCalls}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:McpVoiceToolCallRecord">
+                                <Border Padding="6" Margin="0,0,0,6" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1">
+                                    <StackPanel Spacing="3">
+                                        <SelectableTextBlock FontWeight="SemiBold"
+                                                             Text="{Binding ToolName, StringFormat='{}{0}'}"/>
+                                        <SelectableTextBlock Classes="subtle-text"
+                                                             Text="{Binding Status, StringFormat='Status: {0}'}"/>
+                                        <SelectableTextBlock Classes="subtle-text"
+                                                             Text="{Binding ResultSummary}"
+                                                             TextWrapping="Wrap"/>
+                                        <SelectableTextBlock Foreground="IndianRed"
+                                                             Text="{Binding Error}"
+                                                             TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="5" Classes="phone-outline-card" Padding="8" IsVisible="{Binding IsBusy}">
+            <SelectableTextBlock Text="Working..." FontWeight="SemiBold"/>
+        </Border>
+    </Grid>
+</UserControl>

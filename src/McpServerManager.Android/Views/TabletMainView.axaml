@@ -17,6 +17,9 @@
             <TabItem Header="Todos" Classes="shell-tab">
                 <views:TodoListView DataContext="{Binding TodoViewModel}"/>
             </TabItem>
+            <TabItem Header="Voice" Classes="shell-tab">
+                <views:VoiceConversationView DataContext="{Binding VoiceConversationViewModel}"/>
+            </TabItem>
             <TabItem Header="Workspaces" Classes="shell-tab">
                 <views:WorkspaceView DataContext="{Binding WorkspaceViewModel}"/>
             </TabItem>

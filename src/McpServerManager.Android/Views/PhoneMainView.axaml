@@ -38,6 +38,9 @@
             <TabItem Header="Todos">
                 <views:PhoneTodoView DataContext="{Binding TodoViewModel}"/>
             </TabItem>
+            <TabItem Header="Voice">
+                <views:VoiceConversationView DataContext="{Binding VoiceConversationViewModel}"/>
+            </TabItem>
             <TabItem Header="Session Log">
                 <views:PhoneSessionLogView/>
             </TabItem>
