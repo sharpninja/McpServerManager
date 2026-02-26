@@ -372,6 +372,13 @@ public partial class MainWindowViewModel : ViewModelBase
             ? McpServerRestClientFactory.TryResolveApiKey(_activeMcpBaseUrl)
             : mcpApiKey?.Trim();
 
+        _logger.LogInformation(
+            "[Workspace Switch] ApplyActiveMcpBaseUrl: BaseUrl={BaseUrl}, ApiKey={ApiKeyPresent}, Bearer={BearerPresent}, WorkspacePath={WorkspacePath}",
+            _activeMcpBaseUrl,
+            !string.IsNullOrWhiteSpace(_activeMcpApiKey) ? $"set({_activeMcpApiKey?[..Math.Min(8, _activeMcpApiKey?.Length ?? 0)]}…)" : "null",
+            !string.IsNullOrWhiteSpace(_activeBearerToken) ? "set" : "null",
+            workspaceRootPath ?? "(none)");
+
         McpSessionService = new McpSessionLogService(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath, _activeBearerToken);
         _mcpTodoService = new McpTodoService(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath, _activeBearerToken);
         // Workspace endpoints always target the connection server, not the active workspace
@@ -1093,6 +1100,12 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             var selectedApiKey = await ResolveActiveConnectionApiKeyAsync(option, selectedBaseUrl).ConfigureAwait(true);
+            _logger.LogInformation(
+                "[Workspace Switch] Resolved for '{DisplayName}': BaseUrl={BaseUrl}, ApiKey={ApiKey}, Bearer={Bearer}, WorkspacePath={WorkspacePath}",
+                option.DisplayName, selectedBaseUrl,
+                !string.IsNullOrWhiteSpace(selectedApiKey) ? $"set({selectedApiKey[..Math.Min(8, selectedApiKey.Length)]}…)" : "null",
+                !string.IsNullOrWhiteSpace(_activeBearerToken) ? "set" : "null",
+                option.WorkspaceRootPath ?? "(none)");
             ApplyActiveMcpBaseUrl(selectedBaseUrl, selectedApiKey, option.WorkspaceRootPath);
             await RefreshAllViewsForConnectionChangeAsync().ConfigureAwait(true);
             _logger.LogInformation($"[Workspace Switch] Successfully connected to '{option.DisplayName}'");
@@ -1121,10 +1134,12 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             await ReloadFromMcpAsyncInternal().ConfigureAwait(true);
+            _logger.LogDebug("[Workspace Switch] Session logs refreshed OK");
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[Workspace Switch] Session log refresh failed (endpoint may not exist on target workspace); continuing with remaining views");
+            _logger.LogWarning(ex, "[Workspace Switch] Session log refresh failed ({ExType}: {ExMsg}); continuing",
+                ex.GetType().Name, ex.Message);
         }
 
         if (_todoViewModel != null)
@@ -1133,10 +1148,12 @@ public partial class MainWindowViewModel : ViewModelBase
             try
             {
                 await _todoViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
+                _logger.LogDebug("[Workspace Switch] Todo view refreshed OK");
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            catch (Exception ex)
             {
-                _logger.LogWarning(ex, "[Workspace Switch] Todo refresh failed; continuing");
+                _logger.LogWarning(ex, "[Workspace Switch] Todo refresh failed ({ExType}: {ExMsg}); continuing",
+                    ex.GetType().Name, ex.Message);
             }
         }
 
@@ -1146,10 +1163,12 @@ public partial class MainWindowViewModel : ViewModelBase
             try
             {
                 await _workspaceViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
+                _logger.LogDebug("[Workspace Switch] Workspace view refreshed OK");
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            catch (Exception ex)
             {
-                _logger.LogWarning(ex, "[Workspace Switch] Workspace view refresh failed; continuing");
+                _logger.LogWarning(ex, "[Workspace Switch] Workspace view refresh failed ({ExType}: {ExMsg}); continuing",
+                    ex.GetType().Name, ex.Message);
             }
         }
 
@@ -1159,10 +1178,12 @@ public partial class MainWindowViewModel : ViewModelBase
             try
             {
                 await _voiceConversationViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
+                _logger.LogDebug("[Workspace Switch] Voice view refreshed OK");
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            catch (Exception ex)
             {
-                _logger.LogWarning(ex, "[Workspace Switch] Voice refresh failed; continuing");
+                _logger.LogWarning(ex, "[Workspace Switch] Voice refresh failed ({ExType}: {ExMsg}); continuing",
+                    ex.GetType().Name, ex.Message);
             }
         }
 
@@ -1171,8 +1192,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task<McpWorkspaceHealthResult> ProbeWorkspaceConnectionHealthAsync(string baseUrl)
     {
+        _logger.LogInformation("[Workspace Switch] Probing health at {BaseUrl}...", baseUrl);
         var service = new McpWorkspaceService(baseUrl);
-        return await service.GetHealthAsync().ConfigureAwait(true);
+        var result = await service.GetHealthAsync().ConfigureAwait(true);
+        _logger.LogInformation("[Workspace Switch] Health probe for {BaseUrl}: Success={Success}, StatusCode={StatusCode}, Error={Error}",
+            baseUrl, result.Success, result.StatusCode, result.Error ?? "(none)");
+        return result;
     }
 
     private static string FormatHealthFailure(McpWorkspaceHealthResult health)
