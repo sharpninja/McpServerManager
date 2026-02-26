@@ -1051,13 +1051,6 @@ public partial class MainWindowViewModel : ViewModelBase
                 if (present)
                     return;
 
-                if (change.WorkspacePort is < 1 or > 65535)
-                {
-                    var portLabel = change.WorkspacePort?.ToString() ?? "n/a";
-                    StatusMessage = $"Saved {change.WorkspaceKey}, but workspace picker skipped it due to invalid port ({portLabel}).";
-                    return;
-                }
-
                 StatusMessage = $"Saved {change.WorkspaceKey}, but workspace picker did not include it after refresh.";
             }).ConfigureAwait(true);
         }

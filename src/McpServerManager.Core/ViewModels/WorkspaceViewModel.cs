@@ -41,7 +41,6 @@ public partial class WorkspaceViewModel : ViewModelBase
     [ObservableProperty] private string _editorWorkspacePath = "";
     [ObservableProperty] private string _editorTodoPath = "";
     [ObservableProperty] private string _editorDataDirectory = "";
-    [ObservableProperty] private string _editorWorkspacePortText = "";
     [ObservableProperty] private string _editorTunnelProvider = "";
     [ObservableProperty] private string _editorRunAs = "";
     [ObservableProperty] private bool _editorIsPrimary;
@@ -236,7 +235,6 @@ public partial class WorkspaceViewModel : ViewModelBase
         EditorWorkspacePath = "";
         EditorTodoPath = "";
         EditorDataDirectory = "";
-        EditorWorkspacePortText = "";
         EditorTunnelProvider = "";
         EditorRunAs = "";
         EditorIsPrimary = false;
@@ -409,20 +407,12 @@ public partial class WorkspaceViewModel : ViewModelBase
             return;
         }
 
-        if (!TryParseWorkspacePort(EditorWorkspacePortText, out var workspacePort, out var parseError))
-        {
-            StatusText = parseError;
-            return;
-        }
-
         var request = new McpWorkspaceCreateRequest
         {
             Name = NullIfWhiteSpace(EditorName),
             WorkspacePath = NullIfWhiteSpace(EditorWorkspacePath),
             TodoPath = NullIfWhiteSpace(EditorTodoPath),
             DataDirectory = NullIfWhiteSpace(EditorDataDirectory),
-            // MCP server create request now expects a non-null port; 0 means auto-assign.
-            WorkspacePort = workspacePort ?? 0,
             TunnelProvider = NullIfWhiteSpace(EditorTunnelProvider),
             RunAs = NullIfWhiteSpace(EditorRunAs),
             IsPrimary = EditorIsPrimary,
@@ -465,18 +455,11 @@ public partial class WorkspaceViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(key))
             return;
 
-        if (!TryParseWorkspacePort(EditorWorkspacePortText, out var workspacePort, out var parseError))
-        {
-            StatusText = parseError;
-            return;
-        }
-
         var request = new McpWorkspaceUpdateRequest
         {
             Name = NullIfWhiteSpace(EditorName),
             TodoPath = NullIfWhiteSpace(EditorTodoPath),
             DataDirectory = NullIfWhiteSpace(EditorDataDirectory),
-            WorkspacePort = workspacePort,
             TunnelProvider = NullIfWhiteSpace(EditorTunnelProvider),
             RunAs = NullIfWhiteSpace(EditorRunAs),
             IsPrimary = EditorIsPrimary,
@@ -519,8 +502,8 @@ public partial class WorkspaceViewModel : ViewModelBase
             flags.Add("Disabled");
         var flagsText = flags.Count == 0 ? "" : $" | {string.Join(", ", flags)}";
         var subtitle = string.IsNullOrWhiteSpace(item.WorkspacePath)
-            ? $"Port {item.WorkspacePort}{flagsText}"
-            : $"{item.WorkspacePath} | Port {item.WorkspacePort}{flagsText}";
+            ? flagsText.TrimStart(' ', '|').Trim()
+            : $"{item.WorkspacePath}{flagsText}";
         var searchable = string.Join(" ",
             new[]
             {
@@ -531,7 +514,6 @@ public partial class WorkspaceViewModel : ViewModelBase
                 item.DataDirectory,
                 item.TunnelProvider,
                 item.RunAs,
-                item.WorkspacePort.ToString(),
                 item.IsPrimary == true ? "primary" : null,
                 item.IsEnabled == false ? "disabled" : "enabled"
             }.Where(s => !string.IsNullOrWhiteSpace(s)));
@@ -575,7 +557,6 @@ public partial class WorkspaceViewModel : ViewModelBase
         EditorWorkspacePath = item.WorkspacePath ?? "";
         EditorTodoPath = item.TodoPath ?? "";
         EditorDataDirectory = item.DataDirectory ?? "";
-        EditorWorkspacePortText = item.WorkspacePort > 0 ? item.WorkspacePort.ToString() : "";
         EditorTunnelProvider = item.TunnelProvider ?? "";
         EditorRunAs = item.RunAs ?? "";
         EditorIsPrimary = item.IsPrimary ?? false;
@@ -775,7 +756,6 @@ public partial class WorkspaceViewModel : ViewModelBase
         {
             ChangeKind = changeKind,
             WorkspaceKey = key,
-            WorkspacePort = workspace?.WorkspacePort,
             IsPrimary = workspace?.IsPrimary,
             IsEnabled = workspace?.IsEnabled
         });
@@ -867,27 +847,6 @@ public partial class WorkspaceViewModel : ViewModelBase
         HealthIndicatorTooltip = tooltip;
     }
 
-    private static bool TryParseWorkspacePort(string? text, out int? port, out string error)
-    {
-        port = null;
-        error = "";
-        var raw = (text ?? "").Trim();
-        if (raw.Length == 0) return true;
-
-        if (!int.TryParse(raw, out var parsed))
-        {
-            error = "Workspace Port must be a whole number";
-            return false;
-        }
-        if (parsed < 1 || parsed > 65535)
-        {
-            error = "Workspace Port must be between 1 and 65535";
-            return false;
-        }
-        port = parsed;
-        return true;
-    }
-
     private static string FormatProcessStatus(McpWorkspaceProcessStatus status)
     {
         var state = status.IsRunning ? "Running" : "Stopped";
@@ -939,7 +898,6 @@ public sealed class WorkspaceCatalogChangeEvent
 {
     public WorkspaceCatalogChangeKind ChangeKind { get; init; }
     public string WorkspaceKey { get; init; } = "";
-    public int? WorkspacePort { get; init; }
     public bool? IsPrimary { get; init; }
     public bool? IsEnabled { get; init; }
 }

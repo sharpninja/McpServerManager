@@ -118,7 +118,7 @@
             <StackPanel Spacing="8">
               <SelectableTextBlock Text="{Binding EditorModeText}" FontWeight="SemiBold"/>
 
-              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                 <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Key"/>
                 <TextBox Grid.Row="0" Grid.Column="1"
                          Text="{Binding EditorKey}"
@@ -138,22 +138,19 @@
                 <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Data Directory"/>
                 <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding EditorDataDirectory, Mode=TwoWay}"/>
 
-                <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Text="Workspace Port"/>
-                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding EditorWorkspacePortText, Mode=TwoWay}"/>
+                <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Text="Tunnel Provider"/>
+                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding EditorTunnelProvider, Mode=TwoWay}"/>
 
-                <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Text="Tunnel Provider"/>
-                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding EditorTunnelProvider, Mode=TwoWay}"/>
+                <TextBlock Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Text="Run As"/>
+                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding EditorRunAs, Mode=TwoWay}"/>
 
-                <TextBlock Grid.Row="7" Grid.Column="0" VerticalAlignment="Center" Text="Run As"/>
-                <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding EditorRunAs, Mode=TwoWay}"/>
-
-                <TextBlock Grid.Row="8" Grid.Column="0" VerticalAlignment="Center" Text="Is Primary"/>
-                <CheckBox Grid.Row="8" Grid.Column="1"
+                <TextBlock Grid.Row="7" Grid.Column="0" VerticalAlignment="Center" Text="Is Primary"/>
+                <CheckBox Grid.Row="7" Grid.Column="1"
                           IsChecked="{Binding EditorIsPrimary, Mode=TwoWay}"
                           VerticalAlignment="Center"/>
 
-                <TextBlock Grid.Row="9" Grid.Column="0" VerticalAlignment="Center" Text="Is Enabled"/>
-                <CheckBox Grid.Row="9" Grid.Column="1"
+                <TextBlock Grid.Row="8" Grid.Column="0" VerticalAlignment="Center" Text="Is Enabled"/>
+                <CheckBox Grid.Row="8" Grid.Column="1"
                           IsChecked="{Binding EditorIsEnabled, Mode=TwoWay}"
                           VerticalAlignment="Center"/>
               </Grid>

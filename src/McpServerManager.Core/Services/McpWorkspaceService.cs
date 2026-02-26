@@ -147,20 +147,11 @@ public sealed class McpWorkspaceService
         if (workspace == null)
             return new McpWorkspaceHealthResult { Success = false, Error = $"Workspace '{key}' not found." };
 
-        if (workspace.WorkspacePort is < 1 or > 65535)
-        {
-            return new McpWorkspaceHealthResult
-            {
-                Success = false,
-                Error = $"Workspace '{key}' has invalid port '{workspace.WorkspacePort}'."
-            };
-        }
-
         var candidates = new[] { "/health", "/mcp/health" };
         McpWorkspaceHealthResult? lastResult = null;
         foreach (var candidate in candidates)
         {
-            lastResult = await ProbeHealthAsync(_baseUri, workspace.WorkspacePort, candidate, cancellationToken).ConfigureAwait(true);
+            lastResult = await ProbeHealthAsync(_baseUri, _baseUri.Port, candidate, cancellationToken).ConfigureAwait(true);
             if (lastResult.Success || lastResult.StatusCode != 404)
                 return lastResult;
         }
@@ -283,7 +274,6 @@ public sealed class McpWorkspaceService
             Name = item.Name,
             TodoPath = item.TodoPath,
             DataDirectory = item.DataDirectory,
-            WorkspacePort = item.WorkspacePort,
             TunnelProvider = item.TunnelProvider,
             IsPrimary = item.IsPrimary,
             IsEnabled = item.IsEnabled,
@@ -303,7 +293,6 @@ public sealed class McpWorkspaceService
         {
             WorkspacePath = request.WorkspacePath ?? string.Empty,
             Name = request.Name,
-            WorkspacePort = request.WorkspacePort ?? 0,
             TodoPath = request.TodoPath,
             DataDirectory = request.DataDirectory,
             TunnelProvider = request.TunnelProvider,
@@ -324,7 +313,6 @@ public sealed class McpWorkspaceService
             Name = request.Name,
             TodoPath = request.TodoPath,
             DataDirectory = request.DataDirectory,
-            WorkspacePort = request.WorkspacePort,
             TunnelProvider = request.TunnelProvider,
             RunAs = request.RunAs,
             IsPrimary = request.IsPrimary,

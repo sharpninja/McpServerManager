@@ -27,9 +27,6 @@ public sealed class McpWorkspaceItem
     [JsonPropertyName("dataDirectory")]
     public string? DataDirectory { get; set; }
 
-    [JsonPropertyName("workspacePort")]
-    public int WorkspacePort { get; set; }
-
     [JsonPropertyName("tunnelProvider")]
     public string? TunnelProvider { get; set; }
 
@@ -68,9 +65,6 @@ public sealed class McpWorkspaceCreateRequest
 
     [JsonPropertyName("name")]
     public string? Name { get; set; }
-
-    [JsonPropertyName("workspacePort")]
-    public int? WorkspacePort { get; set; }
 
     [JsonPropertyName("todoPath")]
     public string? TodoPath { get; set; }
@@ -113,9 +107,6 @@ public sealed class McpWorkspaceUpdateRequest
 
     [JsonPropertyName("dataDirectory")]
     public string? DataDirectory { get; set; }
-
-    [JsonPropertyName("workspacePort")]
-    public int? WorkspacePort { get; set; }
 
     [JsonPropertyName("tunnelProvider")]
     public string? TunnelProvider { get; set; }
