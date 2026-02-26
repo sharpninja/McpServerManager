@@ -256,18 +256,9 @@ public partial class ConnectionViewModel : ViewModelBase
             }
         }
 
-        // Before prompting OIDC interactive sign-in, try to acquire the default API key
-        // without any bearer token. The /api-key endpoint is unprotected and returns a
-        // read-only key that allows basic connectivity without requiring the user to
-        // complete the OIDC device authorization flow.
-        var preOidcDefaultKey = await TryFetchDefaultApiKeyFallbackAsync(mcpBaseUrl).ConfigureAwait(true);
-        if (!string.IsNullOrWhiteSpace(preOidcDefaultKey))
-        {
-            _logger.LogInformation("Default API key acquired from /api-key without OIDC; skipping interactive sign-in for {BaseUrl}", mcpBaseUrl);
-            OidcStatusMessage = "Opening MCP…";
-            return preOidcDefaultKey;
-        }
-
+        // NOTE: We intentionally do NOT try /api-key before OIDC here.
+        // The default API key from /api-key only works for the primary workspace.
+        // When OIDC is enabled, we need a Bearer token for cross-workspace auth.
         _logger.LogInformation("OIDC enabled for {BaseUrl}; starting device authorization", mcpBaseUrl);
         var prompt = await McpOidcAuthService
             .StartDeviceAuthorizationAsync(authConfig!, mcpBaseUrl)
