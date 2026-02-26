@@ -1,0 +1,82 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:McpServerManager.Core.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="400"
+        x:Class="McpServerManager.Desktop.Views.ConnectionWindow"
+        x:DataType="vm:ConnectionViewModel"
+        Title="Connect to MCP Server"
+        Width="420" Height="400"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        SystemDecorations="Full">
+
+    <Border Padding="24" VerticalAlignment="Center">
+        <StackPanel Spacing="12">
+            <TextBlock Text="Connect to MCP Server"
+                       FontSize="22"
+                       FontWeight="SemiBold"/>
+
+            <TextBlock Text="Host"/>
+            <TextBox Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                     Watermark="e.g. localhost"
+                     IsEnabled="{Binding !IsConnecting}"/>
+
+            <TextBlock Text="Port"/>
+            <TextBox Text="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                     Watermark="e.g. 7147"
+                     IsEnabled="{Binding !IsConnecting}"/>
+
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="Red" TextWrapping="Wrap"
+                       IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+            <Border Padding="12"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                    CornerRadius="4"
+                    IsVisible="{Binding IsOidcSignInRequired}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Sign In Required"
+                               FontSize="16"
+                               FontWeight="SemiBold"/>
+
+                    <TextBlock Text="Use the code below to authorize this device."
+                               TextWrapping="Wrap" Opacity="0.7"/>
+
+                    <TextBlock Text="User Code"
+                               IsVisible="{Binding OidcUserCode, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBox Text="{Binding OidcUserCode}"
+                             IsReadOnly="True"
+                             IsVisible="{Binding OidcUserCode, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <TextBlock Text="Verification URL"
+                               IsVisible="{Binding OidcVerificationUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <SelectableTextBlock Text="{Binding OidcVerificationUrl}"
+                                         TextWrapping="Wrap"
+                                         IsVisible="{Binding OidcVerificationUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <Button Content="Open Sign-In Page"
+                            Command="{Binding OpenOidcVerificationUrlCommand}"
+                            IsVisible="{Binding OidcCanOpenBrowser}"/>
+
+                    <TextBlock Text="{Binding OidcStatusMessage}"
+                               TextWrapping="Wrap" Opacity="0.7"
+                               IsVisible="{Binding OidcStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+            </Border>
+
+            <Button Content="Connect"
+                    Command="{Binding ConnectCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    IsEnabled="{Binding !IsConnecting}"
+                    Margin="0,8,0,0"/>
+
+            <TextBlock Text="Connecting..."
+                       Opacity="0.7"
+                       HorizontalAlignment="Center"
+                       IsVisible="{Binding IsConnecting}"/>
+        </StackPanel>
+    </Border>
+</Window>
