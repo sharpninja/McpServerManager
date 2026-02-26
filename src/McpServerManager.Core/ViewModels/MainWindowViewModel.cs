@@ -53,6 +53,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private Uri _defaultMcpBaseUri = new("http://localhost");
     private string _activeMcpBaseUrl = "";
     private string? _activeMcpApiKey;
+    private bool _preferExplicitApiKeys;
     internal McpSessionLogService McpSessionService = null!;
     private McpTodoService _mcpTodoService = null!;
     private McpWorkspaceService _mcpWorkspaceService = null!;
@@ -303,16 +304,24 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl)
+        : this(clipboardService, mcpBaseUrl, mcpApiKey: null)
+    {
+    }
+
+    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey)
     {
         _clipboardService = clipboardService;
-        InitializeMcpEndpoint(mcpBaseUrl);
+        InitializeMcpEndpoint(mcpBaseUrl, mcpApiKey);
         RegisterCqrsHandlers();
     }
 
-    private void InitializeMcpEndpoint(string mcpBaseUrl)
+    private void InitializeMcpEndpoint(string mcpBaseUrl, string? initialApiKey = null)
     {
         _defaultMcpBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
-        _defaultMcpApiKey = McpServerRestClientFactory.TryResolveApiKey(_defaultMcpBaseUrl);
+        _preferExplicitApiKeys = !string.IsNullOrWhiteSpace(initialApiKey);
+        _defaultMcpApiKey = string.IsNullOrWhiteSpace(initialApiKey)
+            ? McpServerRestClientFactory.TryResolveApiKey(_defaultMcpBaseUrl)
+            : initialApiKey.Trim();
         _defaultMcpBaseUri = new Uri(_defaultMcpBaseUrl, UriKind.Absolute);
         _workspaceCatalogService = new McpWorkspaceService(_defaultMcpBaseUrl, _defaultMcpApiKey);
         ApplyActiveMcpBaseUrl(_defaultMcpBaseUrl, _defaultMcpApiKey);
@@ -358,6 +367,17 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task<string?> ResolveActiveConnectionApiKeyAsync(WorkspaceConnectionOption option, string baseUrl)
     {
+        // Android OIDC flow can inject an explicit token that should be reused across workspace switches.
+        if (_preferExplicitApiKeys)
+        {
+            if (!string.IsNullOrWhiteSpace(option.ApiKey))
+                return option.ApiKey;
+            if (!string.IsNullOrWhiteSpace(_activeMcpApiKey))
+                return _activeMcpApiKey;
+            if (!string.IsNullOrWhiteSpace(_defaultMcpApiKey))
+                return _defaultMcpApiKey;
+        }
+
         // Workspace default API keys are per-workspace and rotate on server restart.
         // Prefer fetching the current default key from /api-key for the selected connection.
         var fetchedDefaultKey = await McpServerRestClientFactory

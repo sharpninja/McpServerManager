@@ -1,0 +1,8 @@
+02-25 16:06:02.973  6035  6035 I McpSM   : [ConnectionDialogView] UI_READY ConnectDialog input controls ready
+02-25 16:06:02.974  6035  6035 I McpSM   : [ConnectionDialogView] UI_READY ConnectDialog input controls ready
+02-25 16:06:02.979  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS HostTextBox Visible=True Enabled=True Bounds=[0,79,1222,33.5] RootBounds=[0,0,1280,716]
+02-25 16:06:02.980  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS HostTextBox Visible=True Enabled=True Bounds=[0,79,1222,33.5] RootBounds=[0,0,1280,716]
+02-25 16:06:02.981  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS PortTextBox Visible=True Enabled=True Bounds=[0,158.5,1222,33.5] RootBounds=[0,0,1280,716]
+02-25 16:06:02.982  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS PortTextBox Visible=True Enabled=True Bounds=[0,158.5,1222,33.5] RootBounds=[0,0,1280,716]
+02-25 16:06:02.982  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS ConnectButton Visible=True Enabled=True Bounds=[0,212,1222,35] RootBounds=[0,0,1280,716]
+02-25 16:06:02.983  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS ConnectButton Visible=True Enabled=True Bounds=[0,212,1222,35] RootBounds=[0,0,1280,716]

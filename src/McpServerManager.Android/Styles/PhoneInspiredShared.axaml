@@ -1,0 +1,62 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Style Selector="Border.phone-card">
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ItemBorderBrush}"/>
+    <Setter Property="Background" Value="{DynamicResource SystemAltHighColor}"/>
+  </Style>
+
+  <Style Selector="Border.phone-toolbar-card">
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ItemBorderBrush}"/>
+    <Setter Property="Background" Value="{DynamicResource StatusBarBrush}"/>
+  </Style>
+
+  <Style Selector="Border.phone-outline-card">
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ItemBorderBrush}"/>
+    <Setter Property="Background" Value="Transparent"/>
+  </Style>
+
+  <Style Selector="Border.phone-divider">
+    <Setter Property="Height" Value="1"/>
+    <Setter Property="Background" Value="{DynamicResource DividerBrush}"/>
+  </Style>
+
+  <Style Selector="GridSplitter.phone-splitter">
+    <Setter Property="Background" Value="{DynamicResource SeparatorBrush}"/>
+    <Setter Property="Opacity" Value="1"/>
+  </Style>
+
+  <Style Selector="SelectableTextBlock.subtle-text">
+    <Setter Property="Foreground" Value="{DynamicResource SubtleForeground}"/>
+  </Style>
+
+  <Style Selector="TextBlock.subtle-text">
+    <Setter Property="Foreground" Value="{DynamicResource SubtleForeground}"/>
+  </Style>
+
+  <Style Selector="SelectableTextBlock.section-title">
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="FontSize" Value="16"/>
+  </Style>
+
+  <Style Selector="TextBlock.section-title">
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="FontSize" Value="16"/>
+  </Style>
+
+  <Style Selector="TabControl.shell-tabs">
+    <Setter Property="Background" Value="Transparent"/>
+  </Style>
+
+  <Style Selector="TabItem.shell-tab">
+    <Setter Property="FontSize" Value="16"/>
+    <Setter Property="Padding" Value="12,8"/>
+  </Style>
+
+</Styles>

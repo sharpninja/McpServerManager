@@ -8,24 +8,26 @@
              x:Class="McpServerManager.Android.Views.TabletMainView"
              x:DataType="vm:MainWindowViewModel">
 
-    <Grid RowDefinitions="*,Auto">
-        <TabControl Grid.Row="0">
-            <TabItem Header="Request Tracker">
+    <Grid RowDefinitions="*,Auto" Background="{DynamicResource ThemeBackgroundBrush}">
+        <Border Grid.Row="0" Margin="6,6,6,4" Classes="phone-outline-card">
+            <TabControl Classes="shell-tabs">
+            <TabItem Header="Request Tracker" Classes="shell-tab">
                 <views:McpServerManagerTabletView/>
             </TabItem>
-            <TabItem Header="Todos">
+            <TabItem Header="Todos" Classes="shell-tab">
                 <views:TodoListView DataContext="{Binding TodoViewModel}"/>
             </TabItem>
-            <TabItem Header="Workspaces">
+            <TabItem Header="Workspaces" Classes="shell-tab">
                 <views:WorkspaceView DataContext="{Binding WorkspaceViewModel}"/>
             </TabItem>
-            <TabItem Header="Logs">
+            <TabItem Header="Logs" Classes="shell-tab">
                 <views:LogView DataContext="{Binding LogViewModel}"/>
             </TabItem>
         </TabControl>
+        </Border>
 
         <!-- Status Bar -->
-        <views:AnimatedStatusBar Grid.Row="1" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
+        <views:AnimatedStatusBar Grid.Row="1" Margin="6,0,6,6" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
             <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                 <SelectableTextBlock x:Name="StatusMessageText"
                                      Grid.Column="0"
@@ -52,7 +54,10 @@
                          VerticalAlignment="Center"
                          HorizontalAlignment="Center"
                          ToolTip.Tip="{Binding WorkspaceHealthIndicatorTooltip}"/>
-                <SelectableTextBlock Grid.Column="3" Text="{Binding AppVersionDisplay}" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
+                <SelectableTextBlock Grid.Column="3"
+                                     Classes="subtle-text"
+                                     Text="{Binding AppVersionDisplay}"
+                                     VerticalAlignment="Center"/>
             </Grid>
         </views:AnimatedStatusBar>
 
@@ -64,9 +69,7 @@
                 PointerPressed="StatusDialogOverlay_OnPointerPressed">
             <Grid VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20" MaxWidth="700">
                 <Border Background="{DynamicResource ThemeBackgroundBrush}"
-                        BorderBrush="{DynamicResource ItemBorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
+                        Classes="phone-outline-card"
                         Padding="14"
                         MinWidth="420"
                         PointerPressed="StatusDialogContent_OnPointerPressed">

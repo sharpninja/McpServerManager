@@ -20,17 +20,26 @@
         </Style>
     </UserControl.Styles>
 
-    <StackPanel VerticalAlignment="Center" Spacing="12" Margin="16">
+    <Border x:Name="RootCard"
+            Classes="phone-card"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Stretch"
+            Margin="12"
+            Padding="16">
+    <StackPanel VerticalAlignment="Center" Spacing="12">
         <SelectableTextBlock Text="Connect to Server"
-                   FontSize="28" FontWeight="SemiBold"/>
+                             FontSize="28"
+                             FontWeight="SemiBold"/>
 
         <SelectableTextBlock Text="Host" FontSize="18"/>
-        <TextBox Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+        <TextBox x:Name="HostTextBox"
+                 Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                  Watermark="e.g. 10.0.2.2"
                  IsEnabled="{Binding !IsConnecting}"/>
 
         <SelectableTextBlock Text="Port" FontSize="18"/>
-        <TextBox Text="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+        <TextBox x:Name="PortTextBox"
+                 Text="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                  Watermark="e.g. 7147"
                  IsEnabled="{Binding !IsConnecting}"/>
 
@@ -38,7 +47,48 @@
                    Foreground="Red" TextWrapping="Wrap"
                    IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-        <Button Content="Connect"
+        <Border x:Name="OidcPanel"
+                Classes="phone-section-card"
+                Padding="12"
+                IsVisible="{Binding IsOidcSignInRequired}">
+            <StackPanel Spacing="8">
+                <SelectableTextBlock Text="Sign In Required"
+                                     FontSize="18"
+                                     FontWeight="SemiBold"/>
+
+                <SelectableTextBlock Text="Use the code below to authorize this device."
+                                     Foreground="{DynamicResource SubtleForeground}"
+                                     TextWrapping="Wrap"/>
+
+                <SelectableTextBlock Text="User Code"
+                                     FontSize="16"
+                                     IsVisible="{Binding OidcUserCode, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                <TextBox Text="{Binding OidcUserCode}"
+                         IsReadOnly="True"
+                         IsVisible="{Binding OidcUserCode, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                <SelectableTextBlock Text="Verification URL"
+                                     FontSize="16"
+                                     IsVisible="{Binding OidcVerificationUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                <SelectableTextBlock Text="{Binding OidcVerificationUrl}"
+                                     TextWrapping="Wrap"
+                                     IsVisible="{Binding OidcVerificationUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                <Button x:Name="OpenSignInPageButton"
+                        Content="Open Sign-In Page"
+                        Command="{Binding OpenOidcVerificationUrlCommand}"
+                        IsVisible="{Binding OidcCanOpenBrowser}"
+                        IsEnabled="{Binding OidcCanOpenBrowser}"/>
+
+                <SelectableTextBlock Text="{Binding OidcStatusMessage}"
+                                     Foreground="{DynamicResource SubtleForeground}"
+                                     TextWrapping="Wrap"
+                                     IsVisible="{Binding OidcStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+        </Border>
+
+        <Button x:Name="ConnectButton"
+                Content="Connect"
                 Command="{Binding ConnectCommand}"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
@@ -46,8 +96,9 @@
                 Margin="0,8,0,0"/>
 
         <SelectableTextBlock Text="Connecting..."
-                   Foreground="{DynamicResource SubtleForeground}"
-                   HorizontalAlignment="Center"
-                   IsVisible="{Binding IsConnecting}"/>
+                             Foreground="{DynamicResource SubtleForeground}"
+                             HorizontalAlignment="Center"
+                             IsVisible="{Binding IsConnecting}"/>
     </StackPanel>
+    </Border>
 </UserControl>

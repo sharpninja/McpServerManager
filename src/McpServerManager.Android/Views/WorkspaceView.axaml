@@ -8,8 +8,9 @@
              x:Class="McpServerManager.Android.Views.WorkspaceView"
              x:DataType="vm:WorkspaceViewModel">
 
-  <Grid RowDefinitions="Auto,Auto,Auto,*">
-    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="4">
+  <Grid RowDefinitions="Auto,Auto,Auto,*" Background="{DynamicResource ThemeBackgroundBrush}" Margin="6">
+    <Border Grid.Row="0" Classes="phone-toolbar-card" Padding="8" Margin="0,0,0,6">
+    <StackPanel Orientation="Horizontal" Spacing="6">
       <Button Content="+ New" Command="{Binding NewWorkspaceCommand}" Padding="8,4"/>
       <Button Content="Refresh" Command="{Binding RefreshCommand}" Padding="8,4"/>
       <Button Content="Reload" Command="{Binding OpenSelectedWorkspaceCommand}" Padding="8,4"/>
@@ -21,8 +22,10 @@
       <Button Content="Stop" Command="{Binding StopSelectedWorkspaceCommand}" Padding="8,4"/>
       <Button Content="Delete" Command="{Binding DeleteSelectedCommand}" Padding="8,4"/>
     </StackPanel>
+    </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="4,0,4,4">
+    <Border Grid.Row="1" Classes="phone-toolbar-card" Padding="8" Margin="0,0,0,6">
+    <Grid ColumnDefinitions="*,Auto">
       <TextBox Grid.Column="0"
                Text="{Binding FilterText, Mode=TwoWay}"
                Watermark="Filter workspaces..."/>
@@ -32,18 +35,19 @@
               Margin="4,0,0,0"
               Padding="8,4"/>
     </Grid>
+    </Border>
 
-    <SelectableTextBlock Grid.Row="2"
-                         Text="{Binding StatusText}"
-                         Margin="8,0,8,4"
-                         FontSize="12"
-                         Foreground="Gray"/>
+    <Border Grid.Row="2" Classes="phone-outline-card" Padding="8,6" Margin="0,0,0,6">
+      <SelectableTextBlock Text="{Binding StatusText}" FontSize="12" Classes="subtle-text"/>
+    </Border>
 
     <Grid Grid.Row="3" RowDefinitions="1*,4,2*">
-      <Border Grid.Row="0" Background="{DynamicResource SystemAltHighColor}" Margin="4">
+      <Border Grid.Row="0" Classes="phone-card" Padding="4">
         <ListBox ItemsSource="{Binding FilteredItems}"
                  SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
-                 Margin="0">
+                 Margin="0"
+                 Background="Transparent"
+                 BorderThickness="0">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:WorkspaceListEntry">
               <Border Padding="4" Margin="2" CornerRadius="4" Background="Transparent">
@@ -56,7 +60,7 @@
                                TextTrimming="CharacterEllipsis"/>
                     <TextBlock Text="{Binding Subtitle}"
                                FontSize="11"
-                               Foreground="{DynamicResource SystemBaseMediumColor}"
+                               Foreground="{DynamicResource SubtleForeground}"
                                TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
               </Border>
@@ -66,11 +70,10 @@
       </Border>
 
       <GridSplitter Grid.Row="1"
-                    Background="Gray"
-                    Opacity="0.4"
+                    Classes="phone-splitter"
                     ResizeDirection="Rows"/>
 
-      <Border Grid.Row="2" Padding="8">
+      <Border Grid.Row="2" Classes="phone-card" Padding="8">
         <ScrollViewer>
           <StackPanel Spacing="8">
             <SelectableTextBlock Text="{Binding EditorModeText}" FontWeight="SemiBold"/>
@@ -118,7 +121,7 @@
             <SelectableTextBlock Text="Workspace Prompt Template" FontWeight="SemiBold"/>
             <TextBlock Text="Leave blank to inherit the global prompt template."
                        FontSize="11"
-                       Foreground="Gray"
+                       Foreground="{DynamicResource SubtleForeground}"
                        TextWrapping="Wrap"/>
             <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
                     BorderThickness="1"
@@ -134,7 +137,7 @@
             <SelectableTextBlock Text="Status Prompt Override" FontWeight="SemiBold"/>
             <TextBlock Text="Optional workspace-specific override for status generation. Leave blank to inherit."
                        FontSize="11"
-                       Foreground="Gray"
+                       Foreground="{DynamicResource SubtleForeground}"
                        TextWrapping="Wrap"/>
             <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
                     BorderThickness="1"
@@ -150,7 +153,7 @@
             <SelectableTextBlock Text="Implement Prompt Override" FontWeight="SemiBold"/>
             <TextBlock Text="Optional workspace-specific override for implement generation. Leave blank to inherit."
                        FontSize="11"
-                       Foreground="Gray"
+                       Foreground="{DynamicResource SubtleForeground}"
                        TextWrapping="Wrap"/>
             <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
                     BorderThickness="1"
@@ -166,7 +169,7 @@
             <SelectableTextBlock Text="Plan Prompt Override" FontWeight="SemiBold"/>
             <TextBlock Text="Optional workspace-specific override for plan generation. Leave blank to inherit."
                        FontSize="11"
-                       Foreground="Gray"
+                       Foreground="{DynamicResource SubtleForeground}"
                        TextWrapping="Wrap"/>
             <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
                     BorderThickness="1"
@@ -179,7 +182,7 @@
                                  WordWrap="True"/>
             </Border>
 
-            <TextBlock Text="{Binding ProcessStatusText}" TextWrapping="Wrap" Foreground="Gray"/>
+            <TextBlock Text="{Binding ProcessStatusText}" TextWrapping="Wrap" Foreground="{DynamicResource SubtleForeground}"/>
 
             <StackPanel Orientation="Horizontal" Spacing="4">
               <Button Content="Save" Command="{Binding SaveEditorCommand}" Padding="12,4"/>

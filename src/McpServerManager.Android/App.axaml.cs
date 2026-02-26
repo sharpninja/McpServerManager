@@ -27,17 +27,38 @@ public partial class App : Application
         if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
         {
             DisableAvaloniaDataAnnotationValidation();
+            AndroidLogcatBridge.EnsureInitialized();
+            AndroidOidcJwtCacheInvalidationMonitor.EnsureInitialized();
+            global::Android.Util.Log.Info("McpSM", "[App] OnFrameworkInitializationCompleted entered (Android)");
 
             try
             {
                 var connectionVm = new ConnectionViewModel();
+                connectionVm.SetExternalUrlOpener(AndroidBrowserService.TryOpenUrl);
+                connectionVm.SetOidcPostTokenForegroundActivator(AndroidBrowserService.TryBringAppToForeground);
+                connectionVm.SetOidcTokenCacheAccessors(
+                    () => AndroidConnectionPreferencesService.TryLoadOidcJwt(connectionVm.Host, connectionVm.Port, out var jwtToken)
+                        ? jwtToken
+                        : null,
+                    token =>
+                    {
+                        if (string.IsNullOrWhiteSpace(token))
+                        {
+                            AndroidConnectionPreferencesService.ClearOidcJwt();
+                            return;
+                        }
+
+                        AndroidConnectionPreferencesService.SaveOidcJwt(connectionVm.Host, connectionVm.Port, token);
+                    });
                 var connectionView = new ConnectionDialogView { DataContext = connectionVm };
                 singleView.MainView = connectionView;
+                var persistNextConnection = true;
 
-                void OpenMainView(string mcpBaseUrl, bool persistConnection)
+                void OpenMainView(string mcpBaseUrl, string? mcpApiKey, bool persistConnection)
                 {
                     try
                     {
+                        _logger.LogInformation("Opening main Android view for {McpBaseUrl}. TokenPresent={HasToken}, PersistConnection={PersistConnection}", mcpBaseUrl, !string.IsNullOrWhiteSpace(mcpApiKey), persistConnection);
                         if (persistConnection && Uri.TryCreate(mcpBaseUrl, UriKind.Absolute, out var uri))
                         {
                             AndroidConnectionPreferencesService.Save(
@@ -46,7 +67,7 @@ public partial class App : Application
                         }
 
                         var clipboardService = new AndroidClipboardService();
-                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl);
+                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey);
                         singleView.MainView = new AdaptiveMainView { DataContext = vm };
                         vm.InitializeAfterWindowShown();
                     }
@@ -59,18 +80,22 @@ public partial class App : Application
                     }
                 }
 
-                connectionVm.Connected += mcpBaseUrl =>
+                connectionVm.Connected += connection =>
                 {
-                    OpenMainView(mcpBaseUrl, persistConnection: true);
+                    _logger.LogInformation("Connection dialog signaled Connected for {McpBaseUrl}. TokenPresent={HasToken}", connection.BaseUrl, !string.IsNullOrWhiteSpace(connection.ApiKey));
+                    var shouldPersist = persistNextConnection;
+                    persistNextConnection = true;
+                    OpenMainView(connection.BaseUrl, connection.ApiKey, persistConnection: shouldPersist);
                 };
 
                 if (AndroidConnectionPreferencesService.TryLoad(out var savedHost, out var savedPort))
                 {
+                    _logger.LogInformation("Loaded saved Android connection {Host}:{Port}; auto-connecting", savedHost, savedPort);
                     connectionVm.Host = savedHost;
                     connectionVm.Port = savedPort;
                     connectionVm.ErrorMessage = "";
-                    connectionVm.IsConnecting = true;
-                    OpenMainView($"http://{savedHost}:{savedPort}", persistConnection: false);
+                    persistNextConnection = false;
+                    connectionVm.ConnectCommand.Execute(null);
                 }
             }
             catch (Exception ex)

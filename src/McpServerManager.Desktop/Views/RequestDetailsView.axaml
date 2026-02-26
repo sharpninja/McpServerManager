@@ -13,15 +13,26 @@
       <conv:CountToVisibilityConverter x:Key="CountToVisibility"/>
   </UserControl.Resources>
 
-  <ScrollViewer>
-    <StackPanel Spacing="10" Margin="10">
+  <UserControl.Styles>
+    <Style Selector="Expander">
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="0,2"/>
+      <Setter Property="IsExpanded" Value="True"/>
+    </Style>
+    <Style Selector="Expander /template/ Border#ExpanderContent">
+      <Setter Property="Padding" Value="4"/>
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer Background="{DynamicResource ThemeBackgroundBrush}">
+    <StackPanel Spacing="8" Margin="8">
       <!-- Header -->
       <Grid ColumnDefinitions="*, Auto">
         <StackPanel Grid.Column="0">
           <SelectableTextBlock Text="{Binding QueryTitle}" FontSize="20" FontWeight="Bold" TextWrapping="Wrap" />
-          <SelectableTextBlock Text="{Binding RequestId}" FontSize="14" Foreground="Gray" />
+          <SelectableTextBlock Text="{Binding RequestId}" FontSize="14" Foreground="{DynamicResource SubtleForeground}" />
         </StackPanel>
-        <SelectableTextBlock Grid.Column="1" Text="{Binding TimestampLocalDisplay}" FontSize="14" Foreground="Gray" />
+        <SelectableTextBlock Grid.Column="1" Text="{Binding TimestampLocalDisplay}" FontSize="14" Foreground="{DynamicResource SubtleForeground}" />
       </Grid>
 
       <!-- Metadata Badges -->
@@ -29,7 +40,7 @@
         <WrapPanel.Styles>
           <Style Selector="Border">
             <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Background" Value="{DynamicResource BadgeBrush}"/>
             <Setter Property="Padding" Value="6,2"/>
             <Setter Property="Margin" Value="0,0,8,8"/>
           </Style>
@@ -53,36 +64,36 @@
         </Border>
       </WrapPanel>
 
-      <Separator />
+      <Border Classes="phone-divider" />
 
       <!-- Query -->
       <Expander Header="Query" IsExpanded="True" HorizontalAlignment="Stretch">
-        <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Background="#FAFAFA">
+        <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Background="{DynamicResource ContentBgBrush}">
           <SelectableTextBlock Text="{Binding QueryText}" TextWrapping="Wrap" FontFamily="Consolas, Monospace" Foreground="Black" />
         </Border>
       </Expander>
 
       <!-- Interpretation -->
       <Expander Header="Interpretation" IsExpanded="True" HorizontalAlignment="Stretch" IsVisible="{Binding Interpretation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-        <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Background="#F0F8FF">
+        <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Background="{DynamicResource InterpretationBgBrush}">
           <SelectableTextBlock Text="{Binding Interpretation}" TextWrapping="Wrap" FontFamily="Segoe UI, Sans-Serif" Foreground="Black" />
         </Border>
       </Expander>
 
       <!-- Response -->
       <Expander Header="Response" IsExpanded="True" HorizontalAlignment="Stretch">
-        <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Background="#FAFAFA">
+        <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Background="{DynamicResource ContentBgBrush}">
           <SelectableTextBlock Text="{Binding Response}" TextWrapping="Wrap" FontFamily="Consolas, Monospace" Foreground="Black" />
         </Border>
       </Expander>
 
       <Expander Header="{Binding ProcessingDialog.Count, StringFormat='Processing Dialog ({0})'}" IsExpanded="True" HorizontalAlignment="Stretch">
-          <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Background="White" Padding="12" MinHeight="80">
+          <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" CornerRadius="6" Background="{DynamicResource ThemeBackgroundBrush}" Padding="12" MinHeight="80">
               <Grid>
-                  <SelectableTextBlock Text="No processing dialog recorded." Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  <SelectableTextBlock Text="No processing dialog recorded." Foreground="{DynamicResource SubtleForeground}" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
                              IsVisible="{Binding ProcessingDialog, Converter={StaticResource CountToVisibility}, ConverterParameter='Invert'}"/>
                   <StackPanel IsVisible="{Binding ProcessingDialog, Converter={StaticResource CountToVisibility}}">
-                      <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Padding="0,0,0,4" Margin="0,0,0,6">
+                      <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,4" Margin="0,0,0,6">
                           <Grid ColumnDefinitions="160,90,100,*">
                               <SelectableTextBlock Grid.Column="0" Text="Timestamp" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
                               <SelectableTextBlock Grid.Column="1" Text="Role" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
@@ -98,7 +109,7 @@
                           </ItemsControl.ItemsPanel>
                           <ItemsControl.ItemTemplate>
                               <DataTemplate DataType="models:UnifiedProcessingDialogItem">
-                                  <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Margin="2" Padding="4">
+                                  <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Margin="2" Padding="4">
                                       <Grid ColumnDefinitions="160,90,100,*">
                                           <SelectableTextBlock Grid.Column="0" Text="{Binding TimestampDisplay}" FontFamily="Consolas, Monospace" FontSize="13"/>
                                           <SelectableTextBlock Grid.Column="1" Text="{Binding Role}" FontFamily="Consolas, Monospace" FontSize="13"/>
@@ -116,12 +127,12 @@
 
       <!-- Actions -->
       <Expander Header="{Binding Actions.Count, StringFormat='Actions ({0})'}" IsExpanded="True" HorizontalAlignment="Stretch">
-          <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Background="White" Padding="12" MinHeight="80">
+          <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" CornerRadius="6" Background="{DynamicResource ThemeBackgroundBrush}" Padding="12" MinHeight="80">
               <Grid>
-                  <SelectableTextBlock Text="No actions recorded." Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  <SelectableTextBlock Text="No actions recorded." Foreground="{DynamicResource SubtleForeground}" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
                              IsVisible="{Binding Actions, Converter={StaticResource CountToVisibility}, ConverterParameter='Invert'}"/>
                   <StackPanel IsVisible="{Binding Actions, Converter={StaticResource CountToVisibility}}">
-                      <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Padding="0,0,0,4" Margin="0,0,0,6">
+                      <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,4" Margin="0,0,0,6">
                           <Grid ColumnDefinitions="40,100,*,90,120">
                               <SelectableTextBlock Grid.Column="0" Text="#" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
                               <SelectableTextBlock Grid.Column="1" Text="Type" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
@@ -138,7 +149,7 @@
                           </ItemsControl.ItemsPanel>
                           <ItemsControl.ItemTemplate>
                               <DataTemplate DataType="models:UnifiedAction">
-                                  <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Margin="2" Padding="4">
+                                  <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Margin="2" Padding="4">
                                       <Grid ColumnDefinitions="40,100,*,90,120">
                                           <SelectableTextBlock Grid.Column="0" Text="{Binding Order}" FontFamily="Consolas, Monospace" FontSize="14"/>
                                           <SelectableTextBlock Grid.Column="1" Text="{Binding Type}" FontFamily="Consolas, Monospace" FontSize="14" TextWrapping="Wrap"/>
@@ -196,7 +207,7 @@
           <StackPanel Spacing="6" HorizontalAlignment="Stretch">
             <Button Content="Copy" Command="{Binding DataContext.CopyOriginalJsonCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                     CommandParameter="{Binding}" HorizontalAlignment="Right"/>
-            <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Background="#FAFAFA" HorizontalAlignment="Stretch">
+            <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Background="{DynamicResource ContentBgBrush}" HorizontalAlignment="Stretch">
               <SelectableTextBlock Text="{Binding OriginalEntry, Converter={StaticResource ObjectToJson}}"
                                  TextWrapping="Wrap" FontFamily="Consolas, Monospace" Foreground="Black" HorizontalAlignment="Stretch"/>
             </Border>

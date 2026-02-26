@@ -35,10 +35,13 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid x:Name="MainGrid" ColumnDefinitions="300, 4, *" RowDefinitions="*, 4, 150">
+    <Grid x:Name="MainGrid" ColumnDefinitions="300, 4, *" RowDefinitions="*, 4, 150" Background="{DynamicResource ThemeBackgroundBrush}" Margin="8">
         <!-- Tree View -->
-        <TreeView x:Name="TreePanel" Grid.Column="0" Grid.Row="0"
+        <Border Grid.Column="0" Grid.Row="0" Classes="phone-card" Padding="4">
+        <TreeView x:Name="TreePanel"
                   ItemsSource="{Binding Nodes}" SelectedItem="{Binding SelectedNode}"
+                  Background="Transparent"
+                  BorderThickness="0"
                   VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}" DataType="models:FileNode">
@@ -64,22 +67,24 @@
                 </ControlTheme>
             </TreeView.ItemContainerTheme>
         </TreeView>
+        </Border>
 
         <!-- Splitter 1 -->
-        <GridSplitter x:Name="Splitter1" Grid.Column="0" Grid.Row="1" ResizeDirection="Rows" Background="LightGray"/>
+        <GridSplitter x:Name="Splitter1" Grid.Column="0" Grid.Row="1" ResizeDirection="Rows" Classes="phone-splitter"/>
 
         <!-- History Panel -->
-        <Border x:Name="HistoryPanel" Grid.Column="0" Grid.Row="2" BorderBrush="Gray" BorderThickness="0,1,0,0">
+        <Border x:Name="HistoryPanel" Grid.Column="0" Grid.Row="2" Classes="phone-card" Padding="4">
             <ListBox ItemsSource="{Binding ChangeLog}" Background="Transparent"/>
         </Border>
 
         <!-- Splitter 2 -->
-        <GridSplitter x:Name="Splitter2" Grid.Column="1" Grid.Row="0" Grid.RowSpan="3" ResizeDirection="Columns" Background="LightGray"/>
+        <GridSplitter x:Name="Splitter2" Grid.Column="1" Grid.Row="0" Grid.RowSpan="3" ResizeDirection="Columns" Classes="phone-splitter"/>
 
         <!-- Viewer Panel -->
         <Grid x:Name="ViewerPanel" Grid.Column="2" Grid.Row="0" Grid.RowSpan="3" RowDefinitions="Auto, *">
              <!-- Navigation Toolbar -->
-             <Grid Grid.Row="0" ColumnDefinitions="Auto, Auto, Auto, Auto, *" Margin="5">
+             <Border Grid.Row="0" Classes="phone-toolbar-card" Padding="6" Margin="0,0,0,6">
+             <Grid ColumnDefinitions="Auto, Auto, Auto, Auto, *">
                 <Button Grid.Column="0" Command="{Binding NavigateBackCommand}" Margin="0,0,5,0" Width="30" ToolTip.Tip="Back">
                     <PathIcon Data="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" Width="10" Height="10"/>
                 </Button>
@@ -97,17 +102,18 @@
                 </Button>
                 <TextBox Grid.Column="4" Text="{Binding SelectedNodePathDisplay, Mode=OneWay, Converter={StaticResource PathToWsl}}" IsReadOnly="True" VerticalContentAlignment="Center"/>
              </Grid>
+             </Border>
 
              <!-- Markdown View -->
-             <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="5" IsVisible="{Binding IsMarkdownVisible}">
+             <Border Grid.Row="1" Classes="phone-card" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" Margin="0" Padding="6" IsVisible="{Binding IsMarkdownVisible}">
                 <Grid x:Name="MarkdownContentGrid" RowDefinitions="Auto, *">
                     <Border Grid.Row="0">
                     <SelectableTextBlock Text="Loading…" IsVisible="{Binding ShowMarkdownLoadingPlaceholder}"
-                               VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray" Margin="12"/>
+                               VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource SubtleForeground}" Margin="12"/>
                     </Border>
                     <Border Grid.Row="1" IsVisible="{Binding IsPreviewOpenedInBrowser}" Padding="0">
                         <Grid RowDefinitions="Auto, *">
-                            <Border Grid.Row="0" Padding="8,6" BorderBrush="#ddd" BorderThickness="0,0,0,1">
+                            <Border Grid.Row="0" Padding="8,6" BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Button Content="Open HTML preview in browser" Command="{Binding OpenPreviewInBrowserCommand}"/>
                                     <Button Content="Show raw text" Command="{Binding ToggleShowRawMarkdownCommand}"/>
@@ -142,7 +148,7 @@
              </Border>
 
              <!-- JSON Tree View -->
-             <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="5" IsVisible="{Binding IsJsonVisible}"
+             <Border Grid.Row="1" Classes="phone-card" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" Margin="0" Padding="6" IsVisible="{Binding IsJsonVisible}"
                      VerticalAlignment="Stretch" HorizontalAlignment="Stretch" MinHeight="320">
                 <Grid x:Name="JsonViewerGrid" RowDefinitions="Auto, Auto, 200, 4, *"
                       VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
@@ -164,10 +170,10 @@
                         <TextBox Grid.Column="1" Text="{Binding SearchQuery}" Watermark="Request ID, text, model, timestamp..."/>
                     </Grid>
                     <!-- Search results index -->
-                    <Border Grid.Row="2" MinHeight="80" BorderBrush="#ddd" BorderThickness="0,0,0,1" Padding="4" Margin="0,0,0,4">
+                    <Border Grid.Row="2" MinHeight="80" BorderBrush="{DynamicResource SearchBorderBrush}" BorderThickness="0,0,0,1" Padding="4" Margin="0,0,0,4">
                         <Grid RowDefinitions="Auto, Auto, *">
                             <SelectableTextBlock Grid.Row="0" Text="Search index (double-click to open request)" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
-                            <Border Grid.Row="1" BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Padding="0" Margin="0,0,0,0">
+                            <Border Grid.Row="1" BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Padding="0" Margin="0,0,0,0">
                                 <Grid RowDefinitions="Auto, Auto" ColumnDefinitions="250,*,100,100,130" Margin="4,2">
                                     <SelectableTextBlock Grid.Row="0" Grid.Column="0" Text="Request ID" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <SelectableTextBlock Grid.Row="0" Grid.Column="1" Text="Display" FontWeight="SemiBold" FontSize="13" FontFamily="Consolas, Monospace" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -220,7 +226,7 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="jsonModels:SearchableEntry">
-                                            <Border BorderBrush="#C0C0C0" BorderThickness="0,0,0,1" Margin="2" Padding="4"
+                                            <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Margin="2" Padding="4"
                                                     beh:TappedBehavior.Command="{Binding DataContext.SearchRowTappedCommand, ElementName=ContentRoot}"
                                                     beh:TappedBehavior.CommandParameter="{Binding}"
                                                     beh:DoubleTappedBehavior.Command="{Binding DataContext.SearchRowDoubleTappedCommand, ElementName=ContentRoot}"
@@ -246,7 +252,7 @@
                         </Grid>
                     </Border>
                     <!-- Splitter between search index and JSON tree -->
-                    <GridSplitter Grid.Row="3" ResizeDirection="Rows" Background="LightGray" Height="4"/>
+                    <GridSplitter Grid.Row="3" ResizeDirection="Rows" Classes="phone-splitter" Height="4"/>
                     <!-- Tree -->
                     <Border Grid.Row="4" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" MinHeight="180">
                         <TreeView x:Name="JsonTreeView" ItemsSource="{Binding JsonTree}" SelectedItem="{Binding SelectedJsonNode}"
@@ -256,10 +262,10 @@
                                     <StackPanel Orientation="Horizontal" Spacing="5" Background="Transparent" x:CompileBindings="False"
                                                 beh:DoubleTappedBehavior.Command="{Binding DataContext.JsonNodeDoubleTappedCommand, ElementName=ContentRoot}"
                                                 beh:DoubleTappedBehavior.CommandParameter="{Binding}">
-                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#007acc"/>
-                                        <TextBlock Text=":" Foreground="Gray"/>
-                                        <TextBlock Text="{Binding Value}" Foreground="#ce9178"/>
-                                        <TextBlock Text="{Binding Type}" Foreground="Gray" FontStyle="Italic" FontSize="12" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="{DynamicResource JsonKeyBrush}"/>
+                                        <TextBlock Text=":" Foreground="{DynamicResource SubtleForeground}"/>
+                                        <TextBlock Text="{Binding Value}" Foreground="{DynamicResource JsonValueBrush}"/>
+                                        <TextBlock Text="{Binding Type}" Foreground="{DynamicResource SubtleForeground}" FontStyle="Italic" FontSize="12" VerticalAlignment="Center" Margin="5,0,0,0"/>
                                     </StackPanel>
                                 </TreeDataTemplate>
                             </TreeView.ItemTemplate>
@@ -274,10 +280,10 @@
              </Border>
 
              <!-- Request Details View -->
-             <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="5" IsVisible="{Binding IsRequestDetailsVisible}">
+             <Border Grid.Row="1" Classes="phone-card" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" Margin="0" Padding="6" IsVisible="{Binding IsRequestDetailsVisible}">
                 <Grid RowDefinitions="Auto, *">
-                    <Border Grid.Row="0">
-                    <Grid ColumnDefinitions="Auto, Auto, Auto, *" Margin="5" VerticalAlignment="Center">
+                    <Border Grid.Row="0" Classes="phone-toolbar-card" Padding="6" Margin="0,0,0,6">
+                    <Grid ColumnDefinitions="Auto, Auto, Auto, *" VerticalAlignment="Center">
                         <Button Grid.Column="0" Content="← Back to List" Command="{Binding CloseRequestDetailsCommand}" Margin="0,0,10,0"/>
                         <Button Grid.Column="1" Content="← Previous" Command="{Binding NavigateToPreviousRequestCommand}" Margin="0,0,10,0"/>
                         <Button Grid.Column="2" Content="Next →" Command="{Binding NavigateToNextRequestCommand}" Margin="0,0,10,0"/>

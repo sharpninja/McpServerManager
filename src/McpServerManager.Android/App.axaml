@@ -53,6 +53,7 @@
         <StyleInclude Source="avares://Avalonia.Themes.Fluent/FluentTheme.axaml"/>
         <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
         <fa:FluentAvaloniaTheme />
+        <StyleInclude Source="avares://McpServerManager.Android/Styles/PhoneInspiredShared.axaml"/>
         <Style Selector="ListBoxItem">
             <Setter Property="Padding" Value="2"/>
             <Setter Property="Margin" Value="0"/>

@@ -1,0 +1,54 @@
+02-25 16:05:58.771  6035  6035 I McpSM   : [MainActivity] OnCreate entered
+02-25 16:05:58.807  6035  6035 I McpSM   : [MainActivity] CustomizeAppBuilder
+02-25 16:06:01.287  6035  6035 I McpSM   : AndroidLogcatBridge initialized
+02-25 16:06:01.287  6035  6035 I McpSM   : [App] OnFrameworkInitializationCompleted entered (Android)
+02-25 16:06:01.450  6035  6035 I McpSM   : [ConnectionViewModel] External URL opener set: True
+02-25 16:06:01.608  6035  6035 I McpSM   : [ConnectionDialogView] UI_READY ConnectionDialogView DataContext bound. Host=10.0.2.2, Port=7147, IsConnecting=False
+02-25 16:06:01.608  6035  6035 I McpSM   : [ConnectionDialogView] UI_READY ConnectionDialogView DataContext bound. Host=10.0.2.2, Port=7147, IsConnecting=False
+02-25 16:06:01.903  6035  6035 I McpSM   : [ConnectionDialogView] UI_READY ConnectionDialogView attached. RootBounds=[0,0,0,0]
+02-25 16:06:01.904  6035  6035 I McpSM   : [ConnectionDialogView] UI_READY ConnectionDialogView attached. RootBounds=[0,0,0,0]
+02-25 16:06:01.970  6035  6035 I McpSM   : [MainActivity] OnCreate completed
+02-25 16:06:02.973  6035  6035 I McpSM   : [ConnectionDialogView] UI_READY ConnectDialog input controls ready
+02-25 16:06:02.974  6035  6035 I McpSM   : [ConnectionDialogView] UI_READY ConnectDialog input controls ready
+02-25 16:06:02.979  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS HostTextBox Visible=True Enabled=True Bounds=[0,79,1222,33.5] RootBounds=[0,0,1280,716]
+02-25 16:06:02.980  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS HostTextBox Visible=True Enabled=True Bounds=[0,79,1222,33.5] RootBounds=[0,0,1280,716]
+02-25 16:06:02.981  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS PortTextBox Visible=True Enabled=True Bounds=[0,158.5,1222,33.5] RootBounds=[0,0,1280,716]
+02-25 16:06:02.982  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS PortTextBox Visible=True Enabled=True Bounds=[0,158.5,1222,33.5] RootBounds=[0,0,1280,716]
+02-25 16:06:02.982  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS ConnectButton Visible=True Enabled=True Bounds=[0,212,1222,35] RootBounds=[0,0,1280,716]
+02-25 16:06:02.983  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS ConnectButton Visible=True Enabled=True Bounds=[0,212,1222,35] RootBounds=[0,0,1280,716]
+02-25 16:07:24.903  6035  6035 I McpSM   : [ConnectionViewModel] ConnectAsync invoked. Host='10.0.2.2', Port='7147', IsConnecting=False
+02-25 16:07:24.910  6035  6035 I McpSM   : [ConnectionDialogView] UI_STATE IsConnecting=True
+02-25 16:07:24.911  6035  6035 I McpSM   : [ConnectionDialogView] UI_STATE IsConnecting=True
+02-25 16:07:24.947  6035  6035 I McpSM   : [ConnectionViewModel] ConnectAsync started for http://10.0.2.2:7147
+02-25 16:07:24.951  6035  6035 I McpSM   : [ConnectionViewModel] Checking MCP auth config at http://10.0.2.2:7147/auth/config
+02-25 16:07:25.211  6035  6115 I McpSM   : [McpOidcAuthService] GET /auth/config success at http://10.0.2.2:7147/auth/config. enabled=True, clientId=mcp-director, hasDeviceEndpoint=True, hasTokenEndpoint=True
+02-25 16:07:25.216  6035  6035 I McpSM   : [ConnectionViewModel] MCP auth config result: enabled=True, clientId=mcp-director, hasDeviceEndpoint=True, hasTokenEndpoint=True
+02-25 16:07:25.217  6035  6035 I McpSM   : [ConnectionViewModel] OIDC enabled for http://10.0.2.2:7147; starting device authorization
+02-25 16:07:25.223  6035  6035 I McpSM   : [McpOidcAuthService] Starting OIDC device authorization. baseUrl=http://10.0.2.2:7147, authority=http://localhost:7080/realms/mcpserver, endpoint=http://10.0.2.2:7080/realms/mcpserver/protocol/openid-connect/auth/device, clientId=mcp-director
+02-25 16:07:25.495  6035  6115 I McpSM   : [McpOidcAuthService] OIDC device authorization prompt received. verificationUri=http://10.0.2.2:7080/realms/mcpserver/device, hasVerificationUriComplete=True, expiresInSec=600, pollIntervalSec=5
+02-25 16:07:25.496  6035  6035 I McpSM   : [ConnectionDialogView] UI_STATE IsOidcSignInRequired=True
+02-25 16:07:25.497  6035  6035 I McpSM   : [ConnectionDialogView] UI_STATE IsOidcSignInRequired=True
+02-25 16:07:25.500  6035  6035 I McpSM   : [ConnectionDialogView] UI_STATE OidcCanOpenBrowser=True
+02-25 16:07:25.501  6035  6035 I McpSM   : [ConnectionDialogView] UI_STATE OidcCanOpenBrowser=True
+02-25 16:07:25.502  6035  6035 I McpSM   : [ConnectionDialogView] UI_STATE OidcStatusMessage=Sign in to the identity provider and approve this device.
+02-25 16:07:25.502  6035  6035 I McpSM   : [ConnectionDialogView] UI_STATE OidcStatusMessage=Sign in to the identity provider and approve this device.
+02-25 16:07:25.503  6035  6035 I McpSM   : [ConnectionViewModel] OIDC device prompt ready. UserCodePresent=True, VerificationUrl='http://10.0.2.2:7080/realms/mcpserver/device?user_code=XXXZ-JUYP', CanOpenBrowser=True
+02-25 16:07:25.503  6035  6035 I McpSM   : [ConnectionViewModel] Auto-opening OIDC verification page
+02-25 16:07:25.545  6035  6035 I McpSM   : [McpOidcAuthService] Starting OIDC token polling. tokenEndpoint=http://10.0.2.2:7080/realms/mcpserver/protocol/openid-connect/token, initialPollDelayMs=5000, timeoutUtc=2026-02-25T22:17:25.5437545Z
+02-25 16:07:25.546  6035  6035 I McpSM   : [ConnectionDialogView] UI_STATE OidcStatusMessage=Waiting for sign-in approval…
+02-25 16:07:25.546  6035  6035 I McpSM   : [ConnectionDialogView] UI_STATE OidcStatusMessage=Waiting for sign-in approval…
+02-25 16:07:25.548  6035  6035 I McpSM   : [ConnectionViewModel] OIDC status update: Waiting for sign-in approval…
+02-25 16:07:25.655  6035  6035 I McpSM   : [ConnectionDialogView] UI_READY OIDC panel visible
+02-25 16:07:25.656  6035  6035 I McpSM   : [ConnectionDialogView] UI_READY OIDC panel visible
+02-25 16:07:25.657  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS OidcPanel Visible=True Enabled=True Bounds=[0,204,1222,268.5] RootBounds=[0,0,1280,716]
+02-25 16:07:25.657  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS OidcPanel Visible=True Enabled=True Bounds=[0,204,1222,268.5] RootBounds=[0,0,1280,716]
+02-25 16:07:25.657  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS OpenSignInPageButton Visible=True Enabled=True Bounds=[0,181.5,171,35] RootBounds=[0,0,1280,716]
+02-25 16:07:25.658  6035  6035 I McpSM   : [ConnectionDialogView] UI_BOUNDS OpenSignInPageButton Visible=True Enabled=True Bounds=[0,181.5,171,35] RootBounds=[0,0,1280,716]
+02-25 16:07:30.607  6035  6063 D McpSM   : [McpOidcAuthService] OIDC token polling pending authorization
+02-25 16:07:30.608  6035  6063 I McpSM   : [ConnectionDialogView] UI_STATE OidcStatusMessage=Open the sign-in page and approve this device.
+02-25 16:07:30.608  6035  6063 I McpSM   : [ConnectionDialogView] UI_STATE OidcStatusMessage=Open the sign-in page and approve this device.
+02-25 16:07:30.608  6035  6063 I McpSM   : [ConnectionViewModel] OIDC status update: Open the sign-in page and approve this device.
+02-25 16:07:35.653  6035  6063 D McpSM   : [McpOidcAuthService] OIDC token polling pending authorization
+02-25 16:07:35.654  6035  6063 I McpSM   : [ConnectionViewModel] OIDC status update: Open the sign-in page and approve this device.
+02-25 16:07:40.683  6035  6063 D McpSM   : [McpOidcAuthService] OIDC token polling pending authorization
+02-25 16:07:40.683  6035  6063 I McpSM   : [ConnectionViewModel] OIDC status update: Open the sign-in page and approve this device.

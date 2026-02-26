@@ -1,0 +1,78 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Styles.Resources>
+    <SolidColorBrush x:Key="GroupHeaderBrush" Color="#E4E7EB"/>
+    <SolidColorBrush x:Key="SeparatorBrush" Color="#D4D8DE"/>
+    <SolidColorBrush x:Key="EntryBorderBrush" Color="#D8DCE2"/>
+    <SolidColorBrush x:Key="ItemBorderBrush" Color="#E1E5EA"/>
+    <SolidColorBrush x:Key="StatusBarBrush" Color="#F6F7F9"/>
+    <SolidColorBrush x:Key="BadgeBrush" Color="#E9EDF2"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="#D9DDE3"/>
+    <SolidColorBrush x:Key="ContentBgBrush" Color="#FBFBFC"/>
+    <SolidColorBrush x:Key="InterpretationBgBrush" Color="#EEF6FF"/>
+    <SolidColorBrush x:Key="SearchBorderBrush" Color="#D8DCE2"/>
+    <SolidColorBrush x:Key="JsonKeyBrush" Color="#0A6DB7"/>
+    <SolidColorBrush x:Key="JsonValueBrush" Color="#B76333"/>
+    <SolidColorBrush x:Key="SubtleForeground" Color="#666D78"/>
+  </Styles.Resources>
+
+  <Style Selector="Border.phone-card">
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ItemBorderBrush}"/>
+    <Setter Property="Background" Value="{DynamicResource SystemAltHighColor}"/>
+  </Style>
+
+  <Style Selector="Border.phone-toolbar-card">
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ItemBorderBrush}"/>
+    <Setter Property="Background" Value="{DynamicResource StatusBarBrush}"/>
+  </Style>
+
+  <Style Selector="Border.phone-outline-card">
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ItemBorderBrush}"/>
+    <Setter Property="Background" Value="Transparent"/>
+  </Style>
+
+  <Style Selector="Border.phone-divider">
+    <Setter Property="Height" Value="1"/>
+    <Setter Property="Background" Value="{DynamicResource DividerBrush}"/>
+  </Style>
+
+  <Style Selector="GridSplitter.phone-splitter">
+    <Setter Property="Background" Value="{DynamicResource SeparatorBrush}"/>
+    <Setter Property="Opacity" Value="1"/>
+  </Style>
+
+  <Style Selector="SelectableTextBlock.subtle-text">
+    <Setter Property="Foreground" Value="{DynamicResource SubtleForeground}"/>
+  </Style>
+
+  <Style Selector="TextBlock.subtle-text">
+    <Setter Property="Foreground" Value="{DynamicResource SubtleForeground}"/>
+  </Style>
+
+  <Style Selector="SelectableTextBlock.section-title">
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="FontSize" Value="16"/>
+  </Style>
+
+  <Style Selector="TextBlock.section-title">
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="FontSize" Value="16"/>
+  </Style>
+
+  <Style Selector="TabControl.shell-tabs">
+    <Setter Property="Background" Value="Transparent"/>
+  </Style>
+
+  <Style Selector="TabItem.shell-tab">
+    <Setter Property="FontSize" Value="15"/>
+    <Setter Property="Padding" Value="12,8"/>
+  </Style>
+
+</Styles>

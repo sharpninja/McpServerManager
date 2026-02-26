@@ -20,10 +20,12 @@
         <conv:FileNodeToArchiveVisibleConverter x:Key="FileNodeToArchiveVisible"/>
     </UserControl.Resources>
 
-    <Grid x:Name="MainGrid" ColumnDefinitions="225, 4, *" RowDefinitions="*" ClipToBounds="True">
+    <Grid x:Name="MainGrid" ColumnDefinitions="225, 4, *" RowDefinitions="*" ClipToBounds="True" Background="{DynamicResource ThemeBackgroundBrush}" Margin="6">
         <!-- Tree View -->
-        <TreeView Grid.Column="0" Grid.Row="0"
-                  ItemsSource="{Binding Nodes}" SelectedItem="{Binding SelectedNode}"
+        <Border Grid.Column="0" Grid.Row="0" Classes="phone-card" Padding="4">
+        <TreeView ItemsSource="{Binding Nodes}" SelectedItem="{Binding SelectedNode}"
+                  Background="Transparent"
+                  BorderThickness="0"
                   VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}" DataType="models:FileNode">
@@ -49,14 +51,16 @@
                 </ControlTheme>
             </TreeView.ItemContainerTheme>
         </TreeView>
+        </Border>
 
         <!-- Column Splitter -->
-        <GridSplitter Grid.Column="1" Grid.Row="0" ResizeDirection="Columns" Background="{DynamicResource SeparatorBrush}"/>
+        <GridSplitter Grid.Column="1" Grid.Row="0" Classes="phone-splitter" ResizeDirection="Columns" Background="{DynamicResource SeparatorBrush}"/>
 
         <!-- Viewer Panel (no chat button for Android) -->
         <Grid Grid.Column="2" Grid.Row="0" RowDefinitions="Auto, *" ClipToBounds="True">
              <!-- Navigation Toolbar -->
-             <Grid Grid.Row="0" ColumnDefinitions="Auto, Auto, Auto, *" Margin="5">
+             <Border Grid.Row="0" Classes="phone-toolbar-card" Padding="6" Margin="0,0,0,6">
+             <Grid ColumnDefinitions="Auto, Auto, Auto, *">
                 <Button Grid.Column="0" Command="{Binding NavigateBackCommand}" Margin="0,0,5,0" Width="30" ToolTip.Tip="Back">
                     <PathIcon Data="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" Width="10" Height="10"/>
                 </Button>
@@ -68,9 +72,10 @@
                 </Button>
                 <TextBox Grid.Column="3" Text="{Binding SelectedNodePathDisplay, Mode=OneWay}" IsReadOnly="True" VerticalContentAlignment="Center"/>
              </Grid>
+             </Border>
 
              <!-- JSON Tree View -->
-             <Border Grid.Row="1" BorderBrush="{DynamicResource SubtleForeground}" BorderThickness="1" Margin="5" IsVisible="{Binding IsJsonVisible}"
+             <Border Grid.Row="1" Classes="phone-card" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" Margin="0" Padding="6" IsVisible="{Binding IsJsonVisible}"
                      VerticalAlignment="Stretch" HorizontalAlignment="Stretch" MinHeight="320">
                 <Grid RowDefinitions="Auto, Auto, 200, 4, *"
                       VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
@@ -132,7 +137,7 @@
                             </ScrollViewer>
                         </Grid>
                     </Border>
-                    <GridSplitter Grid.Row="3" ResizeDirection="Rows" Background="{DynamicResource SeparatorBrush}" Height="4"/>
+                    <GridSplitter Grid.Row="3" Classes="phone-splitter" ResizeDirection="Rows" Background="{DynamicResource SeparatorBrush}" Height="4"/>
                     <!-- JSON Tree -->
                     <Border Grid.Row="4" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" MinHeight="180">
                         <TreeView ItemsSource="{Binding JsonTree}" SelectedItem="{Binding SelectedJsonNode}"
@@ -160,7 +165,7 @@
              </Border>
 
              <!-- Markdown View -->
-             <Border Grid.Row="1" BorderBrush="{DynamicResource SubtleForeground}" BorderThickness="1" Margin="5" IsVisible="{Binding IsMarkdownVisible}">
+             <Border Grid.Row="1" Classes="phone-card" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" Margin="0" Padding="6" IsVisible="{Binding IsMarkdownVisible}">
                 <Grid RowDefinitions="Auto, *">
                     <SelectableTextBlock Text="Loading…" IsVisible="{Binding ShowMarkdownLoadingPlaceholder}"
                                VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{DynamicResource SubtleForeground}" Margin="12"/>
@@ -179,13 +184,15 @@
              </Border>
 
              <!-- Request Details View -->
-             <Border Grid.Row="1" BorderBrush="{DynamicResource SubtleForeground}" BorderThickness="1" Margin="5" IsVisible="{Binding IsRequestDetailsVisible}">
+             <Border Grid.Row="1" Classes="phone-card" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" Margin="0" Padding="6" IsVisible="{Binding IsRequestDetailsVisible}">
                 <Grid RowDefinitions="Auto, *">
-                    <Grid Grid.Row="0" ColumnDefinitions="Auto, Auto, Auto, *" Margin="5" VerticalAlignment="Center">
+                    <Border Grid.Row="0" Classes="phone-toolbar-card" Padding="6" Margin="0,0,0,6">
+                    <Grid ColumnDefinitions="Auto, Auto, Auto, *" VerticalAlignment="Center">
                         <Button Grid.Column="0" Content="← Back" Command="{Binding CloseRequestDetailsCommand}" Margin="0,0,10,0"/>
                         <Button Grid.Column="1" Content="← Prev" Command="{Binding NavigateToPreviousRequestCommand}" Margin="0,0,10,0"/>
                         <Button Grid.Column="2" Content="Next →" Command="{Binding NavigateToNextRequestCommand}" Margin="0,0,10,0"/>
                     </Grid>
+                    </Border>
                     <ContentControl Grid.Row="1" Content="{Binding SelectedUnifiedRequest}"/>
                 </Grid>
              </Border>

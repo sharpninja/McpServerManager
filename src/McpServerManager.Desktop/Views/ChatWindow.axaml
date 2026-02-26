@@ -11,6 +11,7 @@
         Width="500" Height="550"
         WindowStartupLocation="CenterScreen"
         Icon="/Assets/avalonia-logo.ico"
+        Background="{DynamicResource ThemeBackgroundBrush}"
         FontSize="14">
 
     <Window.Resources>
@@ -18,8 +19,8 @@
         <conv:RoleToVisibilityConverter x:Key="RoleToVisibility"/>
     </Window.Resources>
 
-    <Grid x:Name="ChatMainGrid">
-        <Border Grid.Row="0" Background="#f0f0f0" Padding="8,6" BorderBrush="#ddd" BorderThickness="0,0,0,1">
+    <Grid x:Name="ChatMainGrid" Background="{DynamicResource ThemeBackgroundBrush}" Margin="8">
+        <Border Grid.Row="0" Classes="phone-toolbar-card" Padding="8,6" Margin="0,0,0,6">
             <Grid ColumnDefinitions="Auto, *, Auto, Auto">
                 <SelectableTextBlock Grid.Column="0" Text="Model:" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="14"/>
                 <ComboBox Grid.Column="1" ItemsSource="{Binding AvailableModels}" SelectedItem="{Binding SelectedModel}"
@@ -34,11 +35,13 @@
         </Border>
         <Expander Grid.Row="1" x:Name="PromptTemplatesExpander" Header="Prompt templates" IsExpanded="True"
                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                  Background="#fafafa" Padding="8,6" BorderBrush="#eee" BorderThickness="0,0,0,1"
+                  Background="{DynamicResource StatusBarBrush}" Padding="8,6" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1"
                   MinHeight="40">
             <Grid RowDefinitions="Auto, *">
-                <SelectableTextBlock Grid.Row="0" Text="Click to fill input, double-click to send." FontSize="12" Foreground="Gray" Margin="0,0,0,4"/>
+                <SelectableTextBlock Grid.Row="0" Text="Click to fill input, double-click to send." FontSize="12" Classes="subtle-text" Margin="0,0,0,4"/>
                 <ListBox Grid.Row="1" ItemsSource="{Binding PromptTemplates}" Margin="0" Padding="0"
+                         Background="Transparent"
+                         BorderThickness="0"
                          beh:TappedBehavior.Command="{Binding PopulatePromptCommand}"
                          beh:DoubleTappedBehavior.Command="{Binding SubmitPromptCommand}">
                     <ListBox.ItemTemplate>
@@ -51,16 +54,17 @@
                 </ListBox>
             </Grid>
         </Expander>
-        <GridSplitter Grid.Row="2" x:Name="ChatTemplateSplitter" ResizeDirection="Rows" Background="LightGray" Height="4"/>
-        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                      Margin="8" x:Name="MessageScroll">
+        <GridSplitter Grid.Row="2" x:Name="ChatTemplateSplitter" Classes="phone-splitter" ResizeDirection="Rows" Height="4"/>
+        <Border Grid.Row="3" Classes="phone-card" Padding="6" Margin="0,6,0,6">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      x:Name="MessageScroll">
             <ItemsControl ItemsSource="{Binding Messages}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="models:ChatMessage">
                         <Border Margin="2" Padding="4" CornerRadius="4"
                                 Background="{Binding Role, Converter={StaticResource RoleToBrush}}">
                             <StackPanel Spacing="4">
-                                <SelectableTextBlock FontWeight="SemiBold" FontSize="14" Foreground="Gray"
+                                <SelectableTextBlock FontWeight="SemiBold" FontSize="14" Classes="subtle-text"
                                            Text="{Binding Role}"/>
                                 <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="16"
                                            IsVisible="{Binding Role, Converter={StaticResource RoleToVisibility}, ConverterParameter=user}"/>
@@ -72,7 +76,8 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
-        <Border Grid.Row="4" Background="#f0f0f0" Padding="8" BorderBrush="#ddd" BorderThickness="0,1,0,0">
+        </Border>
+        <Border Grid.Row="4" Classes="phone-toolbar-card" Padding="8">
             <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
                 <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding CurrentInput}" Watermark="Ask about your logs..."
                          MinHeight="36" Margin="0,0,8,0" FontSize="14"
@@ -81,7 +86,7 @@
                 <Button Grid.Row="0" Grid.Column="1" Content="Send" Command="{Binding SendCommand}"
                         IsEnabled="{Binding !IsLoading}" MinWidth="70" FontSize="14"/>
                 <SelectableTextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" IsVisible="{Binding IsLoading}"
-                           Text="Thinking…" Foreground="Gray" FontSize="14" Margin="0,4,0,0"/>
+                           Text="Thinking…" Classes="subtle-text" FontSize="14" Margin="0,4,0,0"/>
             </Grid>
         </Border>
     </Grid>

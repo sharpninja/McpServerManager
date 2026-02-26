@@ -45,8 +45,24 @@ internal static class McpServerRestClientFactory
                 BaseUrl = new Uri(normalizedBaseUrl, UriKind.Absolute),
                 Timeout = timeout ?? TimeSpan.FromSeconds(5)
             });
+            var retryDelay = TimeSpan.FromMilliseconds(250);
+            var retryDeadlineUtc = DateTime.UtcNow.AddSeconds(10);
 
-            return await client.InitializeAsync(cancellationToken).ConfigureAwait(false);
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    return await client.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (McpServerException ex) when (ex.StatusCode == 503 && DateTime.UtcNow < retryDeadlineUtc)
+                {
+                    await Task.Delay(retryDelay, cancellationToken).ConfigureAwait(false);
+                    var nextDelayMs = Math.Min(retryDelay.TotalMilliseconds * 2d, 1500d);
+                    retryDelay = TimeSpan.FromMilliseconds(nextDelayMs);
+                }
+            }
         }
         catch
         {

@@ -1,0 +1,1 @@
+UIAUTOMATOR_BOUNDS ConnectButton=[58,941][2502,1011] center=[1280,976]

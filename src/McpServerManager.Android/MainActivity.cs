@@ -1,6 +1,7 @@
 using Android.App;
 using Android.Content.PM;
 using Android.Content.Res;
+using Android.OS;
 using Avalonia;
 using Avalonia.Android;
 using Avalonia.Threading;
@@ -16,8 +17,16 @@ namespace McpServerManager.Android;
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.SmallestScreenSize | ConfigChanges.UiMode)]
 public class MainActivity : AvaloniaMainActivity<App>
 {
+    protected override void OnCreate(Bundle? savedInstanceState)
+    {
+        global::Android.Util.Log.Info("McpSM", "[MainActivity] OnCreate entered");
+        base.OnCreate(savedInstanceState);
+        global::Android.Util.Log.Info("McpSM", "[MainActivity] OnCreate completed");
+    }
+
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
     {
+        global::Android.Util.Log.Info("McpSM", "[MainActivity] CustomizeAppBuilder");
         return base.CustomizeAppBuilder(builder)
             .WithInterFont();
     }
