@@ -387,6 +387,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task<string?> ResolveActiveConnectionApiKeyAsync(WorkspaceConnectionOption option, string baseUrl)
     {
+        // JWT and API keys are mutually exclusive. When a Bearer token is available,
+        // the server ignores API keys entirely — skip the resolution overhead.
+        if (!string.IsNullOrWhiteSpace(_activeBearerToken))
+        {
+            _logger.LogDebug("[Workspace Switch] Bearer token active — skipping API key resolution");
+            return null;
+        }
+
         var normalizedTargetBaseUrl = NormalizeMcpBaseUrl(baseUrl);
 
         // Android OIDC flow injects an explicit MCP API key for the connection that completed sign-in.
