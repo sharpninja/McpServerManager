@@ -367,37 +367,77 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task<string?> ResolveActiveConnectionApiKeyAsync(WorkspaceConnectionOption option, string baseUrl)
     {
-        // Android OIDC flow can inject an explicit token that should be reused across workspace switches.
+        var normalizedTargetBaseUrl = NormalizeMcpBaseUrl(baseUrl);
+
+        // Android OIDC flow injects an explicit MCP API key for the connection that completed sign-in.
+        // That key is scoped to the issuing MCP server, so only reuse it when the selected base URL matches.
         if (_preferExplicitApiKeys)
         {
-            if (!string.IsNullOrWhiteSpace(option.ApiKey))
-                return option.ApiKey;
-            if (!string.IsNullOrWhiteSpace(_activeMcpApiKey))
-                return _activeMcpApiKey;
-            if (!string.IsNullOrWhiteSpace(_defaultMcpApiKey))
-                return _defaultMcpApiKey;
+            var targetMatchesActive = !string.IsNullOrWhiteSpace(_activeMcpBaseUrl)
+                && string.Equals(NormalizeMcpBaseUrl(_activeMcpBaseUrl), normalizedTargetBaseUrl, StringComparison.OrdinalIgnoreCase);
+            var targetMatchesDefault = !string.IsNullOrWhiteSpace(_defaultMcpBaseUrl)
+                && string.Equals(NormalizeMcpBaseUrl(_defaultMcpBaseUrl), normalizedTargetBaseUrl, StringComparison.OrdinalIgnoreCase);
+
+            if (targetMatchesActive || targetMatchesDefault)
+            {
+                if (!string.IsNullOrWhiteSpace(option.ApiKey))
+                {
+                    _logger.LogDebug("[Workspace Switch] Using explicit API key from workspace option for {BaseUrl}", normalizedTargetBaseUrl);
+                    return option.ApiKey;
+                }
+
+                if (targetMatchesActive && !string.IsNullOrWhiteSpace(_activeMcpApiKey))
+                {
+                    _logger.LogDebug("[Workspace Switch] Reusing active explicit API key for {BaseUrl}", normalizedTargetBaseUrl);
+                    return _activeMcpApiKey;
+                }
+
+                if (targetMatchesDefault && !string.IsNullOrWhiteSpace(_defaultMcpApiKey))
+                {
+                    _logger.LogDebug("[Workspace Switch] Reusing default explicit API key for {BaseUrl}", normalizedTargetBaseUrl);
+                    return _defaultMcpApiKey;
+                }
+            }
+            else
+            {
+                _logger.LogDebug(
+                    "[Workspace Switch] Skipping explicit API key reuse because target base URL differs. Target={TargetBaseUrl}, Active={ActiveBaseUrl}, Default={DefaultBaseUrl}",
+                    normalizedTargetBaseUrl,
+                    _activeMcpBaseUrl,
+                    _defaultMcpBaseUrl);
+            }
         }
 
         // Workspace default API keys are per-workspace and rotate on server restart.
         // Prefer fetching the current default key from /api-key for the selected connection.
         var fetchedDefaultKey = await McpServerRestClientFactory
-            .TryFetchDefaultApiKeyAsync(baseUrl)
+            .TryFetchDefaultApiKeyAsync(normalizedTargetBaseUrl)
             .ConfigureAwait(true);
 
         if (!string.IsNullOrWhiteSpace(fetchedDefaultKey))
+        {
+            _logger.LogDebug("[Workspace Switch] Fetched target workspace API key from /api-key for {BaseUrl}", normalizedTargetBaseUrl);
             return fetchedDefaultKey;
+        }
 
         // Fall back to any key resolved from the local marker file (Desktop/dev scenarios).
         if (!string.IsNullOrWhiteSpace(option.ApiKey))
+        {
+            _logger.LogDebug("[Workspace Switch] Falling back to workspace option API key for {BaseUrl}", normalizedTargetBaseUrl);
             return option.ApiKey;
+        }
 
         if (!string.IsNullOrWhiteSpace(option.WorkspaceRootPath))
         {
-            var markerKey = McpServerRestClientFactory.TryResolveApiKeyForWorkspaceRoot(option.WorkspaceRootPath, baseUrl);
+            var markerKey = McpServerRestClientFactory.TryResolveApiKeyForWorkspaceRoot(option.WorkspaceRootPath, normalizedTargetBaseUrl);
             if (!string.IsNullOrWhiteSpace(markerKey))
+            {
+                _logger.LogDebug("[Workspace Switch] Falling back to marker file API key for {BaseUrl}", normalizedTargetBaseUrl);
                 return markerKey;
+            }
         }
 
+        _logger.LogDebug("[Workspace Switch] No API key resolved for {BaseUrl}; proceeding without explicit key", normalizedTargetBaseUrl);
         return null;
     }
 
