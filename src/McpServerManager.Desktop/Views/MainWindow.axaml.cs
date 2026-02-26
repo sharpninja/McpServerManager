@@ -79,6 +79,7 @@ public partial class MainWindow : Window
             vm.InitializeAfterWindowShown();
             vm.OpenChatWindowRequested += OnOpenChatWindowRequested;
             vm.TodoViewModel.OpenAiChatRequested += OnTodoOpenAiChatRequested;
+            vm.LogoutRequested += OnLogoutRequested;
         }
 
         ContentView.ApplySettings(_layoutSettings);
@@ -191,6 +192,7 @@ public partial class MainWindow : Window
         {
             vm.OpenChatWindowRequested -= OnOpenChatWindowRequested;
             vm.TodoViewModel.OpenAiChatRequested -= OnTodoOpenAiChatRequested;
+            vm.LogoutRequested -= OnLogoutRequested;
         }
 
         _chatWindowWasOpenOnClosing = _chatWindow != null;
@@ -260,6 +262,12 @@ public partial class MainWindow : Window
         _chatWindow.Show();
         chatVm.NotifyContextChanged(mainVm.GetLogContextForAgent());
         mainVm.ApplyModelForCurrentSelection();
+    }
+
+    private void OnLogoutRequested(object? sender, EventArgs e)
+    {
+        _logger.LogInformation("Logout requested; closing application");
+        Close();
     }
 
     private void PersistChatWindowClosed()

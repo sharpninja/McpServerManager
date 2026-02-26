@@ -1444,8 +1444,14 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Raised when the VM wants the platform to open the chat window (desktop-only).</summary>
     public event EventHandler? OpenChatWindowRequested;
 
+    /// <summary>Raised when the user taps/clicks Logout. The platform host should clear tokens and navigate to the connection screen.</summary>
+    public event EventHandler? LogoutRequested;
+
     [RelayCommand]
     private void OpenChatWindow() => OpenChatWindowRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void Logout() => LogoutRequested?.Invoke(this, EventArgs.Empty);
 
     /// <summary>Register or clear the context consumer (chat window). When set, we call it when the user navigates to JSON or details.</summary>
     public void SetContextConsumer(Action<string>? consumer) => _contextConsumer = consumer;

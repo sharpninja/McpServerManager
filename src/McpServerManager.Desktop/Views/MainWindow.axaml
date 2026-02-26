@@ -38,7 +38,7 @@
 
         <!-- Status Bar -->
         <Border Grid.Row="1" Margin="8,0,8,8" Padding="8,6" Classes="phone-toolbar-card">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                 <SelectableTextBlock Grid.Column="0"
                                      Text="{Binding StatusMessage}"
                                      FontWeight="Bold"
@@ -69,6 +69,11 @@
                            VerticalAlignment="Center"
                            HorizontalAlignment="Right"
                            Classes="subtle-text"/>
+                <Button Grid.Column="4"
+                        Content="Logout"
+                        Command="{Binding LogoutCommand}"
+                        VerticalAlignment="Center"
+                        Padding="8,4"/>
             </Grid>
         </Border>
     </Grid>

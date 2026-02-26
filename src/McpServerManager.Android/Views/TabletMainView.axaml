@@ -31,7 +31,7 @@
 
         <!-- Status Bar -->
         <views:AnimatedStatusBar Grid.Row="1" Margin="6,0,6,6" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                 <SelectableTextBlock x:Name="StatusMessageText"
                                      Grid.Column="0"
                                      Text="{Binding StatusMessage}"
@@ -61,6 +61,11 @@
                                      Classes="subtle-text"
                                      Text="{Binding AppVersionDisplay}"
                                      VerticalAlignment="Center"/>
+                <Button Grid.Column="4"
+                        Content="Logout"
+                        Command="{Binding LogoutCommand}"
+                        VerticalAlignment="Center"
+                        Padding="8,4"/>
             </Grid>
         </views:AnimatedStatusBar>
 

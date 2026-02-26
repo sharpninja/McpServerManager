@@ -68,6 +68,15 @@ public partial class App : Application
 
                         var clipboardService = new AndroidClipboardService();
                         var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey);
+                        vm.LogoutRequested += (_, _) =>
+                        {
+                            _logger.LogInformation("Logout requested; clearing tokens and returning to connection dialog");
+                            AndroidConnectionPreferencesService.ClearOidcJwt();
+                            connectionVm.IsConnecting = false;
+                            connectionVm.ErrorMessage = "";
+                            persistNextConnection = true;
+                            singleView.MainView = connectionView;
+                        };
                         singleView.MainView = new AdaptiveMainView { DataContext = vm };
                         vm.InitializeAfterWindowShown();
                     }

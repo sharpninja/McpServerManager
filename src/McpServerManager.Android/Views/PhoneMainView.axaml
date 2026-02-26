@@ -48,7 +48,7 @@
 
         <!-- Status Bar -->
         <views:AnimatedStatusBar Grid.Row="1" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
-            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto" RowSpacing="4" ColumnSpacing="6">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="6">
                 <ComboBox Grid.Row="0"
                           Grid.Column="0"
                           Grid.ColumnSpan="3"
@@ -60,8 +60,16 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
+                <Button Grid.Row="0"
+                        Grid.Column="3"
+                        Content="Logout"
+                        Command="{Binding LogoutCommand}"
+                        VerticalAlignment="Center"
+                        FontSize="15"
+                        Padding="8,4"/>
                 <SelectableTextBlock x:Name="StatusMessageText"
                                      Grid.Row="1" Grid.Column="0"
+                                     Grid.ColumnSpan="2"
                                      Text="{Binding StatusMessage}"
                                      FontWeight="Bold"
                                      FontSize="15"
@@ -69,14 +77,14 @@
                                      TextTrimming="CharacterEllipsis"
                                      PointerPressed="StatusMessageText_OnPointerPressed"/>
                 <Ellipse Grid.Row="1"
-                         Grid.Column="1"
+                         Grid.Column="2"
                          Width="10"
                          Height="10"
                          Fill="{Binding WorkspaceHealthIndicatorBrush}"
                          VerticalAlignment="Center"
                          HorizontalAlignment="Center"
                          ToolTip.Tip="{Binding WorkspaceHealthIndicatorTooltip}"/>
-                <SelectableTextBlock Grid.Row="1" Grid.Column="2" Text="{Binding AppVersionDisplay}" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
+                <SelectableTextBlock Grid.Row="1" Grid.Column="3" Text="{Binding AppVersionDisplay}" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
             </Grid>
         </views:AnimatedStatusBar>
 
