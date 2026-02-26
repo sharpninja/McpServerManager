@@ -168,7 +168,7 @@ public partial class ConnectionViewModel : ViewModelBase
         if (!McpOidcAuthService.IsEnabled(authConfig))
         {
             _logger.LogInformation("OIDC not enabled/configured for {BaseUrl}; continuing without interactive auth", mcpBaseUrl);
-            return null;
+            return await TryFetchDefaultApiKeyFallbackAsync(mcpBaseUrl).ConfigureAwait(true);
         }
 
         var cachedOidcToken = TryReadCachedOidcToken();
@@ -198,6 +198,18 @@ public partial class ConnectionViewModel : ViewModelBase
             {
                 _logger.LogInformation("Cached OIDC token reuse did not yield an MCP API key; falling back to interactive sign-in");
             }
+        }
+
+        // Before prompting OIDC interactive sign-in, try to acquire the default API key
+        // without any bearer token. The /api-key endpoint is unprotected and returns a
+        // read-only key that allows basic connectivity without requiring the user to
+        // complete the OIDC device authorization flow.
+        var preOidcDefaultKey = await TryFetchDefaultApiKeyFallbackAsync(mcpBaseUrl).ConfigureAwait(true);
+        if (!string.IsNullOrWhiteSpace(preOidcDefaultKey))
+        {
+            _logger.LogInformation("Default API key acquired from /api-key without OIDC; skipping interactive sign-in for {BaseUrl}", mcpBaseUrl);
+            OidcStatusMessage = "Opening MCP…";
+            return preOidcDefaultKey;
         }
 
         _logger.LogInformation("OIDC enabled for {BaseUrl}; starting device authorization", mcpBaseUrl);
@@ -259,10 +271,43 @@ public partial class ConnectionViewModel : ViewModelBase
             ClearCachedOidcToken();
         }
 
-        // Fallback to the raw OIDC access token for deployments that accept bearer tokens directly.
+        // Bearer-authenticated key fetch failed. Try without bearer — the /api-key
+        // endpoint is unprotected so this should succeed even when the OIDC token
+        // is not accepted by the server for API key retrieval.
         OidcStatusMessage = "Sign-in complete. Opening MCP…";
-        _logger.LogWarning("MCP default API key fetch after OIDC returned no key; falling back to OIDC access token");
-        return token.AccessToken;
+        _logger.LogWarning("Bearer-authenticated /api-key fetch failed; trying default key without bearer token");
+        var postOidcDefaultKey = await TryFetchDefaultApiKeyFallbackAsync(mcpBaseUrl).ConfigureAwait(true);
+        if (!string.IsNullOrWhiteSpace(postOidcDefaultKey))
+            return postOidcDefaultKey;
+
+        _logger.LogWarning("Could not acquire any MCP API key for {BaseUrl}; proceeding without explicit key", mcpBaseUrl);
+        return null;
+    }
+
+    /// <summary>
+    /// Fetches the default (anonymous) API key from the server's unprotected <c>/api-key</c>
+    /// endpoint without sending any bearer token. Returns null on failure.
+    /// </summary>
+    private async Task<string?> TryFetchDefaultApiKeyFallbackAsync(string mcpBaseUrl)
+    {
+        try
+        {
+            var result = await McpOidcAuthService
+                .TryFetchMcpApiKeyAsync(mcpBaseUrl, bearerAccessToken: null)
+                .ConfigureAwait(true);
+
+            if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.ApiKey))
+            {
+                _logger.LogInformation("Default API key fetched from /api-key without bearer auth for {BaseUrl}", mcpBaseUrl);
+                return result.ApiKey;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch default API key from /api-key for {BaseUrl}", mcpBaseUrl);
+        }
+
+        return null;
     }
 
     private string? TryReadCachedOidcToken()
