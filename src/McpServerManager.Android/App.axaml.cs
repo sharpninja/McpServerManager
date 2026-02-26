@@ -36,6 +36,7 @@ public partial class App : Application
                 var connectionVm = new ConnectionViewModel();
                 connectionVm.SetExternalUrlOpener(AndroidBrowserService.TryOpenUrl);
                 connectionVm.SetOidcPostTokenForegroundActivator(AndroidBrowserService.TryBringAppToForeground);
+                connectionVm.SetQrCodeScanner(AndroidQrScannerService.ScanQrCodeAsync);
                 connectionVm.SetOidcTokenCacheAccessors(
                     () => AndroidConnectionPreferencesService.TryLoadOidcJwt(connectionVm.Host, connectionVm.Port, out var jwtToken)
                         ? jwtToken

@@ -32,10 +32,23 @@
                              FontWeight="SemiBold"/>
 
         <SelectableTextBlock Text="Host" FontSize="18"/>
-        <TextBox x:Name="HostTextBox"
-                 Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                 Watermark="e.g. 10.0.2.2"
-                 IsEnabled="{Binding !IsConnecting}"/>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+            <TextBox x:Name="HostTextBox"
+                     Grid.Column="0"
+                     Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                     Watermark="e.g. 10.0.2.2"
+                     IsEnabled="{Binding !IsConnecting}"/>
+            <Button Grid.Column="1"
+                    Command="{Binding ScanQrCodeCommand}"
+                    IsVisible="{Binding CanScanQrCode}"
+                    IsEnabled="{Binding !IsConnecting}"
+                    ToolTip.Tip="Scan QR code for hostname"
+                    Padding="8"
+                    VerticalAlignment="Stretch">
+                <!-- QR Code icon -->
+                <PathIcon Data="M3,11H5V13H3V11M11,5H13V9H11V5M9,11H13V15H11V13H9V11M15,11H17V13H19V11H21V13H19V15H21V19H19V21H17V19H13V21H11V17H15V19H17V17H19V15H17V13H15V11M17,3H21V7H19V5H17V3M3,3H7V5H5V7H3V3M3,17H5V19H7V21H3V17M19,19V21H21V19H19M1,1H9V9H1V1M3,3V7H7V3H3M15,1H23V9H15V1M17,3V7H21V3H17M1,15H9V23H1V15M3,17V21H7V17H3Z"/>
+            </Button>
+        </Grid>
 
         <SelectableTextBlock Text="Port" FontSize="18"/>
         <TextBox x:Name="PortTextBox"

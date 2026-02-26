@@ -9,6 +9,7 @@
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <PublishTrimmed>false</PublishTrimmed>
     <RunAOTCompilation>false</RunAOTCompilation>
+    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- Signing: set via CI environment or msbuild properties -->
     <AndroidKeyStore Condition="'$(AndroidSigningKeyStore)' != ''">true</AndroidKeyStore>
@@ -38,6 +39,9 @@
     <PackageReference Include="Porcupine" Version="4.0.2">
       <ExcludeAssets>buildTransitive</ExcludeAssets>
     </PackageReference>
+    <PackageReference Include="Xamarin.GooglePlayServices.Code.Scanner" Version="116.1.0.14" />
+    <!-- Exclude duplicate compose runtime annotation JVM classes that conflict with Android variant -->
+    <PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.Jvm" Version="1.10.0.1" ExcludeAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

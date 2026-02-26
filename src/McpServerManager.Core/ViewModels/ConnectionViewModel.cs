@@ -45,6 +45,10 @@ public partial class ConnectionViewModel : ViewModelBase
     private Func<string?>? _cachedOidcTokenReader;
     private Action<string?>? _cachedOidcTokenWriter;
     private Func<bool>? _oidcPostTokenForegroundActivator;
+    private Func<Task<string?>>? _qrCodeScanner;
+
+    [ObservableProperty]
+    private bool _canScanQrCode;
 
     /// <summary>Raised when the user completes connect (and auth, if required).</summary>
     public event Action<ConnectionEstablishedInfo>? Connected;
@@ -72,6 +76,43 @@ public partial class ConnectionViewModel : ViewModelBase
         _logger.LogInformation(
             "OIDC post-token foreground activator configured: {HasActivator}",
             _oidcPostTokenForegroundActivator != null);
+    }
+
+    public void SetQrCodeScanner(Func<Task<string?>>? scanner)
+    {
+        _qrCodeScanner = scanner;
+        CanScanQrCode = scanner != null;
+        _logger.LogInformation("QR code scanner configured: {HasScanner}", scanner != null);
+    }
+
+    [RelayCommand]
+    private async Task ScanQrCodeAsync()
+    {
+        if (_qrCodeScanner == null) return;
+        try
+        {
+            var result = await _qrCodeScanner().ConfigureAwait(true);
+            if (!string.IsNullOrWhiteSpace(result))
+            {
+                // If the scanned value is a URL, extract just the host
+                if (Uri.TryCreate(result, UriKind.Absolute, out var uri))
+                {
+                    Host = uri.Host;
+                    if (uri.Port > 0 && uri.Port != 80 && uri.Port != 443)
+                        Port = uri.Port.ToString();
+                }
+                else
+                {
+                    Host = result.Trim();
+                }
+                ErrorMessage = "";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "QR code scan failed");
+            ErrorMessage = $"QR scan failed: {ex.Message}";
+        }
     }
 
     [RelayCommand]
