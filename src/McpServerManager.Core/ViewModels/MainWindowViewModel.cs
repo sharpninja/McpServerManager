@@ -63,6 +63,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private McpTodoService _mcpTodoService = null!;
     private McpWorkspaceService _mcpWorkspaceService = null!;
     private bool _suppressWorkspaceSelectionChanged;
+    private bool _hasCompletedInitialSwitch;
     private bool _hasRegisteredCqrsHandlers;
     internal readonly Mediator _mediator = new();
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
@@ -1011,11 +1012,12 @@ public partial class MainWindowViewModel : ViewModelBase
         _suppressWorkspaceSelectionChanged = false;
 
         // Initial picker population suppresses selection-changed switching to avoid duplicate work,
-        // but we still need one real connection switch to resolve the active API key and refresh views.
+        // but we still need one real connection switch to set workspace path and refresh views.
         var selectedBaseUrl = NormalizeMcpBaseUrl(selected.BaseUrl);
         var activeBaseUrl = string.IsNullOrWhiteSpace(_activeMcpBaseUrl) ? "" : NormalizeMcpBaseUrl(_activeMcpBaseUrl);
-        var needsInitialSwitch = !string.Equals(activeBaseUrl, selectedBaseUrl, StringComparison.OrdinalIgnoreCase);
-        if (needsInitialSwitch && !IsSwitchingWorkspace)
+        var needsSwitch = !_hasCompletedInitialSwitch
+            || !string.Equals(activeBaseUrl, selectedBaseUrl, StringComparison.OrdinalIgnoreCase);
+        if (needsSwitch && !IsSwitchingWorkspace)
             _ = SwitchWorkspaceConnectionAsync(selected);
     }
 
@@ -1083,6 +1085,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 option.WorkspaceRootPath ?? "(none)");
             ApplyActiveMcpBaseUrl(selectedBaseUrl, selectedApiKey, option.WorkspaceRootPath);
             await RefreshAllViewsForConnectionChangeAsync().ConfigureAwait(true);
+            _hasCompletedInitialSwitch = true;
             _logger.LogInformation($"[Workspace Switch] Successfully connected to '{option.DisplayName}'");
             DispatchToUi(() => StatusMessage = $"Connected: {option.DisplayName}");
         }
