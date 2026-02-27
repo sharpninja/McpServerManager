@@ -142,7 +142,13 @@ public partial class ConnectionViewModel : ViewModelBase
             return;
         }
 
-        var url = $"http://{Host.Trim()}:{portNumber}";
+        var scheme = portNumber switch
+        {
+            443  => "https",
+            80 or 8080 => "http",
+            _    => "http"
+        };
+        var url = $"{scheme}://{Host.Trim()}:{portNumber}";
         if (!Uri.TryCreate(url, UriKind.Absolute, out _))
         {
             ErrorMessage = "Invalid host or port.";
