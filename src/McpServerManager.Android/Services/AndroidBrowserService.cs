@@ -20,21 +20,25 @@ internal static class AndroidBrowserService
             if (context == null)
                 return false;
 
-            var intent = new Intent(Intent.ActionView, global::Android.Net.Uri.Parse(url.Trim()));
+            var intent = new Intent(context, typeof(OidcWebViewActivity));
+            intent.PutExtra("url", url.Trim());
             intent.AddFlags(ActivityFlags.NewTask);
             context.StartActivity(intent);
-            _logger.LogInformation("Opened external browser for OIDC sign-in URL");
+            _logger.LogInformation("Opened in-app WebView for OIDC sign-in URL");
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to open external browser for OIDC sign-in URL");
+            _logger.LogWarning(ex, "Failed to open in-app WebView for OIDC sign-in URL");
             return false;
         }
     }
 
     public static bool TryBringAppToForeground()
     {
+        // Close the in-app WebView if it's open — the main activity is already in the task stack.
+        OidcWebViewActivity.FinishIfOpen();
+
         var notificationPosted = AndroidReturnToAppNotificationService.ShowReturnToAppNotification();
 
         try
