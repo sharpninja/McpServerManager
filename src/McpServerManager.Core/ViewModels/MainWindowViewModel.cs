@@ -18,6 +18,7 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using McpServer.Client;
 using McpServerManager.Core.Converters;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Models.Json;
@@ -52,13 +53,15 @@ public partial class MainWindowViewModel : ViewModelBase
     private string? _defaultMcpApiKey;
     private Uri _defaultMcpBaseUri = new("http://localhost");
     private string _activeMcpBaseUrl = "";
-    private string? _activeMcpApiKey;
     private string? _activeBearerToken;
-    private bool _preferExplicitApiKeys;
+
+    // Shared pre-authenticated clients — created once at connection time.
+    private McpServerClient _mcpClient = null!;
+    private McpServerClient _mcpPromptClient = null!;
+
     internal McpSessionLogService McpSessionService = null!;
     private McpTodoService _mcpTodoService = null!;
     private McpWorkspaceService _mcpWorkspaceService = null!;
-    private McpWorkspaceService _workspaceCatalogService = null!;
     private bool _suppressWorkspaceSelectionChanged;
     private bool _hasRegisteredCqrsHandlers;
     internal readonly Mediator _mediator = new();
@@ -70,7 +73,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private TodoListViewModel CreateTodoViewModel()
     {
-        var vm = new TodoListViewModel(_clipboardService, _activeMcpBaseUrl, _activeMcpApiKey);
+        var vm = new TodoListViewModel(_clipboardService, _mcpTodoService);
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
         return vm;
     }
@@ -81,7 +84,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private WorkspaceViewModel CreateWorkspaceViewModel()
     {
-        var vm = new WorkspaceViewModel(_clipboardService, _defaultMcpBaseUrl, _defaultMcpApiKey);
+        var vm = new WorkspaceViewModel(_clipboardService, _mcpWorkspaceService);
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
         vm.WorkspaceCatalogChanged += change => _ = RefreshWorkspacePickerAfterCatalogChangeAsync(change);
         return vm;
@@ -97,7 +100,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private VoiceConversationViewModel CreateVoiceConversationViewModel()
     {
-        var vm = new VoiceConversationViewModel(_activeMcpBaseUrl, _activeMcpApiKey);
+        var voiceService = new McpVoiceConversationService(
+            _activeMcpBaseUrl,
+            apiKey: _defaultMcpApiKey,
+            bearerToken: _activeBearerToken);
+        var vm = new VoiceConversationViewModel(voiceService);
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
         return vm;
     }
@@ -337,13 +344,31 @@ public partial class MainWindowViewModel : ViewModelBase
     private void InitializeMcpEndpoint(string mcpBaseUrl, string? initialApiKey = null)
     {
         _defaultMcpBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
-        _preferExplicitApiKeys = !string.IsNullOrWhiteSpace(initialApiKey);
         _defaultMcpApiKey = string.IsNullOrWhiteSpace(initialApiKey)
             ? McpServerRestClientFactory.TryResolveApiKey(_defaultMcpBaseUrl)
             : initialApiKey.Trim();
         _defaultMcpBaseUri = new Uri(_defaultMcpBaseUrl, UriKind.Absolute);
-        _workspaceCatalogService = new McpWorkspaceService(_defaultMcpBaseUrl, _defaultMcpApiKey, bearerToken: _activeBearerToken);
-        ApplyActiveMcpBaseUrl(_defaultMcpBaseUrl, _defaultMcpApiKey);
+
+        // Create shared pre-authenticated clients — used by ALL services for the session lifetime.
+        _mcpClient = McpServerRestClientFactory.Create(
+            _defaultMcpBaseUrl,
+            timeout: TimeSpan.FromSeconds(30),
+            apiKey: _defaultMcpApiKey,
+            bearerToken: _activeBearerToken);
+
+        _mcpPromptClient = McpServerRestClientFactory.Create(
+            _defaultMcpBaseUrl,
+            timeout: TimeSpan.FromMinutes(15),
+            apiKey: _defaultMcpApiKey,
+            bearerToken: _activeBearerToken);
+
+        // Create services once — they share the pre-authenticated clients.
+        McpSessionService = new McpSessionLogService(_mcpClient);
+        _mcpTodoService = new McpTodoService(_mcpClient, _mcpPromptClient);
+        _mcpWorkspaceService = new McpWorkspaceService(_mcpClient, _defaultMcpBaseUri);
+
+        _activeMcpBaseUrl = _defaultMcpBaseUrl;
+
         ApplyWorkspaceConnectionOptions(
             new[]
             {
@@ -368,28 +393,20 @@ public partial class MainWindowViewModel : ViewModelBase
     private void ApplyActiveMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? workspaceRootPath = null)
     {
         _activeMcpBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
-        _activeMcpApiKey = string.IsNullOrWhiteSpace(mcpApiKey)
-            ? McpServerRestClientFactory.TryResolveApiKey(_activeMcpBaseUrl)
-            : mcpApiKey?.Trim();
 
         _logger.LogInformation(
-            "[Workspace Switch] ApplyActiveMcpBaseUrl: BaseUrl={BaseUrl}, ApiKey={ApiKeyPresent}, Bearer={BearerPresent}, WorkspacePath={WorkspacePath}",
+            "[Workspace Switch] ApplyActiveMcpBaseUrl: BaseUrl={BaseUrl}, Bearer={BearerPresent}, WorkspacePath={WorkspacePath}",
             _activeMcpBaseUrl,
-            !string.IsNullOrWhiteSpace(_activeMcpApiKey) ? $"set({_activeMcpApiKey?[..Math.Min(8, _activeMcpApiKey?.Length ?? 0)]}…)" : "null",
             !string.IsNullOrWhiteSpace(_activeBearerToken) ? "set" : "null",
             workspaceRootPath ?? "(none)");
 
-        McpSessionService = new McpSessionLogService(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath, _activeBearerToken);
-        _mcpTodoService = new McpTodoService(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath, _activeBearerToken);
-        // Workspace endpoints always target the connection server, not the active workspace
-        _mcpWorkspaceService = new McpWorkspaceService(_defaultMcpBaseUrl, _defaultMcpApiKey, bearerToken: _activeBearerToken);
+        // Update workspace routing on the shared clients — no service recreation needed.
+        var resolvedPath = workspaceRootPath ?? string.Empty;
+        _mcpClient.WorkspacePath = resolvedPath;
+        _mcpPromptClient.WorkspacePath = resolvedPath;
 
         if (_hasRegisteredCqrsHandlers)
             RegisterMcpServiceHandlers();
-
-        _todoViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath, _activeBearerToken);
-        _workspaceViewModel?.SetMcpBaseUrl(_defaultMcpBaseUrl, _defaultMcpApiKey, bearerToken: _activeBearerToken);
-        _voiceConversationViewModel?.SetMcpBaseUrl(_activeMcpBaseUrl, _activeMcpApiKey, workspaceRootPath, _activeBearerToken);
     }
 
     private async Task<string?> ResolveActiveConnectionApiKeyAsync(WorkspaceConnectionOption option, string baseUrl)
@@ -404,70 +421,31 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var normalizedTargetBaseUrl = NormalizeMcpBaseUrl(baseUrl);
 
-        // Android OIDC flow injects an explicit MCP API key for the connection that completed sign-in.
-        // That key is scoped to the issuing MCP server, so only reuse it when the selected base URL matches.
-        if (_preferExplicitApiKeys)
+        // Try the workspace option's API key first.
+        if (!string.IsNullOrWhiteSpace(option.ApiKey))
         {
-            var targetMatchesActive = !string.IsNullOrWhiteSpace(_activeMcpBaseUrl)
-                && string.Equals(NormalizeMcpBaseUrl(_activeMcpBaseUrl), normalizedTargetBaseUrl, StringComparison.OrdinalIgnoreCase);
-            var targetMatchesDefault = !string.IsNullOrWhiteSpace(_defaultMcpBaseUrl)
-                && string.Equals(NormalizeMcpBaseUrl(_defaultMcpBaseUrl), normalizedTargetBaseUrl, StringComparison.OrdinalIgnoreCase);
-
-            if (targetMatchesActive || targetMatchesDefault)
-            {
-                if (!string.IsNullOrWhiteSpace(option.ApiKey))
-                {
-                    _logger.LogDebug("[Workspace Switch] Using explicit API key from workspace option for {BaseUrl}", normalizedTargetBaseUrl);
-                    return option.ApiKey;
-                }
-
-                if (targetMatchesActive && !string.IsNullOrWhiteSpace(_activeMcpApiKey))
-                {
-                    _logger.LogDebug("[Workspace Switch] Reusing active explicit API key for {BaseUrl}", normalizedTargetBaseUrl);
-                    return _activeMcpApiKey;
-                }
-
-                if (targetMatchesDefault && !string.IsNullOrWhiteSpace(_defaultMcpApiKey))
-                {
-                    _logger.LogDebug("[Workspace Switch] Reusing default explicit API key for {BaseUrl}", normalizedTargetBaseUrl);
-                    return _defaultMcpApiKey;
-                }
-            }
-            else
-            {
-                _logger.LogDebug(
-                    "[Workspace Switch] Skipping explicit API key reuse because target base URL differs. Target={TargetBaseUrl}, Active={ActiveBaseUrl}, Default={DefaultBaseUrl}",
-                    normalizedTargetBaseUrl,
-                    _activeMcpBaseUrl,
-                    _defaultMcpBaseUrl);
-            }
+            _logger.LogDebug("[Workspace Switch] Using workspace option API key for {BaseUrl}", normalizedTargetBaseUrl);
+            return option.ApiKey;
         }
 
-        // Workspace default API keys are per-workspace and rotate on server restart.
-        // Prefer fetching the current default key from /api-key for the selected connection.
+        // Fetch current default key from /api-key for the selected connection.
         var fetchedDefaultKey = await McpServerRestClientFactory
             .TryFetchDefaultApiKeyAsync(normalizedTargetBaseUrl)
             .ConfigureAwait(true);
 
         if (!string.IsNullOrWhiteSpace(fetchedDefaultKey))
         {
-            _logger.LogDebug("[Workspace Switch] Fetched target workspace API key from /api-key for {BaseUrl}", normalizedTargetBaseUrl);
+            _logger.LogDebug("[Workspace Switch] Fetched API key from /api-key for {BaseUrl}", normalizedTargetBaseUrl);
             return fetchedDefaultKey;
         }
 
-        // Fall back to any key resolved from the local marker file (Desktop/dev scenarios).
-        if (!string.IsNullOrWhiteSpace(option.ApiKey))
-        {
-            _logger.LogDebug("[Workspace Switch] Falling back to workspace option API key for {BaseUrl}", normalizedTargetBaseUrl);
-            return option.ApiKey;
-        }
-
+        // Fall back to marker file (Desktop/dev scenarios).
         if (!string.IsNullOrWhiteSpace(option.WorkspaceRootPath))
         {
             var markerKey = McpServerRestClientFactory.TryResolveApiKeyForWorkspaceRoot(option.WorkspaceRootPath, normalizedTargetBaseUrl);
             if (!string.IsNullOrWhiteSpace(markerKey))
             {
-                _logger.LogDebug("[Workspace Switch] Falling back to marker file API key for {BaseUrl}", normalizedTargetBaseUrl);
+                _logger.LogDebug("[Workspace Switch] Using marker file API key for {BaseUrl}", normalizedTargetBaseUrl);
                 return markerKey;
             }
         }
@@ -704,8 +682,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var service = new McpWorkspaceService(baseUrl);
-            var health = await service.GetHealthAsync().ConfigureAwait(true);
+            var health = await McpWorkspaceService.ProbeHealthAsync(baseUrl).ConfigureAwait(true);
 
             var current = SelectedWorkspaceConnection;
             if (current == null ||
@@ -977,7 +954,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var query = await _workspaceCatalogService.QueryAsync().ConfigureAwait(true);
+            var query = await _mcpWorkspaceService.QueryAsync().ConfigureAwait(true);
             var options = BuildWorkspaceConnectionOptions(query.Items);
             DispatchToUi(() => ApplyWorkspaceConnectionOptions(options, preferredSelection, preferredBaseUrl));
         }
@@ -1037,8 +1014,7 @@ public partial class MainWindowViewModel : ViewModelBase
         // but we still need one real connection switch to resolve the active API key and refresh views.
         var selectedBaseUrl = NormalizeMcpBaseUrl(selected.BaseUrl);
         var activeBaseUrl = string.IsNullOrWhiteSpace(_activeMcpBaseUrl) ? "" : NormalizeMcpBaseUrl(_activeMcpBaseUrl);
-        var needsInitialSwitch = string.IsNullOrWhiteSpace(_activeMcpApiKey)
-            || !string.Equals(activeBaseUrl, selectedBaseUrl, StringComparison.OrdinalIgnoreCase);
+        var needsInitialSwitch = !string.Equals(activeBaseUrl, selectedBaseUrl, StringComparison.OrdinalIgnoreCase);
         if (needsInitialSwitch && !IsSwitchingWorkspace)
             _ = SwitchWorkspaceConnectionAsync(selected);
     }
@@ -1082,7 +1058,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _logger.LogInformation($"[Workspace Switch] Switching to '{option.DisplayName}' (BaseUrl={option.BaseUrl})");
         var previousBaseUrl = _activeMcpBaseUrl;
-        var previousApiKey = _activeMcpApiKey;
+        var previousWorkspacePath = _mcpClient.WorkspacePath;
         var previousSelection = FindWorkspaceConnectionOption(
             WorkspaceConnections.FirstOrDefault(c =>
                 !string.IsNullOrWhiteSpace(c.WorkspaceKey) &&
@@ -1101,9 +1077,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
             var selectedApiKey = await ResolveActiveConnectionApiKeyAsync(option, selectedBaseUrl).ConfigureAwait(true);
             _logger.LogInformation(
-                "[Workspace Switch] Resolved for '{DisplayName}': BaseUrl={BaseUrl}, ApiKey={ApiKey}, Bearer={Bearer}, WorkspacePath={WorkspacePath}",
+                "[Workspace Switch] Resolved for '{DisplayName}': BaseUrl={BaseUrl}, Bearer={Bearer}, WorkspacePath={WorkspacePath}",
                 option.DisplayName, selectedBaseUrl,
-                !string.IsNullOrWhiteSpace(selectedApiKey) ? $"set({selectedApiKey[..Math.Min(8, selectedApiKey.Length)]}…)" : "null",
                 !string.IsNullOrWhiteSpace(_activeBearerToken) ? "set" : "null",
                 option.WorkspaceRootPath ?? "(none)");
             ApplyActiveMcpBaseUrl(selectedBaseUrl, selectedApiKey, option.WorkspaceRootPath);
@@ -1114,7 +1089,7 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, $"[Workspace Switch] Failed switching to '{option.DisplayName}'");
-            ApplyActiveMcpBaseUrl(previousBaseUrl, previousApiKey, previousSelection?.WorkspaceRootPath);
+            ApplyActiveMcpBaseUrl(previousBaseUrl, workspaceRootPath: previousWorkspacePath);
             var revertedDisplayName = previousSelection?.DisplayName ?? previousBaseUrl;
             await DispatchToUiAsync(() =>
             {
@@ -1193,8 +1168,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private async Task<McpWorkspaceHealthResult> ProbeWorkspaceConnectionHealthAsync(string baseUrl)
     {
         _logger.LogInformation("[Workspace Switch] Probing health at {BaseUrl}...", baseUrl);
-        var service = new McpWorkspaceService(baseUrl);
-        var result = await service.GetHealthAsync().ConfigureAwait(true);
+        var result = await McpWorkspaceService.ProbeHealthAsync(baseUrl).ConfigureAwait(true);
         _logger.LogInformation("[Workspace Switch] Health probe for {BaseUrl}: Success={Success}, StatusCode={StatusCode}, Error={Error}",
             baseUrl, result.Success, result.StatusCode, result.Error ?? "(none)");
         return result;

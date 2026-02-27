@@ -13,14 +13,10 @@ public sealed class McpSessionLogService
     private const int PageSize = 1000;
     private readonly McpServerClient _client;
 
-    public McpSessionLogService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null, string? bearerToken = null)
+    /// <summary>Creates a session-log service using a pre-authenticated, shared MCP client.</summary>
+    public McpSessionLogService(McpServerClient client)
     {
-        _client = McpServerRestClientFactory.Create(
-            baseUrl,
-            timeout: TimeSpan.FromSeconds(30),
-            apiKey: apiKey,
-            workspaceRootPath: workspaceRootPath,
-            bearerToken: bearerToken);
+        _client = client ?? throw new ArgumentNullException(nameof(client));
     }
 
     public async Task<IReadOnlyList<UnifiedSessionLog>> GetAllSessionsAsync(CancellationToken cancellationToken)

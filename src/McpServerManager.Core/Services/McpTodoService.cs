@@ -14,22 +14,13 @@ public sealed class McpTodoService
     private readonly McpServerClient _client;
     private readonly McpServerClient _promptClient;
 
-    public McpTodoService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null, string? bearerToken = null)
+    /// <summary>Creates a todo service using pre-authenticated, shared MCP clients.</summary>
+    /// <param name="client">Standard-timeout client for CRUD operations.</param>
+    /// <param name="promptClient">Long-timeout client for SSE prompt streaming.</param>
+    public McpTodoService(McpServerClient client, McpServerClient promptClient)
     {
-        _client = McpServerRestClientFactory.Create(
-            baseUrl,
-            timeout: TimeSpan.FromSeconds(5),
-            apiKey: apiKey,
-            workspaceRootPath: workspaceRootPath,
-            bearerToken: bearerToken);
-
-        // Prompt endpoints stream SSE responses and can run much longer than CRUD calls.
-        _promptClient = McpServerRestClientFactory.Create(
-            baseUrl,
-            timeout: TimeSpan.FromMinutes(15),
-            apiKey: apiKey,
-            workspaceRootPath: workspaceRootPath,
-            bearerToken: bearerToken);
+        _client = client ?? throw new ArgumentNullException(nameof(client));
+        _promptClient = promptClient ?? throw new ArgumentNullException(nameof(promptClient));
     }
 
     /// <summary>List / filter todos.</summary>

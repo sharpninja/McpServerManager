@@ -20,17 +20,11 @@ public sealed class McpWorkspaceService
     private readonly Uri _baseUri;
     private readonly HttpClient _healthHttpClient;
 
-    public McpWorkspaceService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null, string? bearerToken = null)
+    /// <summary>Creates a workspace service using a pre-authenticated, shared MCP client.</summary>
+    public McpWorkspaceService(McpServerClient client, Uri baseUri)
     {
-        _client = McpServerRestClientFactory.Create(
-            baseUrl,
-            timeout: TimeSpan.FromSeconds(5),
-            apiKey: apiKey,
-            workspaceRootPath: workspaceRootPath,
-            bearerToken: bearerToken);
-
-        var normalizedBaseUrl = McpServerRestClientFactory.NormalizeBaseUrl(baseUrl);
-        _baseUri = new Uri(normalizedBaseUrl, UriKind.Absolute);
+        _client = client ?? throw new ArgumentNullException(nameof(client));
+        _baseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
         _healthHttpClient = new HttpClient
         {
             BaseAddress = _baseUri,
@@ -332,5 +326,53 @@ public sealed class McpWorkspaceService
             .TrimEnd('=')
             .Replace('+', '-')
             .Replace('/', '_');
+    }
+
+    /// <summary>Unauthenticated health probe — no MCP client needed.</summary>
+    public static async Task<McpWorkspaceHealthResult> ProbeHealthAsync(string baseUrl, CancellationToken cancellationToken = default)
+    {
+        var normalizedBaseUrl = McpServerRestClientFactory.NormalizeBaseUrl(baseUrl);
+        var baseUri = new Uri(normalizedBaseUrl, UriKind.Absolute);
+        using var httpClient = new HttpClient { BaseAddress = baseUri, Timeout = TimeSpan.FromSeconds(5) };
+
+        var candidates = new[] { "/health", "/mcp/health" };
+        McpWorkspaceHealthResult? lastResult = null;
+        foreach (var candidate in candidates)
+        {
+            try
+            {
+                var uriBuilder = new UriBuilder(baseUri) { Path = candidate.TrimStart('/') };
+                using var request = CreateNoCacheGet(uriBuilder.Uri);
+                using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(true);
+                var body = response.Content == null
+                    ? ""
+                    : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(true);
+
+                lastResult = new McpWorkspaceHealthResult
+                {
+                    Success = response.IsSuccessStatusCode,
+                    StatusCode = (int)response.StatusCode,
+                    Url = uriBuilder.Uri.ToString(),
+                    Body = body
+                };
+            }
+            catch (Exception ex)
+            {
+                lastResult = new McpWorkspaceHealthResult
+                {
+                    Success = false,
+                    StatusCode = 0,
+                    Url = null,
+                    Body = "",
+                    Error = ex.Message
+                };
+            }
+
+            if (lastResult.Success || lastResult.StatusCode != 404)
+                return lastResult;
+        }
+
+        return lastResult ?? new McpWorkspaceHealthResult { Success = false, Error = "No health endpoint response." };
     }
 }

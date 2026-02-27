@@ -41,33 +41,20 @@ public partial class VoiceConversationViewModel : ViewModelBase
     public event Action<string>? GlobalStatusChanged;
 
     /// <summary>
-    /// Creates a voice conversation ViewModel for an MCP endpoint.
+    /// Creates a voice conversation ViewModel with a pre-configured voice service.
     /// </summary>
-    public VoiceConversationViewModel(string mcpBaseUrl, string? mcpApiKey = null)
+    public VoiceConversationViewModel(McpVoiceConversationService service)
     {
-        _mcpBaseUrl = mcpBaseUrl;
-        _mcpApiKey = mcpApiKey;
-        _voiceService = new McpVoiceConversationService(mcpBaseUrl, mcpApiKey);
+        _mcpBaseUrl = "";
+        _mcpApiKey = null;
+        _voiceService = service ?? throw new ArgumentNullException(nameof(service));
     }
 
     /// <summary>
     /// Design-time/parameterless constructor.
     /// </summary>
-    public VoiceConversationViewModel() : this(AppSettings.ResolveMcpBaseUrl())
+    public VoiceConversationViewModel() : this(new McpVoiceConversationService(AppSettings.ResolveMcpBaseUrl()))
     {
-    }
-
-    /// <summary>
-    /// Updates the MCP endpoint used by the voice client and clears the current session state.
-    /// </summary>
-    public void SetMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? workspaceRootPath = null, string? bearerToken = null)
-    {
-        _mcpBaseUrl = mcpBaseUrl;
-        _mcpApiKey = mcpApiKey;
-        _voiceService = new McpVoiceConversationService(mcpBaseUrl, mcpApiKey, workspaceRootPath, bearerToken);
-        _activeTurnCts?.Cancel();
-        ClearSessionState();
-        StatusText = "Voice endpoint updated. Create a new voice session.";
     }
 
     /// <summary>

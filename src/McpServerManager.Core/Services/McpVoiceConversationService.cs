@@ -12,6 +12,7 @@ namespace McpServerManager.Core.Services;
 
 /// <summary>
 /// Typed client for MCP voice conversation REST endpoints.
+/// Auth tokens are set once at construction; no runtime resolution.
 /// </summary>
 public sealed class McpVoiceConversationService
 {
@@ -19,17 +20,15 @@ public sealed class McpVoiceConversationService
 
     private readonly string _baseUrl;
     private readonly string? _apiKey;
-    private readonly string? _workspaceRootPath;
     private readonly string? _bearerToken;
 
     /// <summary>
-    /// Creates a new MCP voice conversation client.
+    /// Creates a new MCP voice conversation client with pre-resolved auth.
     /// </summary>
-    public McpVoiceConversationService(string baseUrl, string? apiKey = null, string? workspaceRootPath = null, string? bearerToken = null)
+    public McpVoiceConversationService(string baseUrl, string? apiKey = null, string? bearerToken = null)
     {
         _baseUrl = McpServerRestClientFactory.NormalizeBaseUrl(baseUrl);
         _apiKey = string.IsNullOrWhiteSpace(apiKey) ? null : apiKey.Trim();
-        _workspaceRootPath = workspaceRootPath;
         _bearerToken = string.IsNullOrWhiteSpace(bearerToken) ? null : bearerToken.Trim();
     }
 
@@ -123,26 +122,22 @@ public sealed class McpVoiceConversationService
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
     }
 
-    private async Task<HttpClient> CreateAuthorizedClientAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    private Task<HttpClient> CreateAuthorizedClientAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
-        var apiKey = _apiKey
-            ?? McpServerRestClientFactory.TryResolveApiKey(_baseUrl, _workspaceRootPath)
-            ?? await McpServerRestClientFactory.TryFetchDefaultApiKeyAsync(_baseUrl, timeout: TimeSpan.FromSeconds(10), cancellationToken).ConfigureAwait(true);
-
         var client = new HttpClient
         {
             BaseAddress = new Uri(_baseUrl.TrimEnd('/') + "/", UriKind.Absolute),
             Timeout = timeout
         };
 
-        if (!string.IsNullOrWhiteSpace(apiKey))
-            client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
-
+        // Bearer takes precedence (mutual exclusivity with API key)
         if (!string.IsNullOrWhiteSpace(_bearerToken))
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _bearerToken);
+        else if (!string.IsNullOrWhiteSpace(_apiKey))
+            client.DefaultRequestHeaders.Add("X-Api-Key", _apiKey);
 
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        return client;
+        return Task.FromResult(client);
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)

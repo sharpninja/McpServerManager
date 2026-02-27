@@ -78,17 +78,21 @@ public partial class WorkspaceViewModel : ViewModelBase
     /// <summary>Set by the desktop view code-behind to read current global prompt editor content.</summary>
     public Func<string>? GetGlobalPromptEditorText { get; set; }
 
-    public WorkspaceViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey = null)
+    public WorkspaceViewModel(IClipboardService clipboardService, McpWorkspaceService service)
     {
         _clipboardService = clipboardService;
-        SetMcpBaseUrl(mcpBaseUrl, mcpApiKey);
+        RegisterCqrsHandlers(service);
         NewWorkspace();
     }
 
     public WorkspaceViewModel(IClipboardService clipboardService)
     {
         _clipboardService = clipboardService;
-        SetMcpBaseUrl(AppSettings.ResolveMcpBaseUrl());
+        // Design-time / standalone fallback — creates its own client.
+        var baseUrl = AppSettings.ResolveMcpBaseUrl();
+        var normalizedUrl = McpServerRestClientFactory.NormalizeBaseUrl(baseUrl);
+        var client = McpServerRestClientFactory.Create(baseUrl, TimeSpan.FromSeconds(5));
+        RegisterCqrsHandlers(new McpWorkspaceService(client, new Uri(normalizedUrl, UriKind.Absolute)));
         NewWorkspace();
     }
 
@@ -116,13 +120,6 @@ public partial class WorkspaceViewModel : ViewModelBase
         _mediator.Register<StopWorkspaceCommand, McpWorkspaceProcessStatus>(new StopWorkspaceHandler(service));
         _mediator.Register<UpdateWorkspaceGlobalPromptCommand, McpWorkspaceGlobalPromptResult>(
             new UpdateWorkspaceGlobalPromptHandler(service));
-    }
-
-    public void SetMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? bearerToken = null)
-    {
-        _hasLoadedGlobalPrompt = false;
-        GlobalPromptStatusText = "Global prompt not loaded";
-        RegisterCqrsHandlers(new McpWorkspaceService(mcpBaseUrl, mcpApiKey, bearerToken: bearerToken));
     }
 
     public Task RefreshForConnectionChangeAsync() => LoadWorkspacesCoreAsync(forceEditorReload: true);

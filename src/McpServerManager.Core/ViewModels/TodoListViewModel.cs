@@ -62,16 +62,19 @@ public partial class TodoListViewModel : ViewModelBase
 
     // ── Constructor ─────────────────────────────────────────────────────────
 
-    public TodoListViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey = null)
+    public TodoListViewModel(IClipboardService clipboardService, McpTodoService service)
     {
         _clipboardService = clipboardService;
-        SetMcpBaseUrl(mcpBaseUrl, mcpApiKey);
+        RegisterCqrsHandlers(service);
     }
 
     public TodoListViewModel(IClipboardService clipboardService)
     {
         _clipboardService = clipboardService;
-        SetMcpBaseUrl(AppSettings.ResolveMcpBaseUrl());
+        // Design-time / standalone fallback — creates its own client.
+        var client = McpServerRestClientFactory.Create(AppSettings.ResolveMcpBaseUrl(), TimeSpan.FromSeconds(5));
+        var promptClient = McpServerRestClientFactory.Create(AppSettings.ResolveMcpBaseUrl(), TimeSpan.FromMinutes(15));
+        RegisterCqrsHandlers(new McpTodoService(client, promptClient));
     }
 
     private void RegisterCqrsHandlers(McpTodoService service)
@@ -92,11 +95,6 @@ public partial class TodoListViewModel : ViewModelBase
         _mediator.Register<DeleteTodoCommand, McpTodoMutationResult>(new DeleteTodoHandler(service));
         _mediator.Register<AnalyzeTodoRequirementsCommand, McpRequirementsAnalysisResult>(new AnalyzeTodoRequirementsHandler(service));
         _mediator.Register<StreamTodoPromptCommand, IAsyncEnumerable<string>>(new StreamTodoPromptHandler(service));
-    }
-
-    public void SetMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? workspaceRootPath = null, string? bearerToken = null)
-    {
-        RegisterCqrsHandlers(new McpTodoService(mcpBaseUrl, mcpApiKey, workspaceRootPath, bearerToken));
     }
 
     public Task RefreshForConnectionChangeAsync() => LoadTodosAsync();
