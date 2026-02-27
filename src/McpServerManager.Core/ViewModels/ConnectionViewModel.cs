@@ -161,11 +161,25 @@ public partial class ConnectionViewModel : ViewModelBase
 
         try
         {
-            // Verify the server is reachable before attempting auth
-            using var probe = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+            // Verify the server is reachable. Use a non-redirecting probe so we can
+            // detect HTTP→HTTPS upgrades (e.g. ngrok free tier) and use the final
+            // scheme. .NET HttpClient strips the Authorization header on scheme-change
+            // redirects, which breaks Bearer auth if we keep using the HTTP URL.
+            using var probeHandler = new HttpClientHandler { AllowAutoRedirect = false };
+            using var probe = new HttpClient(probeHandler) { Timeout = TimeSpan.FromSeconds(5) };
             try
             {
                 using var healthResponse = await probe.GetAsync($"{url}/health").ConfigureAwait(true);
+                if ((int)healthResponse.StatusCode is >= 301 and <= 308
+                    && healthResponse.Headers.Location is { } redirectLocation)
+                {
+                    var redirected = redirectLocation.IsAbsoluteUri ? redirectLocation : new Uri(new Uri(url), redirectLocation);
+                    var upgradedUrl = $"{redirected.Scheme}://{redirected.Host}:{redirected.Port}";
+                    _logger.LogInformation(
+                        "ConnectAsync: health probe redirected {OriginalUrl} → {UpgradedUrl}; adopting upgraded scheme",
+                        url, upgradedUrl);
+                    url = upgradedUrl;
+                }
             }
             catch (Exception probeEx)
             {
