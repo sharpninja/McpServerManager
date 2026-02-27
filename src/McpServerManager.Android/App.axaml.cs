@@ -58,12 +58,18 @@ public partial class App : Application
                 {
                     try
                     {
-                        _logger.LogInformation("Opening main Android view for {McpBaseUrl}. TokenPresent={HasToken}, BearerPresent={HasBearer}", mcpBaseUrl, !string.IsNullOrWhiteSpace(mcpApiKey), !string.IsNullOrWhiteSpace(bearerToken));
+                        _logger.LogInformation("OpenMainView: entered for {McpBaseUrl}. TokenPresent={HasToken}, BearerPresent={HasBearer}", mcpBaseUrl, !string.IsNullOrWhiteSpace(mcpApiKey), !string.IsNullOrWhiteSpace(bearerToken));
                         if (Uri.TryCreate(mcpBaseUrl, UriKind.Absolute, out var uri))
                         {
-                            AndroidConnectionPreferencesService.Save(
-                                uri.Host,
-                                uri.Port.ToString(CultureInfo.InvariantCulture));
+                            var saveHost = uri.Host;
+                            var savePort = uri.Port.ToString(CultureInfo.InvariantCulture);
+                            _logger.LogInformation("OpenMainView: saving connection {Host}:{Port}", saveHost, savePort);
+                            AndroidConnectionPreferencesService.Save(saveHost, savePort);
+                            _logger.LogInformation("OpenMainView: save call completed for {Host}:{Port}", saveHost, savePort);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("OpenMainView: Uri.TryCreate failed for '{McpBaseUrl}' — connection not saved", mcpBaseUrl);
                         }
 
                         var clipboardService = new AndroidClipboardService();
@@ -90,17 +96,22 @@ public partial class App : Application
 
                 connectionVm.Connected += connection =>
                 {
-                    _logger.LogInformation("Connection dialog signaled Connected for {McpBaseUrl}. TokenPresent={HasToken}, BearerPresent={HasBearer}", connection.BaseUrl, !string.IsNullOrWhiteSpace(connection.ApiKey), !string.IsNullOrWhiteSpace(connection.BearerToken));
+                    _logger.LogInformation("Connected event fired for {McpBaseUrl}. TokenPresent={HasToken}, BearerPresent={HasBearer}", connection.BaseUrl, !string.IsNullOrWhiteSpace(connection.ApiKey), !string.IsNullOrWhiteSpace(connection.BearerToken));
                     OpenMainView(connection.BaseUrl, connection.ApiKey, connection.BearerToken);
                 };
 
                 if (AndroidConnectionPreferencesService.TryLoad(out var savedHost, out var savedPort))
                 {
-                    _logger.LogInformation("Loaded saved Android connection {Host}:{Port}; auto-connecting", savedHost, savedPort);
+                    _logger.LogInformation("Startup: loaded saved connection {Host}:{Port}; auto-connecting", savedHost, savedPort);
                     connectionVm.Host = savedHost;
                     connectionVm.Port = savedPort;
                     connectionVm.ErrorMessage = "";
+                    _logger.LogInformation("Startup: VM updated with saved Host={Host}, Port={Port}; executing ConnectCommand", connectionVm.Host, connectionVm.Port);
                     connectionVm.ConnectCommand.Execute(null);
+                }
+                else
+                {
+                    _logger.LogInformation("Startup: no saved connection found; showing connection dialog with defaults Host={Host}, Port={Port}", connectionVm.Host, connectionVm.Port);
                 }
             }
             catch (Exception ex)
