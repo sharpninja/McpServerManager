@@ -29,7 +29,8 @@ internal static class McpServerRestClientFactory
             ApiKey = string.IsNullOrWhiteSpace(resolvedApiKey) ? null : resolvedApiKey,
             BearerToken = string.IsNullOrWhiteSpace(bearerToken) ? null : bearerToken.Trim(),
             Timeout = timeout,
-            WorkspacePath = string.IsNullOrWhiteSpace(workspaceRootPath) ? null : workspaceRootPath.Trim()
+            WorkspacePath = string.IsNullOrWhiteSpace(workspaceRootPath) ? null : workspaceRootPath.Trim(),
+            LoggerFactory = AppLogService.Instance
         };
 
         return McpServerClientFactory.Create(options);

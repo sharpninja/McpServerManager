@@ -1,11 +1,14 @@
 using Avalonia;
 using System;
 using System.IO;
+using McpServerManager.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace McpServerManager;
 
 sealed class Program
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("Program");
     private static readonly string HtmlCacheDir = AppSettings.ResolveHtmlCacheDirectory();
 
     // Initialization code. Don't use any Avalonia, third-party APIs or any
@@ -21,7 +24,7 @@ sealed class Program
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"FATAL CRASH: {ex}");
+            _logger.LogCritical(ex, "FATAL CRASH");
             System.IO.File.WriteAllText("crash.log", ex.ToString());
             throw; // Re-throw to let the OS handle it (or not)
         }
@@ -38,7 +41,7 @@ sealed class Program
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Could not remove HTML cache: {ex.Message}");
+            _logger.LogWarning(ex, "Could not remove HTML cache");
         }
     }
 

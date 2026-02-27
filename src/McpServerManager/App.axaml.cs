@@ -7,11 +7,14 @@ using System.Linq;
 using Avalonia.Markup.Xaml;
 using McpServerManager.ViewModels;
 using McpServerManager.Views;
+using McpServerManager.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace McpServerManager;
 
 public partial class App : Application
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("App");
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -38,8 +41,7 @@ public partial class App : Application
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"ViewModel init failed (window will still show): {ex}");
-                    System.Diagnostics.Debug.WriteLine(ex.ToString());
+                    _logger.LogError(ex, "ViewModel init failed (window will still show)");
                 }
 
                 desktop.MainWindow = window;
@@ -48,8 +50,7 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"MainWindow creation failed: {ex}");
-                System.Diagnostics.Debug.WriteLine(ex.ToString());
+                _logger.LogCritical(ex, "MainWindow creation failed");
                 System.IO.File.WriteAllText("crash.log", ex.ToString());
             }
         }

@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using McpServerManager.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace McpServerManager.Models.Json
 {
@@ -144,6 +146,7 @@ namespace McpServerManager.Models.Json
 
     public static class UnifiedLogFactory
     {
+        private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("UnifiedLogFactory");
         /// <summary>Ensures entries have OriginalEntry set and Agent set from log SourceType when empty (e.g. when loaded from unified-format file).</summary>
         public static void EnsureOriginalEntriesSet(UnifiedSessionLog? log)
         {
@@ -310,7 +313,7 @@ namespace McpServerManager.Models.Json
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Copilot actions parse failed RequestId={requestId}: {ex.Message}");
+                    _logger.LogWarning(ex, "Copilot actions parse failed RequestId={RequestId}", requestId);
                 }
                 return list.OrderBy(a => a.Order).ToList();
             }
@@ -340,7 +343,7 @@ namespace McpServerManager.Models.Json
                      using var doc = System.Text.Json.JsonDocument.Parse(jsonString);
                      ParseActionsFromElement(doc.RootElement, list);
                  } catch (Exception ex) {
-                     System.Diagnostics.Debug.WriteLine($"Failed to parse actions JSON: {ex.Message}");
+                     _logger.LogWarning(ex, "Failed to parse actions JSON");;
                  }
             }
             return list.OrderBy(a => a.Order).ToList();

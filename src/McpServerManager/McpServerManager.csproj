@@ -47,5 +47,6 @@
     <!-- Local copy (submodule) for debugging/fixes -->
     <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Client\McpServer.Client.csproj" />
     <ProjectReference Include="..\..\lib\Markdown.Avalonia\Markdown.Avalonia\Markdown.Avalonia.csproj" />
+    <ProjectReference Include="..\McpServerManager.Core\McpServerManager.Core.csproj" />
   </ItemGroup>
 </Project>

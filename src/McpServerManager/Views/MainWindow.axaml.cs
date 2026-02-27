@@ -8,6 +8,8 @@ using Avalonia.VisualTree;
 using McpServerManager.ViewModels;
 using McpServerManager.Models;
 using McpServerManager.Models.Json;
+using McpServerManager.Core.Services;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -18,6 +20,7 @@ namespace McpServerManager.Views;
 
 public partial class MainWindow : Window
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("MainWindow");
     private bool? _wasPortrait;
     private bool _isUpdatingLayout;
     private LayoutSettings _layoutSettings = new();
@@ -81,7 +84,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error applying window settings: {ex.Message}");
+            _logger.LogWarning(ex, "Error applying window settings");
         }
     }
 
@@ -116,7 +119,7 @@ public partial class MainWindow : Window
         var pos = Position;
         if (pos.X < -100 || pos.Y < -100 || pos.X > 10000 || pos.Y > 10000)
         {
-            Console.WriteLine($"Window position ({pos.X}, {pos.Y}) off-screen; resetting to (50, 50)");
+            _logger.LogWarning("Window position ({X}, {Y}) off-screen; resetting to (50, 50)", pos.X, pos.Y);
             Position = new PixelPoint(50, 50);
         }
 
@@ -241,7 +244,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error applying JSON viewer splitter: {ex.Message}");
+            _logger.LogWarning(ex, "Error applying JSON viewer splitter");
         }
     }
 
@@ -256,7 +259,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error saving JSON viewer splitter: {ex.Message}");
+            _logger.LogWarning(ex, "Error saving JSON viewer splitter");
         }
     }
 
