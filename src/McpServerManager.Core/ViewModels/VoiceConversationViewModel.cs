@@ -34,6 +34,23 @@ public partial class VoiceConversationViewModel : ViewModelBase
     [ObservableProperty] private int _lastLatencyMs;
     [ObservableProperty] private bool _isSessionActive;
 
+    /// <summary>When set, workspace path is resolved from the source of truth at read time.</summary>
+    public Func<string?>? ResolveWorkspacePath { get; set; }
+
+    /// <summary>The active workspace root path (e.g. "E:\github\FunWasHad"). Reads from <see cref="ResolveWorkspacePath"/> when set.</summary>
+    public string WorkspacePath
+    {
+        get => ResolveWorkspacePath?.Invoke() ?? _workspacePath;
+        set
+        {
+            _workspacePath = value ?? string.Empty;
+            // Only push to service if the service doesn't have its own resolver
+            if (_voiceService.ResolveWorkspacePath == null)
+                _voiceService.WorkspacePath = _workspacePath;
+        }
+    }
+    private string _workspacePath = string.Empty;
+
     public ObservableCollection<McpVoiceTranscriptEntry> TranscriptItems { get; } = [];
     public ObservableCollection<McpVoiceToolCallRecord> LastToolCalls { get; } = [];
 

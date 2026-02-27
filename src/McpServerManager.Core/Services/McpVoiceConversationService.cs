@@ -12,7 +12,9 @@ namespace McpServerManager.Core.Services;
 
 /// <summary>
 /// Typed client for MCP voice conversation REST endpoints.
-/// Auth tokens are set once at construction; no runtime resolution.
+/// When <see cref="ResolveBaseUrl"/>, <see cref="ResolveBearerToken"/>, etc. are set,
+/// auth and workspace are resolved at request time (pull from source of truth).
+/// Otherwise falls back to cached construction-time values.
 /// </summary>
 public sealed class McpVoiceConversationService
 {
@@ -24,6 +26,7 @@ public sealed class McpVoiceConversationService
 
     /// <summary>
     /// Creates a new MCP voice conversation client with pre-resolved auth.
+    /// Prefer setting the <c>Resolve*</c> Func properties so values are read at request time.
     /// </summary>
     public McpVoiceConversationService(string baseUrl, string? apiKey = null, string? bearerToken = null)
     {
@@ -31,6 +34,24 @@ public sealed class McpVoiceConversationService
         _apiKey = string.IsNullOrWhiteSpace(apiKey) ? null : apiKey.Trim();
         _bearerToken = string.IsNullOrWhiteSpace(bearerToken) ? null : bearerToken.Trim();
     }
+
+    /// <summary>When set, overrides the cached base URL at request time.</summary>
+    public Func<string>? ResolveBaseUrl { get; set; }
+
+    /// <summary>When set, overrides the cached API key at request time.</summary>
+    public Func<string?>? ResolveApiKey { get; set; }
+
+    /// <summary>When set, overrides the cached bearer token at request time.</summary>
+    public Func<string?>? ResolveBearerToken { get; set; }
+
+    /// <summary>When set, overrides the cached workspace path at request time.</summary>
+    public Func<string?>? ResolveWorkspacePath { get; set; }
+
+    /// <summary>
+    /// Gets or sets the workspace root path sent via <c>X-Workspace-Path</c> header.
+    /// Superseded by <see cref="ResolveWorkspacePath"/> when set.
+    /// </summary>
+    public string? WorkspacePath { get; set; }
 
     /// <summary>
     /// Creates a voice session on the MCP server.
@@ -124,19 +145,29 @@ public sealed class McpVoiceConversationService
 
     private Task<HttpClient> CreateAuthorizedClientAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
+        // Resolve all values at request time — Func resolvers take priority over cached construction-time values
+        var baseUrl = ResolveBaseUrl?.Invoke() ?? _baseUrl;
+        var apiKey = ResolveApiKey?.Invoke() ?? _apiKey;
+        var bearerToken = ResolveBearerToken?.Invoke() ?? _bearerToken;
+        var workspacePath = ResolveWorkspacePath?.Invoke() ?? WorkspacePath;
+
         var client = new HttpClient
         {
-            BaseAddress = new Uri(_baseUrl.TrimEnd('/') + "/", UriKind.Absolute),
+            BaseAddress = new Uri(McpServerRestClientFactory.NormalizeBaseUrl(baseUrl).TrimEnd('/') + "/", UriKind.Absolute),
             Timeout = timeout
         };
 
         // Bearer takes precedence (mutual exclusivity with API key)
-        if (!string.IsNullOrWhiteSpace(_bearerToken))
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _bearerToken);
-        else if (!string.IsNullOrWhiteSpace(_apiKey))
-            client.DefaultRequestHeaders.Add("X-Api-Key", _apiKey);
+        if (!string.IsNullOrWhiteSpace(bearerToken))
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+        else if (!string.IsNullOrWhiteSpace(apiKey))
+            client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
 
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        if (!string.IsNullOrWhiteSpace(workspacePath))
+            client.DefaultRequestHeaders.Add("X-Workspace-Path", workspacePath);
+
         return Task.FromResult(client);
     }
 
@@ -149,17 +180,34 @@ public sealed class McpVoiceConversationService
             ? string.Empty
             : (await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(true)).Trim();
 
+        // Try to extract {"error":"..."} from JSON response body
+        var detail = ExtractErrorDetail(body);
+
         var message = response.StatusCode switch
         {
-            HttpStatusCode.NotFound => "MCP voice endpoint or session was not found.",
+            HttpStatusCode.NotFound => string.IsNullOrWhiteSpace(detail) ? "MCP voice endpoint or session was not found." : detail,
             HttpStatusCode.Unauthorized => "Unauthorized to call MCP voice endpoint (API key missing/invalid).",
-            HttpStatusCode.BadRequest => string.IsNullOrWhiteSpace(body) ? "MCP voice request was invalid." : $"MCP voice request was invalid: {body}",
-            HttpStatusCode.ServiceUnavailable => string.IsNullOrWhiteSpace(body) ? "MCP voice service is unavailable." : $"MCP voice service unavailable: {body}",
-            _ => string.IsNullOrWhiteSpace(body)
+            HttpStatusCode.BadRequest => string.IsNullOrWhiteSpace(detail) ? "MCP voice request was invalid." : detail,
+            HttpStatusCode.ServiceUnavailable => string.IsNullOrWhiteSpace(detail) ? "MCP voice service is unavailable." : detail,
+            _ => string.IsNullOrWhiteSpace(detail)
                 ? $"MCP voice request failed ({(int)response.StatusCode} {response.ReasonPhrase})."
-                : $"MCP voice request failed ({(int)response.StatusCode} {response.ReasonPhrase}): {body}"
+                : $"{detail} ({(int)response.StatusCode})"
         };
 
         throw new InvalidOperationException(message);
+    }
+
+    private static string? ExtractErrorDetail(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+            return null;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("error", out var errorProp) && errorProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                return errorProp.GetString();
+        }
+        catch { /* not JSON or missing field — use raw body */ }
+        return body;
     }
 }

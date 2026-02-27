@@ -104,8 +104,22 @@ public partial class MainWindowViewModel : ViewModelBase
         var voiceService = new McpVoiceConversationService(
             _activeMcpBaseUrl,
             apiKey: _defaultMcpApiKey,
-            bearerToken: _activeBearerToken);
-        var vm = new VoiceConversationViewModel(voiceService);
+            bearerToken: _activeBearerToken)
+        {
+            // Pull from source of truth at request time — never stale
+            ResolveBaseUrl = () => _activeMcpBaseUrl,
+            ResolveBearerToken = () => _activeBearerToken,
+            ResolveApiKey = () => _defaultMcpApiKey,
+            ResolveWorkspacePath = () => SelectedWorkspaceConnection?.WorkspaceRootPath
+                ?? _mcpClient.WorkspacePath
+        };
+        var vm = new VoiceConversationViewModel(voiceService)
+        {
+            // VM also reads from source of truth — no stale cached copy
+            ResolveWorkspacePath = () => SelectedWorkspaceConnection?.WorkspaceRootPath
+                ?? _mcpClient.WorkspacePath
+                ?? string.Empty
+        };
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
         return vm;
     }
@@ -640,6 +654,12 @@ public partial class MainWindowViewModel : ViewModelBase
         _ = LoadWorkspaceConnectionsAsync();
     }
 
+    /// <summary>Platform callback to persist the selected workspace key.</summary>
+    public Action<string?>? SaveWorkspaceKey { get; set; }
+
+    /// <summary>Platform callback to load the previously selected workspace key.</summary>
+    public Func<string?>? LoadWorkspaceKey { get; set; }
+
     partial void OnSelectedWorkspaceConnectionChanged(WorkspaceConnectionOption? value)
     {
         if (value == null)
@@ -654,6 +674,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         StartWorkspaceHealthRefresh();
         _ = RefreshSelectedWorkspaceHealthAsync();
+
+        // Persist the selection for next startup
+        SaveWorkspaceKey?.Invoke(value.Key);
 
         if (_suppressWorkspaceSelectionChanged)
             return;
@@ -969,23 +992,34 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private List<WorkspaceConnectionOption> BuildWorkspaceConnectionOptions(List<McpWorkspaceItem>? workspaces)
     {
-        var defaultWorkspaceRootPath = workspaces?
-            .FirstOrDefault(item => item.IsPrimary == true && !string.IsNullOrWhiteSpace(item.WorkspacePath))
-            ?.WorkspacePath?
-            .Trim();
+        var options = new List<WorkspaceConnectionOption>();
 
-        var options = new List<WorkspaceConnectionOption>
+        if (workspaces != null)
         {
-            WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, defaultWorkspaceRootPath, _defaultMcpApiKey)
-        };
+            foreach (var workspace in workspaces)
+                options.Add(WorkspaceConnectionOption.FromWorkspace(_defaultMcpBaseUri, workspace));
+        }
 
-        if (workspaces == null)
-            return options;
-
-        foreach (var workspace in workspaces)
+        // Only add a synthetic Default entry when no real workspaces exist
+        if (options.Count == 0)
         {
-            var candidate = WorkspaceConnectionOption.FromWorkspace(_defaultMcpBaseUri, workspace);
-            options.Add(candidate);
+            options.Add(WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, primaryWorkspaceRootPath: null, _defaultMcpApiKey));
+        }
+        else if (!options.Any(o => o.IsPrimary))
+        {
+            // No workspace marked as primary — promote the first one
+            var first = options[0];
+            options[0] = new WorkspaceConnectionOption
+            {
+                Key = first.Key,
+                WorkspaceKey = first.WorkspaceKey,
+                WorkspaceRootPath = first.WorkspaceRootPath,
+                ApiKey = first.ApiKey,
+                DisplayName = first.DisplayName,
+                BaseUrl = first.BaseUrl,
+                IsPrimary = true,
+                IsEnabled = first.IsEnabled
+            };
         }
 
         return options;
@@ -1000,11 +1034,19 @@ public partial class MainWindowViewModel : ViewModelBase
         if (list.Count == 0)
             list.Add(WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, primaryWorkspaceRootPath: null, apiKey: _defaultMcpApiKey));
 
-        var normalizedPreferred = NormalizeMcpBaseUrl(preferredBaseUrl);
         WorkspaceConnections = new ObservableCollection<WorkspaceConnectionOption>(list);
+
+        // Try saved workspace key from platform persistence
+        var savedKey = LoadWorkspaceKey?.Invoke();
+
+        // Priority: exact preferred match by workspace key → saved workspace key → preferred base URL → primary → first.
+        // Saved key is checked before base URL because all workspaces share the same base URL in single-port mode.
         var selected = FindWorkspaceConnectionOption(preferredSelection)
-            ?? WorkspaceConnections.FirstOrDefault(item =>
-                string.Equals(NormalizeMcpBaseUrl(item.BaseUrl), normalizedPreferred, StringComparison.OrdinalIgnoreCase))
+            ?? (!string.IsNullOrWhiteSpace(savedKey)
+                ? WorkspaceConnections.FirstOrDefault(item =>
+                    string.Equals(item.Key, savedKey, StringComparison.OrdinalIgnoreCase))
+                : null)
+            ?? WorkspaceConnections.FirstOrDefault(item => item.IsPrimary && item.IsEnabled)
             ?? WorkspaceConnections[0];
 
         _suppressWorkspaceSelectionChanged = true;
@@ -1015,8 +1057,11 @@ public partial class MainWindowViewModel : ViewModelBase
         // but we still need one real connection switch to set workspace path and refresh views.
         var selectedBaseUrl = NormalizeMcpBaseUrl(selected.BaseUrl);
         var activeBaseUrl = string.IsNullOrWhiteSpace(_activeMcpBaseUrl) ? "" : NormalizeMcpBaseUrl(_activeMcpBaseUrl);
+        var activeWorkspacePath = _mcpClient.WorkspacePath ?? string.Empty;
+        var selectedWorkspacePath = selected.WorkspaceRootPath ?? string.Empty;
         var needsSwitch = !_hasCompletedInitialSwitch
-            || !string.Equals(activeBaseUrl, selectedBaseUrl, StringComparison.OrdinalIgnoreCase);
+            || !string.Equals(activeBaseUrl, selectedBaseUrl, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(activeWorkspacePath, selectedWorkspacePath, StringComparison.OrdinalIgnoreCase);
         if (needsSwitch && !IsSwitchingWorkspace)
             _ = SwitchWorkspaceConnectionAsync(selected);
     }
@@ -1037,7 +1082,6 @@ public partial class MainWindowViewModel : ViewModelBase
             await DispatchToUiAsync(() =>
             {
                 var present = WorkspaceConnections.Any(item =>
-                    !item.IsDefault &&
                     !string.IsNullOrWhiteSpace(item.WorkspaceKey) &&
                     string.Equals(item.WorkspaceKey, change.WorkspaceKey, StringComparison.OrdinalIgnoreCase));
 
@@ -1155,6 +1199,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _logger.LogDebug("[Workspace Switch] Refreshing voice view...");
             try
             {
+                _voiceConversationViewModel.WorkspacePath = _mcpClient.WorkspacePath ?? string.Empty;
                 await _voiceConversationViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
                 _logger.LogDebug("[Workspace Switch] Voice view refreshed OK");
             }
@@ -1197,23 +1242,14 @@ public partial class MainWindowViewModel : ViewModelBase
         if (preferredSelection == null)
             return null;
 
-        if (preferredSelection.IsDefault)
-        {
-            return WorkspaceConnections.FirstOrDefault(item =>
-                item.IsDefault &&
-                string.Equals(NormalizeMcpBaseUrl(item.BaseUrl), NormalizeMcpBaseUrl(preferredSelection.BaseUrl), StringComparison.OrdinalIgnoreCase));
-        }
-
         if (!string.IsNullOrWhiteSpace(preferredSelection.WorkspaceKey))
         {
-            var byWorkspaceKey = WorkspaceConnections.FirstOrDefault(item =>
-                !item.IsDefault &&
+            return WorkspaceConnections.FirstOrDefault(item =>
                 string.Equals(item.WorkspaceKey, preferredSelection.WorkspaceKey, StringComparison.OrdinalIgnoreCase));
-            if (byWorkspaceKey != null)
-                return byWorkspaceKey;
         }
 
-        return FindWorkspaceConnectionOptionByBaseUrl(preferredSelection.BaseUrl);
+        // No workspace key on preferred selection — can't match precisely in single-port mode
+        return null;
     }
 
     private void RestoreWorkspaceSelection(WorkspaceConnectionOption? preferredSelection, string baseUrl)
@@ -3801,7 +3837,6 @@ public sealed class WorkspaceConnectionOption
     public string? ApiKey { get; init; }
     public string DisplayName { get; init; } = "";
     public string BaseUrl { get; init; } = "";
-    public bool IsDefault { get; init; }
     public bool IsPrimary { get; init; }
     public bool IsEnabled { get; init; } = true;
 
@@ -3820,8 +3855,7 @@ public sealed class WorkspaceConnectionOption
             ApiKey = string.IsNullOrWhiteSpace(resolvedApiKey) ? null : resolvedApiKey,
             DisplayName = $"Default ({defaultBaseUri.Host}:{defaultBaseUri.Port})",
             BaseUrl = normalizedBaseUrl,
-            IsDefault = true,
-            IsPrimary = false,
+            IsPrimary = true,
             IsEnabled = true
         };
     }
@@ -3856,7 +3890,6 @@ public sealed class WorkspaceConnectionOption
             ApiKey = apiKey,
             DisplayName = $"{label}{flagsSuffix}",
             BaseUrl = baseUrl,
-            IsDefault = false,
             IsPrimary = isPrimary,
             IsEnabled = isEnabled
         };
