@@ -141,7 +141,7 @@ public sealed class McpWorkspaceService
         if (workspace == null)
             return new McpWorkspaceHealthResult { Success = false, Error = $"Workspace '{key}' not found." };
 
-        var candidates = new[] { "/health", "/mcp/health" };
+        var candidates = new[] { "/health" };
         McpWorkspaceHealthResult? lastResult = null;
         foreach (var candidate in candidates)
         {
@@ -156,7 +156,7 @@ public sealed class McpWorkspaceService
     /// <summary>Probe health for this service base URL (selected connection target).</summary>
     public async Task<McpWorkspaceHealthResult> GetHealthAsync(CancellationToken cancellationToken = default)
     {
-        var candidates = new[] { "/health", "/mcp/health" };
+        var candidates = new[] { "/health" };
         McpWorkspaceHealthResult? lastResult = null;
         foreach (var candidate in candidates)
         {
@@ -335,7 +335,7 @@ public sealed class McpWorkspaceService
         var baseUri = new Uri(normalizedBaseUrl, UriKind.Absolute);
         using var httpClient = new HttpClient { BaseAddress = baseUri, Timeout = TimeSpan.FromSeconds(5) };
 
-        var candidates = new[] { "/health", "/mcp/health" };
+        var candidates = new[] { "/health" };
         McpWorkspaceHealthResult? lastResult = null;
         foreach (var candidate in candidates)
         {

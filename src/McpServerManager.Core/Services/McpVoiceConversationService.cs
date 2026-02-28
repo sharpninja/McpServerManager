@@ -64,7 +64,7 @@ public sealed class McpVoiceConversationService
         CancellationToken cancellationToken = default)
     {
         using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(true);
-        using var response = await client.PostAsJsonAsync("mcp/voice/session", request ?? new McpVoiceSessionCreateRequest(), JsonOptions, cancellationToken).ConfigureAwait(true);
+        using var response = await client.PostAsJsonAsync("mcpserver/voice/session", request ?? new McpVoiceSessionCreateRequest(), JsonOptions, cancellationToken).ConfigureAwait(true);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
         return (await response.Content.ReadFromJsonAsync<McpVoiceSessionCreateResponse>(JsonOptions, cancellationToken).ConfigureAwait(true))
             ?? throw new InvalidOperationException("MCP voice create session returned an empty response.");
@@ -83,7 +83,7 @@ public sealed class McpVoiceConversationService
 
         using var client = await CreateAuthorizedClientAsync(TimeSpan.FromMinutes(2), cancellationToken).ConfigureAwait(true);
         using var response = await client.PostAsJsonAsync(
-            $"mcp/voice/session/{Uri.EscapeDataString(sessionId)}/turn",
+            $"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}/turn",
             request,
             JsonOptions,
             cancellationToken).ConfigureAwait(true);
@@ -111,7 +111,7 @@ public sealed class McpVoiceConversationService
             using var content = new StringContent(jsonBody, System.Text.Encoding.UTF8, "application/json");
 
             var httpRequest = new HttpRequestMessage(HttpMethod.Post,
-                $"mcp/voice/session/{Uri.EscapeDataString(sessionId)}/turn/stream")
+                $"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}/turn/stream")
             { Content = content };
             // SSE requires text/event-stream Accept header for proper proxy behavior
             httpRequest.Headers.Accept.Clear();
@@ -175,7 +175,7 @@ public sealed class McpVoiceConversationService
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
         using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(true);
-        using var response = await client.PostAsync($"mcp/voice/session/{Uri.EscapeDataString(sessionId)}/interrupt", content: null, cancellationToken).ConfigureAwait(true);
+        using var response = await client.PostAsync($"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}/interrupt", content: null, cancellationToken).ConfigureAwait(true);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
         return (await response.Content.ReadFromJsonAsync<McpVoiceInterruptResponse>(JsonOptions, cancellationToken).ConfigureAwait(true))
             ?? throw new InvalidOperationException("MCP voice interrupt returned an empty response.");
@@ -189,7 +189,7 @@ public sealed class McpVoiceConversationService
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
         using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(true);
-        using var response = await client.GetAsync($"mcp/voice/session/{Uri.EscapeDataString(sessionId)}", cancellationToken).ConfigureAwait(true);
+        using var response = await client.GetAsync($"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}", cancellationToken).ConfigureAwait(true);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
         return (await response.Content.ReadFromJsonAsync<McpVoiceSessionStatus>(JsonOptions, cancellationToken).ConfigureAwait(true))
             ?? throw new InvalidOperationException("MCP voice status returned an empty response.");
@@ -203,7 +203,7 @@ public sealed class McpVoiceConversationService
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
         using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(true);
-        using var response = await client.GetAsync($"mcp/voice/session/{Uri.EscapeDataString(sessionId)}/transcript", cancellationToken).ConfigureAwait(true);
+        using var response = await client.GetAsync($"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}/transcript", cancellationToken).ConfigureAwait(true);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
         return (await response.Content.ReadFromJsonAsync<McpVoiceTranscriptResponse>(JsonOptions, cancellationToken).ConfigureAwait(true))
             ?? throw new InvalidOperationException("MCP voice transcript returned an empty response.");
@@ -217,7 +217,7 @@ public sealed class McpVoiceConversationService
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
         using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(true);
-        using var response = await client.DeleteAsync($"mcp/voice/session/{Uri.EscapeDataString(sessionId)}", cancellationToken).ConfigureAwait(true);
+        using var response = await client.DeleteAsync($"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}", cancellationToken).ConfigureAwait(true);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
     }
 

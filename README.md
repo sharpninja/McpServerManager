@@ -34,7 +34,7 @@ The application monitors a specified directory (e.g., `docs/requests`) for JSON 
 
 ## Configuration
 
-Edit `src/McpServerManager/appsettings.config` (copied next to the executable) to set `Mcp.BaseUrl`, `Paths.SessionsRootPath`, `Paths.HtmlCacheDirectory`, and `Paths.CssFallbackPath`. Session logs are loaded from `Mcp.BaseUrl` (`/mcp/sessionlog`), while `Paths.*` is still used for documents/source context and markdown CSS fallback. `Paths.HtmlCacheDirectory` supports environment variables such as `%TEMP%`.
+Edit `src/McpServerManager/appsettings.config` (copied next to the executable) to set `Mcp.BaseUrl`, `Paths.SessionsRootPath`, `Paths.HtmlCacheDirectory`, and `Paths.CssFallbackPath`. Session logs are loaded from `Mcp.BaseUrl` (`/mcpserver/sessionlog`), while `Paths.*` is still used for documents/source context and markdown CSS fallback. `Paths.HtmlCacheDirectory` supports environment variables such as `%TEMP%`.
 
 ## Tech Stack
 

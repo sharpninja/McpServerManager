@@ -12,6 +12,7 @@ namespace McpServerManager.Android.Services;
 /// <summary>
 /// An Android Activity that hosts a WebView for in-app OIDC authentication.
 /// Keeps the app in the foreground during sign-in so Android does not kill the process.
+/// Shows a force-close dialog after <see cref="TimeoutSeconds"/> if authentication has not completed.
 /// </summary>
 [Activity(
     Label = "Sign In",
@@ -21,7 +22,14 @@ public class OidcWebViewActivity : Activity
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("OidcWebViewActivity");
     private static WeakReference<OidcWebViewActivity>? _currentInstance;
+
+    /// <summary>Seconds before the force-close dialog appears.</summary>
+    private const int TimeoutSeconds = 60;
+
     private WebView? _webView;
+    private Handler? _timeoutHandler;
+    private Java.Lang.Runnable? _timeoutRunnable;
+    private bool _dialogShown;
 
     /// <summary>
     /// Finishes the current OidcWebViewActivity instance if one is open.
@@ -76,6 +84,8 @@ public class OidcWebViewActivity : Activity
 
         _logger.LogInformation("OidcWebViewActivity loading URL: {Url}", url);
         _webView.LoadUrl(url);
+
+        ScheduleTimeoutDialog();
     }
 
     public override void OnBackPressed()
@@ -93,6 +103,8 @@ public class OidcWebViewActivity : Activity
     protected override void OnDestroy()
     {
         _logger.LogInformation("OidcWebViewActivity OnDestroy");
+        CancelTimeout();
+
         if (_currentInstance != null && _currentInstance.TryGetTarget(out var instance) && instance == this)
         {
             _currentInstance = null;
@@ -106,6 +118,52 @@ public class OidcWebViewActivity : Activity
         }
 
         base.OnDestroy();
+    }
+
+    /// <summary>Schedules the force-close dialog after <see cref="TimeoutSeconds"/>.</summary>
+    private void ScheduleTimeoutDialog()
+    {
+        _timeoutHandler = new Handler(Looper.MainLooper!);
+        _timeoutRunnable = new Java.Lang.Runnable(ShowTimeoutDialog);
+        _timeoutHandler.PostDelayed(_timeoutRunnable, TimeoutSeconds * 1000L);
+        _logger.LogInformation("OidcWebViewActivity timeout scheduled in {Seconds}s", TimeoutSeconds);
+    }
+
+    private void CancelTimeout()
+    {
+        if (_timeoutHandler != null && _timeoutRunnable != null)
+        {
+            _timeoutHandler.RemoveCallbacks(_timeoutRunnable);
+            _timeoutRunnable.Dispose();
+            _timeoutRunnable = null;
+            _timeoutHandler = null;
+        }
+    }
+
+    private void ShowTimeoutDialog()
+    {
+        if (_dialogShown || IsFinishing || IsDestroyed)
+            return;
+
+        _dialogShown = true;
+        _logger.LogWarning("OidcWebViewActivity sign-in timeout reached ({Seconds}s); showing force-close dialog", TimeoutSeconds);
+
+        new AlertDialog.Builder(this)!
+            .SetTitle("Sign-In Timeout")!
+            .SetMessage("Authentication is taking longer than expected. Would you like to close and retry?")!
+            .SetPositiveButton("Logout & Retry", (_, _) =>
+            {
+                _logger.LogInformation("User chose force-close from timeout dialog");
+                Finish();
+            })!
+            .SetNegativeButton("Wait", (_, _) =>
+            {
+                _logger.LogInformation("User chose to continue waiting from timeout dialog");
+                _dialogShown = false;
+                ScheduleTimeoutDialog();
+            })!
+            .SetCancelable(false)!
+            .Show();
     }
 
     /// <summary>

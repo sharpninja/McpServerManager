@@ -6,9 +6,9 @@
 
 Before doing ANY work on ANY user request, you MUST complete these steps in order:
 
-3. **POST `/mcp/sessionlog`** with your session entry — do NOT proceed until this succeeds
-4. **GET `/mcp/sessionlog?limit=5`** to review recent session history for context
-5. **GET `/mcp/todo`** to check current tasks
+3. **POST `/mcpserver/sessionlog`** with your session entry — do NOT proceed until this succeeds
+4. **GET `/mcpserver/sessionlog?limit=5`** to review recent session history for context
+5. **GET `/mcpserver/todo`** to check current tasks
 6. **THEN** begin working on the user's request
 
 On EVERY subsequent user message:

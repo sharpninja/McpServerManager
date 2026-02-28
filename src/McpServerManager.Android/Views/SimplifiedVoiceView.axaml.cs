@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -14,7 +15,9 @@ using Avalonia.Threading;
 using Android.App;
 using AndroidOS = Android.OS;
 using McpServerManager.Android.Services;
+using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
+using Microsoft.Extensions.Logging;
 
 namespace McpServerManager.Android.Views;
 
@@ -55,13 +58,14 @@ public class ChatMessage : INotifyPropertyChanged
 
 public partial class SimplifiedVoiceView : UserControl
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("SimplifiedVoiceView");
     private readonly IAndroidSpeechRecognitionService _stt = new AndroidSpeechRecognitionService();
     private readonly IAndroidTextToSpeechService _tts = new AndroidTextToSpeechService();
     private readonly IAndroidAudioFocusService _audioFocus = new AndroidAudioFocusService();
     private readonly ObservableCollection<ChatMessage> _messages = new();
 
     private ScrollViewer? _chatScroller;
-    private CheckBox? _autoCheck;
+    private ToggleButton? _autoCheck;
     private Border? _inputPreviewBorder;
     private TextBlock? _inputPreviewText;
 
@@ -74,7 +78,9 @@ public partial class SimplifiedVoiceView : UserControl
     private bool _ttsStopped;
     private bool _clearRequested;
     private bool _sendRequested;
+    private string? _manualText;
     private bool _foregroundServiceRunning;
+    private TextBox? _textInputBox;
     private Button? _pauseButton;
     private Button? _stopButton;
     private Button? _chatToggleButton;
@@ -83,12 +89,13 @@ public partial class SimplifiedVoiceView : UserControl
     {
         InitializeComponent();
         _chatScroller = this.FindControl<ScrollViewer>("ChatScroller");
-        _autoCheck = this.FindControl<CheckBox>("AutoContinueCheck");
+        _autoCheck = this.FindControl<ToggleButton>("AutoContinueToggle");
         _inputPreviewBorder = this.FindControl<Border>("InputPreviewBorder");
         _inputPreviewText = this.FindControl<TextBlock>("InputPreviewText");
         _pauseButton = this.FindControl<Button>("PauseResumeButton");
         _stopButton = this.FindControl<Button>("StopButton");
         _chatToggleButton = this.FindControl<Button>("ChatToggleButton");
+        _textInputBox = this.FindControl<TextBox>("TextInputBox");
 
         var chatItems = this.FindControl<ItemsControl>("ChatItems");
         if (chatItems != null)
@@ -149,6 +156,7 @@ public partial class SimplifiedVoiceView : UserControl
         if (string.IsNullOrWhiteSpace(vm.SessionId))
         {
             var reason = string.IsNullOrWhiteSpace(vm.StatusText) ? "Failed to create session." : vm.StatusText;
+            _logger.LogWarning("Voice session creation failed: {Reason}", reason);
             SetStatus(reason);
             _messages.Add(new ChatMessage { Role = "system", Text = reason });
             ScrollToBottom();
@@ -183,6 +191,7 @@ public partial class SimplifiedVoiceView : UserControl
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Conversation loop failed");
             SetStatus($"Error: {ex.Message}");
         }
         finally
@@ -220,8 +229,8 @@ public partial class SimplifiedVoiceView : UserControl
 
             if (string.IsNullOrWhiteSpace(listenResult.Transcript))
             {
-                SetStatus("Nothing to send. Tap mic to try again.");
-                break;
+                SetStatus("Listening...");
+                continue;
             }
 
             var transcript = listenResult.Transcript!;
@@ -306,6 +315,7 @@ public partial class SimplifiedVoiceView : UserControl
                 }
                 else if (evt.Type == "error")
                 {
+                    _logger.LogWarning("Voice streaming error: {Message}", evt.Message);
                     assistantBubble.Text = $"Error: {evt.Message}";
                     ScrollToBottom();
                     break;
@@ -402,8 +412,10 @@ public partial class SimplifiedVoiceView : UserControl
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                SetStatus($"Mic error: {ex.Message}");
-                return new ListenResult(null, false);
+                _logger.LogWarning(ex, "Speech recognition failed");
+                SetStatus($"Mic error: {ex.Message} — retrying...");
+                await Task.Delay(1000, ct).ConfigureAwait(true);
+                continue;
             }
 
             // Check if clear was requested via the UI button
@@ -414,10 +426,17 @@ public partial class SimplifiedVoiceView : UserControl
                 UpdateInputPreview(null);
             }
 
-            // Check if send was requested via the UI button
+            // Check if send was requested via the UI button or text input
             if (_sendRequested)
             {
                 _sendRequested = false;
+                var typed = _manualText;
+                _manualText = null;
+                if (!string.IsNullOrWhiteSpace(typed))
+                {
+                    UpdateInputPreview(null);
+                    return new ListenResult(typed, false);
+                }
                 var final = accumulated.ToString().Trim();
                 UpdateInputPreview(null);
                 if (!string.IsNullOrWhiteSpace(final))
@@ -429,8 +448,8 @@ public partial class SimplifiedVoiceView : UserControl
                 emptyCount++;
                 if (emptyCount >= 5)
                 {
-                    SetStatus("No speech detected. Tap mic to try again.");
-                    return new ListenResult(null, false);
+                    emptyCount = 0;
+                    SetStatus("Still listening...");
                 }
                 continue;
             }
@@ -657,6 +676,38 @@ public partial class SimplifiedVoiceView : UserControl
         _sendRequested = true;
     }
 
+    private void OnTextClearClick(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (_textInputBox != null)
+            _textInputBox.Text = string.Empty;
+    }
+
+    private void OnTextSendClick(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        SubmitTypedText();
+    }
+
+    private void OnTextInputKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key == Avalonia.Input.Key.Enter && e.KeyModifiers == Avalonia.Input.KeyModifiers.None)
+        {
+            e.Handled = true;
+            SubmitTypedText();
+        }
+    }
+
+    private void SubmitTypedText()
+    {
+        var text = _textInputBox?.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(text)) return;
+        _manualText = text;
+        _sendRequested = true;
+        if (_textInputBox != null)
+            _textInputBox.Text = string.Empty;
+    }
+
     private void UpdateButtons()
     {
         Dispatcher.UIThread.Post(() =>
@@ -664,7 +715,9 @@ public partial class SimplifiedVoiceView : UserControl
             if (_pauseButton != null)
             {
                 _pauseButton.IsEnabled = _conversationActive;
-                _pauseButton.Content = _isPaused ? "Resume" : "Pause";
+                _pauseButton.Content = _isPaused
+                    ? new Avalonia.Controls.PathIcon { Data = Avalonia.Media.Geometry.Parse("M8,5.14V19.14L19,12.14L8,5.14Z"), Width = 24, Height = 24 }
+                    : new Avalonia.Controls.PathIcon { Data = Avalonia.Media.Geometry.Parse("M14,19H18V5H14M6,19H10V5H6V19Z"), Width = 24, Height = 24 };
             }
             if (_stopButton != null)
                 _stopButton.IsEnabled = _isSpeaking;
@@ -845,10 +898,10 @@ public partial class SimplifiedVoiceView : UserControl
             Task.Delay(250).ContinueWith(_ =>
             {
                 try { toneGen.Release(); toneGen.Dispose(); }
-                catch { /* best effort */ }
+                catch (Exception ex) { _logger.LogDebug(ex, "ToneGenerator cleanup failed"); }
             });
         }
-        catch { /* best effort */ }
+        catch (Exception ex) { _logger.LogDebug(ex, "PlayChime failed"); }
     }
 
     private void ScrollToBottom()
@@ -875,7 +928,7 @@ public partial class SimplifiedVoiceView : UserControl
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to start voice foreground service: {ex.Message}");
+            _logger.LogWarning(ex, "Failed to start voice foreground service");
         }
     }
 
@@ -890,7 +943,7 @@ public partial class SimplifiedVoiceView : UserControl
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to stop voice foreground service: {ex.Message}");
+            _logger.LogWarning(ex, "Failed to stop voice foreground service");
         }
         finally
         {
@@ -906,7 +959,7 @@ public partial class SimplifiedVoiceView : UserControl
             using var intent = VoiceSessionForegroundService.CreateUpdateIntent(context, statusText);
             context.StartService(intent);
         }
-        catch { /* best effort */ }
+        catch (Exception ex) { _logger.LogDebug(ex, "Failed to update foreground service status"); }
     }
 
     // ── Cleanup ────────────────────────────────────────────────────────

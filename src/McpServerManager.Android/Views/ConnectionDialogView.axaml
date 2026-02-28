@@ -108,6 +108,32 @@
                 IsEnabled="{Binding !IsConnecting}"
                 Margin="0,8,0,0"/>
 
+        <Button x:Name="CancelButton"
+                Content="Cancel"
+                Command="{Binding CancelConnectCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                IsVisible="{Binding IsConnecting}"
+                Margin="0,4,0,0"/>
+
+        <Button x:Name="LogoutRetryButton"
+                Content="Logout &amp; Retry"
+                Command="{Binding LogoutAndRetryCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                IsEnabled="{Binding !IsConnecting}"
+                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                Margin="0,4,0,0"/>
+
+        <Button x:Name="LogoutButton"
+                Content="Logout"
+                Command="{Binding LogoutCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                IsEnabled="{Binding !IsConnecting}"
+                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                Margin="0,4,0,0"/>
+
         <SelectableTextBlock Text="Connecting..."
                              Foreground="{DynamicResource SubtleForeground}"
                              HorizontalAlignment="Center"

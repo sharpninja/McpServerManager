@@ -25,7 +25,7 @@ internal static class AndroidOidcJwtCacheInvalidationMonitor
             if (entry == null || string.IsNullOrWhiteSpace(entry.Message))
                 return;
 
-            // /mcp/* client calls surface unauthorized responses as McpUnauthorizedException.
+            // /mcpserver/* client calls surface unauthorized responses as McpUnauthorizedException.
             // This intentionally does not trigger for the raw HttpClient /api-key probe path.
             if (entry.Message.IndexOf(UnauthorizedExceptionMarker, StringComparison.Ordinal) < 0)
                 return;

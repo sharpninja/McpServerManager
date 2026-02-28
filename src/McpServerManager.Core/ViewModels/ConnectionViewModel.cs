@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -47,6 +48,10 @@ public partial class ConnectionViewModel : ViewModelBase
     private Func<bool>? _oidcPostTokenForegroundActivator;
     private Func<Task<string?>>? _qrCodeScanner;
     private string? _oidcBearerToken;
+    private string? _lastOidcAuthority;
+    private string? _lastMcpBaseUrl;
+    private string? _lastOidcClientId;
+    private CancellationTokenSource? _connectCts;
 
     [ObservableProperty]
     private bool _canScanQrCode;
@@ -117,6 +122,58 @@ public partial class ConnectionViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task LogoutAndRetryAsync()
+    {
+        _logger.LogInformation("LogoutAndRetryAsync invoked");
+        await PerformOidcLogoutAsync().ConfigureAwait(true);
+        await ConnectAsync().ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private async Task LogoutAsync()
+    {
+        _logger.LogInformation("LogoutAsync invoked");
+        await PerformOidcLogoutAsync().ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private void CancelConnect()
+    {
+        _logger.LogInformation("CancelConnect invoked — aborting in-progress OIDC flow");
+        _connectCts?.Cancel();
+        _connectCts = null;
+        IsConnecting = false;
+        IsOidcSignInRequired = false;
+        OidcStatusMessage = "";
+        TryBringAppToForegroundAfterOidcTokenAcquired();
+    }
+
+    private async Task PerformOidcLogoutAsync()
+    {
+        ErrorMessage = "";
+        var token = _oidcBearerToken ?? TryReadCachedOidcToken();
+
+        if (_lastMcpBaseUrl != null && _lastOidcAuthority != null)
+        {
+            _logger.LogInformation("Performing OIDC logout via revocation/end-session API");
+            var success = await McpOidcAuthService.TryLogoutAsync(
+                _lastMcpBaseUrl,
+                _lastOidcAuthority,
+                _lastOidcClientId,
+                token).ConfigureAwait(true);
+            _logger.LogInformation("OIDC API logout result: {Success}", success);
+        }
+        else
+        {
+            _logger.LogInformation("No OIDC authority/baseUrl cached; skipping Keycloak SSO logout");
+        }
+
+        ClearCachedOidcToken();
+        _oidcBearerToken = null;
+        TryBringAppToForegroundAfterOidcTokenAcquired();
+    }
+
+    [RelayCommand]
     private async Task ConnectAsync()
     {
         _logger.LogInformation("ConnectAsync invoked. Host='{Host}', Port='{Port}', IsConnecting={IsConnecting}", Host, Port, IsConnecting);
@@ -163,6 +220,9 @@ public partial class ConnectionViewModel : ViewModelBase
         }
 
         IsConnecting = true;
+        _connectCts?.Cancel();
+        _connectCts = new CancellationTokenSource();
+        var ct = _connectCts.Token;
         _logger.LogInformation("ConnectAsync started for {Url}", url);
 
         try
@@ -175,7 +235,7 @@ public partial class ConnectionViewModel : ViewModelBase
             using var probe = new HttpClient(probeHandler) { Timeout = TimeSpan.FromSeconds(5) };
             try
             {
-                using var healthResponse = await probe.GetAsync($"{url}/health").ConfigureAwait(true);
+                using var healthResponse = await probe.GetAsync($"{url}/health", ct).ConfigureAwait(true);
                 if ((int)healthResponse.StatusCode is >= 301 and <= 308
                     && healthResponse.Headers.Location is { } redirectLocation)
                 {
@@ -192,15 +252,27 @@ public partial class ConnectionViewModel : ViewModelBase
                 throw new InvalidOperationException($"Server unreachable at {url}: {probeEx.Message}", probeEx);
             }
 
-            var authToken = await TryAuthenticateWithOidcAsync(url).ConfigureAwait(true);
+            var authToken = await TryAuthenticateWithOidcAsync(url, ct).ConfigureAwait(true);
             _logger.LogInformation("ConnectAsync auth stage complete for {Url}. TokenPresent={HasToken}, BearerTokenPresent={HasBearer}", url, !string.IsNullOrWhiteSpace(authToken), !string.IsNullOrWhiteSpace(_oidcBearerToken));
             Connected?.Invoke(new ConnectionEstablishedInfo(url, authToken, _oidcBearerToken));
             _logger.LogInformation("ConnectAsync raised Connected event for {Url}", url);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            _logger.LogInformation("ConnectAsync cancelled by user for {Url}", url);
+            IsConnecting = false;
+            IsOidcSignInRequired = false;
+            TryBringAppToForegroundAfterOidcTokenAcquired();
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
             IsConnecting = false;
+            IsOidcSignInRequired = false;
+
+            // Close the OIDC WebView (if open) so the user returns to the connection screen.
+            TryBringAppToForegroundAfterOidcTokenAcquired();
+
             _logger.LogError(ex, "ConnectAsync failed for {Url}", url);
         }
     }
@@ -229,10 +301,10 @@ public partial class ConnectionViewModel : ViewModelBase
         }
     }
 
-    private async Task<string?> TryAuthenticateWithOidcAsync(string mcpBaseUrl)
+    private async Task<string?> TryAuthenticateWithOidcAsync(string mcpBaseUrl, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Checking MCP auth config at {BaseUrl}/auth/config", mcpBaseUrl);
-        var authConfig = await McpOidcAuthService.TryGetAuthConfigAsync(mcpBaseUrl).ConfigureAwait(true);
+        var authConfig = await McpOidcAuthService.TryGetAuthConfigAsync(mcpBaseUrl, cancellationToken).ConfigureAwait(true);
         _logger.LogInformation(
             "MCP auth config result: enabled={Enabled}, clientId={ClientId}, hasDeviceEndpoint={HasDeviceEndpoint}, hasTokenEndpoint={HasTokenEndpoint}",
             authConfig?.Enabled,
@@ -253,7 +325,7 @@ public partial class ConnectionViewModel : ViewModelBase
             _logger.LogInformation("Attempting cached OIDC token reuse for {BaseUrl}", mcpBaseUrl);
 
             var cachedApiKeyResult = await McpOidcAuthService
-                .TryFetchMcpApiKeyAsync(mcpBaseUrl, cachedOidcToken)
+                .TryFetchMcpApiKeyAsync(mcpBaseUrl, cachedOidcToken, cancellationToken)
                 .ConfigureAwait(true);
 
             if (cachedApiKeyResult.IsSuccess)
@@ -280,8 +352,11 @@ public partial class ConnectionViewModel : ViewModelBase
         // The default API key from /api-key only works for the primary workspace.
         // When OIDC is enabled, we need a Bearer token for cross-workspace auth.
         _logger.LogInformation("OIDC enabled for {BaseUrl}; starting device authorization", mcpBaseUrl);
+        _lastOidcAuthority = authConfig!.Authority;
+        _lastMcpBaseUrl = mcpBaseUrl;
+        _lastOidcClientId = authConfig!.ClientId;
         var prompt = await McpOidcAuthService
-            .StartDeviceAuthorizationAsync(authConfig!, mcpBaseUrl)
+            .StartDeviceAuthorizationAsync(authConfig!, mcpBaseUrl, cancellationToken)
             .ConfigureAwait(true);
 
         IsOidcSignInRequired = true;
@@ -312,7 +387,8 @@ public partial class ConnectionViewModel : ViewModelBase
                 {
                     OidcStatusMessage = status;
                     _logger.LogInformation("OIDC status update: {Status}", status);
-                })
+                },
+                cancellationToken)
             .ConfigureAwait(true);
 
         _logger.LogInformation("OIDC sign-in complete. Access token acquired for {BaseUrl}", mcpBaseUrl);
@@ -323,7 +399,7 @@ public partial class ConnectionViewModel : ViewModelBase
         OidcStatusMessage = "Sign-in complete. Acquiring MCP API key…";
         _logger.LogInformation("Fetching MCP default API key from {BaseUrl}/api-key after OIDC sign-in", mcpBaseUrl);
         var mcpApiKeyResult = await McpOidcAuthService
-            .TryFetchMcpApiKeyAsync(mcpBaseUrl, token.AccessToken)
+            .TryFetchMcpApiKeyAsync(mcpBaseUrl, token.AccessToken, cancellationToken)
             .ConfigureAwait(true);
 
         if (mcpApiKeyResult.IsSuccess)

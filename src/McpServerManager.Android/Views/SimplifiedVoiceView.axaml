@@ -5,7 +5,7 @@
              x:Class="McpServerManager.Android.Views.SimplifiedVoiceView"
              x:DataType="vm:VoiceConversationViewModel">
 
-    <Grid RowDefinitions="Auto,*,Auto,Auto">
+    <Grid RowDefinitions="Auto,*,Auto,Auto,Auto">
 
         <!-- Header -->
         <Border Grid.Row="0" Classes="phone-outline-card" Padding="12,10" Margin="8,8,8,0">
@@ -28,7 +28,7 @@
                                         HorizontalAlignment="{Binding HAlign}"
                                         Background="{Binding BubbleBrush}"
                                         IsVisible="{Binding IsNotAssistant}">
-                                    <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="18"/>
+                                    <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="22"/>
                                 </Border>
                                 <!-- Assistant: full-width rendered markdown -->
                                 <Border Padding="10,6" Margin="4,3" CornerRadius="12"
@@ -52,8 +52,8 @@
                         Click="OnClearInputClick" VerticalAlignment="Center"
                         Padding="8,4" FontSize="20" Opacity="0.7"/>
                 <StackPanel Grid.Column="1" Margin="6,0">
-                    <TextBlock Text="Drafting:" FontSize="14" Opacity="0.6" FontWeight="SemiBold"/>
-                    <TextBlock x:Name="InputPreviewText" TextWrapping="Wrap" FontSize="18"/>
+                    <TextBlock Text="Drafting:" FontSize="18" Opacity="0.6" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="InputPreviewText" TextWrapping="Wrap" FontSize="22"/>
                 </StackPanel>
                 <Button Grid.Column="2" x:Name="SendInputButton" Content="➤"
                         Click="OnSendInputClick" VerticalAlignment="Center"
@@ -61,18 +61,44 @@
             </Grid>
         </Border>
 
+        <!-- Text input -->
+        <Border Grid.Row="3" Classes="phone-outline-card" Margin="8,4,8,0" Padding="6">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button Grid.Column="0" x:Name="TextClearButton" Click="OnTextClearClick"
+                        VerticalAlignment="Center" Padding="8,4" Opacity="0.7"
+                        ToolTip.Tip="Clear">
+                    <TextBlock Text="✕" FontSize="20"/>
+                </Button>
+                <TextBox Grid.Column="1" x:Name="TextInputBox" Watermark="Type a message..."
+                         AcceptsReturn="False" TextWrapping="Wrap" FontSize="22"
+                         Margin="6,0" MinHeight="38" VerticalContentAlignment="Center"
+                         KeyDown="OnTextInputKeyDown"/>
+                <Button Grid.Column="2" x:Name="TextSendButton" Click="OnTextSendClick"
+                        VerticalAlignment="Center" Padding="8,4" Opacity="0.7"
+                        ToolTip.Tip="Send">
+                    <TextBlock Text="➤" FontSize="22"/>
+                </Button>
+            </Grid>
+        </Border>
+
         <!-- Bottom controls -->
-        <StackPanel Grid.Row="3" Spacing="6" Margin="12,4,12,8" HorizontalAlignment="Center">
+        <StackPanel Grid.Row="4" Spacing="6" Margin="12,4,12,8" HorizontalAlignment="Center">
             <TextBlock Text="{Binding StatusText}" HorizontalAlignment="Center"
                        TextWrapping="Wrap" FontSize="16" Opacity="0.8"/>
-            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
-                <Button x:Name="PauseResumeButton" Content="Pause" Click="OnPauseResumeClick"
-                        Padding="16,6" FontSize="18" FontWeight="Bold" IsEnabled="False"/>
-                <Button x:Name="StopButton" Content="Stop" Click="OnStopClick"
-                        Padding="16,6" IsEnabled="False"/>
+            <StackPanel Orientation="Horizontal" Spacing="24" HorizontalAlignment="Center">
+                <Button x:Name="PauseResumeButton" Click="OnPauseResumeClick"
+                        Padding="16,6" IsEnabled="False" ToolTip.Tip="Pause">
+                    <PathIcon Data="M14,19H18V5H14M6,19H10V5H6V19Z" Width="24" Height="24"/>
+                </Button>
+                <Button x:Name="StopButton" Click="OnStopClick"
+                        Padding="16,6" IsEnabled="False" ToolTip.Tip="Stop">
+                    <PathIcon Data="M18,18H6V6H18V18Z" Width="24" Height="24"/>
+                </Button>
+                <ToggleButton x:Name="AutoContinueToggle" IsChecked="True"
+                              Padding="16,6" ToolTip.Tip="Auto-continue">
+                    <PathIcon Data="M17,17H7V7H17M21,1H7C5.89,1 5,1.89 5,3V17C5,18.1 5.9,19 7,19H21C22.1,19 23,18.1 23,17V3C23,1.89 22.1,1 21,1M1,7H3V21H17V23H3C1.9,23 1,22.1 1,21V7Z" Width="24" Height="24"/>
+                </ToggleButton>
             </StackPanel>
-            <CheckBox x:Name="AutoContinueCheck" Content="Auto-continue after response"
-                      IsChecked="True" HorizontalAlignment="Center"/>
             <TextBlock Text="send now · start over · clear chat · end chat · pause/resume"
                        FontSize="14" Opacity="0.5" HorizontalAlignment="Center" TextWrapping="Wrap"/>
         </StackPanel>

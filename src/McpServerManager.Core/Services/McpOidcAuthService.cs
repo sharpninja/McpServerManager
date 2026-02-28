@@ -97,6 +97,69 @@ internal static class McpOidcAuthService
            && !string.IsNullOrWhiteSpace(config.DeviceAuthorizationEndpoint)
            && !string.IsNullOrWhiteSpace(config.TokenEndpoint);
 
+    /// <summary>
+    /// Revokes the OIDC access token by calling the Keycloak revocation endpoint,
+    /// which also invalidates the SSO session so the next login gets a fresh token lifespan.
+    /// </summary>
+    public static async Task<bool> TryLogoutAsync(
+        string mcpBaseUrl,
+        string? authority,
+        string? clientId,
+        string? accessToken,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken) || string.IsNullOrWhiteSpace(authority) || string.IsNullOrWhiteSpace(clientId))
+        {
+            s_logger.LogInformation("TryLogoutAsync skipped: missing token, authority, or clientId");
+            return false;
+        }
+
+        try
+        {
+            var revokeUrl = $"{authority.TrimEnd('/')}/protocol/openid-connect/revoke";
+            revokeUrl = RewriteLoopbackEndpointForAndroidEmulator(revokeUrl, mcpBaseUrl);
+
+            var logoutUrl = $"{authority.TrimEnd('/')}/protocol/openid-connect/logout";
+            logoutUrl = RewriteLoopbackEndpointForAndroidEmulator(logoutUrl, mcpBaseUrl);
+
+            // Revoke the token first
+            s_logger.LogInformation("Revoking OIDC token at {RevokeUrl}", revokeUrl);
+            var revokePairs = new List<KeyValuePair<string, string>>
+            {
+                new("client_id", clientId.Trim()),
+                new("token", accessToken.Trim()),
+                new("token_type_hint", "access_token")
+            };
+            using var revokeRequest = new HttpRequestMessage(HttpMethod.Post, revokeUrl)
+            {
+                Content = new FormUrlEncodedContent(revokePairs)
+            };
+            using var revokeResponse = await s_http.SendAsync(revokeRequest, cancellationToken).ConfigureAwait(false);
+            s_logger.LogInformation("Token revocation returned HTTP {StatusCode}", (int)revokeResponse.StatusCode);
+
+            // End the SSO session
+            s_logger.LogInformation("Ending SSO session at {LogoutUrl}", logoutUrl);
+            var logoutPairs = new List<KeyValuePair<string, string>>
+            {
+                new("client_id", clientId.Trim())
+            };
+            using var logoutRequest = new HttpRequestMessage(HttpMethod.Post, logoutUrl)
+            {
+                Content = new FormUrlEncodedContent(logoutPairs)
+            };
+            logoutRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.Trim());
+            using var logoutResponse = await s_http.SendAsync(logoutRequest, cancellationToken).ConfigureAwait(false);
+            s_logger.LogInformation("SSO session logout returned HTTP {StatusCode}", (int)logoutResponse.StatusCode);
+
+            return revokeResponse.IsSuccessStatusCode || logoutResponse.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            s_logger.LogWarning(ex, "TryLogoutAsync failed for {BaseUrl}", mcpBaseUrl);
+            return false;
+        }
+    }
+
     public static async Task<OidcDeviceAuthorizationPrompt> StartDeviceAuthorizationAsync(
         McpAuthConfigResponse config,
         string mcpBaseUrl,
