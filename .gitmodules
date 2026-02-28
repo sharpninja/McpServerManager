@@ -7,3 +7,6 @@
 [submodule "lib/McpServer"]
 	path = lib/McpServer
 	url = https://github.com/sharpninja/McpServer.git
+[submodule "tools/McpServerTools"]
+	path = tools/McpServerTools
+	url = https://github.com/sharpninja/McpServerTools.git
