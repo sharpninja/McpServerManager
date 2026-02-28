@@ -243,6 +243,9 @@ public partial class SimplifiedVoiceView : UserControl
             var sentenceBuffer = new StringBuilder();
             var spokenUpTo = 0;
             var isDone = false;
+            _isSpeaking = true;
+            _ttsStopped = false;
+            UpdateButtons();
 
             await foreach (var evt in vm.SubmitTurnStreamingAsync(transcript, ct).ConfigureAwait(true))
             {
@@ -320,6 +323,9 @@ public partial class SimplifiedVoiceView : UserControl
                 }
                 catch (OperationCanceledException) { /* ok */ }
             }
+
+            _isSpeaking = false;
+            UpdateButtons();
 
             ct.ThrowIfCancellationRequested();
             if (listenResult.ShouldEndChat)
