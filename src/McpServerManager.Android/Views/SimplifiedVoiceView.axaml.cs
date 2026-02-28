@@ -228,34 +228,94 @@ public partial class SimplifiedVoiceView : UserControl
             _messages.Add(new ChatMessage { Role = "user", Text = transcript });
             ScrollToBottom();
 
-            // 3. Submit turn
+            // 3. Submit turn via streaming
             vm.TranscriptInput = transcript;
             SetMicState("thinking");
-            await vm.SubmitTurnCommand.ExecuteAsync(null).ConfigureAwait(true);
-            ct.ThrowIfCancellationRequested();
 
-            // 4. Stream response to chat and speak sentence-by-sentence
-            var speakText = !string.IsNullOrWhiteSpace(vm.AssistantSpeakText)
-                ? vm.AssistantSpeakText
-                : vm.AssistantDisplayText;
+            var assistantBubble = new ChatMessage { Role = "assistant" };
+            _messages.Add(assistantBubble);
+            ScrollToBottom();
 
-            var displayText = !string.IsNullOrWhiteSpace(vm.AssistantDisplayText)
-                ? vm.AssistantDisplayText
-                : vm.StatusText;
+            var accumulated = new StringBuilder();
+            var sentences = new List<string>();
+            var sentenceBuffer = new StringBuilder();
+            var spokenUpTo = 0;
+            var isDone = false;
 
-            if (string.IsNullOrWhiteSpace(displayText) && string.IsNullOrWhiteSpace(speakText))
+            await foreach (var evt in vm.SubmitTurnStreamingAsync(transcript, ct).ConfigureAwait(true))
             {
-                SetStatus("No response. Tap mic to try again.");
-                break;
+                ct.ThrowIfCancellationRequested();
+
+                if (evt.Type == "chunk" && evt.Text is not null)
+                {
+                    accumulated.Append(evt.Text);
+                    assistantBubble.Text = accumulated.ToString();
+                    ScrollToBottom();
+
+                    // Detect complete sentences and speak them as they arrive
+                    sentenceBuffer.Append(evt.Text);
+                    var bufText = sentenceBuffer.ToString();
+                    var lastSentenceEnd = -1;
+                    for (int i = 0; i < bufText.Length; i++)
+                    {
+                        if (bufText[i] is '.' or '!' or '?' &&
+                            (i + 1 >= bufText.Length || bufText[i + 1] == ' ' || bufText[i + 1] == '\n'))
+                        {
+                            lastSentenceEnd = i;
+                        }
+                    }
+
+                    if (lastSentenceEnd >= 0)
+                    {
+                        var completePart = bufText[..(lastSentenceEnd + 1)];
+                        sentenceBuffer.Clear();
+                        if (lastSentenceEnd + 1 < bufText.Length)
+                            sentenceBuffer.Append(bufText[(lastSentenceEnd + 1)..].TrimStart());
+
+                        foreach (var s in SplitIntoSentences(completePart))
+                        {
+                            if (!string.IsNullOrWhiteSpace(s))
+                                sentences.Add(s);
+                        }
+                    }
+
+                    // Speak any new sentences
+                    while (spokenUpTo < sentences.Count && !_ttsStopped)
+                    {
+                        SetMicState("speaking");
+                        try
+                        {
+                            await _tts.SpeakAsync(sentences[spokenUpTo], vm.Language, ct).ConfigureAwait(true);
+                        }
+                        catch (OperationCanceledException) when (_ttsStopped) { break; }
+                        spokenUpTo++;
+                    }
+                }
+                else if (evt.Type == "done")
+                {
+                    isDone = true;
+                }
+                else if (evt.Type == "error")
+                {
+                    assistantBubble.Text = $"Error: {evt.Message}";
+                    ScrollToBottom();
+                    break;
+                }
             }
 
-            var fullDisplay = displayText ?? speakText ?? "";
-            var fullSpeak = speakText ?? displayText ?? "";
+            // Speak any remaining buffered text
+            var remainder = sentenceBuffer.ToString().Trim();
+            if (!string.IsNullOrWhiteSpace(remainder) && !_ttsStopped)
+            {
+                SetMicState("speaking");
+                try
+                {
+                    await _tts.SpeakAsync(remainder, vm.Language, ct).ConfigureAwait(true);
+                }
+                catch (OperationCanceledException) { /* ok */ }
+            }
 
-            await SpeakResponseStreamingAsync(fullDisplay, fullSpeak, vm.Language, ct)
-                .ConfigureAwait(true);
-
-            // 6. End session if "end chat" was spoken
+            ct.ThrowIfCancellationRequested();
             if (listenResult.ShouldEndChat)
             {
                 await EndSessionInternalAsync().ConfigureAwait(true);
@@ -288,19 +348,23 @@ public partial class SimplifiedVoiceView : UserControl
         _messages.Add(new ChatMessage { Role = "system", Text = seedPrompt });
         ScrollToBottom();
 
-        vm.TranscriptInput = seedPrompt;
-        await vm.SubmitTurnCommand.ExecuteAsync(null).ConfigureAwait(true);
-        ct.ThrowIfCancellationRequested();
+        var seedBubble = new ChatMessage { Role = "assistant" };
+        _messages.Add(seedBubble);
+        ScrollToBottom();
 
-        var seedResponse = !string.IsNullOrWhiteSpace(vm.AssistantDisplayText)
-            ? vm.AssistantDisplayText
-            : vm.StatusText;
-
-        if (!string.IsNullOrWhiteSpace(seedResponse))
+        var seedAccum = new StringBuilder();
+        await foreach (var evt in vm.SubmitTurnStreamingAsync(seedPrompt, ct).ConfigureAwait(true))
         {
-            _messages.Add(new ChatMessage { Role = "assistant", Text = seedResponse });
-            ScrollToBottom();
+            if (evt.Type == "chunk" && evt.Text is not null)
+            {
+                seedAccum.Append(evt.Text);
+                seedBubble.Text = seedAccum.ToString();
+                ScrollToBottom();
+            }
         }
+
+        if (seedAccum.Length == 0)
+            seedBubble.Text = vm.AssistantDisplayText ?? vm.StatusText ?? "(no response)";
 
         await _tts.SpeakAsync("Copilot ready", vm.Language, ct).ConfigureAwait(true);
         SetStatus("Copilot ready. Listening...");

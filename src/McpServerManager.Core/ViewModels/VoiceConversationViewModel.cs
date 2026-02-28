@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
@@ -195,6 +196,111 @@ public partial class VoiceConversationViewModel : ViewModelBase
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// Submits a turn via SSE streaming. Yields text chunks as they arrive from Copilot.
+    /// Updates <see cref="AssistantDisplayText"/> incrementally.
+    /// </summary>
+    public async IAsyncEnumerable<McpVoiceTurnStreamEvent> SubmitTurnStreamingAsync(
+        string text,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            yield break;
+
+        if (string.IsNullOrWhiteSpace(SessionId))
+            await CreateSessionAsync().ConfigureAwait(true);
+
+        if (string.IsNullOrWhiteSpace(SessionId))
+            yield break;
+
+        IsBusy = true;
+        _activeTurnCts?.Cancel();
+        _activeTurnCts = new CancellationTokenSource();
+        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_activeTurnCts.Token, cancellationToken);
+
+        AssistantDisplayText = string.Empty;
+        AssistantSpeakText = string.Empty;
+        StatusText = "Streaming response...";
+        GlobalStatusChanged?.Invoke(StatusText);
+
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<McpVoiceTurnStreamEvent>();
+        var accumulated = new System.Text.StringBuilder();
+
+        // Producer: reads from service stream, writes to channel
+        _ = Task.Run(async () =>
+        {
+            McpVoiceTurnStreamEvent? lastEvent = null;
+            try
+            {
+                await foreach (var evt in _voiceService.SubmitTurnStreamingAsync(
+                    SessionId,
+                    new McpVoiceTurnRequest
+                    {
+                        UserTranscriptText = text,
+                        Language = Language,
+                        ClientTimestampUtc = DateTimeOffset.UtcNow.ToString("O")
+                    },
+                    linkedCts.Token).ConfigureAwait(false))
+                {
+                    lastEvent = evt;
+                    if (evt.Type == "chunk" && evt.Text is not null)
+                    {
+                        accumulated.Append(evt.Text);
+                        AssistantDisplayText = accumulated.ToString();
+                    }
+                    await channel.Writer.WriteAsync(evt, linkedCts.Token).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                StatusText = "Voice turn canceled.";
+                GlobalStatusChanged?.Invoke(StatusText);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Streaming voice turn failed");
+                StatusText = $"Voice turn failed: {ex.Message}";
+                GlobalStatusChanged?.Invoke(StatusText);
+                await channel.Writer.WriteAsync(
+                    new McpVoiceTurnStreamEvent { Type = "error", Message = ex.Message },
+                    CancellationToken.None).ConfigureAwait(false);
+            }
+            finally
+            {
+                // Finalize state
+                var finalText = accumulated.ToString().Trim();
+                AssistantDisplayText = finalText;
+                AssistantSpeakText = finalText;
+
+                if (lastEvent?.Type == "done")
+                {
+                    LastTurnId = lastEvent.TurnId ?? string.Empty;
+                    LastLatencyMs = lastEvent.LatencyMs ?? 0;
+                    LastToolCalls.Clear();
+                    if (lastEvent.ToolCalls is not null)
+                        foreach (var tc in lastEvent.ToolCalls)
+                            LastToolCalls.Add(tc);
+                    StatusText = $"Voice turn completed ({LastLatencyMs} ms)";
+                }
+                else if (lastEvent?.Type == "error")
+                {
+                    StatusText = $"Voice turn error: {lastEvent.Message}";
+                }
+
+                GlobalStatusChanged?.Invoke(StatusText);
+                IsBusy = false;
+                linkedCts.Dispose();
+                channel.Writer.Complete();
+            }
+        }, linkedCts.Token);
+
+        // Consumer: yield from channel
+        await foreach (var evt in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(true))
+        {
+            yield return evt;
         }
     }
 

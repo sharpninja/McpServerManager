@@ -179,3 +179,34 @@ public sealed record McpVoiceToolCallRecord
     [JsonPropertyName("error")]
     public string? Error { get; init; }
 }
+
+/// <summary>A single Server-Sent Event emitted during a streaming voice turn.</summary>
+public sealed record McpVoiceTurnStreamEvent
+{
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = string.Empty;
+
+    [JsonPropertyName("text")]
+    public string? Text { get; init; }
+
+    [JsonPropertyName("turnId")]
+    public string? TurnId { get; init; }
+
+    [JsonPropertyName("status")]
+    public string? Status { get; init; }
+
+    [JsonPropertyName("message")]
+    public string? Message { get; init; }
+
+    [JsonPropertyName("toolName")]
+    public string? ToolName { get; init; }
+
+    [JsonPropertyName("summary")]
+    public string? Summary { get; init; }
+
+    [JsonPropertyName("toolCalls")]
+    public IReadOnlyList<McpVoiceToolCallRecord>? ToolCalls { get; init; }
+
+    [JsonPropertyName("latencyMs")]
+    public int? LatencyMs { get; init; }
+}

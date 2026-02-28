@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -87,6 +90,71 @@ public sealed class McpVoiceConversationService
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
         return (await response.Content.ReadFromJsonAsync<McpVoiceTurnResponse>(JsonOptions, cancellationToken).ConfigureAwait(true))
             ?? throw new InvalidOperationException("MCP voice submit turn returned an empty response.");
+    }
+
+    /// <summary>
+    /// Submits a turn via the SSE streaming endpoint. Yields events as they arrive.
+    /// </summary>
+    public async IAsyncEnumerable<McpVoiceTurnStreamEvent> SubmitTurnStreamingAsync(
+        string sessionId,
+        McpVoiceTurnRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        ArgumentNullException.ThrowIfNull(request);
+
+        var client = await CreateAuthorizedClientAsync(TimeSpan.FromMinutes(5), cancellationToken).ConfigureAwait(false);
+        HttpResponseMessage? response = null;
+        try
+        {
+            response = await client.PostAsJsonAsync(
+                $"mcp/voice/session/{Uri.EscapeDataString(sessionId)}/turn/stream",
+                request,
+                JsonOptions,
+                cancellationToken).ConfigureAwait(false);
+            await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var reader = new StreamReader(stream);
+
+            while (!reader.EndOfStream)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+
+                if (line is null)
+                    break;
+
+                // SSE format: "data: {json}"
+                if (!line.StartsWith("data: ", StringComparison.Ordinal))
+                    continue;
+
+                var json = line.AsSpan(6);
+                if (json.IsEmpty)
+                    continue;
+
+                McpVoiceTurnStreamEvent? evt;
+                try
+                {
+                    evt = JsonSerializer.Deserialize<McpVoiceTurnStreamEvent>(json, JsonOptions);
+                }
+                catch (JsonException)
+                {
+                    continue;
+                }
+
+                if (evt is not null)
+                    yield return evt;
+
+                if (evt?.Type is "done" or "error")
+                    yield break;
+            }
+        }
+        finally
+        {
+            response?.Dispose();
+            client.Dispose();
+        }
     }
 
     /// <summary>
