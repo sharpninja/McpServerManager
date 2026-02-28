@@ -110,12 +110,16 @@ public sealed class McpVoiceConversationService
             var jsonBody = JsonSerializer.Serialize(request, JsonOptions);
             using var content = new StringContent(jsonBody, System.Text.Encoding.UTF8, "application/json");
 
-            // ResponseHeadersRead is critical: starts returning stream data immediately
-            // instead of buffering the entire response
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post,
+                $"mcp/voice/session/{Uri.EscapeDataString(sessionId)}/turn/stream")
+            { Content = content };
+            // SSE requires text/event-stream Accept header for proper proxy behavior
+            httpRequest.Headers.Accept.Clear();
+            httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+
+            // ResponseHeadersRead starts returning stream data immediately
             response = await client.SendAsync(
-                new HttpRequestMessage(HttpMethod.Post,
-                    $"mcp/voice/session/{Uri.EscapeDataString(sessionId)}/turn/stream")
-                { Content = content },
+                httpRequest,
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken).ConfigureAwait(false);
             await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
