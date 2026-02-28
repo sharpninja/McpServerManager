@@ -1,0 +1,658 @@
+    INFO: 2026-02-27 12:01:54,418:               log.py:   20: Logging to E:\github\RequestTracker\mdpdf.log
+   DEBUG: 2026-02-27 12:01:54,419:               cli.py:  103: C:\Users\kingd\.copilot\session-state\14fd8a02-56cc-4964-9635-ded0325c793c\plan.md
+    INFO: 2026-02-27 12:01:54,426:         converter.py:   14: C:\Users\kingd\.copilot\session-state\14fd8a02-56cc-4964-9635-ded0325c793c\plan.md
+   DEBUG: 2026-02-27 12:01:54,444:      pdf_renderer.py:  470: printSegment: Voice Tab Interface — Developer Reference
+   DEBUG: 2026-02-27 12:01:54,467:      pdf_renderer.py:  470: printSegment: Problem Statement
+   DEBUG: 2026-02-27 12:01:54,476:      pdf_renderer.py:  470: printSegment: Document the intended interaction flow of the Voice tab in the Android phone app for developer understanding.
+   DEBUG: 2026-02-27 12:01:54,480:      pdf_renderer.py:  470: printSegment: Architecture Overview
+   DEBUG: 2026-02-27 12:01:54,481:      pdf_renderer.py:  470: printSegment: The Voice tab is a 
+   DEBUG: 2026-02-27 12:01:54,484:      pdf_renderer.py:  470: printSegment: voice-driven TODO assistant
+   DEBUG: 2026-02-27 12:01:54,495:      pdf_renderer.py:  470: printSegment:  for the Android app. Users speak (or type) natural-language
+   DEBUG: 2026-02-27 12:01:54,497:      pdf_renderer.py:  470: printSegment: requests about their TODO list, and an AI assistant processes them against the MCP server
+   DEBUG: 2026-02-27 12:01:54,497:      pdf_renderer.py:  470: printSegment: '
+   DEBUG: 2026-02-27 12:01:54,500:      pdf_renderer.py:  470: printSegment: s TODO store. The
+   DEBUG: 2026-02-27 12:01:54,502:      pdf_renderer.py:  470: printSegment: system spans 4 layers:
+   DEBUG: 2026-02-27 12:01:54,505:      pdf_renderer.py:  470: printSegment: ┌──────────────────────────────────────────────────────┐
+   DEBUG: 2026-02-27 12:01:54,532:      pdf_renderer.py:  470: printSegment: │  Android UI Layer (VoiceConversationView.axaml/.cs)   │
+   DEBUG: 2026-02-27 12:01:54,534:      pdf_renderer.py:  470: printSegment: │  • Speech-to-Text  • Text-to-Speech  • Wake Word     │
+   DEBUG: 2026-02-27 12:01:54,535:      pdf_renderer.py:  470: printSegment: │  • Audio Focus Management                             │
+   DEBUG: 2026-02-27 12:01:54,538:      pdf_renderer.py:  470: printSegment: ├──────────────────────────────────────────────────────┤
+   DEBUG: 2026-02-27 12:01:54,555:      pdf_renderer.py:  470: printSegment: │  Core ViewModel (VoiceConversationViewModel.cs)       │
+   DEBUG: 2026-02-27 12:01:54,556:      pdf_renderer.py:  470: printSegment: │  • Session lifecycle  • Turn submission               │
+   DEBUG: 2026-02-27 12:01:54,558:      pdf_renderer.py:  470: printSegment: │  • Observable state for UI bindings                   │
+   DEBUG: 2026-02-27 12:01:54,558:      pdf_renderer.py:  470: printSegment: ├──────────────────────────────────────────────────────┤
+   DEBUG: 2026-02-27 12:01:54,559:      pdf_renderer.py:  470: printSegment: │  Core REST Client (McpVoiceConversationService.cs)    │
+   DEBUG: 2026-02-27 12:01:54,561:      pdf_renderer.py:  470: printSegment: │  • Typed HTTP client for /mcp/voice/* endpoints       │
+   DEBUG: 2026-02-27 12:01:54,562:      pdf_renderer.py:  470: printSegment: ├──────────────────────────────────────────────────────┤
+   DEBUG: 2026-02-27 12:01:54,563:      pdf_renderer.py:  470: printSegment: │  MCP Server Backend (VoiceConversationService.cs)     │
+   DEBUG: 2026-02-27 12:01:54,564:      pdf_renderer.py:  470: printSegment: │  • In-memory session store                            │
+   DEBUG: 2026-02-27 12:01:54,566:      pdf_renderer.py:  470: printSegment: │  • Copilot CLI orchestration with tool-call loop      │
+   DEBUG: 2026-02-27 12:01:54,568:      pdf_renderer.py:  470: printSegment: │  • Todo CRUD via ITodoService                         │
+   DEBUG: 2026-02-27 12:01:54,569:      pdf_renderer.py:  470: printSegment: └──────────────────────────────────────────────────────┘
+   DEBUG: 2026-02-27 12:01:54,572:      pdf_renderer.py:  470: printSegment: Key Files
+   DEBUG: 2026-02-27 12:01:54,574:      pdf_renderer.py:  470: printSegment: | File | Layer | Purpose |
+   DEBUG: 2026-02-27 12:01:54,575:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,577:      pdf_renderer.py:  470: printSegment: |------|-------|---------|
+   DEBUG: 2026-02-27 12:01:54,578:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,579:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,580:      pdf_renderer.py:  470: printSegment: src/McpServerManager.Android/Views/VoiceConversationView.axaml
+   DEBUG: 2026-02-27 12:01:54,581:      pdf_renderer.py:  470: printSegment:  | UI | XAML layout — 6
+   DEBUG: 2026-02-27 12:01:54,595:      pdf_renderer.py:  470: printSegment: card sections |
+   DEBUG: 2026-02-27 12:01:54,596:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,597:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,598:      pdf_renderer.py:  470: printSegment: src/McpServerManager.Android/Views/VoiceConversationView.axaml.cs
+   DEBUG: 2026-02-27 12:01:54,601:      pdf_renderer.py:  470: printSegment:  |
+   DEBUG: 2026-02-27 12:01:54,603:      pdf_renderer.py:  470: printSegment: UI | Code-behind — STT, TTS, wake word, audio focus |
+   DEBUG: 2026-02-27 12:01:54,604:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,605:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,606:      pdf_renderer.py:  470: printSegment: src/McpServerManager.Android/Services/AndroidVoiceAudioServices.cs
+   DEBUG: 2026-02-27 12:01:54,608:      pdf_renderer.py:  470: printSegment:  | UI | Speech
+   DEBUG: 2026-02-27 12:01:54,610:      pdf_renderer.py:  470: printSegment: recognition, TTS, audio focus services |
+   DEBUG: 2026-02-27 12:01:54,611:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,612:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,613:      pdf_renderer.py:  470: printSegment: src/McpServerManager.Android/Services/AndroidWakeWordServices.cs
+   DEBUG: 2026-02-27 12:01:54,615:      pdf_renderer.py:  470: printSegment:  | UI | Wake word
+   DEBUG: 2026-02-27 12:01:54,616:      pdf_renderer.py:  470: printSegment: detection + foreground service |
+   DEBUG: 2026-02-27 12:01:54,617:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,618:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,620:      pdf_renderer.py:  470: printSegment: src/McpServerManager.Android/Services/AndroidPorcupineWakeWordEngine.cs
+   DEBUG: 2026-02-27 12:01:54,622:      pdf_renderer.py:  470: printSegment:  | UI |
+   DEBUG: 2026-02-27 12:01:54,623:      pdf_renderer.py:  470: printSegment: Pluggable wake word engine (Porcupine) |
+   DEBUG: 2026-02-27 12:01:54,624:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,625:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,627:      pdf_renderer.py:  470: printSegment: src/McpServerManager.Core/ViewModels/VoiceConversationViewModel.cs
+   DEBUG: 2026-02-27 12:01:54,628:      pdf_renderer.py:  470: printSegment:  | VM |
+   DEBUG: 2026-02-27 12:01:54,631:      pdf_renderer.py:  470: printSegment: Session/turn state management |
+   DEBUG: 2026-02-27 12:01:54,632:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,633:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,634:      pdf_renderer.py:  470: printSegment: src/McpServerManager.Core/Services/McpVoiceConversationService.cs
+   DEBUG: 2026-02-27 12:01:54,636:      pdf_renderer.py:  470: printSegment:  | Client | REST
+   DEBUG: 2026-02-27 12:01:54,637:      pdf_renderer.py:  470: printSegment: client for 
+   DEBUG: 2026-02-27 12:01:54,637:      pdf_renderer.py:  470: printSegment: /mcp/voice/*
+   DEBUG: 2026-02-27 12:01:54,639:      pdf_renderer.py:  470: printSegment:  |
+   DEBUG: 2026-02-27 12:01:54,640:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,641:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,642:      pdf_renderer.py:  470: printSegment: src/McpServerManager.Core/Models/McpVoiceConversationContracts.cs
+   DEBUG: 2026-02-27 12:01:54,645:      pdf_renderer.py:  470: printSegment:  | Client |
+   DEBUG: 2026-02-27 12:01:54,646:      pdf_renderer.py:  470: printSegment: Request/response DTOs |
+   DEBUG: 2026-02-27 12:01:54,648:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,649:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,649:      pdf_renderer.py:  470: printSegment: lib/McpServer/.../Controllers/VoiceController.cs
+   DEBUG: 2026-02-27 12:01:54,652:      pdf_renderer.py:  470: printSegment:  | Server | REST
+   DEBUG: 2026-02-27 12:01:54,653:      pdf_renderer.py:  470: printSegment: API controller |
+   DEBUG: 2026-02-27 12:01:54,653:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,654:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,656:      pdf_renderer.py:  470: printSegment: lib/McpServer/.../Services/VoiceConversationService.cs
+   DEBUG: 2026-02-27 12:01:54,658:      pdf_renderer.py:  470: printSegment:  | Server |
+   DEBUG: 2026-02-27 12:01:54,659:      pdf_renderer.py:  470: printSegment: Orchestration + Copilot CLI integration |
+   DEBUG: 2026-02-27 12:01:54,660:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,661:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,664:      pdf_renderer.py:  470: printSegment: lib/McpServer/.../Options/VoiceConversationOptions.cs
+   DEBUG: 2026-02-27 12:01:54,665:      pdf_renderer.py:  470: printSegment:  | Server | Configuration (model,
+   DEBUG: 2026-02-27 12:01:54,666:      pdf_renderer.py:  470: printSegment: limits, timeouts) |
+   DEBUG: 2026-02-27 12:01:54,667:      pdf_renderer.py:  470: printSegment: Navigation Wiring
+   DEBUG: 2026-02-27 12:01:54,669:      pdf_renderer.py:  470: printSegment: The Voice tab is the 
+   DEBUG: 2026-02-27 12:01:54,669:      pdf_renderer.py:  470: printSegment: second tab
+   DEBUG: 2026-02-27 12:01:54,671:      pdf_renderer.py:  470: printSegment:  in 
+   DEBUG: 2026-02-27 12:01:54,672:      pdf_renderer.py:  470: printSegment: PhoneMainView.axaml
+   DEBUG: 2026-02-27 12:01:54,673:      pdf_renderer.py:  470: printSegment: :
+   DEBUG: 2026-02-27 12:01:54,674:      pdf_renderer.py:  470: printSegment: <TabControl TabStripPlacement="Bottom" SelectedIndex="0">
+   DEBUG: 2026-02-27 12:01:54,675:      pdf_renderer.py:  470: printSegment:     <TabItem Header="Todos">...</TabItem>
+   DEBUG: 2026-02-27 12:01:54,676:      pdf_renderer.py:  470: printSegment:     <TabItem Header="Voice">
+   DEBUG: 2026-02-27 12:01:54,678:      pdf_renderer.py:  470: printSegment:         <VoiceConversationView DataContext="{Binding
+   DEBUG: 2026-02-27 12:01:54,679:      pdf_renderer.py:  470: printSegment: VoiceConversationViewModel}"/>
+   DEBUG: 2026-02-27 12:01:54,679:      pdf_renderer.py:  470: printSegment:     </TabItem>
+   DEBUG: 2026-02-27 12:01:54,680:      pdf_renderer.py:  470: printSegment:     <TabItem Header="Session Log">...</TabItem>
+   DEBUG: 2026-02-27 12:01:54,681:      pdf_renderer.py:  470: printSegment: </TabControl>
+   DEBUG: 2026-02-27 12:01:54,683:      pdf_renderer.py:  470: printSegment: VoiceConversationViewModel
+   DEBUG: 2026-02-27 12:01:54,684:      pdf_renderer.py:  470: printSegment:  is a property on 
+   DEBUG: 2026-02-27 12:01:54,685:      pdf_renderer.py:  470: printSegment: MainWindowViewModel
+   DEBUG: 2026-02-27 12:01:54,685:      pdf_renderer.py:  470: printSegment: .
+   DEBUG: 2026-02-27 12:01:54,686:      pdf_renderer.py:  470: printSegment: Intended Flow — Manual Turn
+   DEBUG: 2026-02-27 12:01:54,687:      pdf_renderer.py:  470: printSegment: This is the core happy path:
+   DEBUG: 2026-02-27 12:01:54,689:      pdf_renderer.py:  470: printSegment: 1. Start Session
+   DEBUG: 2026-02-27 12:01:54,690:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,692:      pdf_renderer.py:  470: printSegment: User taps 
+   DEBUG: 2026-02-27 12:01:54,695:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,696:      pdf_renderer.py:  470: printSegment: Start Session
+   DEBUG: 2026-02-27 12:01:54,697:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,697:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,698:      pdf_renderer.py:  470: printSegment: CreateSessionCommand
+   DEBUG: 2026-02-27 12:01:54,699:      pdf_renderer.py:  470: printSegment:  → 
+   DEBUG: 2026-02-27 12:01:54,715:      pdf_renderer.py:  470: printSegment: McpVoiceConversationService.CreateSessionAsync()
+   DEBUG: 2026-02-27 12:01:54,716:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,717:      pdf_renderer.py:  470: printSegment: POST /mcp/voice/session
+   DEBUG: 2026-02-27 12:01:54,718:      pdf_renderer.py:  470: printSegment:  → server creates in-memory 
+   DEBUG: 2026-02-27 12:01:54,719:      pdf_renderer.py:  470: printSegment: VoiceSessionState
+   DEBUG: 2026-02-27 12:01:54,720:      pdf_renderer.py:  470: printSegment: , returns 
+   DEBUG: 2026-02-27 12:01:54,721:      pdf_renderer.py:  470: printSegment: sessionId
+   DEBUG: 2026-02-27 12:01:54,722:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,723:      pdf_renderer.py:  470: printSegment: UI stores 
+   DEBUG: 2026-02-27 12:01:54,723:      pdf_renderer.py:  470: printSegment: SessionId
+   DEBUG: 2026-02-27 12:01:54,725:      pdf_renderer.py:  470: printSegment: , clears transcript/tool-call history
+   DEBUG: 2026-02-27 12:01:54,726:      pdf_renderer.py:  470: printSegment: 2. Capture Input (two options)
+   DEBUG: 2026-02-27 12:01:54,727:      pdf_renderer.py:  470: printSegment: Option A — Type:
+   DEBUG: 2026-02-27 12:01:54,743:      pdf_renderer.py:  470: printSegment:  User types text into the transcript input TextBox.
+   DEBUG: 2026-02-27 12:01:54,744:      pdf_renderer.py:  470: printSegment: Option B — Listen:
+   DEBUG: 2026-02-27 12:01:54,745:      pdf_renderer.py:  470: printSegment:  User taps 
+   DEBUG: 2026-02-27 12:01:54,746:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,746:      pdf_renderer.py:  470: printSegment: Listen
+   DEBUG: 2026-02-27 12:01:54,747:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,748:      pdf_renderer.py:  470: printSegment:  button:
+   DEBUG: 2026-02-27 12:01:54,749:      pdf_renderer.py:  470: printSegment:  1 
+   DEBUG: 2026-02-27 12:01:54,750:      pdf_renderer.py:  470: printSegment: OnListenFillInputClick()
+   DEBUG: 2026-02-27 12:01:54,751:      pdf_renderer.py:  470: printSegment:  calls 
+   DEBUG: 2026-02-27 12:01:54,752:      pdf_renderer.py:  470: printSegment: ListenAsync(submitAfterCapture: false)
+   DEBUG: 2026-02-27 12:01:54,753:      pdf_renderer.py:  470: printSegment:  2 
+   DEBUG: 2026-02-27 12:01:54,754:      pdf_renderer.py:  470: printSegment: Stops any active TTS playback
+   DEBUG: 2026-02-27 12:01:54,754:      pdf_renderer.py:  470: printSegment:  3 
+   DEBUG: 2026-02-27 12:01:54,756:      pdf_renderer.py:  470: printSegment: Acquires audio focus for 
+   DEBUG: 2026-02-27 12:01:54,757:      pdf_renderer.py:  470: printSegment: SpeechRecognition
+   DEBUG: 2026-02-27 12:01:54,758:      pdf_renderer.py:  470: printSegment:  (microphone)
+   DEBUG: 2026-02-27 12:01:54,760:      pdf_renderer.py:  470: printSegment:  4 
+   DEBUG: 2026-02-27 12:01:54,761:      pdf_renderer.py:  470: printSegment: AndroidSpeechRecognitionService.RecognizeOnceAsync(language)
+   DEBUG: 2026-02-27 12:01:54,762:      pdf_renderer.py:  470: printSegment:  — one-shot
+   DEBUG: 2026-02-27 12:01:54,763:      pdf_renderer.py:  470: printSegment: Android STT
+   DEBUG: 2026-02-27 12:01:54,764:      pdf_renderer.py:  470: printSegment:  5 
+   DEBUG: 2026-02-27 12:01:54,765:      pdf_renderer.py:  470: printSegment: Recognized text fills 
+   DEBUG: 2026-02-27 12:01:54,765:      pdf_renderer.py:  470: printSegment: TranscriptInput
+   DEBUG: 2026-02-27 12:01:54,767:      pdf_renderer.py:  470: printSegment:  on the ViewModel
+   DEBUG: 2026-02-27 12:01:54,768:      pdf_renderer.py:  470: printSegment:  6 
+   DEBUG: 2026-02-27 12:01:54,769:      pdf_renderer.py:  470: printSegment: Audio focus is released (via 
+   DEBUG: 2026-02-27 12:01:54,770:      pdf_renderer.py:  470: printSegment: using
+   DEBUG: 2026-02-27 12:01:54,771:      pdf_renderer.py:  470: printSegment:  pattern)
+   DEBUG: 2026-02-27 12:01:54,772:      pdf_renderer.py:  470: printSegment: 3. Submit Turn
+   DEBUG: 2026-02-27 12:01:54,773:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,774:      pdf_renderer.py:  470: printSegment: User taps 
+   DEBUG: 2026-02-27 12:01:54,775:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,776:      pdf_renderer.py:  470: printSegment: Send Turn
+   DEBUG: 2026-02-27 12:01:54,778:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,778:      pdf_renderer.py:  470: printSegment:  (or uses 
+   DEBUG: 2026-02-27 12:01:54,780:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,780:      pdf_renderer.py:  470: printSegment: Lstn+Send
+   DEBUG: 2026-02-27 12:01:54,781:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,782:      pdf_renderer.py:  470: printSegment:  which combines steps 2+3)
+   DEBUG: 2026-02-27 12:01:54,783:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,784:      pdf_renderer.py:  470: printSegment: SubmitTurnCommand
+   DEBUG: 2026-02-27 12:01:54,785:      pdf_renderer.py:  470: printSegment:  → 
+   DEBUG: 2026-02-27 12:01:54,786:      pdf_renderer.py:  470: printSegment: McpVoiceConversationService.SubmitTurnAsync()
+   DEBUG: 2026-02-27 12:01:54,788:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,789:      pdf_renderer.py:  470: printSegment: POST /mcp/voice/session/{id}/turn
+   DEBUG: 2026-02-27 12:01:54,791:      pdf_renderer.py:  470: printSegment:  with 
+   DEBUG: 2026-02-27 12:01:54,793:      pdf_renderer.py:  470: printSegment: { userTranscriptText,
+   DEBUG: 2026-02-27 12:01:54,794:      pdf_renderer.py:  470: printSegment: language, clientTimestampUtc }
+   DEBUG: 2026-02-27 12:01:54,796:      pdf_renderer.py:  470: printSegment: 4. Backend Processing (VoiceConversationService)
+   DEBUG: 2026-02-27 12:01:54,797:      pdf_renderer.py:  470: printSegment:  1 
+   DEBUG: 2026-02-27 12:01:54,798:      pdf_renderer.py:  470: printSegment: Acquires session gate (SemaphoreSlim — one turn at a time)
+   DEBUG: 2026-02-27 12:01:54,798:      pdf_renderer.py:  470: printSegment:  2 
+   DEBUG: 2026-02-27 12:01:54,799:      pdf_renderer.py:  470: printSegment: Records user transcript entry
+   DEBUG: 2026-02-27 12:01:54,800:      pdf_renderer.py:  470: printSegment:  3 
+   DEBUG: 2026-02-27 12:01:54,801:      pdf_renderer.py:  470: printSegment: Enters 
+   DEBUG: 2026-02-27 12:01:54,802:      pdf_renderer.py:  470: printSegment: tool-call loop
+   DEBUG: 2026-02-27 12:01:54,803:      pdf_renderer.py:  470: printSegment:  (up to 
+   DEBUG: 2026-02-27 12:01:54,804:      pdf_renderer.py:  470: printSegment: MaxToolSteps = 6
+   DEBUG: 2026-02-27 12:01:54,805:      pdf_renderer.py:  470: printSegment:  iterations):
+   DEBUG: 2026-02-27 12:01:54,806:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,810:      pdf_renderer.py:  470: printSegment: a. Builds a prompt with: system
+   DEBUG: 2026-02-27 12:01:54,812:      pdf_renderer.py:  470: printSegment: instructions, allowed tools, transcript history, user text, prior tool results
+   DEBUG: 2026-02-27 12:01:54,812:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,813:      pdf_renderer.py:  470: printSegment: b. Invokes 
+   DEBUG: 2026-02-27 12:01:54,814:      pdf_renderer.py:  470: printSegment: Copilot CLI
+   DEBUG: 2026-02-27 12:01:54,815:      pdf_renderer.py:  470: printSegment:  (
+   DEBUG: 2026-02-27 12:01:54,816:      pdf_renderer.py:  470: printSegment: ICopilotClient.InvokeAsync
+   DEBUG: 2026-02-27 12:01:54,816:      pdf_renderer.py:  470: printSegment: ) with the prompt
+   DEBUG: 2026-02-27 12:01:54,818:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,820:      pdf_renderer.py:  470: printSegment: c. Parses the JSON response envelope — one
+   DEBUG: 2026-02-27 12:01:54,821:      pdf_renderer.py:  470: printSegment: of three types:
+   DEBUG: 2026-02-27 12:01:54,821:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,823:      pdf_renderer.py:  470: printSegment: "final_response"
+   DEBUG: 2026-02-27 12:01:54,823:      pdf_renderer.py:  470: printSegment:  → returns 
+   DEBUG: 2026-02-27 12:01:54,825:      pdf_renderer.py:  470: printSegment: displayText
+   DEBUG: 2026-02-27 12:01:54,826:      pdf_renderer.py:  470: printSegment:  + 
+   DEBUG: 2026-02-27 12:01:54,826:      pdf_renderer.py:  470: printSegment: speakText
+   DEBUG: 2026-02-27 12:01:54,827:      pdf_renderer.py:  470: printSegment:  to client (loop
+   DEBUG: 2026-02-27 12:01:54,828:      pdf_renderer.py:  470: printSegment: ends)
+   DEBUG: 2026-02-27 12:01:54,828:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,829:      pdf_renderer.py:  470: printSegment: "error_response"
+   DEBUG: 2026-02-27 12:01:54,831:      pdf_renderer.py:  470: printSegment:  → returns error message (loop ends)
+   DEBUG: 2026-02-27 12:01:54,832:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,833:      pdf_renderer.py:  470: printSegment: "tool_call"
+   DEBUG: 2026-02-27 12:01:54,835:      pdf_renderer.py:  470: printSegment:  → executes the named tool, feeds result back into next loop iteration
+   DEBUG: 2026-02-27 12:01:54,836:      pdf_renderer.py:  470: printSegment:  4 
+   DEBUG: 2026-02-27 12:01:54,837:      pdf_renderer.py:  470: printSegment: Records assistant transcript entry
+   DEBUG: 2026-02-27 12:01:54,838:      pdf_renderer.py:  470: printSegment:  5 
+   DEBUG: 2026-02-27 12:01:54,840:      pdf_renderer.py:  470: printSegment: Returns 
+   DEBUG: 2026-02-27 12:01:54,841:      pdf_renderer.py:  470: printSegment: VoiceTurnResponse
+   DEBUG: 2026-02-27 12:01:54,842:      pdf_renderer.py:  470: printSegment:  with 
+   DEBUG: 2026-02-27 12:01:54,843:      pdf_renderer.py:  470: printSegment: assistantDisplayText
+   DEBUG: 2026-02-27 12:01:54,843:      pdf_renderer.py:  470: printSegment: , 
+   DEBUG: 2026-02-27 12:01:54,844:      pdf_renderer.py:  470: printSegment: assistantSpeakText
+   DEBUG: 2026-02-27 12:01:54,845:      pdf_renderer.py:  470: printSegment: , 
+   DEBUG: 2026-02-27 12:01:54,846:      pdf_renderer.py:  470: printSegment: toolCalls[]
+   DEBUG: 2026-02-27 12:01:54,847:      pdf_renderer.py:  470: printSegment: , 
+   DEBUG: 2026-02-27 12:01:54,849:      pdf_renderer.py:  470: printSegment: latencyMs
+   DEBUG: 2026-02-27 12:01:54,850:      pdf_renderer.py:  470: printSegment: Available Tools (server-side):
+   DEBUG: 2026-02-27 12:01:54,851:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,852:      pdf_renderer.py:  470: printSegment: | Tool | Type | Purpose |
+   DEBUG: 2026-02-27 12:01:54,853:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,854:      pdf_renderer.py:  470: printSegment: |------|------|---------|
+   DEBUG: 2026-02-27 12:01:54,855:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,856:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,856:      pdf_renderer.py:  470: printSegment: todo_list
+   DEBUG: 2026-02-27 12:01:54,858:      pdf_renderer.py:  470: printSegment:  | Read | List/filter todos |
+   DEBUG: 2026-02-27 12:01:54,858:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,859:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,860:      pdf_renderer.py:  470: printSegment: todo_search
+   DEBUG: 2026-02-27 12:01:54,861:      pdf_renderer.py:  470: printSegment:  | Read | Keyword search todos |
+   DEBUG: 2026-02-27 12:01:54,862:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,863:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,863:      pdf_renderer.py:  470: printSegment: todo_get
+   DEBUG: 2026-02-27 12:01:54,865:      pdf_renderer.py:  470: printSegment:  | Read | Get single todo by ID |
+   DEBUG: 2026-02-27 12:01:54,865:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,866:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,868:      pdf_renderer.py:  470: printSegment: todo_create
+   DEBUG: 2026-02-27 12:01:54,869:      pdf_renderer.py:  470: printSegment:  |
+   DEBUG: 2026-02-27 12:01:54,872:      pdf_renderer.py:  470: printSegment: Write | Create new todo |
+   DEBUG: 2026-02-27 12:01:54,873:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,874:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,875:      pdf_renderer.py:  470: printSegment: todo_update
+   DEBUG: 2026-02-27 12:01:54,876:      pdf_renderer.py:  470: printSegment:  | Write | Update todo fields |
+   DEBUG: 2026-02-27 12:01:54,877:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,877:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,879:      pdf_renderer.py:  470: printSegment: todo_delete
+   DEBUG: 2026-02-27 12:01:54,880:      pdf_renderer.py:  470: printSegment:  | Write | Delete a todo |
+   DEBUG: 2026-02-27 12:01:54,881:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:54,882:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:54,883:      pdf_renderer.py:  470: printSegment: todo_toggle_done
+   DEBUG: 2026-02-27 12:01:54,884:      pdf_renderer.py:  470: printSegment:  | Write | Toggle done status |
+   DEBUG: 2026-02-27 12:01:54,885:      pdf_renderer.py:  470: printSegment: Guardrails:
+   DEBUG: 2026-02-27 12:01:54,887:      pdf_renderer.py:  470: printSegment:  Max 3 writes and 1 delete per turn. Duplicate identical calls are blocked.
+   DEBUG: 2026-02-27 12:01:54,887:      pdf_renderer.py:  470: printSegment: 5. Display Response
+   DEBUG: 2026-02-27 12:01:54,889:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,889:      pdf_renderer.py:  470: printSegment: ViewModel updates 
+   DEBUG: 2026-02-27 12:01:54,891:      pdf_renderer.py:  470: printSegment: AssistantDisplayText
+   DEBUG: 2026-02-27 12:01:54,892:      pdf_renderer.py:  470: printSegment:  (shown on screen) and 
+   DEBUG: 2026-02-27 12:01:54,893:      pdf_renderer.py:  470: printSegment: AssistantSpeakText
+   DEBUG: 2026-02-27 12:01:54,895:      pdf_renderer.py:  470: printSegment:  (spoken version)
+   DEBUG: 2026-02-27 12:01:54,896:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,898:      pdf_renderer.py:  470: printSegment: LastToolCalls
+   DEBUG: 2026-02-27 12:01:54,899:      pdf_renderer.py:  470: printSegment:  collection is populated with tool call records
+   DEBUG: 2026-02-27 12:01:54,902:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,903:      pdf_renderer.py:  470: printSegment: Transcript history is refreshed from server
+   DEBUG: 2026-02-27 12:01:54,905:      pdf_renderer.py:  470: printSegment: 6. Speak Reply (optional)
+   DEBUG: 2026-02-27 12:01:54,906:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,907:      pdf_renderer.py:  470: printSegment: User taps 
+   DEBUG: 2026-02-27 12:01:54,909:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,910:      pdf_renderer.py:  470: printSegment: Speak Reply
+   DEBUG: 2026-02-27 12:01:54,911:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,912:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,914:      pdf_renderer.py:  470: printSegment: OnSpeakReplyClick()
+   DEBUG: 2026-02-27 12:01:54,915:      pdf_renderer.py:  470: printSegment: :
+   DEBUG: 2026-02-27 12:01:54,916:      pdf_renderer.py:  470: printSegment:  1 
+   DEBUG: 2026-02-27 12:01:54,917:      pdf_renderer.py:  470: printSegment: Stops any active playback
+   DEBUG: 2026-02-27 12:01:54,919:      pdf_renderer.py:  470: printSegment:  2 
+   DEBUG: 2026-02-27 12:01:54,920:      pdf_renderer.py:  470: printSegment: Acquires audio focus for 
+   DEBUG: 2026-02-27 12:01:54,921:      pdf_renderer.py:  470: printSegment: TextToSpeechPlayback
+   DEBUG: 2026-02-27 12:01:54,922:      pdf_renderer.py:  470: printSegment:  (speaker)
+   DEBUG: 2026-02-27 12:01:54,923:      pdf_renderer.py:  470: printSegment:  3 
+   DEBUG: 2026-02-27 12:01:54,926:      pdf_renderer.py:  470: printSegment: AndroidTextToSpeechService.SpeakAsync(speakText,
+   DEBUG: 2026-02-27 12:01:54,927:      pdf_renderer.py:  470: printSegment: language)
+   DEBUG: 2026-02-27 12:01:54,928:      pdf_renderer.py:  470: printSegment:  4 
+   DEBUG: 2026-02-27 12:01:54,929:      pdf_renderer.py:  470: printSegment: Android TTS engine reads the reply aloud
+   DEBUG: 2026-02-27 12:01:54,932:      pdf_renderer.py:  470: printSegment: Intended Flow — Wake Word (Hands-Free)
+   DEBUG: 2026-02-27 12:01:54,933:      pdf_renderer.py:  470: printSegment: Setup
+   DEBUG: 2026-02-27 12:01:54,934:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,935:      pdf_renderer.py:  470: printSegment: User taps 
+   DEBUG: 2026-02-27 12:01:54,936:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,938:      pdf_renderer.py:  470: printSegment: Wake Start
+   DEBUG: 2026-02-27 12:01:54,939:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,939:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,942:      pdf_renderer.py:  470: printSegment: AndroidWakeWordService.StartMonitoringAsync()
+   DEBUG: 2026-02-27 12:01:54,943:      pdf_renderer.py:  470: printSegment:  starts an Android foreground
+   DEBUG: 2026-02-27 12:01:54,944:      pdf_renderer.py:  470: printSegment: service
+   DEBUG: 2026-02-27 12:01:54,945:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,947:      pdf_renderer.py:  470: printSegment: A persistent notification (
+   DEBUG: 2026-02-27 12:01:54,948:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,949:      pdf_renderer.py:  470: printSegment: Request Tracker Voice
+   DEBUG: 2026-02-27 12:01:54,950:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,952:      pdf_renderer.py:  470: printSegment: ) keeps the service alive
+   DEBUG: 2026-02-27 12:01:54,952:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,954:      pdf_renderer.py:  470: printSegment: The wake word engine monitors for the selected phrase
+   DEBUG: 2026-02-27 12:01:54,956:      pdf_renderer.py:  470: printSegment: Wake Phrases
+   DEBUG: 2026-02-27 12:01:54,957:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,958:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,959:      pdf_renderer.py:  470: printSegment: Hey Tracker
+   DEBUG: 2026-02-27 12:01:54,960:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,961:      pdf_renderer.py:  470: printSegment:  (default)
+   DEBUG: 2026-02-27 12:01:54,961:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,962:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,963:      pdf_renderer.py:  470: printSegment: Okay Tracker
+   DEBUG: 2026-02-27 12:01:54,963:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,964:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,965:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,965:      pdf_renderer.py:  470: printSegment: Hello Tracker
+   DEBUG: 2026-02-27 12:01:54,966:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,967:      pdf_renderer.py:  470: printSegment: Phrase selection is persisted to Android 
+   DEBUG: 2026-02-27 12:01:54,967:      pdf_renderer.py:  470: printSegment: SharedPreferences
+   DEBUG: 2026-02-27 12:01:54,970:      pdf_renderer.py:  470: printSegment: .
+   DEBUG: 2026-02-27 12:01:54,971:      pdf_renderer.py:  470: printSegment: Triggered Flow
+   DEBUG: 2026-02-27 12:01:54,972:      pdf_renderer.py:  470: printSegment:  1 
+   DEBUG: 2026-02-27 12:01:54,972:      pdf_renderer.py:  470: printSegment: Wake phrase is detected → 
+   DEBUG: 2026-02-27 12:01:54,974:      pdf_renderer.py:  470: printSegment: WakeWordDetected
+   DEBUG: 2026-02-27 12:01:54,975:      pdf_renderer.py:  470: printSegment:  event fires
+   DEBUG: 2026-02-27 12:01:54,976:      pdf_renderer.py:  470: printSegment:  2 
+   DEBUG: 2026-02-27 12:01:54,977:      pdf_renderer.py:  470: printSegment: VoiceConversationView.OnWakeWordDetected()
+   DEBUG: 2026-02-27 12:01:54,978:      pdf_renderer.py:  470: printSegment:  dispatches to UI thread
+   DEBUG: 2026-02-27 12:01:54,978:      pdf_renderer.py:  470: printSegment:  3 
+   DEBUG: 2026-02-27 12:01:54,979:      pdf_renderer.py:  470: printSegment: If 
+   DEBUG: 2026-02-27 12:01:54,979:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,981:      pdf_renderer.py:  470: printSegment: Auto listen + send on wake
+   DEBUG: 2026-02-27 12:01:54,981:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,982:      pdf_renderer.py:  470: printSegment:  checkbox is checked:
+   DEBUG: 2026-02-27 12:01:54,983:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,984:      pdf_renderer.py:  470: printSegment: Calls 
+   DEBUG: 2026-02-27 12:01:54,985:      pdf_renderer.py:  470: printSegment: ListenAsync(submitAfterCapture: true)
+   DEBUG: 2026-02-27 12:01:54,986:      pdf_renderer.py:  470: printSegment:  — auto-captures speech
+   DEBUG: 2026-02-27 12:01:54,987:      pdf_renderer.py:  470: printSegment: AND submits
+   DEBUG: 2026-02-27 12:01:54,988:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,990:      pdf_renderer.py:  470: printSegment: This is the full hands-free flow: wake phrase → listen → submit → get response
+   DEBUG: 2026-02-27 12:01:54,991:      pdf_renderer.py:  470: printSegment:  4 
+   DEBUG: 2026-02-27 12:01:54,992:      pdf_renderer.py:  470: printSegment: If checkbox is unchecked:
+   DEBUG: 2026-02-27 12:01:54,993:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,994:      pdf_renderer.py:  470: printSegment: Only shows a status message; user must manually tap Listen/Send
+   DEBUG: 2026-02-27 12:01:54,995:      pdf_renderer.py:  470: printSegment: Stop
+   DEBUG: 2026-02-27 12:01:54,995:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:54,996:      pdf_renderer.py:  470: printSegment: User taps 
+   DEBUG: 2026-02-27 12:01:54,996:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:54,998:      pdf_renderer.py:  470: printSegment: Wake Stop
+   DEBUG: 2026-02-27 12:01:54,998:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:55,000:      pdf_renderer.py:  470: printSegment:  → 
+   DEBUG: 2026-02-27 12:01:55,001:      pdf_renderer.py:  470: printSegment: StopMonitoringAsync()
+   DEBUG: 2026-02-27 12:01:55,002:      pdf_renderer.py:  470: printSegment:  stops the foreground service
+   DEBUG: 2026-02-27 12:01:55,003:      pdf_renderer.py:  470: printSegment: Simulate
+   DEBUG: 2026-02-27 12:01:55,004:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,005:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:55,006:      pdf_renderer.py:  470: printSegment: Sim Wake
+   DEBUG: 2026-02-27 12:01:55,006:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:55,008:      pdf_renderer.py:  470: printSegment:  button fires a simulated wake event for testing (only works when monitoring is active)
+   DEBUG: 2026-02-27 12:01:55,010:      pdf_renderer.py:  470: printSegment: Intended Flow — Interrupt
+   DEBUG: 2026-02-27 12:01:55,011:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,012:      pdf_renderer.py:  470: printSegment: User taps 
+   DEBUG: 2026-02-27 12:01:55,013:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:55,014:      pdf_renderer.py:  470: printSegment: Interrupt
+   DEBUG: 2026-02-27 12:01:55,015:      pdf_renderer.py:  470: printSegment: "
+   DEBUG: 2026-02-27 12:01:55,016:      pdf_renderer.py:  470: printSegment:  during an active turn
+   DEBUG: 2026-02-27 12:01:55,016:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,017:      pdf_renderer.py:  470: printSegment: Client-side: cancels the 
+   DEBUG: 2026-02-27 12:01:55,018:      pdf_renderer.py:  470: printSegment: CancellationTokenSource
+   DEBUG: 2026-02-27 12:01:55,020:      pdf_renderer.py:  470: printSegment:  for the active turn
+   DEBUG: 2026-02-27 12:01:55,021:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,022:      pdf_renderer.py:  470: printSegment: Server-side: 
+   DEBUG: 2026-02-27 12:01:55,023:      pdf_renderer.py:  470: printSegment: POST /mcp/voice/session/{id}/interrupt
+   DEBUG: 2026-02-27 12:01:55,024:      pdf_renderer.py:  470: printSegment:  → cancels the Copilot CLI
+   DEBUG: 2026-02-27 12:01:55,025:      pdf_renderer.py:  470: printSegment: invocation
+   DEBUG: 2026-02-27 12:01:55,025:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,027:      pdf_renderer.py:  470: printSegment: Any active TTS playback is also stopped
+   DEBUG: 2026-02-27 12:01:55,029:      pdf_renderer.py:  470: printSegment: UI Layout (6 Sections)
+   DEBUG: 2026-02-27 12:01:55,029:      pdf_renderer.py:  470: printSegment:  1 
+   DEBUG: 2026-02-27 12:01:55,030:      pdf_renderer.py:  470: printSegment: Session Controls
+   DEBUG: 2026-02-27 12:01:55,031:      pdf_renderer.py:  470: printSegment:  — Start/Refresh/End session, shows session ID and status
+   DEBUG: 2026-02-27 12:01:55,033:      pdf_renderer.py:  470: printSegment:  2 
+   DEBUG: 2026-02-27 12:01:55,035:      pdf_renderer.py:  470: printSegment: Language + Latency
+   DEBUG: 2026-02-27 12:01:55,037:      pdf_renderer.py:  470: printSegment:  — Language tag (en-US), last turn ID, latency in ms
+   DEBUG: 2026-02-27 12:01:55,038:      pdf_renderer.py:  470: printSegment:  3 
+   DEBUG: 2026-02-27 12:01:55,040:      pdf_renderer.py:  470: printSegment: Manual Transcript Input
+   DEBUG: 2026-02-27 12:01:55,042:      pdf_renderer.py:  470: printSegment:  — Wake phrase selector, auto-listen checkbox, text input, 9-button action
+   DEBUG: 2026-02-27 12:01:55,043:      pdf_renderer.py:  470: printSegment: grid:
+   DEBUG: 2026-02-27 12:01:55,044:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,045:      pdf_renderer.py:  470: printSegment: Row 1: Listen | Lstn+Send | Send Turn
+   DEBUG: 2026-02-27 12:01:55,046:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,047:      pdf_renderer.py:  470: printSegment: Row 2: Wake Start | Wake Stop | Sim Wake
+   DEBUG: 2026-02-27 12:01:55,047:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,049:      pdf_renderer.py:  470: printSegment: Row 3: Interrupt | Clear | Refresh
+   DEBUG: 2026-02-27 12:01:55,051:      pdf_renderer.py:  470: printSegment:  4 
+   DEBUG: 2026-02-27 12:01:55,052:      pdf_renderer.py:  470: printSegment: Assistant Response
+   DEBUG: 2026-02-27 12:01:55,053:      pdf_renderer.py:  470: printSegment:  — Display text + speak text, Speak Reply / Stop Audio buttons
+   DEBUG: 2026-02-27 12:01:55,055:      pdf_renderer.py:  470: printSegment:  5 
+   DEBUG: 2026-02-27 12:01:55,056:      pdf_renderer.py:  470: printSegment: Transcript History
+   DEBUG: 2026-02-27 12:01:55,057:      pdf_renderer.py:  470: printSegment:  — Scrollable list of all conversation entries (user/assistant/tool)
+   DEBUG: 2026-02-27 12:01:55,057:      pdf_renderer.py:  470: printSegment:  6 
+   DEBUG: 2026-02-27 12:01:55,059:      pdf_renderer.py:  470: printSegment: Last Tool Calls
+   DEBUG: 2026-02-27 12:01:55,060:      pdf_renderer.py:  470: printSegment:  — Tool name, status, result summary, errors
+   DEBUG: 2026-02-27 12:01:55,062:      pdf_renderer.py:  470: printSegment: Server Configuration (VoiceConversationOptions)
+   DEBUG: 2026-02-27 12:01:55,063:      pdf_renderer.py:  470: printSegment: | Setting | Default | Purpose |
+   DEBUG: 2026-02-27 12:01:55,064:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:55,065:      pdf_renderer.py:  470: printSegment: |---------|---------|---------|
+   DEBUG: 2026-02-27 12:01:55,066:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:55,067:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:55,068:      pdf_renderer.py:  470: printSegment: Enabled
+   DEBUG: 2026-02-27 12:01:55,068:      pdf_renderer.py:  470: printSegment:  | 
+   DEBUG: 2026-02-27 12:01:55,070:      pdf_renderer.py:  470: printSegment: true
+   DEBUG: 2026-02-27 12:01:55,070:      pdf_renderer.py:  470: printSegment:  | Feature flag |
+   DEBUG: 2026-02-27 12:01:55,071:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:55,072:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:55,072:      pdf_renderer.py:  470: printSegment: CopilotModel
+   DEBUG: 2026-02-27 12:01:55,073:      pdf_renderer.py:  470: printSegment:  | 
+   DEBUG: 2026-02-27 12:01:55,074:      pdf_renderer.py:  470: printSegment: claude-sonnet-4.6
+   DEBUG: 2026-02-27 12:01:55,075:      pdf_renderer.py:  470: printSegment:  | AI model for Copilot CLI |
+   DEBUG: 2026-02-27 12:01:55,075:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:55,076:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:55,077:      pdf_renderer.py:  470: printSegment: MaxToolSteps
+   DEBUG: 2026-02-27 12:01:55,078:      pdf_renderer.py:  470: printSegment:  | 
+   DEBUG: 2026-02-27 12:01:55,078:      pdf_renderer.py:  470: printSegment: 6
+   DEBUG: 2026-02-27 12:01:55,079:      pdf_renderer.py:  470: printSegment:  | Max tool-call loop iterations per turn
+   DEBUG: 2026-02-27 12:01:55,080:      pdf_renderer.py:  470: printSegment: |
+   DEBUG: 2026-02-27 12:01:55,080:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:55,081:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:55,082:      pdf_renderer.py:  470: printSegment: CopilotTimeoutSeconds
+   DEBUG: 2026-02-27 12:01:55,083:      pdf_renderer.py:  470: printSegment:  | 
+   DEBUG: 2026-02-27 12:01:55,084:      pdf_renderer.py:  470: printSegment: 45
+   DEBUG: 2026-02-27 12:01:55,085:      pdf_renderer.py:  470: printSegment:  | Timeout for each Copilot CLI invocation |
+   DEBUG: 2026-02-27 12:01:55,086:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:55,087:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:55,088:      pdf_renderer.py:  470: printSegment: MaxWritesPerTurn
+   DEBUG: 2026-02-27 12:01:55,088:      pdf_renderer.py:  470: printSegment:  | 
+   DEBUG: 2026-02-27 12:01:55,089:      pdf_renderer.py:  470: printSegment: 3
+   DEBUG: 2026-02-27 12:01:55,091:      pdf_renderer.py:  470: printSegment:  |
+   DEBUG: 2026-02-27 12:01:55,092:      pdf_renderer.py:  470: printSegment: Write mutation safety limit |
+   DEBUG: 2026-02-27 12:01:55,092:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:55,093:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:55,094:      pdf_renderer.py:  470: printSegment: MaxDeletesPerTurn
+   DEBUG: 2026-02-27 12:01:55,095:      pdf_renderer.py:  470: printSegment:  | 
+   DEBUG: 2026-02-27 12:01:55,095:      pdf_renderer.py:  470: printSegment: 1
+   DEBUG: 2026-02-27 12:01:55,096:      pdf_renderer.py:  470: printSegment:  | Delete safety limit |
+   DEBUG: 2026-02-27 12:01:55,097:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:55,098:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:55,099:      pdf_renderer.py:  470: printSegment: LogTranscripts
+   DEBUG: 2026-02-27 12:01:55,100:      pdf_renderer.py:  470: printSegment:  | 
+   DEBUG: 2026-02-27 12:01:55,101:      pdf_renderer.py:  470: printSegment: true
+   DEBUG: 2026-02-27 12:01:55,103:      pdf_renderer.py:  470: printSegment:  |
+   DEBUG: 2026-02-27 12:01:55,104:      pdf_renderer.py:  470: printSegment: Retain transcript entries in memory |
+   DEBUG: 2026-02-27 12:01:55,104:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:55,105:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:55,106:      pdf_renderer.py:  470: printSegment: LogToolCalls
+   DEBUG: 2026-02-27 12:01:55,107:      pdf_renderer.py:  470: printSegment:  | 
+   DEBUG: 2026-02-27 12:01:55,107:      pdf_renderer.py:  470: printSegment: true
+   DEBUG: 2026-02-27 12:01:55,108:      pdf_renderer.py:  470: printSegment:  | Retain tool call records in memory |
+   DEBUG: 2026-02-27 12:01:55,109:      pdf_renderer.py:  470: printSegment:  
+   DEBUG: 2026-02-27 12:01:55,109:      pdf_renderer.py:  470: printSegment: | 
+   DEBUG: 2026-02-27 12:01:55,110:      pdf_renderer.py:  470: printSegment: TranscriptContextEntryLimit
+   DEBUG: 2026-02-27 12:01:55,111:      pdf_renderer.py:  470: printSegment:  | 
+   DEBUG: 2026-02-27 12:01:55,112:      pdf_renderer.py:  470: printSegment: 20
+   DEBUG: 2026-02-27 12:01:55,113:      pdf_renderer.py:  470: printSegment:  | Max transcript entries in model context |
+   DEBUG: 2026-02-27 12:01:55,115:      pdf_renderer.py:  470: printSegment: Android Audio Services
+   DEBUG: 2026-02-27 12:01:55,116:      pdf_renderer.py:  470: printSegment: AndroidSpeechRecognitionService
+   DEBUG: 2026-02-27 12:01:55,117:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,118:      pdf_renderer.py:  470: printSegment: Wraps 
+   DEBUG: 2026-02-27 12:01:55,119:      pdf_renderer.py:  470: printSegment: Android.Speech.SpeechRecognizer
+   DEBUG: 2026-02-27 12:01:55,120:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,121:      pdf_renderer.py:  470: printSegment: One-shot recognition via 
+   DEBUG: 2026-02-27 12:01:55,123:      pdf_renderer.py:  470: printSegment: RecognizeOnceAsync(language)
+   DEBUG: 2026-02-27 12:01:55,124:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,125:      pdf_renderer.py:  470: printSegment: Requests 
+   DEBUG: 2026-02-27 12:01:55,125:      pdf_renderer.py:  470: printSegment: RECORD_AUDIO
+   DEBUG: 2026-02-27 12:01:55,126:      pdf_renderer.py:  470: printSegment:  permission
+   DEBUG: 2026-02-27 12:01:55,127:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,130:      pdf_renderer.py:  470: printSegment: Returns best-match transcript string
+   DEBUG: 2026-02-27 12:01:55,131:      pdf_renderer.py:  470: printSegment: AndroidTextToSpeechService
+   DEBUG: 2026-02-27 12:01:55,133:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,134:      pdf_renderer.py:  470: printSegment: Wraps 
+   DEBUG: 2026-02-27 12:01:55,135:      pdf_renderer.py:  470: printSegment: Android.Speech.Tts.TextToSpeech
+   DEBUG: 2026-02-27 12:01:55,136:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,137:      pdf_renderer.py:  470: printSegment: Async lazy initialization
+   DEBUG: 2026-02-27 12:01:55,138:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,139:      pdf_renderer.py:  470: printSegment: SpeakAsync(text, language)
+   DEBUG: 2026-02-27 12:01:55,140:      pdf_renderer.py:  470: printSegment:  — uses 
+   DEBUG: 2026-02-27 12:01:55,141:      pdf_renderer.py:  470: printSegment: QueueMode.Flush
+   DEBUG: 2026-02-27 12:01:55,143:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,145:      pdf_renderer.py:  470: printSegment: Stop()
+   DEBUG: 2026-02-27 12:01:55,146:      pdf_renderer.py:  470: printSegment:  — immediate interruption
+   DEBUG: 2026-02-27 12:01:55,147:      pdf_renderer.py:  470: printSegment: AndroidAudioFocusService
+   DEBUG: 2026-02-27 12:01:55,148:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,150:      pdf_renderer.py:  470: printSegment: Manages Android audio focus (microphone vs speaker contention)
+   DEBUG: 2026-02-27 12:01:55,150:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,151:      pdf_renderer.py:  470: printSegment: Leasing pattern: 
+   DEBUG: 2026-02-27 12:01:55,153:      pdf_renderer.py:  470: printSegment: Acquire(usage)
+   DEBUG: 2026-02-27 12:01:55,154:      pdf_renderer.py:  470: printSegment:  returns 
+   DEBUG: 2026-02-27 12:01:55,155:      pdf_renderer.py:  470: printSegment: IDisposable
+   DEBUG: 2026-02-27 12:01:55,156:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,157:      pdf_renderer.py:  470: printSegment: Two usage types: 
+   DEBUG: 2026-02-27 12:01:55,158:      pdf_renderer.py:  470: printSegment: SpeechRecognition
+   DEBUG: 2026-02-27 12:01:55,159:      pdf_renderer.py:  470: printSegment: , 
+   DEBUG: 2026-02-27 12:01:55,160:      pdf_renderer.py:  470: printSegment: TextToSpeechPlayback
+   DEBUG: 2026-02-27 12:01:55,161:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,162:      pdf_renderer.py:  470: printSegment: Fires 
+   DEBUG: 2026-02-27 12:01:55,163:      pdf_renderer.py:  470: printSegment: AudioFocusChanged
+   DEBUG: 2026-02-27 12:01:55,164:      pdf_renderer.py:  470: printSegment:  event when focus is lost → auto-stops playback
+   DEBUG: 2026-02-27 12:01:55,165:      pdf_renderer.py:  470: printSegment: AndroidWakeWordService
+   DEBUG: 2026-02-27 12:01:55,167:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,168:      pdf_renderer.py:  470: printSegment: Coordinates wake word detection lifecycle
+   DEBUG: 2026-02-27 12:01:55,169:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,169:      pdf_renderer.py:  470: printSegment: Pluggable engine via 
+   DEBUG: 2026-02-27 12:01:55,172:      pdf_renderer.py:  470: printSegment: IAndroidWakeWordEngine
+   DEBUG: 2026-02-27 12:01:55,173:      pdf_renderer.py:  470: printSegment:  (Porcupine implementation exists)
+   DEBUG: 2026-02-27 12:01:55,174:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,176:      pdf_renderer.py:  470: printSegment: Controls foreground service for background monitoring
+   DEBUG: 2026-02-27 12:01:55,177:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,178:      pdf_renderer.py:  470: printSegment: Persists selected wake phrase to 
+   DEBUG: 2026-02-27 12:01:55,179:      pdf_renderer.py:  470: printSegment: SharedPreferences
+   DEBUG: 2026-02-27 12:01:55,182:      pdf_renderer.py:  470: printSegment: Data Flow Diagram
+   DEBUG: 2026-02-27 12:01:55,182:      pdf_renderer.py:  470: printSegment: User speaks "Add a task to buy groceries"
+   DEBUG: 2026-02-27 12:01:55,184:      pdf_renderer.py:  470: printSegment:         │
+   DEBUG: 2026-02-27 12:01:55,185:      pdf_renderer.py:  470: printSegment:         ▼
+   DEBUG: 2026-02-27 12:01:55,201:      pdf_renderer.py:  470: printSegment:   [Android STT] ──────── RecognizeOnceAsync()
+   DEBUG: 2026-02-27 12:01:55,202:      pdf_renderer.py:  470: printSegment:         │
+   DEBUG: 2026-02-27 12:01:55,203:      pdf_renderer.py:  470: printSegment:         ▼
+   DEBUG: 2026-02-27 12:01:55,204:      pdf_renderer.py:  470: printSegment:   TranscriptInput = "Add a task to buy groceries"
+   DEBUG: 2026-02-27 12:01:55,206:      pdf_renderer.py:  470: printSegment:         │
+   DEBUG: 2026-02-27 12:01:55,207:      pdf_renderer.py:  470: printSegment:         ▼
+   DEBUG: 2026-02-27 12:01:55,208:      pdf_renderer.py:  470: printSegment:   [SubmitTurnCommand] ── POST /mcp/voice/session/{id}/turn
+   DEBUG: 2026-02-27 12:01:55,209:      pdf_renderer.py:  470: printSegment:         │
+   DEBUG: 2026-02-27 12:01:55,210:      pdf_renderer.py:  470: printSegment:         ▼
+   DEBUG: 2026-02-27 12:01:55,211:      pdf_renderer.py:  470: printSegment:   [VoiceConversationService.ExecuteTurnAsync]
+   DEBUG: 2026-02-27 12:01:55,211:      pdf_renderer.py:  470: printSegment:         │
+   DEBUG: 2026-02-27 12:01:55,212:      pdf_renderer.py:  470: printSegment:         ├─ Step 1: Copilot CLI prompt → returns tool_call
+   DEBUG: 2026-02-27 12:01:55,213:      pdf_renderer.py:  470: printSegment:         │   └─ { type: "tool_call", toolName: "todo_create",
+   DEBUG: 2026-02-27 12:01:55,216:      pdf_renderer.py:  470: printSegment:         │        arguments: { id: "buy-groceries", title: "Buy
+   DEBUG: 2026-02-27 12:01:55,217:      pdf_renderer.py:  470: printSegment: groceries", ... } }
+   DEBUG: 2026-02-27 12:01:55,217:      pdf_renderer.py:  470: printSegment:         │
+   DEBUG: 2026-02-27 12:01:55,218:      pdf_renderer.py:  470: printSegment:         ├─ Execute todo_create via ITodoService
+   DEBUG: 2026-02-27 12:01:55,219:      pdf_renderer.py:  470: printSegment:         │
+   DEBUG: 2026-02-27 12:01:55,221:      pdf_renderer.py:  470: printSegment:         ├─ Step 2: Copilot CLI prompt (with tool result) → returns
+   DEBUG: 2026-02-27 12:01:55,222:      pdf_renderer.py:  470: printSegment: final_response
+   DEBUG: 2026-02-27 12:01:55,223:      pdf_renderer.py:  470: printSegment:         │   └─ { type: "final_response",
+   DEBUG: 2026-02-27 12:01:55,224:      pdf_renderer.py:  470: printSegment:         │        displayText: "Created todo 'buy-groceries': Buy
+   DEBUG: 2026-02-27 12:01:55,225:      pdf_renderer.py:  470: printSegment: groceries",
+   DEBUG: 2026-02-27 12:01:55,227:      pdf_renderer.py:  470: printSegment:         │        speakText: "Done! I've added buy groceries to your
+   DEBUG: 2026-02-27 12:01:55,228:      pdf_renderer.py:  470: printSegment: list." }
+   DEBUG: 2026-02-27 12:01:55,228:      pdf_renderer.py:  470: printSegment:         │
+   DEBUG: 2026-02-27 12:01:55,229:      pdf_renderer.py:  470: printSegment:         ▼
+   DEBUG: 2026-02-27 12:01:55,230:      pdf_renderer.py:  470: printSegment:   VoiceTurnResponse returned to client
+   DEBUG: 2026-02-27 12:01:55,231:      pdf_renderer.py:  470: printSegment:         │
+   DEBUG: 2026-02-27 12:01:55,232:      pdf_renderer.py:  470: printSegment:         ├─ AssistantDisplayText shown on screen
+   DEBUG: 2026-02-27 12:01:55,233:      pdf_renderer.py:  470: printSegment:         ├─ AssistantSpeakText available for TTS
+   DEBUG: 2026-02-27 12:01:55,234:      pdf_renderer.py:  470: printSegment:         ├─ LastToolCalls shows: todo_create (executed)
+   DEBUG: 2026-02-27 12:01:55,235:      pdf_renderer.py:  470: printSegment:         └─ TranscriptHistory updated with user + assistant entries
+   DEBUG: 2026-02-27 12:01:55,236:      pdf_renderer.py:  470: printSegment:         │
+   DEBUG: 2026-02-27 12:01:55,237:      pdf_renderer.py:  470: printSegment:         ▼
+   DEBUG: 2026-02-27 12:01:55,238:      pdf_renderer.py:  470: printSegment:   User taps "Speak Reply"
+   DEBUG: 2026-02-27 12:01:55,239:      pdf_renderer.py:  470: printSegment:         │
+   DEBUG: 2026-02-27 12:01:55,239:      pdf_renderer.py:  470: printSegment:         ▼
+   DEBUG: 2026-02-27 12:01:55,241:      pdf_renderer.py:  470: printSegment:   [Android TTS] ──────── SpeakAsync("Done! I've added...")
+   DEBUG: 2026-02-27 12:01:55,242:      pdf_renderer.py:  470: printSegment: Session Lifecycle
+   DEBUG: 2026-02-27 12:01:55,244:      pdf_renderer.py:  470: printSegment: [No Session] ──Start Session──▶ [idle]
+   DEBUG: 2026-02-27 12:01:55,244:      pdf_renderer.py:  470: printSegment:      │                            │
+   DEBUG: 2026-02-27 12:01:55,246:      pdf_renderer.py:  470: printSegment:      │                      Submit Turn
+   DEBUG: 2026-02-27 12:01:55,248:      pdf_renderer.py:  470: printSegment:      │                            │
+   DEBUG: 2026-02-27 12:01:55,249:      pdf_renderer.py:  470: printSegment:      │                            ▼
+   DEBUG: 2026-02-27 12:01:55,249:      pdf_renderer.py:  470: printSegment:      │                      [thinking] ──(Copilot + tools)──▶ [idle]
+   DEBUG: 2026-02-27 12:01:55,251:      pdf_renderer.py:  470: printSegment:      │                            │                             │
+   DEBUG: 2026-02-27 12:01:55,252:      pdf_renderer.py:  470: printSegment:      │                      Interrupt                     Submit Turn
+   DEBUG: 2026-02-27 12:01:55,254:      pdf_renderer.py:  470: printSegment:      │                            │                             │
+   DEBUG: 2026-02-27 12:01:55,256:      pdf_renderer.py:  470: printSegment:      │                            ▼                             ▼
+   DEBUG: 2026-02-27 12:01:55,257:      pdf_renderer.py:  470: printSegment:      │                    [interrupting] ──▶ [idle]       [thinking]
+   DEBUG: 2026-02-27 12:01:55,258:      pdf_renderer.py:  470: printSegment:      │                                                          │
+   DEBUG: 2026-02-27 12:01:55,260:      pdf_renderer.py:  470: printSegment:      │                                                    Error
+   DEBUG: 2026-02-27 12:01:55,261:      pdf_renderer.py:  470: printSegment:      │                                                          │
+   DEBUG: 2026-02-27 12:01:55,263:      pdf_renderer.py:  470: printSegment:      │                                                          ▼
+   DEBUG: 2026-02-27 12:01:55,263:      pdf_renderer.py:  470: printSegment:      │                                                     [error]
+   DEBUG: 2026-02-27 12:01:55,264:      pdf_renderer.py:  470: printSegment:      │                                                          │
+   DEBUG: 2026-02-27 12:01:55,265:      pdf_renderer.py:  470: printSegment:      │◀──────────────── End Session ────────────────────────────┘
+   DEBUG: 2026-02-27 12:01:55,282:      pdf_renderer.py:  470: printSegment: Notes
+   DEBUG: 2026-02-27 12:01:55,283:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,284:      pdf_renderer.py:  470: printSegment: Sessions are in-memory only
+   DEBUG: 2026-02-27 12:01:55,286:      pdf_renderer.py:  470: printSegment:  — server restart loses all voice sessions.
+   DEBUG: 2026-02-27 12:01:55,287:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,288:      pdf_renderer.py:  470: printSegment: Single turn at a time
+   DEBUG: 2026-02-27 12:01:55,289:      pdf_renderer.py:  470: printSegment:  — the session gate (
+   DEBUG: 2026-02-27 12:01:55,289:      pdf_renderer.py:  470: printSegment: SemaphoreSlim(1,1)
+   DEBUG: 2026-02-27 12:01:55,291:      pdf_renderer.py:  470: printSegment: ) ensures only one turn executes
+   DEBUG: 2026-02-27 12:01:55,292:      pdf_renderer.py:  470: printSegment: per session.
+   DEBUG: 2026-02-27 12:01:55,292:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,293:      pdf_renderer.py:  470: printSegment: JSON repair
+   DEBUG: 2026-02-27 12:01:55,298:      pdf_renderer.py:  470: printSegment:  — if Copilot CLI returns malformed JSON (e.g. with markdown fences), the server
+   DEBUG: 2026-02-27 12:01:55,299:      pdf_renderer.py:  470: printSegment: automatically re-prompts for JSON repair.
+   DEBUG: 2026-02-27 12:01:55,300:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,301:      pdf_renderer.py:  470: printSegment: No Desktop voice tab
+   DEBUG: 2026-02-27 12:01:55,302:      pdf_renderer.py:  470: printSegment:  — Voice is Android-only. The Desktop app does not include this tab.
+   DEBUG: 2026-02-27 12:01:55,303:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,304:      pdf_renderer.py:  470: printSegment: Connection changes
+   DEBUG: 2026-02-27 12:01:55,304:      pdf_renderer.py:  470: printSegment:  — 
+   DEBUG: 2026-02-27 12:01:55,306:      pdf_renderer.py:  470: printSegment: RefreshForConnectionChangeAsync()
+   DEBUG: 2026-02-27 12:01:55,308:      pdf_renderer.py:  470: printSegment:  cancels any active turn and
+   DEBUG: 2026-02-27 12:01:55,308:      pdf_renderer.py:  470: printSegment: resets session state.
+   DEBUG: 2026-02-27 12:01:55,309:      pdf_renderer.py:  470: printSegment: l
+   DEBUG: 2026-02-27 12:01:55,310:      pdf_renderer.py:  470: printSegment: Auto-create session
+   DEBUG: 2026-02-27 12:01:55,311:      pdf_renderer.py:  470: printSegment:  — If user submits a turn without an active session, 
+   DEBUG: 2026-02-27 12:01:55,312:      pdf_renderer.py:  470: printSegment: SubmitTurnAsync
+   DEBUG: 2026-02-27 12:01:55,314:      pdf_renderer.py:  470: printSegment:  in the
+   DEBUG: 2026-02-27 12:01:55,315:      pdf_renderer.py:  470: printSegment: ViewModel automatically creates one first.
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 0, [1, 'Voice Tab Interface — Developer Reference', 1, 68.0]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 1, [2, 'Problem Statement', 1, 106.0]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 2, [2, 'Architecture Overview', 1, 169.60000000000002]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 3, [2, 'Key Files', 1, 473.20000000000005]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 4, [2, 'Navigation Wiring', 2, 122.80000000000001]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 5, [2, 'Intended Flow — Manual Turn', 2, 312.40000000000003]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 6, [3, '1. Start Session', 2, 363.6]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 7, [3, '2. Capture Input (two options)', 2, 476.4]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 8, [3, '3. Submit Turn', 2, 637.1999999999999]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 9, [3, '4. Backend Processing (VoiceConversationService)', 3, 72.0]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 10, [3, '5. Display Response', 3, 352.79999999999995]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 11, [3, '6. Speak Reply (optional)', 3, 441.5999999999999]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 12, [2, 'Intended Flow — Wake Word (Hands-Free)', 3, 590.7999999999998]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 13, [3, 'Setup', 3, 623.9999999999998]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 14, [3, 'Wake Phrases', 4, 72.0]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 15, [3, 'Triggered Flow', 4, 166.8]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 16, [3, 'Stop', 4, 327.6]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 17, [3, 'Simulate', 4, 380.4]
+   DEBUG: 2026-02-27 12:01:55,317:      pdf_renderer.py:   53: 18, [2, 'Intended Flow — Interrupt', 4, 445.59999999999997]
+   DEBUG: 2026-02-27 12:01:55,318:      pdf_renderer.py:   53: 19, [2, 'UI Layout (6 Sections)', 4, 563.1999999999999]
+   DEBUG: 2026-02-27 12:01:55,318:      pdf_renderer.py:   53: 20, [2, 'Server Configuration (VoiceConversationOptions)', 5, 104.8]
+   DEBUG: 2026-02-27 12:01:55,318:      pdf_renderer.py:   53: 21, [2, 'Android Audio Services', 5, 228.4]
+   DEBUG: 2026-02-27 12:01:55,318:      pdf_renderer.py:   53: 22, [3, 'AndroidSpeechRecognitionService', 5, 261.59999999999997]
+   DEBUG: 2026-02-27 12:01:55,318:      pdf_renderer.py:   53: 23, [3, 'AndroidTextToSpeechService', 5, 350.3999999999999]
+   DEBUG: 2026-02-27 12:01:55,318:      pdf_renderer.py:   53: 24, [3, 'AndroidAudioFocusService', 5, 439.1999999999999]
+   DEBUG: 2026-02-27 12:01:55,318:      pdf_renderer.py:   53: 25, [3, 'AndroidWakeWordService', 5, 527.9999999999999]
+   DEBUG: 2026-02-27 12:01:55,318:      pdf_renderer.py:   53: 26, [2, 'Data Flow Diagram', 5, 629.1999999999998]
+   DEBUG: 2026-02-27 12:01:55,318:      pdf_renderer.py:   53: 27, [2, 'Session Lifecycle', 6, 548.8]
+   DEBUG: 2026-02-27 12:01:55,318:      pdf_renderer.py:   53: 28, [2, 'Notes', 7, 176.8]
