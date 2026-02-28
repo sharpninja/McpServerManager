@@ -202,7 +202,6 @@ public partial class SimplifiedVoiceView : UserControl
         if (vm == null) return;
 
         // Signal that we're now listening
-        PlayChime();
         SetStatus("Listening...");
 
         do
@@ -254,6 +253,10 @@ public partial class SimplifiedVoiceView : UserControl
                     accumulated.Append(evt.Text);
                     assistantBubble.Text = accumulated.ToString();
                     ScrollToBottom();
+
+                    // Skip tool-progress lines for TTS (still displayed in chat)
+                    if (IsToolProgressLine(evt.Text))
+                        continue;
 
                     // Detect complete sentences and speak them as they arrive
                     sentenceBuffer.Append(evt.Text);
@@ -436,7 +439,6 @@ public partial class SimplifiedVoiceView : UserControl
                 {
                     _isPaused = false;
                     UpdateButtons();
-                    PlayChime();
                     SetStatus("Resumed. Listening...");
                 }
                 continue;
@@ -480,7 +482,6 @@ public partial class SimplifiedVoiceView : UserControl
 
                 case VoiceCommand.ResumeChat:
                     // Already not paused, treat as no-op
-                    PlayChime();
                     continue;
 
                 case VoiceCommand.Continue:
@@ -619,7 +620,7 @@ public partial class SimplifiedVoiceView : UserControl
         }
         else
         {
-            if (!_isPaused) PlayChime();
+            if (!_isPaused) SetStatus("Resumed. Listening...");
             SetStatus(_isPaused ? "Paused. Say 'resume chat' or tap Resume." : "Resumed. Listening...");
         }
     }
@@ -790,6 +791,41 @@ public partial class SimplifiedVoiceView : UserControl
         UpdateInputPreview(null);
         SetMicState("idle");
         SetStatus("Chat ended.");
+    }
+
+    /// <summary>
+    /// Returns true if the line is a Copilot CLI tool-execution marker that
+    /// should be displayed but not spoken (spinners, commands, fold summaries).
+    /// </summary>
+    private static bool IsToolProgressLine(string line)
+    {
+        if (string.IsNullOrEmpty(line)) return false;
+        var trimmed = line.TrimStart();
+        if (trimmed.Length == 0) return false;
+
+        char first = trimmed[0];
+
+        // Spinner / tool-start markers: ● ◐ ◑ ◒ ◓
+        if (first is '\u25CF' or '\u25D0' or '\u25D1' or '\u25D2' or '\u25D3')
+            return true;
+
+        // Result fold: └
+        if (first == '\u2514')
+            return true;
+
+        // Error/success markers: ✗ ✘ ✓
+        if (first is '\u2717' or '\u2718' or '\u2713')
+            return true;
+
+        // Shell command lines (indented with $)
+        if (line.Length >= 3 && line[0] == ' ' && line[1] == ' ' && line[2] == '$')
+            return true;
+
+        // Indented command output (2+ leading spaces)
+        if (line.Length >= 2 && line[0] == ' ' && line[1] == ' ')
+            return true;
+
+        return false;
     }
 
     private static void PlayChime()

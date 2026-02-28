@@ -213,8 +213,19 @@ public sealed class AndroidSpeechRecognitionService : IAndroidSpeechRecognitionS
                     ?? throw new InvalidOperationException("Failed to create Android speech recognizer.");
                 recognizer.SetRecognitionListener(_listener);
 
+                // Mute notification stream to suppress the recognizer beep
+                var audioMgr = activity.GetSystemService(Context.AudioService) as AudioManager;
+                audioMgr?.AdjustStreamVolume(Stream.Notification, Adjust.Mute, VolumeNotificationFlags.RemoveSoundAndVibrate);
+
                 using var intent = BuildRecognizerIntent(activity, languageTag);
                 recognizer.StartListening(intent);
+
+                // Restore after a short delay so the beep window has passed
+                Task.Delay(600).ContinueWith(_ =>
+                {
+                    try { audioMgr?.AdjustStreamVolume(Stream.Notification, Adjust.Unmute, 0); }
+                    catch { /* best effort */ }
+                });
             }).ConfigureAwait(false);
 
             using var _ = cancellationToken.Register(() =>
@@ -358,6 +369,10 @@ public sealed class AndroidSpeechRecognitionService : IAndroidSpeechRecognitionS
         intent.PutExtra(RecognizerIntent.ExtraCallingPackage, activity.PackageName);
         intent.PutExtra(RecognizerIntent.ExtraPartialResults, false);
         intent.PutExtra(RecognizerIntent.ExtraMaxResults, 3);
+        // Extend silence timeouts so the mic doesn't cut off prematurely
+        intent.PutExtra("android.speech.extra.SPEECH_INPUT_MINIMUM_LENGTH_MILLIS", 10000);
+        intent.PutExtra("android.speech.extra.SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS", 3000);
+        intent.PutExtra("android.speech.extra.SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS", 3000);
 
         if (!string.IsNullOrWhiteSpace(languageTag))
         {

@@ -65,12 +65,12 @@
         <StackPanel Grid.Row="3" Spacing="6" Margin="12,4,12,8" HorizontalAlignment="Center">
             <TextBlock Text="{Binding StatusText}" HorizontalAlignment="Center"
                        TextWrapping="Wrap" FontSize="16" Opacity="0.8"/>
-            <Button x:Name="PauseResumeButton" Content="Pause" Click="OnPauseResumeClick"
-                    Width="72" Height="72" CornerRadius="36" FontSize="18" FontWeight="Bold"
-                    HorizontalAlignment="Center" HorizontalContentAlignment="Center"
-                    VerticalContentAlignment="Center" IsEnabled="False"/>
-            <Button x:Name="StopButton" Content="Stop" Click="OnStopClick"
-                    Padding="16,6" IsEnabled="False" HorizontalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                <Button x:Name="PauseResumeButton" Content="Pause" Click="OnPauseResumeClick"
+                        Padding="16,6" FontSize="18" FontWeight="Bold" IsEnabled="False"/>
+                <Button x:Name="StopButton" Content="Stop" Click="OnStopClick"
+                        Padding="16,6" IsEnabled="False"/>
+            </StackPanel>
             <CheckBox x:Name="AutoContinueCheck" Content="Auto-continue after response"
                       IsChecked="True" HorizontalAlignment="Center"/>
             <TextBlock Text="send now · start over · clear chat · end chat · pause/resume"
