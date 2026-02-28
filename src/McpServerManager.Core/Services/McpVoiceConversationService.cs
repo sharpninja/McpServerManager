@@ -107,10 +107,16 @@ public sealed class McpVoiceConversationService
         HttpResponseMessage? response = null;
         try
         {
-            response = await client.PostAsJsonAsync(
-                $"mcp/voice/session/{Uri.EscapeDataString(sessionId)}/turn/stream",
-                request,
-                JsonOptions,
+            var jsonBody = JsonSerializer.Serialize(request, JsonOptions);
+            using var content = new StringContent(jsonBody, System.Text.Encoding.UTF8, "application/json");
+
+            // ResponseHeadersRead is critical: starts returning stream data immediately
+            // instead of buffering the entire response
+            response = await client.SendAsync(
+                new HttpRequestMessage(HttpMethod.Post,
+                    $"mcp/voice/session/{Uri.EscapeDataString(sessionId)}/turn/stream")
+                { Content = content },
+                HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken).ConfigureAwait(false);
             await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
 
