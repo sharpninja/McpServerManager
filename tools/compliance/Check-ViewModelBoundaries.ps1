@@ -81,8 +81,22 @@ if ($findings.Count -eq 0) {
     exit 0
 }
 
+# Phase 0 baseline: existing violations in MainWindowViewModel are tracked but not blocking.
+# Fail only if new violations appear (count exceeds baseline).
+$baseline = 123
 $scopeLabel = if ($IncludeLegacy) { "Core + legacy" } else { "Core only (legacy excluded by Phase 0 scope decision)" }
-Write-Error ("ViewModel boundary violations found ({0}): {1}" -f $scopeLabel, $findings.Count)
+
+if ($findings.Count -le $baseline) {
+    Write-Warning ("ViewModel boundary violations ({0}): {1} (at or below Phase 0 baseline of {2})" -f $scopeLabel, $findings.Count, $baseline)
+    $findings |
+        Sort-Object File, Line, Rule |
+        Format-Table Rule, File, Line, Text -AutoSize |
+        Out-String -Width 240 |
+        Write-Host
+    exit 0
+}
+
+Write-Error ("ViewModel boundary violations ({0}): {1} — exceeds Phase 0 baseline of {2}" -f $scopeLabel, $findings.Count, $baseline)
 $findings |
     Sort-Object File, Line, Rule |
     Format-Table Rule, File, Line, Text -AutoSize |

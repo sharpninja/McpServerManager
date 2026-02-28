@@ -1,7 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using McpServerManager.Core.Cqrs;
-using McpServerManager.Core.ViewModels;
 
 namespace McpServerManager.Core.Commands;
 
@@ -9,30 +8,30 @@ namespace McpServerManager.Core.Commands;
 
 public sealed class NavigateBackCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
-    public NavigateBackCommand(MainWindowViewModel vm) => ViewModel = vm;
+    public ICommandTarget Target { get; }
+    public NavigateBackCommand(ICommandTarget target) => Target = target;
 }
 
 public sealed class NavigateBackHandler : ICommandHandler<NavigateBackCommand>
 {
     public Task ExecuteAsync(NavigateBackCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.NavigateBackInternal();
+        command.Target.NavigateBack();
         return Task.CompletedTask;
     }
 }
 
 public sealed class NavigateForwardCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
-    public NavigateForwardCommand(MainWindowViewModel vm) => ViewModel = vm;
+    public ICommandTarget Target { get; }
+    public NavigateForwardCommand(ICommandTarget target) => Target = target;
 }
 
 public sealed class NavigateForwardHandler : ICommandHandler<NavigateForwardCommand>
 {
     public Task ExecuteAsync(NavigateForwardCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.NavigateForwardInternal();
+        command.Target.NavigateForward();
         return Task.CompletedTask;
     }
 }
@@ -41,15 +40,15 @@ public sealed class NavigateForwardHandler : ICommandHandler<NavigateForwardComm
 
 public sealed class RefreshViewCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
-    public RefreshViewCommand(MainWindowViewModel vm) => ViewModel = vm;
+    public ICommandTarget Target { get; }
+    public RefreshViewCommand(ICommandTarget target) => Target = target;
 }
 
 public sealed class RefreshViewHandler : ICommandHandler<RefreshViewCommand>
 {
     public async Task ExecuteAsync(RefreshViewCommand command, CancellationToken cancellationToken = default)
     {
-        await command.ViewModel.RefreshInternalAsync();
+        await command.Target.RefreshAsync();
     }
 }
 
@@ -57,11 +56,11 @@ public sealed class RefreshViewHandler : ICommandHandler<RefreshViewCommand>
 
 public sealed class ShowRequestDetailsCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
+    public ICommandTarget Target { get; }
     public Models.Json.SearchableEntry Entry { get; }
-    public ShowRequestDetailsCommand(MainWindowViewModel vm, Models.Json.SearchableEntry entry)
+    public ShowRequestDetailsCommand(ICommandTarget target, Models.Json.SearchableEntry entry)
     {
-        ViewModel = vm;
+        Target = target;
         Entry = entry;
     }
 }
@@ -70,52 +69,52 @@ public sealed class ShowRequestDetailsHandler : ICommandHandler<ShowRequestDetai
 {
     public Task ExecuteAsync(ShowRequestDetailsCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.ShowRequestDetailsInternal(command.Entry);
+        command.Target.ShowRequestDetails(command.Entry);
         return Task.CompletedTask;
     }
 }
 
 public sealed class CloseRequestDetailsCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
-    public CloseRequestDetailsCommand(MainWindowViewModel vm) => ViewModel = vm;
+    public ICommandTarget Target { get; }
+    public CloseRequestDetailsCommand(ICommandTarget target) => Target = target;
 }
 
 public sealed class CloseRequestDetailsHandler : ICommandHandler<CloseRequestDetailsCommand>
 {
     public Task ExecuteAsync(CloseRequestDetailsCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.CloseRequestDetailsInternal();
+        command.Target.CloseRequestDetails();
         return Task.CompletedTask;
     }
 }
 
 public sealed class NavigateToPreviousRequestCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
-    public NavigateToPreviousRequestCommand(MainWindowViewModel vm) => ViewModel = vm;
+    public ICommandTarget Target { get; }
+    public NavigateToPreviousRequestCommand(ICommandTarget target) => Target = target;
 }
 
 public sealed class NavigateToPreviousRequestHandler : ICommandHandler<NavigateToPreviousRequestCommand>
 {
     public Task ExecuteAsync(NavigateToPreviousRequestCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.NavigateToPreviousRequestInternal();
+        command.Target.NavigateToPreviousRequest();
         return Task.CompletedTask;
     }
 }
 
 public sealed class NavigateToNextRequestCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
-    public NavigateToNextRequestCommand(MainWindowViewModel vm) => ViewModel = vm;
+    public ICommandTarget Target { get; }
+    public NavigateToNextRequestCommand(ICommandTarget target) => Target = target;
 }
 
 public sealed class NavigateToNextRequestHandler : ICommandHandler<NavigateToNextRequestCommand>
 {
     public Task ExecuteAsync(NavigateToNextRequestCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.NavigateToNextRequestInternal();
+        command.Target.NavigateToNextRequest();
         return Task.CompletedTask;
     }
 }
@@ -124,11 +123,11 @@ public sealed class NavigateToNextRequestHandler : ICommandHandler<NavigateToNex
 
 public sealed class SelectSearchEntryCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
+    public ICommandTarget Target { get; }
     public Models.Json.SearchableEntry Entry { get; }
-    public SelectSearchEntryCommand(MainWindowViewModel vm, Models.Json.SearchableEntry entry)
+    public SelectSearchEntryCommand(ICommandTarget target, Models.Json.SearchableEntry entry)
     {
-        ViewModel = vm;
+        Target = target;
         Entry = entry;
     }
 }
@@ -137,7 +136,7 @@ public sealed class SelectSearchEntryHandler : ICommandHandler<SelectSearchEntry
 {
     public Task ExecuteAsync(SelectSearchEntryCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.SelectSearchEntryInternal(command.Entry);
+        command.Target.SelectSearchEntry(command.Entry);
         return Task.CompletedTask;
     }
 }
@@ -146,11 +145,11 @@ public sealed class SelectSearchEntryHandler : ICommandHandler<SelectSearchEntry
 
 public sealed class CopyTextCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
+    public ICommandTarget Target { get; }
     public string Text { get; }
-    public CopyTextCommand(MainWindowViewModel vm, string text)
+    public CopyTextCommand(ICommandTarget target, string text)
     {
-        ViewModel = vm;
+        Target = target;
         Text = text;
     }
 }
@@ -159,17 +158,17 @@ public sealed class CopyTextHandler : ICommandHandler<CopyTextCommand>
 {
     public async Task ExecuteAsync(CopyTextCommand command, CancellationToken cancellationToken = default)
     {
-        await command.ViewModel.CopyTextInternal(command.Text);
+        await command.Target.CopyText(command.Text);
     }
 }
 
 public sealed class CopyOriginalJsonCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
+    public ICommandTarget Target { get; }
     public Models.Json.UnifiedRequestEntry? Entry { get; }
-    public CopyOriginalJsonCommand(MainWindowViewModel vm, Models.Json.UnifiedRequestEntry? entry)
+    public CopyOriginalJsonCommand(ICommandTarget target, Models.Json.UnifiedRequestEntry? entry)
     {
-        ViewModel = vm;
+        Target = target;
         Entry = entry;
     }
 }
@@ -178,7 +177,7 @@ public sealed class CopyOriginalJsonHandler : ICommandHandler<CopyOriginalJsonCo
 {
     public async Task ExecuteAsync(CopyOriginalJsonCommand command, CancellationToken cancellationToken = default)
     {
-        await command.ViewModel.CopyOriginalJsonInternal(command.Entry);
+        await command.Target.CopyOriginalJson(command.Entry);
     }
 }
 
@@ -186,30 +185,30 @@ public sealed class CopyOriginalJsonHandler : ICommandHandler<CopyOriginalJsonCo
 
 public sealed class OpenPreviewInBrowserCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
-    public OpenPreviewInBrowserCommand(MainWindowViewModel vm) => ViewModel = vm;
+    public ICommandTarget Target { get; }
+    public OpenPreviewInBrowserCommand(ICommandTarget target) => Target = target;
 }
 
 public sealed class OpenPreviewInBrowserHandler : ICommandHandler<OpenPreviewInBrowserCommand>
 {
     public Task ExecuteAsync(OpenPreviewInBrowserCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.OpenPreviewInBrowserInternal();
+        command.Target.OpenPreviewInBrowser();
         return Task.CompletedTask;
     }
 }
 
 public sealed class ToggleShowRawMarkdownCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
-    public ToggleShowRawMarkdownCommand(MainWindowViewModel vm) => ViewModel = vm;
+    public ICommandTarget Target { get; }
+    public ToggleShowRawMarkdownCommand(ICommandTarget target) => Target = target;
 }
 
 public sealed class ToggleShowRawMarkdownHandler : ICommandHandler<ToggleShowRawMarkdownCommand>
 {
     public Task ExecuteAsync(ToggleShowRawMarkdownCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.ToggleShowRawMarkdownInternal();
+        command.Target.ToggleShowRawMarkdown();
         return Task.CompletedTask;
     }
 }
@@ -218,26 +217,26 @@ public sealed class ToggleShowRawMarkdownHandler : ICommandHandler<ToggleShowRaw
 
 public sealed class ArchiveCurrentCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
-    public ArchiveCurrentCommand(MainWindowViewModel vm) => ViewModel = vm;
+    public ICommandTarget Target { get; }
+    public ArchiveCurrentCommand(ICommandTarget target) => Target = target;
 }
 
 public sealed class ArchiveCurrentHandler : ICommandHandler<ArchiveCurrentCommand>
 {
     public Task ExecuteAsync(ArchiveCurrentCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.ArchiveInternal();
+        command.Target.Archive();
         return Task.CompletedTask;
     }
 }
 
 public sealed class ArchiveTreeItemCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
+    public ICommandTarget Target { get; }
     public Models.FileNode? Node { get; }
-    public ArchiveTreeItemCommand(MainWindowViewModel vm, Models.FileNode? node)
+    public ArchiveTreeItemCommand(ICommandTarget target, Models.FileNode? node)
     {
-        ViewModel = vm;
+        Target = target;
         Node = node;
     }
 }
@@ -246,7 +245,7 @@ public sealed class ArchiveTreeItemHandler : ICommandHandler<ArchiveTreeItemComm
 {
     public Task ExecuteAsync(ArchiveTreeItemCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.ArchiveTreeItemInternal(command.Node);
+        command.Target.ArchiveTreeItem(command.Node);
         return Task.CompletedTask;
     }
 }
@@ -255,11 +254,11 @@ public sealed class ArchiveTreeItemHandler : ICommandHandler<ArchiveTreeItemComm
 
 public sealed class OpenTreeItemCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
+    public ICommandTarget Target { get; }
     public Models.FileNode? Node { get; }
-    public OpenTreeItemCommand(MainWindowViewModel vm, Models.FileNode? node)
+    public OpenTreeItemCommand(ICommandTarget target, Models.FileNode? node)
     {
-        ViewModel = vm;
+        Target = target;
         Node = node;
     }
 }
@@ -268,7 +267,7 @@ public sealed class OpenTreeItemHandler : ICommandHandler<OpenTreeItemCommand>
 {
     public Task ExecuteAsync(OpenTreeItemCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.OpenTreeItemInternal(command.Node);
+        command.Target.OpenTreeItem(command.Node);
         return Task.CompletedTask;
     }
 }
@@ -277,30 +276,30 @@ public sealed class OpenTreeItemHandler : ICommandHandler<OpenTreeItemCommand>
 
 public sealed class OpenAgentConfigCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
-    public OpenAgentConfigCommand(MainWindowViewModel vm) => ViewModel = vm;
+    public ICommandTarget Target { get; }
+    public OpenAgentConfigCommand(ICommandTarget target) => Target = target;
 }
 
 public sealed class OpenAgentConfigHandler : ICommandHandler<OpenAgentConfigCommand>
 {
     public Task ExecuteAsync(OpenAgentConfigCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.OpenAgentConfigInternal();
+        command.Target.OpenAgentConfig();
         return Task.CompletedTask;
     }
 }
 
 public sealed class OpenPromptTemplatesCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
-    public OpenPromptTemplatesCommand(MainWindowViewModel vm) => ViewModel = vm;
+    public ICommandTarget Target { get; }
+    public OpenPromptTemplatesCommand(ICommandTarget target) => Target = target;
 }
 
 public sealed class OpenPromptTemplatesHandler : ICommandHandler<OpenPromptTemplatesCommand>
 {
     public Task ExecuteAsync(OpenPromptTemplatesCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.OpenPromptTemplatesInternal();
+        command.Target.OpenPromptTemplates();
         return Task.CompletedTask;
     }
 }
@@ -309,11 +308,11 @@ public sealed class OpenPromptTemplatesHandler : ICommandHandler<OpenPromptTempl
 
 public sealed class PhoneNavigateSectionCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
+    public ICommandTarget Target { get; }
     public string? SectionKey { get; }
-    public PhoneNavigateSectionCommand(MainWindowViewModel vm, string? sectionKey)
+    public PhoneNavigateSectionCommand(ICommandTarget target, string? sectionKey)
     {
-        ViewModel = vm;
+        Target = target;
         SectionKey = sectionKey;
     }
 }
@@ -322,7 +321,7 @@ public sealed class PhoneNavigateSectionHandler : ICommandHandler<PhoneNavigateS
 {
     public Task ExecuteAsync(PhoneNavigateSectionCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.PhoneNavigateSectionInternal(command.SectionKey);
+        command.Target.PhoneNavigateSection(command.SectionKey);
         return Task.CompletedTask;
     }
 }
@@ -331,11 +330,11 @@ public sealed class PhoneNavigateSectionHandler : ICommandHandler<PhoneNavigateS
 
 public sealed class TreeItemTappedCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
+    public ICommandTarget Target { get; }
     public Models.FileNode? Node { get; }
-    public TreeItemTappedCommand(MainWindowViewModel vm, Models.FileNode? node)
+    public TreeItemTappedCommand(ICommandTarget target, Models.FileNode? node)
     {
-        ViewModel = vm;
+        Target = target;
         Node = node;
     }
 }
@@ -344,7 +343,7 @@ public sealed class TreeItemTappedHandler : ICommandHandler<TreeItemTappedComman
 {
     public Task ExecuteAsync(TreeItemTappedCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.TreeItemTappedInternal(command.Node);
+        command.Target.TreeItemTapped(command.Node);
         return Task.CompletedTask;
     }
 }
@@ -353,11 +352,11 @@ public sealed class TreeItemTappedHandler : ICommandHandler<TreeItemTappedComman
 
 public sealed class JsonNodeDoubleTappedCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
+    public ICommandTarget Target { get; }
     public Models.Json.JsonTreeNode? Node { get; }
-    public JsonNodeDoubleTappedCommand(MainWindowViewModel vm, Models.Json.JsonTreeNode? node)
+    public JsonNodeDoubleTappedCommand(ICommandTarget target, Models.Json.JsonTreeNode? node)
     {
-        ViewModel = vm;
+        Target = target;
         Node = node;
     }
 }
@@ -366,7 +365,7 @@ public sealed class JsonNodeDoubleTappedHandler : ICommandHandler<JsonNodeDouble
 {
     public Task ExecuteAsync(JsonNodeDoubleTappedCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.JsonNodeDoubleTappedInternal(command.Node);
+        command.Target.JsonNodeDoubleTapped(command.Node);
         return Task.CompletedTask;
     }
 }
@@ -375,11 +374,11 @@ public sealed class JsonNodeDoubleTappedHandler : ICommandHandler<JsonNodeDouble
 
 public sealed class SearchRowTappedCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
+    public ICommandTarget Target { get; }
     public Models.Json.SearchableEntry? Entry { get; }
-    public SearchRowTappedCommand(MainWindowViewModel vm, Models.Json.SearchableEntry? entry)
+    public SearchRowTappedCommand(ICommandTarget target, Models.Json.SearchableEntry? entry)
     {
-        ViewModel = vm;
+        Target = target;
         Entry = entry;
     }
 }
@@ -388,7 +387,7 @@ public sealed class SearchRowTappedHandler : ICommandHandler<SearchRowTappedComm
 {
     public Task ExecuteAsync(SearchRowTappedCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.SearchRowTappedInternal(command.Entry);
+        command.Target.SearchRowTapped(command.Entry);
         return Task.CompletedTask;
     }
 }
@@ -397,11 +396,11 @@ public sealed class SearchRowTappedHandler : ICommandHandler<SearchRowTappedComm
 
 public sealed class SearchRowDoubleTappedCommand : ICommand
 {
-    public MainWindowViewModel ViewModel { get; }
+    public ICommandTarget Target { get; }
     public Models.Json.SearchableEntry? Entry { get; }
-    public SearchRowDoubleTappedCommand(MainWindowViewModel vm, Models.Json.SearchableEntry? entry)
+    public SearchRowDoubleTappedCommand(ICommandTarget target, Models.Json.SearchableEntry? entry)
     {
-        ViewModel = vm;
+        Target = target;
         Entry = entry;
     }
 }
@@ -410,7 +409,7 @@ public sealed class SearchRowDoubleTappedHandler : ICommandHandler<SearchRowDoub
 {
     public Task ExecuteAsync(SearchRowDoubleTappedCommand command, CancellationToken cancellationToken = default)
     {
-        command.ViewModel.SearchRowDoubleTappedInternal(command.Entry);
+        command.Target.SearchRowDoubleTapped(command.Entry);
         return Task.CompletedTask;
     }
 }

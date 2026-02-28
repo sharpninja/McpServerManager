@@ -28,7 +28,7 @@ using McpServerManager.Core.Commands;
 
 namespace McpServerManager.Core.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase
+public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarget
 {
     private const string AgentsReadmeFileName = "AGENTS-README-FIRST.yaml";
 
@@ -3827,6 +3827,68 @@ public partial class MainWindowViewModel : ViewModelBase
             }
         });
     }
+
+    // ── ICommandTarget explicit implementation ──────────────────────────
+    // Bridges command handlers to the ViewModel's existing Internal methods.
+
+    void ICommandTarget.NavigateBack() => NavigateBackInternal();
+    void ICommandTarget.NavigateForward() => NavigateForwardInternal();
+    Task ICommandTarget.RefreshAsync() => RefreshInternalAsync();
+    void ICommandTarget.PhoneNavigateSection(string? sectionKey) => PhoneNavigateSectionInternal(sectionKey);
+    void ICommandTarget.ShowRequestDetails(SearchableEntry entry) => ShowRequestDetailsInternal(entry);
+    void ICommandTarget.CloseRequestDetails() => CloseRequestDetailsInternal();
+    void ICommandTarget.NavigateToPreviousRequest() => NavigateToPreviousRequestInternal();
+    void ICommandTarget.NavigateToNextRequest() => NavigateToNextRequestInternal();
+    void ICommandTarget.SelectSearchEntry(SearchableEntry entry) => SelectSearchEntryInternal(entry);
+    Task ICommandTarget.CopyText(string text) => CopyTextInternal(text);
+    Task ICommandTarget.CopyOriginalJson(UnifiedRequestEntry? entry) => CopyOriginalJsonInternal(entry);
+    void ICommandTarget.OpenPreviewInBrowser() => OpenPreviewInBrowserInternal();
+    void ICommandTarget.ToggleShowRawMarkdown() => ToggleShowRawMarkdownInternal();
+    void ICommandTarget.Archive() => ArchiveInternal();
+    void ICommandTarget.ArchiveTreeItem(FileNode? node) => ArchiveTreeItemInternal(node);
+    void ICommandTarget.OpenTreeItem(FileNode? node) => OpenTreeItemInternal(node);
+    void ICommandTarget.TreeItemTapped(FileNode? node) => TreeItemTappedInternal(node);
+    void ICommandTarget.JsonNodeDoubleTapped(JsonTreeNode? node) => JsonNodeDoubleTappedInternal(node);
+    void ICommandTarget.SearchRowTapped(SearchableEntry? entry) => SearchRowTappedInternal(entry);
+    void ICommandTarget.SearchRowDoubleTapped(SearchableEntry? entry) => SearchRowDoubleTappedInternal(entry);
+    void ICommandTarget.OpenAgentConfig() => OpenAgentConfigInternal();
+    void ICommandTarget.OpenPromptTemplates() => OpenPromptTemplatesInternal();
+    Task ICommandTarget.ReloadFromMcpAsync() => ReloadFromMcpAsyncInternal();
+    void ICommandTarget.BuildUnifiedSummaryAndIndex(UnifiedSessionLog session, JsonLogSummary summary) => BuildUnifiedSummaryAndIndexInternal(session, summary);
+    void ICommandTarget.BuildJsonTree(JsonNode? node, JsonTreeNode root, string? pathPrefix) => BuildJsonTreeInternal(node, root, pathPrefix);
+    void ICommandTarget.LoadJson(string filePath) => LoadJsonInternal(filePath);
+    void ICommandTarget.LoadMarkdownFile(FileNode node) => LoadMarkdownFileInternal(node);
+    void ICommandTarget.LoadSourceFile(FileNode node) => LoadSourceFileInternal(node);
+    void ICommandTarget.UpdateFilteredSearchEntries() => UpdateFilteredSearchEntriesInternal();
+    void ICommandTarget.GenerateAndNavigate(FileNode? node) => GenerateAndNavigateInternal(node);
+    void ICommandTarget.TrackBackgroundWork(Task task) => _mediator.TrackBackgroundWork(task);
+    void ICommandTarget.DispatchToUi(Action action) => DispatchToUi(action);
+
+    string ICommandTarget.StatusMessage
+    {
+        get => StatusMessage;
+        set => StatusMessage = value;
+    }
+
+    McpSessionLogService ICommandTarget.McpSessionService => McpSessionService;
+
+    JsonLogSummary ICommandTarget.JsonLogSummary
+    {
+        get => JsonLogSummary;
+        set => JsonLogSummary = value;
+    }
+
+    ObservableCollection<JsonTreeNode> ICommandTarget.JsonTree => JsonTree;
+
+    string ICommandTarget.AgentFilter
+    {
+        get => AgentFilter;
+        set => AgentFilter = value;
+    }
+
+    Dictionary<string, UnifiedSessionLog> ICommandTarget.BuildSessionsByPathDict(IReadOnlyList<UnifiedSessionLog> sessions) => BuildSessionsByPathDict(sessions);
+    List<UnifiedSessionLog> ICommandTarget.OrderAndDeduplicateSessions(Dictionary<string, UnifiedSessionLog> byPath) => OrderAndDeduplicateSessions(byPath);
+    void ICommandTarget.SetMcpSessionState(List<UnifiedSessionLog> sessions, Dictionary<string, UnifiedSessionLog> byPath) => SetMcpSessionState(sessions, byPath);
 }
 
 public sealed class WorkspaceConnectionOption
