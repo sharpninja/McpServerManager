@@ -9,7 +9,7 @@
              x:Class="McpServerManager.Android.Views.PhoneTodoView"
              x:Name="TodoRoot"
              x:DataType="vm:TodoListViewModel"
-             FontSize="16">
+             FontSize="20">
 
     <UserControl.Resources>
         <conv:DoneToBackgroundBrushConverter x:Key="DoneToBackgroundBrush"/>
@@ -17,22 +17,22 @@
 
     <UserControl.Styles>
         <Style Selector="Button">
-            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontSize" Value="21"/>
         </Style>
         <Style Selector="TextBox">
-            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontSize" Value="21"/>
         </Style>
         <Style Selector="ComboBox">
-            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontSize" Value="21"/>
         </Style>
         <Style Selector="ToggleButton">
-            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontSize" Value="21"/>
         </Style>
         <Style Selector="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontSize" Value="20"/>
         </Style>
         <Style Selector="SelectableTextBlock">
-            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontSize" Value="20"/>
         </Style>
     </UserControl.Styles>
 
@@ -76,7 +76,7 @@
             <SelectableTextBlock Grid.Row="2"
                                  Text="{Binding StatusText}"
                                  Margin="10,0,10,4"
-                                 FontSize="15"
+                                 FontSize="19"
                                  Foreground="{DynamicResource SubtleForeground}"
                                  TextTrimming="CharacterEllipsis"/>
 
@@ -88,7 +88,7 @@
                                 <StackPanel Margin="0,0,0,6">
                                     <Border Background="{DynamicResource SystemAccentColor}"
                                             Padding="8,5" CornerRadius="4" Margin="4,4,4,2">
-                                        <SelectableTextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="16" Foreground="White"/>
+                                        <SelectableTextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="20" Foreground="White"/>
                                     </Border>
 
                                     <ItemsControl ItemsSource="{Binding Items}">
@@ -109,21 +109,21 @@
                                                             <StackPanel Grid.Column="0" Spacing="2">
                                                                 <TextBlock Text="{Binding Item.Id}"
                                                                            FontWeight="SemiBold"
-                                                                           FontSize="16"
+                                                                           FontSize="20"
                                                                            TextTrimming="CharacterEllipsis"/>
                                                                 <TextBlock Text="{Binding Item.Title}"
                                                                            FontWeight="SemiBold"
-                                                                           FontSize="16"
+                                                                           FontSize="20"
                                                                            Foreground="{DynamicResource SubtleForeground}"
                                                                            TextTrimming="CharacterEllipsis"/>
                                                             </StackPanel>
                                                             <StackPanel Grid.Column="1" Spacing="2" HorizontalAlignment="Right">
                                                                 <TextBlock Text="{Binding Item.Priority}"
-                                                                           FontSize="14"
+                                                                           FontSize="18"
                                                                            Foreground="{DynamicResource SubtleForeground}"
                                                                            HorizontalAlignment="Right"/>
                                                                 <TextBlock Text="{Binding Item.Section}"
-                                                                           FontSize="14"
+                                                                           FontSize="18"
                                                                            Foreground="{DynamicResource SubtleForeground}"
                                                                            HorizontalAlignment="Right"
                                                                            MaxWidth="110"
@@ -150,7 +150,7 @@
                 <SelectableTextBlock Grid.Column="1"
                                      Text="{Binding EditorTitle}"
                                      FontWeight="Bold"
-                                     FontSize="17"
+                                     FontSize="21"
                                      VerticalAlignment="Center"
                                      TextTrimming="CharacterEllipsis"/>
             </Grid>
@@ -194,7 +194,7 @@
             <SelectableTextBlock Grid.Row="3"
                                  Text="{Binding StatusText}"
                                  Margin="10,0,10,4"
-                                 FontSize="15"
+                                 FontSize="19"
                                  Foreground="{DynamicResource SubtleForeground}"
                                  TextTrimming="CharacterEllipsis"/>
 
@@ -202,11 +202,11 @@
                 <ScrollViewer>
                     <StackPanel Spacing="8">
                         <TextBlock x:Name="DetailTitleText"
-                                   FontSize="20"
+                                   FontSize="25"
                                    FontWeight="Bold"
                                    TextWrapping="Wrap"/>
                         <TextBlock x:Name="DetailSubtitleText"
-                                   FontSize="15"
+                                   FontSize="19"
                                    Foreground="{DynamicResource SubtleForeground}"
                                    TextWrapping="Wrap"/>
                         <WrapPanel x:Name="DetailMetaChipsPanel"
@@ -214,7 +214,7 @@
                                    HorizontalAlignment="Left"/>
                         <TextBlock x:Name="DetailEmptyText"
                                    IsVisible="False"
-                                   FontSize="15"
+                                   FontSize="19"
                                    Foreground="{DynamicResource SubtleForeground}"
                                    TextWrapping="Wrap"/>
                         <StackPanel x:Name="DetailFieldCardsPanel" Spacing="8"/>
@@ -231,7 +231,7 @@
                 <SelectableTextBlock Grid.Column="1"
                                      Text="{Binding EditorTitle}"
                                      FontWeight="Bold"
-                                     FontSize="17"
+                                     FontSize="21"
                                      VerticalAlignment="Center"
                                      TextTrimming="CharacterEllipsis"/>
                 <Button Grid.Column="2" Content="Refresh" Click="OnEditRefreshClick" Padding="10,6"/>
@@ -241,14 +241,14 @@
             <SelectableTextBlock Grid.Row="1"
                                  Text="{Binding StatusText}"
                                  Margin="10,0,10,4"
-                                 FontSize="15"
+                                 FontSize="19"
                                  Foreground="{DynamicResource SubtleForeground}"
                                  TextTrimming="CharacterEllipsis"/>
 
             <Border Grid.Row="2" Margin="6,0,6,6" CornerRadius="6" Background="{DynamicResource SystemAltHighColor}">
                 <avedit:TextEditor x:Name="Editor"
                                    FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
-                                   FontSize="16"
+                                   FontSize="20"
                                    ShowLineNumbers="True"
                                    WordWrap="True"/>
             </Border>

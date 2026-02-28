@@ -12,6 +12,25 @@ public partial class PhoneMainView : UserControl
         InitializeComponent();
     }
 
+    private async void MainTabControl_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not TabControl tc || DataContext is not MainWindowViewModel vm)
+            return;
+
+        if (tc.SelectedItem is TabItem { Header: string header })
+        {
+            switch (header)
+            {
+                case "Todos":
+                    await vm.TodoViewModel.RefreshCommand.ExecuteAsync(null);
+                    break;
+                case "Session Log":
+                    await vm.RefreshInternalAsync();
+                    break;
+            }
+        }
+    }
+
     private void StatusMessageText_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm || string.IsNullOrWhiteSpace(vm.StatusMessage))

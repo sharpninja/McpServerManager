@@ -3,6 +3,7 @@ using Android.App;
 [assembly: UsesPermission(Android.Manifest.Permission.Internet)]
 [assembly: UsesPermission(Android.Manifest.Permission.RecordAudio)]
 [assembly: UsesPermission(Android.Manifest.Permission.ForegroundService)]
+[assembly: UsesPermission("android.permission.FOREGROUND_SERVICE_MICROPHONE")]
 [assembly: UsesPermission(Android.Manifest.Permission.PostNotifications)]
 
 namespace McpServerManager.Android;

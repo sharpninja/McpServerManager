@@ -11,6 +11,8 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Android.App;
+using AndroidOS = Android.OS;
 using McpServerManager.Android.Services;
 using McpServerManager.Core.ViewModels;
 
@@ -69,6 +71,7 @@ public partial class SimplifiedVoiceView : UserControl
     private bool _ttsStopped;
     private bool _clearRequested;
     private bool _sendRequested;
+    private bool _foregroundServiceRunning;
     private Button? _pauseButton;
     private Button? _stopButton;
     private Button? _chatToggleButton;
@@ -113,6 +116,7 @@ public partial class SimplifiedVoiceView : UserControl
             _isPaused = false;
             _isSpeaking = false;
             _ttsStopped = false;
+            StopForegroundService();
             UpdateButtons();
             UpdateInputPreview(null);
             SetMicState("idle");
@@ -162,6 +166,9 @@ public partial class SimplifiedVoiceView : UserControl
         _ttsStopped = false;
         _loopCts = new CancellationTokenSource();
         UpdateButtons();
+
+        // Start foreground service to keep voice alive in background
+        StartForegroundService("Voice session active. Listening...");
 
         // Announce readiness and start listening
         PlayChime();
@@ -477,6 +484,7 @@ public partial class SimplifiedVoiceView : UserControl
         Dispatcher.UIThread.Post(() =>
         {
             if (_isDisposed) return;
+            string? notificationText = null;
             switch (state)
             {
                 case "idle":
@@ -484,23 +492,31 @@ public partial class SimplifiedVoiceView : UserControl
                     break;
                 case "connecting":
                     SetStatus("Starting session...");
+                    notificationText = "Starting session...";
                     break;
                 case "ready":
                     SetStatus("Session ready.");
+                    notificationText = "Session ready.";
                     break;
                 case "listening":
                     SetStatus("Listening... say 'send now' when done");
+                    notificationText = "Listening...";
                     break;
                 case "paused":
                     SetStatus("Paused. Say 'resume chat' or tap Resume.");
+                    notificationText = "Paused.";
                     break;
                 case "thinking":
                     SetStatus("Thinking...");
+                    notificationText = "Thinking...";
                     break;
                 case "speaking":
                     SetStatus("Speaking...");
+                    notificationText = "Speaking...";
                     break;
             }
+            if (notificationText != null && _foregroundServiceRunning)
+                UpdateForegroundServiceStatus(notificationText);
         });
     }
 
@@ -702,6 +718,7 @@ public partial class SimplifiedVoiceView : UserControl
         _sessionReady = false;
         _isSpeaking = false;
         _ttsStopped = false;
+        StopForegroundService();
         UpdateButtons();
         UpdateInputPreview(null);
         SetMicState("idle");
@@ -730,6 +747,56 @@ public partial class SimplifiedVoiceView : UserControl
         Dispatcher.UIThread.Post(() => _chatScroller?.ScrollToEnd(), DispatcherPriority.Background);
     }
 
+    // ── Foreground service helpers ───────────────────────────────────────
+
+    private void StartForegroundService(string statusText)
+    {
+        try
+        {
+            var context = global::Android.App.Application.Context;
+            using var intent = VoiceSessionForegroundService.CreateStartIntent(context, statusText);
+            if (AndroidOS.Build.VERSION.SdkInt >= AndroidOS.BuildVersionCodes.O)
+                context.StartForegroundService(intent);
+            else
+                context.StartService(intent);
+            _foregroundServiceRunning = true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to start voice foreground service: {ex.Message}");
+        }
+    }
+
+    private void StopForegroundService()
+    {
+        if (!_foregroundServiceRunning) return;
+        try
+        {
+            var context = global::Android.App.Application.Context;
+            using var intent = VoiceSessionForegroundService.CreateStopIntent(context);
+            context.StartService(intent);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to stop voice foreground service: {ex.Message}");
+        }
+        finally
+        {
+            _foregroundServiceRunning = false;
+        }
+    }
+
+    private void UpdateForegroundServiceStatus(string statusText)
+    {
+        try
+        {
+            var context = global::Android.App.Application.Context;
+            using var intent = VoiceSessionForegroundService.CreateUpdateIntent(context, statusText);
+            context.StartService(intent);
+        }
+        catch { /* best effort */ }
+    }
+
     // ── Cleanup ────────────────────────────────────────────────────────
 
     private void OnDetached(object? sender, VisualTreeAttachmentEventArgs e)
@@ -742,5 +809,6 @@ public partial class SimplifiedVoiceView : UserControl
         _tts.Dispose();
         _stt.Dispose();
         _audioFocus.Dispose();
+        StopForegroundService();
     }
 }

@@ -74,6 +74,8 @@ public partial class App : Application
 
                         var clipboardService = new AndroidClipboardService();
                         var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken);
+                        vm.SaveWorkspaceKey = AndroidConnectionPreferencesService.SaveWorkspaceKey;
+                        vm.LoadWorkspaceKey = AndroidConnectionPreferencesService.LoadWorkspaceKey;
                         vm.LogoutRequested += (_, _) =>
                         {
                             _logger.LogInformation("Logout requested; clearing tokens and returning to connection dialog");

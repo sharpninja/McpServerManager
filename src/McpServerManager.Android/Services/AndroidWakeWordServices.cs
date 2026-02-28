@@ -205,7 +205,7 @@ public sealed class AndroidWakeWordService : IAndroidWakeWordService
     public AndroidWakeWordService()
         : this(
             new AndroidVoiceForegroundServiceController(),
-            new AndroidPorcupineWakeWordEngine(),
+            new AndroidVoskWakeWordEngine(),
             new AndroidWakeWordPreferencesStore())
     {
     }
@@ -459,7 +459,7 @@ public sealed class AndroidVoiceForegroundServiceController : IAndroidVoiceForeg
     }
 }
 
-[Service(Exported = false, Name = "ninja.thesharp.mcpservermanager.voice.WakeWordForegroundService")]
+[Service(Exported = false, ForegroundServiceType = global::Android.Content.PM.ForegroundService.TypeMicrophone, Name = "ninja.thesharp.mcpservermanager.voice.WakeWordForegroundService")]
 public sealed class AndroidWakeWordForegroundService : Service
 {
     public const string ActionStart = "ninja.thesharp.mcpservermanager.voice.START_WAKEWORD_FOREGROUND";
@@ -503,7 +503,10 @@ public sealed class AndroidWakeWordForegroundService : Service
 
         var statusText = intent?.GetStringExtra(ExtraStatusText);
         var notification = BuildNotification(statusText);
-        StartForeground(NotificationId, notification);
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
+            StartForeground(NotificationId, notification, global::Android.Content.PM.ForegroundService.TypeMicrophone);
+        else
+            StartForeground(NotificationId, notification);
         return StartCommandResult.Sticky;
     }
 

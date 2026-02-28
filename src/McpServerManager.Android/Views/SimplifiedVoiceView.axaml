@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:McpServerManager.Core.ViewModels"
+             x:Class="McpServerManager.Android.Views.SimplifiedVoiceView"
+             x:DataType="vm:VoiceConversationViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
+
+        <!-- Header -->
+        <Border Grid.Row="0" Classes="phone-outline-card" Padding="12,10" Margin="8,8,8,0">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="Voice Chat" FontSize="25" FontWeight="Bold" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" x:Name="ChatToggleButton" Content="Start"
+                        Click="OnChatToggleClick" Padding="12,6"/>
+            </Grid>
+        </Border>
+
+        <!-- Chat messages -->
+        <Border Grid.Row="1" Margin="8,4" Padding="4">
+            <ScrollViewer x:Name="ChatScroller">
+                <ItemsControl x:Name="ChatItems">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:CompileBindings="False">
+                            <Border Padding="10,6" Margin="4,3" CornerRadius="12" MaxWidth="320"
+                                    HorizontalAlignment="{Binding HAlign}"
+                                    Background="{Binding BubbleBrush}">
+                                <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="18"/>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Input preview (accumulated speech before "send now") -->
+        <Border Grid.Row="2" x:Name="InputPreviewBorder" IsVisible="False"
+                Classes="phone-outline-card" Margin="8,0" Padding="10,6">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button Grid.Column="0" x:Name="ClearInputButton" Content="✕"
+                        Click="OnClearInputClick" VerticalAlignment="Center"
+                        Padding="8,4" FontSize="20" Opacity="0.7"/>
+                <StackPanel Grid.Column="1" Margin="6,0">
+                    <TextBlock Text="Drafting:" FontSize="14" Opacity="0.6" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="InputPreviewText" TextWrapping="Wrap" FontSize="18"/>
+                </StackPanel>
+                <Button Grid.Column="2" x:Name="SendInputButton" Content="➤"
+                        Click="OnSendInputClick" VerticalAlignment="Center"
+                        Padding="8,4" FontSize="22" Opacity="0.7"/>
+            </Grid>
+        </Border>
+
+        <!-- Bottom controls -->
+        <StackPanel Grid.Row="3" Spacing="6" Margin="12,4,12,8" HorizontalAlignment="Center">
+            <TextBlock Text="{Binding StatusText}" HorizontalAlignment="Center"
+                       TextWrapping="Wrap" FontSize="16" Opacity="0.8"/>
+            <Button x:Name="PauseResumeButton" Content="Pause" Click="OnPauseResumeClick"
+                    Width="72" Height="72" CornerRadius="36" FontSize="18" FontWeight="Bold"
+                    HorizontalAlignment="Center" HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center" IsEnabled="False"/>
+            <Button x:Name="StopButton" Content="Stop" Click="OnStopClick"
+                    Padding="16,6" IsEnabled="False" HorizontalAlignment="Center"/>
+            <CheckBox x:Name="AutoContinueCheck" Content="Auto-continue after response"
+                      IsChecked="True" HorizontalAlignment="Center"/>
+            <TextBlock Text="send now · start over · clear chat · end chat · pause/resume"
+                       FontSize="14" Opacity="0.5" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+        </StackPanel>
+
+    </Grid>
+</UserControl>

@@ -16,6 +16,7 @@ internal static class AndroidConnectionPreferencesService
     private const string OidcJwtKey = "OidcJwt";
     private const string OidcJwtHostKey = "OidcJwtHost";
     private const string OidcJwtPortKey = "OidcJwtPort";
+    private const string WorkspaceKeyPref = "SelectedWorkspaceKey";
 
     public static bool TryLoad(out string host, out string port)
     {
@@ -219,6 +220,43 @@ internal static class AndroidConnectionPreferencesService
             editor.Remove(OidcJwtPortKey);
             var committed = editor.Commit();
             _logger.LogInformation("ClearOidcJwt: Commit returned {Result}", committed);
+        }
+    }
+
+    public static void SaveWorkspaceKey(string? key)
+    {
+        var prefs = GetPreferences();
+        if (prefs == null) return;
+
+        var editor = prefs.Edit();
+        if (editor == null) return;
+
+        using (editor)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+                editor.Remove(WorkspaceKeyPref);
+            else
+                editor.PutString(WorkspaceKeyPref, key.Trim());
+            editor.Commit();
+        }
+
+        _logger.LogInformation("SaveWorkspaceKey: {Key}", key ?? "<cleared>");
+    }
+
+    public static string? LoadWorkspaceKey()
+    {
+        try
+        {
+            var prefs = GetPreferences();
+            var key = prefs?.GetString(WorkspaceKeyPref, null)?.Trim();
+            if (!string.IsNullOrWhiteSpace(key))
+                _logger.LogInformation("LoadWorkspaceKey: {Key}", key);
+            return key;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "LoadWorkspaceKey: exception reading SharedPreferences");
+            return null;
         }
     }
 

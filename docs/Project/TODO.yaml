@@ -106,3 +106,92 @@ mvp-app:
       done: false
     - task: Publish final architecture guidance and examples in docs and HANDOFF to preserve the refactored standard.
       done: false
+  - id: MVP-APP-007
+    title: Implement Android voice conversation system (wake-word + STT/TTS + Claude via Copilot CLI + MCP todo orchestration)
+    estimate: ~60-120 hours (multi-session mobile + server orchestration + QA/hardening)
+    note: 'Phase 0 + Chat refactor complete: Chat prompt/config/model/send flows, CQRS handlers, VM factory, and Desktop chat code-behind extraction are compliant. Voice v1 vertical slice shipped: MCP server voice endpoints (session/turn/interrupt/status/transcript/delete), Copilot CLI JSON tool loop with guardrails, Core typed client + VoiceConversationViewModel, Android STT/TTS/wake-word/foreground-service/permission/audio-focus services, manual transcript harness UI on phone/tablet. Remaining: rate limits, redaction, app-state gating, tests, QA, docs.'
+    done: false
+    description:
+    - Build a voice-first conversation capability in the Android app that supports wake-word + turn-taking interactions and can read/write todo items through the MCP server.
+    - Use Android native speech recognition (STT) and Android native text-to-speech (TTS) for device audio interaction.
+    - Orchestrate reasoning and tool decisions on the MCP server using Claude Sonnet 4.6 via Copilot CLI, with server-side guardrails and audit logging.
+    remaining: 9 tasks remain (rate limiting, redaction, app-state gating, tests, integration tests, E2E QA, docs/requirements, HANDOFF).
+    technical-details:
+    - 'Android app responsibilities: custom wake-word detection, audio state machine, native STT/TTS, voice UI controls, and voice session client calls.'
+    - 'MCP server responsibilities: voice session endpoints, Copilot CLI Claude orchestration loop, todo tool execution, write guardrails, transcript/tool-call storage, and interrupt handling.'
+    - Claude tool-calling is implemented as a server-side JSON loop over Copilot CLI (tool request JSON -> local MCP todo execution -> tool result -> next model turn), not Anthropic remote MCP connector.
+    - v1 trust model is local-network-only with transcript/tool-call retention and no per-user auth.
+    - Autonomous writes are allowed without confirmation, but blocked by backend schema/rule/idempotency/rate-limit guardrails.
+    - English-only v1, user-selectable wake phrase (catalog-backed), tap-to-end-turn, tap-to-interrupt during TTS.
+    - Add /mcp/voice/* endpoints for session create, turn submit/stream, interrupt, status, transcript query, and session close.
+    - 'Add server services: voice conversation orchestration, Copilot/Claude adapter, tool execution, write guardrail policy, transcript store, and session store.'
+    - Reuse existing ICopilotClient for Copilot CLI invocation and existing MCP todo services/handlers for todo CRUD and rich edits.
+    - Add Android/Core voice contracts (client + DTOs) and Android-specific services for wake word, STT, TTS, audio focus, permissions, and foreground service control.
+    - 'Voice ViewModel must remain UI-state only (CQRS/code-behind compliance): no direct audio, process, or network orchestration in ViewModel.'
+    - Implement server guardrails with tool allowlist, schema validation, id existence checks, duplicate-write idempotency hashing, and per-turn mutation limits.
+    - Implement interruption/cancellation propagation to stop TTS on device and cancel in-flight server/Copilot CLI processing.
+    - Persist transcript + tool-call logs (no raw audio by default) with configurable retention/TTL and redaction of sensitive stderr/log content.
+    - Make Claude model selection configuration-driven (Copilot CLI --model) to support exact sonnet-4.6 identifier differences across CLI versions.
+    implementation-tasks:
+    - task: Define and document voice feature functional/technical requirements and testing requirements in docs/Project/* (including requirements matrix and mappings).
+      done: false
+    - task: Add MCP server voice domain contracts/DTOs for session lifecycle, turn requests/responses, transcript records, tool-call records, and interrupt/status payloads.
+      done: true
+    - task: Add MCP server VoiceConversationOptions configuration (enabled flag, Copilot model, limits, retention, guardrail toggles).
+      done: true
+    - task: Implement /mcp/voice/* REST endpoints for session create, turn submit, interrupt, status, transcript query, and session close.
+      done: true
+    - task: Implement IVoiceSessionStore and persistence model for voice sessions and per-turn state.
+      done: true
+    - task: Implement IVoiceTranscriptStore and persistence model for transcript/tool-call logging with TTL metadata.
+      done: true
+    - task: Implement IVoiceClaudeCopilotOrchestrator using existing ICopilotClient to call Copilot CLI with configurable Claude Sonnet 4.6 model.
+      done: true
+    - task: Define strict JSON response protocol for Claude loop (tool_call, final_response, error_response) and parser/validator.
+      done: true
+    - task: Implement JSON-repair retry path for malformed Claude output (single retry max).
+      done: true
+    - task: Implement IVoiceToolExecutionService with todo tool allowlist (todo_list, todo_get, todo_search, todo_create, todo_update, todo_delete, todo_toggle_done).
+      done: true
+    - task: Reuse existing MCP todo service/handler logic for tool execution (no HTTP self-calls and no duplicated business logic).
+      done: true
+    - task: Implement IVoiceWriteGuardrailPolicy with schema validation, unknown-property rejection, existence checks, per-turn mutation limits, and duplicate-write idempotency hashing.
+      done: true
+    - task: Implement interrupt/cancellation propagation so voice turn interruption cancels Copilot CLI and prevents further tool writes.
+      done: true
+    - task: Add rate limiting and concurrency controls for voice sessions and CLI invocations.
+      done: false
+    - task: Add server logging/redaction rules for transcript/tool-call/Copilot stderr outputs.
+      done: false
+    - task: Add Android/Core voice client contracts (IVoiceConversationClient and DTOs) for calling /mcp/voice/*.
+      done: true
+    - task: Implement Android network client for voice session lifecycle and turn submission (plus interrupt/status calls).
+      done: true
+    - task: Add VoiceConversationViewModel (UI-state only) and wire it into Android phone/tablet UI surfaces.
+      done: true
+    - task: Implement Android SpeechRecognizer wrapper service for STT (English-only v1) and end-turn flow.
+      done: true
+    - task: Implement Android TextToSpeech wrapper service with tap-to-interrupt support and graceful fallback to text-only.
+      done: true
+    - task: Implement Android audio focus service and voice playback/listening coordination.
+      done: true
+    - task: Implement Android runtime permission handling (RECORD_AUDIO, notifications/foreground-service as needed).
+      done: true
+    - task: Implement Android foreground voice service controller/notification for wake-word monitoring.
+      done: true
+    - task: Integrate custom in-app wake-word engine behind IAndroidWakeWordService with fixed phrase + sensitivity presets.
+      done: true
+    - task: Add voice UI elements (status pill/panel, transcript preview, end-turn button, interrupt button, settings entry point) for phone/tablet layouts.
+      done: true
+    - task: Add app-state gating so wake-word defaults to foreground-only behavior.
+      done: false
+    - task: Add Android state-machine tests (idle/listening/transcribing/thinking/speaking/interrupted/error transitions).
+      done: false
+    - task: Add MCP server unit tests for orchestrator JSON parsing, guardrails, idempotency, interrupt behavior, and tool execution routing.
+      done: false
+    - task: Add MCP server integration tests for /mcp/voice/* endpoints with mocked ICopilotClient, including multi-step tool loops and blocked writes.
+      done: false
+    - task: Run manual end-to-end QA on Android + local MCP server (create/update/delete/list/search flows, interrupts, failures, server restarts, Copilot CLI unavailable).
+      done: false
+    - task: Update HANDOFF and audit docs with voice architecture decisions, risks, operational setup (Copilot CLI + model config), and test evidence.
+      done: false

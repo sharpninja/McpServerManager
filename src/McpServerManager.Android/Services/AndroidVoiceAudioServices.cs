@@ -451,6 +451,9 @@ public sealed class AndroidTextToSpeechService : IAndroidTextToSpeechService
     private TextToSpeech? _tts;
     private Task<bool>? _initTask;
     private bool _disposed;
+    private TaskCompletionSource? _speakCompletionSource;
+    private string? _activeUtteranceId;
+    private SpeakProgressListener? _utteranceListener;
 
     public async Task SpeakAsync(string text, string? languageTag, CancellationToken cancellationToken = default)
     {
@@ -466,9 +469,22 @@ public sealed class AndroidTextToSpeechService : IAndroidTextToSpeechService
         if (!initialized)
             throw new InvalidOperationException("Android text-to-speech initialization failed.");
 
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var utteranceId = $"voice-{Guid.NewGuid():N}";
+
+        lock (_sync)
+        {
+            _speakCompletionSource?.TrySetCanceled();
+            _speakCompletionSource = tcs;
+            _activeUtteranceId = utteranceId;
+        }
+
         await RunOnUiThreadAsync(activity, () =>
         {
             var tts = _tts ?? throw new InvalidOperationException("Android text-to-speech is unavailable.");
+            _utteranceListener ??= new SpeakProgressListener(this);
+            tts.SetOnUtteranceProgressListener(_utteranceListener);
+
             if (!string.IsNullOrWhiteSpace(languageTag))
             {
                 try
@@ -481,12 +497,34 @@ public sealed class AndroidTextToSpeechService : IAndroidTextToSpeechService
                 }
             }
 
-            tts.Speak(text, QueueMode.Flush, null, $"voice-{Guid.NewGuid():N}");
+            tts.Speak(text, QueueMode.Flush, null, utteranceId);
         }).ConfigureAwait(false);
+
+        using var reg = cancellationToken.Register(() =>
+        {
+            lock (_sync)
+            {
+                if (ReferenceEquals(_speakCompletionSource, tcs))
+                {
+                    _speakCompletionSource.TrySetCanceled(cancellationToken);
+                    _speakCompletionSource = null;
+                    _activeUtteranceId = null;
+                }
+            }
+        });
+
+        await tcs.Task.ConfigureAwait(false);
     }
 
     public void Stop()
     {
+        lock (_sync)
+        {
+            _speakCompletionSource?.TrySetCanceled();
+            _speakCompletionSource = null;
+            _activeUtteranceId = null;
+        }
+
         var tts = _tts;
         if (tts == null)
             return;
@@ -624,6 +662,40 @@ public sealed class AndroidTextToSpeechService : IAndroidTextToSpeechService
         public void OnInit(OperationResult status)
         {
             tcs.TrySetResult(status == OperationResult.Success);
+        }
+    }
+
+    private sealed class SpeakProgressListener(AndroidTextToSpeechService owner) : UtteranceProgressListener
+    {
+        public override void OnStart(string? utteranceId) { }
+
+        public override void OnDone(string? utteranceId)
+        {
+            lock (owner._sync)
+            {
+                if (utteranceId != null && utteranceId == owner._activeUtteranceId)
+                {
+                    owner._speakCompletionSource?.TrySetResult();
+                    owner._speakCompletionSource = null;
+                    owner._activeUtteranceId = null;
+                }
+            }
+        }
+
+#pragma warning disable CS0672 // Overrides deprecated OnError(string)
+        public override void OnError(string? utteranceId)
+#pragma warning restore CS0672
+        {
+            lock (owner._sync)
+            {
+                if (utteranceId != null && utteranceId == owner._activeUtteranceId)
+                {
+                    owner._speakCompletionSource?.TrySetException(
+                        new InvalidOperationException("Text-to-speech utterance failed."));
+                    owner._speakCompletionSource = null;
+                    owner._activeUtteranceId = null;
+                }
+            }
         }
     }
 }

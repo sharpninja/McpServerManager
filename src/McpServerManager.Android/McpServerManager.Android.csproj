@@ -39,6 +39,7 @@
     <PackageReference Include="Porcupine" Version="4.0.2">
       <ExcludeAssets>buildTransitive</ExcludeAssets>
     </PackageReference>
+    <PackageReference Include="Vosk" Version="0.3.38" />
     <PackageReference Include="Xamarin.GooglePlayServices.Code.Scanner" Version="116.1.0.14" />
     <!-- Exclude duplicate compose runtime annotation JVM classes that conflict with Android variant -->
     <PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.Jvm" Version="1.10.0.1" ExcludeAssets="all" />
@@ -55,10 +56,12 @@
   <ItemGroup>
     <AndroidAsset Include="Assets\Voice\WakeWords\*.ppn" />
     <AndroidAsset Include="Assets\Voice\Porcupine\*.pv" />
+    <AndroidAsset Include="Assets\Voice\VoskModel\**\*" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Place ABI-specific Porcupine native libs under Assets/Voice/Porcupine/Native/<abi>/libpv_porcupine.so -->
     <AndroidNativeLibrary Include="Assets\Voice\Porcupine\Native\**\libpv_porcupine.so" />
+    <AndroidNativeLibrary Include="libs\arm64-v8a\libvosk.so" Abi="arm64-v8a" />
   </ItemGroup>
 </Project>

@@ -7,39 +7,40 @@
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
              x:Class="McpServerManager.Android.Views.PhoneMainView"
              x:DataType="vm:MainWindowViewModel"
-             FontSize="16">
+             FontSize="20">
 
     <UserControl.Styles>
         <Style Selector="Button">
-            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontSize" Value="21"/>
         </Style>
         <Style Selector="TextBox">
-            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontSize" Value="21"/>
         </Style>
         <Style Selector="ComboBox">
-            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontSize" Value="21"/>
         </Style>
         <Style Selector="ToggleButton">
-            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontSize" Value="21"/>
         </Style>
         <Style Selector="TabItem">
-            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontSize" Value="22"/>
         </Style>
         <Style Selector="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontSize" Value="20"/>
         </Style>
         <Style Selector="SelectableTextBlock">
-            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontSize" Value="20"/>
         </Style>
     </UserControl.Styles>
 
     <Grid RowDefinitions="*,Auto" ClipToBounds="True">
-        <TabControl Grid.Row="0" TabStripPlacement="Bottom" SelectedIndex="0">
+        <TabControl x:Name="MainTabControl" Grid.Row="0" TabStripPlacement="Bottom" SelectedIndex="0"
+                    SelectionChanged="MainTabControl_OnSelectionChanged">
+            <TabItem Header="Voice">
+                <views:SimplifiedVoiceView DataContext="{Binding VoiceConversationViewModel}"/>
+            </TabItem>
             <TabItem Header="Todos">
                 <views:PhoneTodoView DataContext="{Binding TodoViewModel}"/>
-            </TabItem>
-            <TabItem Header="Voice">
-                <views:VoiceConversationView DataContext="{Binding VoiceConversationViewModel}"/>
             </TabItem>
             <TabItem Header="Session Log">
                 <views:PhoneSessionLogView/>
@@ -52,6 +53,7 @@
                 <ComboBox Grid.Row="0"
                           Grid.Column="0"
                           Grid.ColumnSpan="3"
+                          IsEnabled="{Binding !VoiceConversationViewModel.IsSessionActive}"
                           ItemsSource="{Binding WorkspaceConnections}"
                           SelectedItem="{Binding SelectedWorkspaceConnection, Mode=TwoWay}">
                     <ComboBox.ItemTemplate>
@@ -65,14 +67,14 @@
                         Content="Logout"
                         Command="{Binding LogoutCommand}"
                         VerticalAlignment="Center"
-                        FontSize="15"
+                        FontSize="19"
                         Padding="8,4"/>
                 <SelectableTextBlock x:Name="StatusMessageText"
                                      Grid.Row="1" Grid.Column="0"
                                      Grid.ColumnSpan="2"
                                      Text="{Binding StatusMessage}"
                                      FontWeight="Bold"
-                                     FontSize="15"
+                                     FontSize="19"
                                      VerticalAlignment="Center"
                                      TextTrimming="CharacterEllipsis"
                                      PointerPressed="StatusMessageText_OnPointerPressed"/>
@@ -84,7 +86,7 @@
                          VerticalAlignment="Center"
                          HorizontalAlignment="Center"
                          ToolTip.Tip="{Binding WorkspaceHealthIndicatorTooltip}"/>
-                <SelectableTextBlock Grid.Row="1" Grid.Column="3" Text="{Binding AppVersionDisplay}" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
+                <SelectableTextBlock Grid.Row="1" Grid.Column="3" Text="{Binding AppVersionDisplay}" FontSize="18" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
             </Grid>
         </views:AnimatedStatusBar>
 
@@ -102,11 +104,11 @@
                         Padding="12"
                         PointerPressed="StatusDialogContent_OnPointerPressed">
                     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
-                        <TextBlock Grid.Row="0" Text="Status Message" FontWeight="Bold" FontSize="18"/>
+                        <TextBlock Grid.Row="0" Text="Status Message" FontWeight="Bold" FontSize="22"/>
                         <TextBlock Grid.Row="1"
                                    Text="Full text from the status bar"
                                    Foreground="{DynamicResource SubtleForeground}"
-                                   FontSize="14"/>
+                                   FontSize="18"/>
                         <Border Grid.Row="2"
                                 MinWidth="280"
                                 MaxWidth="480"
@@ -118,7 +120,7 @@
                             <ScrollViewer>
                                 <SelectableTextBlock x:Name="StatusDialogText"
                                                      TextWrapping="Wrap"
-                                                     FontSize="16"/>
+                                                     FontSize="20"/>
                             </ScrollViewer>
                         </Border>
                         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
