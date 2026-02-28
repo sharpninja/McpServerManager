@@ -46,6 +46,9 @@ public class ChatMessage : INotifyPropertyChanged
 
     public IBrush BubbleBrush => IsUser ? s_userBrush : IsSystem ? s_systemBrush : s_assistantBrush;
 
+    public bool IsAssistant => string.Equals(Role, "assistant", StringComparison.OrdinalIgnoreCase);
+    public bool IsNotAssistant => !IsAssistant;
+
     private bool IsUser => string.Equals(Role, "user", StringComparison.OrdinalIgnoreCase);
     private bool IsSystem => string.Equals(Role, "system", StringComparison.OrdinalIgnoreCase);
 }
@@ -808,7 +811,10 @@ public partial class SimplifiedVoiceView : UserControl
 
     private void ScrollToBottom()
     {
-        Dispatcher.UIThread.Post(() => _chatScroller?.ScrollToEnd(), DispatcherPriority.Background);
+        // Double-post: first at Background lets markdown re-layout, second scrolls after
+        Dispatcher.UIThread.Post(() =>
+            Dispatcher.UIThread.Post(() => _chatScroller?.ScrollToEnd(), DispatcherPriority.Background),
+            DispatcherPriority.Background);
     }
 
     // ── Foreground service helpers ───────────────────────────────────────

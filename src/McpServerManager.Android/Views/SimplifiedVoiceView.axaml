@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
              x:Class="McpServerManager.Android.Views.SimplifiedVoiceView"
              x:DataType="vm:VoiceConversationViewModel">
@@ -21,11 +22,22 @@
                 <ItemsControl x:Name="ChatItems">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:CompileBindings="False">
-                            <Border Padding="10,6" Margin="4,3" CornerRadius="12" MaxWidth="320"
-                                    HorizontalAlignment="{Binding HAlign}"
-                                    Background="{Binding BubbleBrush}">
-                                <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="18"/>
-                            </Border>
+                            <Panel>
+                                <!-- User/System: compact right-aligned bubble -->
+                                <Border Padding="10,6" Margin="4,3" CornerRadius="12" MaxWidth="320"
+                                        HorizontalAlignment="{Binding HAlign}"
+                                        Background="{Binding BubbleBrush}"
+                                        IsVisible="{Binding IsNotAssistant}">
+                                    <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="18"/>
+                                </Border>
+                                <!-- Assistant: full-width rendered markdown -->
+                                <Border Padding="10,6" Margin="4,3" CornerRadius="12"
+                                        HorizontalAlignment="Stretch"
+                                        Background="{Binding BubbleBrush}"
+                                        IsVisible="{Binding IsAssistant}">
+                                    <md:MarkdownScrollViewer Markdown="{Binding Text}" Margin="0"/>
+                                </Border>
+                            </Panel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
