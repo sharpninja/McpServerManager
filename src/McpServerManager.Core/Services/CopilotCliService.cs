@@ -37,7 +37,7 @@ public static class CopilotCliService
             await File.WriteAllTextAsync(tmpFile, prompt, cancellationToken).ConfigureAwait(true);
 
             var shell = "pwsh";
-            var agentCmd = $"copilot -p \"$(Get-Content -Raw '{tmpFile.Replace("'", "''")}')\" --allow-all";
+            var agentCmd = $"copilot -p \"$(Get-Content -Raw '{tmpFile.Replace("'", "''")}')\" --model claude-opus-4.6 --allow-all";
             var shellArgs = $"-NoProfile -Command \"{agentCmd}\"";
 
             var psi = new ProcessStartInfo

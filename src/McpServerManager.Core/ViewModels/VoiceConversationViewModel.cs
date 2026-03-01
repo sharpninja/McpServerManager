@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -18,6 +19,7 @@ namespace McpServerManager.Core.ViewModels;
 public partial class VoiceConversationViewModel : ViewModelBase
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("VoiceConversationViewModel");
+    private static readonly Regex AnsiEscapePattern = new(@"\x1B\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
 
     private McpVoiceConversationService _voiceService;
     private CancellationTokenSource? _activeTurnCts;
@@ -248,7 +250,7 @@ public partial class VoiceConversationViewModel : ViewModelBase
                     lastEvent = evt;
                     if (evt.Type == "chunk" && evt.Text is not null)
                     {
-                        accumulated.Append(evt.Text);
+                        accumulated.Append(AnsiEscapePattern.Replace(evt.Text, ""));
                         AssistantDisplayText = accumulated.ToString();
                     }
                     await channel.Writer.WriteAsync(evt, linkedCts.Token).ConfigureAwait(false);
@@ -375,6 +377,28 @@ public partial class VoiceConversationViewModel : ViewModelBase
         {
             _logger.LogError(ex, "Interrupt voice turn failed");
             StatusText = $"Interrupt failed: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task SendEscapeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SessionId))
+        {
+            StatusText = "No active session.";
+            return;
+        }
+
+        try
+        {
+            var sent = await _voiceService.SendEscapeAsync(SessionId).ConfigureAwait(true);
+            StatusText = sent ? "ESC sent to Copilot." : "No active interactive session.";
+            GlobalStatusChanged?.Invoke(StatusText);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Send escape failed");
+            StatusText = $"Send ESC failed: {ex.Message}";
         }
     }
 

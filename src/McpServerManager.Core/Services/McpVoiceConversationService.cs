@@ -182,6 +182,23 @@ public sealed class McpVoiceConversationService
     }
 
     /// <summary>
+    /// Sends three ESC characters to the active Copilot interactive session stdin,
+    /// cancelling the current generation without ending the session.
+    /// Returns <c>false</c> if the session was not found or has no active interactive session.
+    /// </summary>
+    public async Task<bool> SendEscapeAsync(string sessionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+
+        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(10), cancellationToken).ConfigureAwait(true);
+        using var response = await client.PostAsync($"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}/escape", content: null, cancellationToken).ConfigureAwait(true);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return false;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
+        return true;
+    }
+
+    /// <summary>
     /// Gets a voice session status snapshot.
     /// </summary>
     public async Task<McpVoiceSessionStatus> GetStatusAsync(string sessionId, CancellationToken cancellationToken = default)

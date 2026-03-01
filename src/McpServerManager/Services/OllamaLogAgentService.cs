@@ -5,6 +5,7 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using McpServerManager.Core.Services;
@@ -16,6 +17,7 @@ namespace McpServerManager.Services;
 public sealed class OllamaLogAgentService : ILogAgentService
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("OllamaAgent");
+    private static readonly Regex AnsiEscapePattern = new(@"\x1B\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
     private const string DefaultModel = "llama3:latest";
     private const string DefaultBaseUrl = "http://localhost:11434";
     private static readonly string SystemPrompt = "You are an assistant for a log viewer app. The user sees request logs (Cursor, Copilot, or unified JSON). You receive a summary of the current view (filtered list and optionally the selected request). Help them query, filter, and understand the logs. Be concise and practical.";
@@ -113,7 +115,7 @@ public sealed class OllamaLogAgentService : ILogAgentService
                     var chunk = contentEl.GetString();
                     if (!string.IsNullOrEmpty(chunk))
                     {
-                        accumulated.Append(chunk);
+                        accumulated.Append(AnsiEscapePattern.Replace(chunk, ""));
                         contentProgress.Report(accumulated.ToString());
                     }
                 }
