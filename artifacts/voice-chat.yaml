@@ -1,0 +1,6 @@
+- "├ó┼ôΓÇö"
+- "├óΓÇö┬Å"
+- "├óΓÇ¥ΓÇ¥"
+- "Now let me follow the procedures"
+- '$ Invoke-RestMethod -Uri "http://localhost:7147/health" -Method Get'
+- "├ó┼ôΓÇª"

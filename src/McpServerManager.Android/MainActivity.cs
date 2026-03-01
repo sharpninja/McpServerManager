@@ -10,7 +10,7 @@ using McpServerManager.Android.Services;
 namespace McpServerManager.Android;
 
 [Activity(
-    Label = "Request Tracker",
+    Label = "MCP Server Manager",
     Theme = "@style/MyTheme.NoActionBar",
     Icon = "@drawable/icon",
     MainLauncher = true,
