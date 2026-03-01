@@ -13,12 +13,14 @@ Features:
     title: Add settings tab with configurable speech filter word list
     estimate: 4h
     note: User-configurable word list; match is case-insensitive substring match per line
-    done: false
+    done: true
+    completed: 2026-03-01T07:05:34.5814169Z
     description:
     - Add a Settings tab to the app UI that allows the user to configure a list of filter words.
     - When streaming output from MCP tool calls, any line containing one or more of these filter words
     - should be excluded from text-to-speech (TTS) synthesis.
     - This allows users to suppress noisy or irrelevant lines from being read aloud.
+    done-summary: Settings tab with configurable speech filter word list implemented and committed in 5e42d8f. SpeechFilterService, SettingsViewModel, SettingsView.axaml all created and integrated. Build verified.
     implementation-tasks:
     - task: Create SpeechFilterService in Core with persistence and ShouldFilter method
       done: false
