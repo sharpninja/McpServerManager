@@ -11,6 +11,7 @@ using McpServerManager.Core.ViewModels;
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace McpServerManager.Android;
 
@@ -24,6 +25,8 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        WireGlobalExceptionHandlers();
+
         if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
         {
             DisableAvaloniaDataAnnotationValidation();
@@ -131,5 +134,22 @@ public partial class App : Application
             BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
         foreach (var plugin in dataValidationPluginsToRemove)
             BindingPlugins.DataValidators.Remove(plugin);
+    }
+
+    private static void WireGlobalExceptionHandlers()
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            var ex = args.ExceptionObject as Exception;
+            _logger.LogError(ex, "Unhandled exception");
+            StatusViewModel.Instance.AddStatus(ex?.ToString() ?? args.ExceptionObject?.ToString() ?? "Unknown unhandled exception");
+        };
+
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            _logger.LogError(args.Exception, "Unobserved task exception");
+            StatusViewModel.Instance.AddStatus(args.Exception.ToString());
+            args.SetObserved();
+        };
     }
 }

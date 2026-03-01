@@ -99,6 +99,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     public SettingsViewModel SettingsViewModel => _settingsViewModel ??= new SettingsViewModel();
     private SettingsViewModel? _settingsViewModel;
 
+    /// <summary>Global status sink for exception reporting and app-wide status messages.</summary>
+    public StatusViewModel StatusViewModel => StatusViewModel.Instance;
+
     /// <summary>ViewModel for the Voice tab. Created lazily on first access.</summary>
     public VoiceConversationViewModel VoiceConversationViewModel => _voiceConversationViewModel ??= CreateVoiceConversationViewModel();
     private VoiceConversationViewModel? _voiceConversationViewModel;
@@ -251,6 +254,11 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     [ObservableProperty]
     private string _statusMessage = "Ready";
+
+    partial void OnStatusMessageChanged(string value)
+    {
+        StatusViewModel.Instance.AddStatus(value);
+    }
 
     [ObservableProperty]
     private ObservableCollection<WorkspaceConnectionOption> _workspaceConnections = new();

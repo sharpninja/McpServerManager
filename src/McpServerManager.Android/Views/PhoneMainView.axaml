@@ -82,7 +82,7 @@
                 <SelectableTextBlock x:Name="StatusMessageText"
                                      Grid.Row="1" Grid.Column="0"
                                      Grid.ColumnSpan="2"
-                                     Text="{Binding StatusMessage}"
+                                     Text="{Binding StatusViewModel.Status}"
                                      FontWeight="Bold"
                                      FontSize="19"
                                      VerticalAlignment="Center"

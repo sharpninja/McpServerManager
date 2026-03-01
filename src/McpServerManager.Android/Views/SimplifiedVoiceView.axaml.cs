@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -123,7 +122,6 @@ public class ChatMessage : INotifyPropertyChanged
 public partial class SimplifiedVoiceView : UserControl
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("SimplifiedVoiceView");
-    private static readonly Regex AnsiEscapePattern = new(@"\x1B\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
     private readonly IAndroidSpeechRecognitionService _stt = new AndroidSpeechRecognitionService();
     private readonly IAndroidTextToSpeechService _tts = new AndroidTextToSpeechService();
     private readonly IAndroidAudioFocusService _audioFocus = new AndroidAudioFocusService();
@@ -378,7 +376,7 @@ public partial class SimplifiedVoiceView : UserControl
                     }
                     assistantBubble.UpdateTiming(elapsed);
 
-                    accumulated.Append(AnsiEscapePattern.Replace(evt.Text, ""));
+                    accumulated.Append(evt.Text);
                     assistantBubble.Text = accumulated.ToString();
                     ScrollToBottom();
 

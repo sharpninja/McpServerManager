@@ -34,7 +34,7 @@
             <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                 <SelectableTextBlock x:Name="StatusMessageText"
                                      Grid.Column="0"
-                                     Text="{Binding StatusMessage}"
+                                     Text="{Binding StatusViewModel.Status}"
                                      FontWeight="Bold"
                                      VerticalAlignment="Center"
                                      TextTrimming="CharacterEllipsis"

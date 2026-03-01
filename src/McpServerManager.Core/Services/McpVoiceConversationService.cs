@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -154,7 +155,11 @@ public sealed class McpVoiceConversationService
                 }
 
                 if (evt is not null)
+                {
+                    if (evt.Text is not null)
+                        evt = evt with { Text = SanitizeStreamText(evt.Text) };
                     yield return evt;
+                }
 
                 if (evt?.Type is "done" or "error")
                     yield break;
@@ -320,5 +325,24 @@ public sealed class McpVoiceConversationService
         }
         catch { /* not JSON or missing field — use raw body */ }
         return body;
+    }
+
+    /// <summary>
+    /// Sanitizes streamed text: replaces ESC chars with "ESC" text and
+    /// unicode characters above U+00FF with HTML entity escaping.
+    /// </summary>
+    private static string SanitizeStreamText(string text)
+    {
+        var sb = new StringBuilder(text.Length);
+        foreach (var ch in text)
+        {
+            if (ch == '\x1B')
+                sb.Append("ESC");
+            else if (ch > '\x00FF')
+                sb.Append($"&#x{(int)ch:X4};");
+            else
+                sb.Append(ch);
+        }
+        return sb.ToString();
     }
 }

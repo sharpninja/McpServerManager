@@ -43,7 +43,7 @@
         <Border Grid.Row="1" Margin="8,0,8,8" Padding="8,6" Classes="phone-toolbar-card">
             <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                 <SelectableTextBlock Grid.Column="0"
-                                     Text="{Binding StatusMessage}"
+                                     Text="{Binding StatusViewModel.Status}"
                                      FontWeight="Bold"
                                      VerticalAlignment="Center"
                                      HorizontalAlignment="Left"/>

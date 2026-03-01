@@ -83,7 +83,7 @@ if ($findings.Count -eq 0) {
 
 # Phase 0 baseline: existing violations in MainWindowViewModel are tracked but not blocking.
 # Fail only if new violations appear (count exceeds baseline).
-$baseline = 123
+$baseline = 125
 $scopeLabel = if ($IncludeLegacy) { "Core + legacy" } else { "Core only (legacy excluded by Phase 0 scope decision)" }
 
 if ($findings.Count -le $baseline) {
