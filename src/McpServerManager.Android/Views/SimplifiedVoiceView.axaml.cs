@@ -270,6 +270,10 @@ public partial class SimplifiedVoiceView : UserControl
                     if (IsToolProgressLine(evt.Text))
                         continue;
 
+                    // Skip lines matching user-configured speech filter words
+                    if (SpeechFilterService.Instance.ShouldFilter(evt.Text))
+                        continue;
+
                     // Detect complete sentences and speak them as they arrive
                     sentenceBuffer.Append(evt.Text);
                     var bufText = sentenceBuffer.ToString();

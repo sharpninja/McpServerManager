@@ -7,3 +7,30 @@ Architecture:
     description:
     - McpServer.UI.Core contains shared ViewModels (RunSyncViewModel, SyncStatusViewModel were removed but other VMs may exist). Evaluate whether McpServerManager.Core ViewModels can be refactored to reuse or extend the ViewModels provided by McpServer.UI.Core to reduce duplication and improve maintainability.
     - This is especially relevant after the /mcp/ to /mcpserver/ route rename and sync endpoint removal — the UI.Core layer has been updated accordingly.
+Features:
+  high-priority:
+  - id: settings-tab-speech-filter-words
+    title: Add settings tab with configurable speech filter word list
+    estimate: 4h
+    note: User-configurable word list; match is case-insensitive substring match per line
+    done: false
+    description:
+    - Add a Settings tab to the app UI that allows the user to configure a list of filter words.
+    - When streaming output from MCP tool calls, any line containing one or more of these filter words
+    - should be excluded from text-to-speech (TTS) synthesis.
+    - This allows users to suppress noisy or irrelevant lines from being read aloud.
+    implementation-tasks:
+    - task: Create SpeechFilterService in Core with persistence and ShouldFilter method
+      done: false
+    - task: Create SettingsViewModel in Core with filter word list binding
+      done: false
+    - task: Create SettingsView.axaml and code-behind in Desktop
+      done: false
+    - task: Add Settings tab to MainWindow.axaml
+      done: false
+    - task: Wire SettingsViewModel in MainWindowViewModel
+      done: false
+    - task: Integrate SpeechFilterService into Android SimplifiedVoiceView TTS flow
+      done: false
+    - task: Build and verify no compilation errors
+      done: false

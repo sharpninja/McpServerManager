@@ -33,6 +33,9 @@
             <TabItem Header="AGENTS" Classes="shell-tab">
                 <views:AgentsReadmeView x:Name="AgentsReadmeTabView" DataContext="{Binding}"/>
             </TabItem>
+            <TabItem Header="Settings" Classes="shell-tab">
+                <views:SettingsView x:Name="SettingsTabView" DataContext="{Binding SettingsViewModel}"/>
+            </TabItem>
         </TabControl>
         </Border>
 

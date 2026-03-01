@@ -95,6 +95,10 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     public LogViewModel LogViewModel => _logViewModel ??= new LogViewModel(_clipboardService);
     private LogViewModel? _logViewModel;
 
+    /// <summary>ViewModel for the Settings tab. Created lazily on first access.</summary>
+    public SettingsViewModel SettingsViewModel => _settingsViewModel ??= new SettingsViewModel();
+    private SettingsViewModel? _settingsViewModel;
+
     /// <summary>ViewModel for the Voice tab. Created lazily on first access.</summary>
     public VoiceConversationViewModel VoiceConversationViewModel => _voiceConversationViewModel ??= CreateVoiceConversationViewModel();
     private VoiceConversationViewModel? _voiceConversationViewModel;
