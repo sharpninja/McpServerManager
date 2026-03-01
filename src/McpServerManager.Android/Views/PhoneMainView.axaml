@@ -52,6 +52,9 @@
             <TabItem Header="Session Log">
                 <views:PhoneSessionLogView/>
             </TabItem>
+            <TabItem Header="Settings">
+                <views:PhoneSettingsView DataContext="{Binding SettingsViewModel}"/>
+            </TabItem>
         </TabControl>
 
         <!-- Status Bar -->

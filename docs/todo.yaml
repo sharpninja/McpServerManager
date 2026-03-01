@@ -7,6 +7,64 @@ Architecture:
     description:
     - McpServer.UI.Core contains shared ViewModels (RunSyncViewModel, SyncStatusViewModel were removed but other VMs may exist). Evaluate whether McpServerManager.Core ViewModels can be refactored to reuse or extend the ViewModels provided by McpServer.UI.Core to reduce duplication and improve maintainability.
     - This is especially relevant after the /mcp/ to /mcpserver/ route rename and sync endpoint removal — the UI.Core layer has been updated accordingly.
+  - id: RT-REFACTOR
+    title: Observable ConnectionState refactor
+    estimate: 8h
+    done: false
+    description:
+    - Full refactor to replace push-based data propagation with observable ConnectionState singleton.
+    - 'STEP 1 (001): Create ConnectionState ObservableObject singleton in McpServerManager.Core/Services/ with properties: ActiveMcpBaseUrl, ApiKey, BearerToken, WorkspacePath, WorkspaceKey, WorkspaceDisplayName, IsConnected.'
+    - 'STEP 2 (002): Migrate WorkspacePath - remove duplicates from VoiceConversationViewModel and McpVoiceConversationService; all consumers read from ConnectionState directly.'
+    - 'STEP 3 (003): Migrate voice service auth credentials - remove cached _baseUrl/_apiKey/_bearerToken from McpVoiceConversationService; read from ConnectionState per-request.'
+    - 'STEP 4 (004): Replace platform callbacks (SaveWorkspaceKey/LoadWorkspaceKey, GetEditorText) with IWorkspacePreferenceStore and IEditorTextProvider interfaces.'
+    - 'STEP 5 (005): Replace GlobalStatusChanged event pattern with observable StatusState or ConnectionState properties; final audit pass for remaining push-based propagation.'
+    technical-details:
+    - Use [ObservableProperty] source generators from CommunityToolkit.Mvvm for ConnectionState
+    - Must be thread-safe for cross-thread property change notifications
+    - 'Auth credentials currently duplicated in 5+ objects: MainWindowViewModel, _mcpClient, _mcpPromptClient, McpVoiceConversationService, VoiceConversationViewModel'
+    - 'WorkspacePath currently lives in 4 objects: _mcpClient, _mcpPromptClient, VoiceConversationViewModel, McpVoiceConversationService'
+    - 'CRITICAL sync risk: voice service never gets updated with new credentials after creation'
+    - The voice VM lazy-init race condition is a direct result of push-based propagation
+    - McpServerClient.WorkspacePath should also read from ConnectionState
+    implementation-tasks:
+    - task: '[001] Create ConnectionState.cs in Core/Services/'
+      done: false
+    - task: '[001] Register ConnectionState as singleton in service collection'
+      done: false
+    - task: '[001] Inject ConnectionState into MainWindowViewModel constructor'
+      done: false
+    - task: '[002] Remove _workspacePath field from VoiceConversationViewModel'
+      done: false
+    - task: '[002] Remove WorkspacePath property from McpVoiceConversationService'
+      done: false
+    - task: '[002] McpServerClient reads WorkspacePath from ConnectionState'
+      done: false
+    - task: '[002] Remove all workspace path push sites from MainWindowViewModel'
+      done: false
+    - task: '[003] Remove _baseUrl, _apiKey, _bearerToken fields from McpVoiceConversationService'
+      done: false
+    - task: '[003] Inject ConnectionState into McpVoiceConversationService'
+      done: false
+    - task: '[003] Read auth from ConnectionState per-request in HTTP client creation'
+      done: false
+    - task: '[003] Evaluate McpServerClient auth migration (may keep current pattern)'
+      done: false
+    - task: '[004] Create IWorkspacePreferenceStore interface'
+      done: false
+    - task: '[004] Implement AndroidWorkspacePreferenceStore using SharedPreferences'
+      done: false
+    - task: '[004] Create IEditorTextProvider interface'
+      done: false
+    - task: '[004] Wire ConnectionState.WorkspaceKey PropertyChanged to auto-save'
+      done: false
+    - task: '[004] Remove SaveWorkspaceKey/LoadWorkspaceKey callbacks from MainWindowViewModel'
+      done: false
+    - task: '[005] Create StatusState observable or add status properties to ConnectionState'
+      done: false
+    - task: '[005] Replace GlobalStatusChanged event subscriptions with PropertyChanged'
+      done: false
+    - task: '[005] Final audit pass for remaining push patterns'
+      done: false
 Features:
   high-priority:
   - id: settings-tab-speech-filter-words
@@ -23,16 +81,16 @@ Features:
     done-summary: Settings tab with configurable speech filter word list implemented and committed in 5e42d8f. SpeechFilterService, SettingsViewModel, SettingsView.axaml all created and integrated. Build verified.
     implementation-tasks:
     - task: Create SpeechFilterService in Core with persistence and ShouldFilter method
-      done: false
+      done: true
     - task: Create SettingsViewModel in Core with filter word list binding
-      done: false
+      done: true
     - task: Create SettingsView.axaml and code-behind in Desktop
-      done: false
+      done: true
     - task: Add Settings tab to MainWindow.axaml
-      done: false
+      done: true
     - task: Wire SettingsViewModel in MainWindowViewModel
-      done: false
+      done: true
     - task: Integrate SpeechFilterService into Android SimplifiedVoiceView TTS flow
-      done: false
+      done: true
     - task: Build and verify no compilation errors
-      done: false
+      done: true

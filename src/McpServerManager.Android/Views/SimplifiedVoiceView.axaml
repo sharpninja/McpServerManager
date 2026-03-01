@@ -37,10 +37,18 @@
                                         IsVisible="{Binding IsAssistant}">
                                     <StackPanel>
                                         <md:MarkdownScrollViewer Markdown="{Binding Text}" Margin="0"/>
-                                        <TextBlock Text="{Binding TimingText}"
-                                                   IsVisible="{Binding HasTiming}"
-                                                   FontSize="13" Opacity="0.5" Margin="2,4,2,0"
-                                                   FontStyle="Italic" TextWrapping="Wrap"/>
+                                        <StackPanel Orientation="Horizontal"
+                                                       IsVisible="{Binding HasTiming}"
+                                                       Margin="2,4,2,0" Spacing="4">
+                                            <TextBlock Text="{Binding TimingText}"
+                                                       FontSize="13" Opacity="0.5"
+                                                       FontStyle="Italic" TextWrapping="Wrap"
+                                                       VerticalAlignment="Center"/>
+                                            <PathIcon Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12.5,7H11V13L16.2,16.2L17,14.9L12.5,12.2V7Z"
+                                                      Width="14" Height="14" Opacity="0.5"
+                                                      IsVisible="{Binding IsStreaming}"
+                                                      VerticalAlignment="Center"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Border>
                             </Panel>

@@ -4,7 +4,7 @@ using McpServerManager.Core.Services;
 
 namespace McpServerManager.Core.ViewModels;
 
-/// <summary>ViewModel for the Settings tab. Exposes speech filter word configuration.</summary>
+/// <summary>ViewModel for the Settings tab. Exposes speech filter phrase configuration.</summary>
 public partial class SettingsViewModel : ViewModelBase
 {
     private readonly SpeechFilterService _speechFilter = SpeechFilterService.Instance;
@@ -20,11 +20,19 @@ public partial class SettingsViewModel : ViewModelBase
         _speechFilterWords = _speechFilter.FilterText;
     }
 
-    /// <summary>Saves the current filter word list to disk.</summary>
+    /// <summary>Saves the current filter phrase list to disk.</summary>
     [RelayCommand]
     private void SaveFilterWords()
     {
         _speechFilter.FilterText = SpeechFilterWords;
-        StatusMessage = $"Saved {_speechFilter.GetFilterWords().Count} filter word(s).";
+        StatusMessage = $"Saved {_speechFilter.GetFilterWords().Count} filter phrase(s).";
+    }
+
+    /// <summary>Reverts the editor text to the last saved values.</summary>
+    [RelayCommand]
+    private void RevertFilterWords()
+    {
+        SpeechFilterWords = _speechFilter.FilterText;
+        StatusMessage = "Reverted to saved values.";
     }
 }

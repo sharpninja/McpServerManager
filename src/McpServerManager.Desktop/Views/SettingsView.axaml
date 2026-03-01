@@ -14,8 +14,8 @@
 
     <!-- Speech Filter Section Header -->
     <StackPanel Grid.Row="1" Spacing="4" Margin="0,0,0,8">
-      <TextBlock Text="Speech Filter Words" FontSize="16" FontWeight="SemiBold"/>
-      <TextBlock Text="Lines containing any of these words (case-insensitive) will be excluded from text-to-speech. One word or phrase per line."
+      <TextBlock Text="Speech Filter Phrases" FontSize="16" FontWeight="SemiBold"/>
+      <TextBlock Text="Lines containing any of these phrases (case-insensitive) will be excluded from text-to-speech. One phrase per line."
                  TextWrapping="Wrap" Opacity="0.7" FontSize="13"/>
     </StackPanel>
 
@@ -24,7 +24,7 @@
              Text="{Binding SpeechFilterWords, Mode=TwoWay}"
              AcceptsReturn="True"
              TextWrapping="Wrap"
-             Watermark="Enter filter words, one per line..."
+             Watermark="Enter filter phrases, one per line..."
              FontFamily="Cascadia Code,Consolas,Menlo,monospace"
              FontSize="14"
              MinHeight="200"
@@ -33,6 +33,7 @@
     <!-- Save Button + Status -->
     <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
       <Button Content="Save" Command="{Binding SaveFilterWordsCommand}" Padding="12,6"/>
+      <Button Content="Revert" Command="{Binding RevertFilterWordsCommand}" Padding="12,6"/>
       <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Opacity="0.7"/>
     </StackPanel>
 

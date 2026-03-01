@@ -67,6 +67,19 @@ public class ChatMessage : INotifyPropertyChanged
     /// <summary>Elapsed time from request submission to final response.</summary>
     public TimeSpan? FinalResponseDuration { get; set; }
 
+    private bool _isStreaming;
+    /// <summary>True while response is still streaming in.</summary>
+    public bool IsStreaming
+    {
+        get => _isStreaming;
+        set
+        {
+            if (_isStreaming == value) return;
+            _isStreaming = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsStreaming)));
+        }
+    }
+
     public bool HasTiming => !string.IsNullOrEmpty(_timingText);
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -91,8 +104,8 @@ public class ChatMessage : INotifyPropertyChanged
             ? FormatDuration(FirstResponseDuration.Value) : "—";
         var current = elapsed ?? FinalResponseDuration;
         var total = current.HasValue ? FormatDuration(current.Value) : "—";
-        var suffix = FinalResponseDuration.HasValue ? "" : " ⏳";
-        TimingText = $"{ts}  ·  first: {first}  ·  total: {total}{suffix}";
+        IsStreaming = !FinalResponseDuration.HasValue;
+        TimingText = $"{ts}  ·  first: {first}  ·  total: {total}";
     }
 
     /// <summary>Sets timing text from captured durations (finalized).</summary>

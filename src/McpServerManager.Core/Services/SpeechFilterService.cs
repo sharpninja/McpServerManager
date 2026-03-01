@@ -7,8 +7,8 @@ using Microsoft.Extensions.Logging;
 namespace McpServerManager.Core.Services;
 
 /// <summary>
-/// Manages a user-configurable list of filter words for text-to-speech output.
-/// Lines containing any filter word (case-insensitive substring match) are excluded from TTS.
+/// Manages a user-configurable list of filter phrases for text-to-speech output.
+/// Lines containing any filter phrase (case-insensitive substring match) are excluded from TTS.
 /// </summary>
 public sealed class SpeechFilterService
 {
@@ -38,7 +38,7 @@ public sealed class SpeechFilterService
     }
 
     /// <summary>
-    /// Gets or sets the raw filter text (one word/phrase per line).
+    /// Gets or sets the raw filter text (one phrase per line).
     /// Setting this value persists the list to disk.
     /// </summary>
     public string FilterText
@@ -62,7 +62,7 @@ public sealed class SpeechFilterService
 
     /// <summary>
     /// Returns true if the given line should be excluded from TTS because it contains
-    /// one or more filter words (case-insensitive substring match).
+    /// one or more filter phrases (case-insensitive substring match).
     /// </summary>
     public bool ShouldFilter(string line)
     {
@@ -81,7 +81,7 @@ public sealed class SpeechFilterService
         return false;
     }
 
-    /// <summary>Returns a snapshot of the current filter words.</summary>
+    /// <summary>Returns a snapshot of the current filter phrases.</summary>
     public IReadOnlyList<string> GetFilterWords()
     {
         lock (_lock)
@@ -102,12 +102,12 @@ public sealed class SpeechFilterService
                 {
                     _filterWords = ParseLines(text);
                 }
-                Logger.LogDebug("Loaded {Count} speech filter words", _filterWords.Count);
+                Logger.LogDebug("Loaded {Count} speech filter phrases", _filterWords.Count);
             }
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Failed to load speech filter words");
+            Logger.LogWarning(ex, "Failed to load speech filter phrases");
         }
     }
 
@@ -120,11 +120,11 @@ public sealed class SpeechFilterService
             {
                 File.WriteAllText(path, string.Join(Environment.NewLine, _filterWords));
             }
-            Logger.LogDebug("Saved {Count} speech filter words", _filterWords.Count);
+            Logger.LogDebug("Saved {Count} speech filter phrases", _filterWords.Count);
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Failed to save speech filter words");
+            Logger.LogWarning(ex, "Failed to save speech filter phrases");
         }
     }
 
