@@ -121,6 +121,12 @@ public sealed record McpVoiceSessionStatus
 
     [JsonPropertyName("lastTurnId")]
     public string? LastTurnId { get; init; }
+
+    [JsonPropertyName("turnCounter")]
+    public int TurnCounter { get; init; }
+
+    [JsonPropertyName("transcriptCount")]
+    public int TranscriptCount { get; init; }
 }
 
 /// <summary>Transcript response payload for a voice session.</summary>

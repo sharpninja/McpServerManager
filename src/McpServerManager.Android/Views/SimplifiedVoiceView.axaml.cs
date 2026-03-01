@@ -83,6 +83,7 @@ public partial class SimplifiedVoiceView : UserControl
     private bool _sendRequested;
     private string? _manualText;
     private bool _foregroundServiceRunning;
+    private Timer? _heartbeatTimer;
     private TextBox? _textInputBox;
     private Button? _pauseButton;
     private Button? _stopButton;
@@ -219,6 +220,9 @@ public partial class SimplifiedVoiceView : UserControl
         // Start foreground service to keep voice alive in background
         StartForegroundService("Voice session active. Listening...");
 
+        // Start heartbeat to keep session alive during idle periods
+        _heartbeatTimer = new Timer(OnHeartbeatTick, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+
         // Announce readiness and start listening
         PlayChime();
 
@@ -234,6 +238,8 @@ public partial class SimplifiedVoiceView : UserControl
         }
         finally
         {
+            _heartbeatTimer?.Dispose();
+            _heartbeatTimer = null;
             _conversationActive = false;
             _isPaused = false;
             _isSpeaking = false;
@@ -755,6 +761,25 @@ public partial class SimplifiedVoiceView : UserControl
         _sendRequested = true;
         if (_textInputBox != null)
             _textInputBox.Text = string.Empty;
+    }
+
+    private void OnHeartbeatTick(object? state)
+    {
+        var vm = VM;
+        if (vm == null || !_sessionReady || string.IsNullOrWhiteSpace(vm.SessionId)) return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await vm.RefreshStatusCommand.ExecuteAsync(null).ConfigureAwait(false);
+                _logger.LogDebug("Heartbeat OK for session {SessionId}", vm.SessionId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Heartbeat failed for session {SessionId}", vm.SessionId);
+            }
+        });
     }
 
     private void UpdateButtons()

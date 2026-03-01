@@ -91,13 +91,40 @@ public partial class VoiceConversationViewModel : ViewModelBase
         IsBusy = true;
         try
         {
+            var deviceId = Environment.MachineName;
+
+            // Try to reconnect to an existing session for this device
+            GlobalStatusChanged?.Invoke("Looking for existing voice session...");
+            StatusText = "Looking for existing voice session...";
+            try
+            {
+                var existing = await _voiceService.FindExistingSessionAsync(deviceId).ConfigureAwait(true);
+                if (existing is not null)
+                {
+                    SessionId = existing.SessionId;
+                    Language = string.IsNullOrWhiteSpace(existing.Language) ? Language : existing.Language;
+                    IsSessionActive = true;
+                    LastTurnId = existing.LastTurnId ?? string.Empty;
+                    StatusText = $"Resumed session {SessionId} (turn {existing.TurnCounter})";
+                    GlobalStatusChanged?.Invoke(StatusText);
+                    _logger.LogInformation("Resumed existing voice session {SessionId} (turns={TurnCounter}, transcripts={TranscriptCount})",
+                        SessionId, existing.TurnCounter, existing.TranscriptCount);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Device session lookup failed, falling back to create");
+            }
+
+            // No existing session — create a new one
             GlobalStatusChanged?.Invoke("Creating voice session...");
             StatusText = "Creating voice session...";
             var response = await _voiceService.CreateSessionAsync(new McpVoiceSessionCreateRequest
             {
                 Language = Language,
                 ClientName = "RequestTracker.Android",
-                DeviceId = Environment.MachineName
+                DeviceId = deviceId
             }).ConfigureAwait(true);
 
             SessionId = response.SessionId;

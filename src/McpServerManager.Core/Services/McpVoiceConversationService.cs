@@ -227,6 +227,22 @@ public sealed class McpVoiceConversationService
     }
 
     /// <summary>
+    /// Finds an active voice session for the specified device.
+    /// Returns <c>null</c> if no active session exists.
+    /// </summary>
+    public async Task<McpVoiceSessionStatus?> FindExistingSessionAsync(string deviceId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(deviceId);
+
+        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(true);
+        using var response = await client.GetAsync($"mcpserver/voice/session?deviceId={Uri.EscapeDataString(deviceId)}", cancellationToken).ConfigureAwait(true);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
+        return await response.Content.ReadFromJsonAsync<McpVoiceSessionStatus>(JsonOptions, cancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>
     /// Deletes a voice session and any associated in-memory state.
     /// </summary>
     public async Task DeleteSessionAsync(string sessionId, CancellationToken cancellationToken = default)
