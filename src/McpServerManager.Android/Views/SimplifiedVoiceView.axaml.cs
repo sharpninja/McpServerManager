@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -17,6 +18,7 @@ using AndroidOS = Android.OS;
 using McpServerManager.Android.Services;
 using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
+using McpServerManager.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace McpServerManager.Android.Views;
@@ -59,6 +61,7 @@ public class ChatMessage : INotifyPropertyChanged
 public partial class SimplifiedVoiceView : UserControl
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("SimplifiedVoiceView");
+    private static readonly Regex AnsiEscapePattern = new(@"\x1B\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
     private readonly IAndroidSpeechRecognitionService _stt = new AndroidSpeechRecognitionService();
     private readonly IAndroidTextToSpeechService _tts = new AndroidTextToSpeechService();
     private readonly IAndroidAudioFocusService _audioFocus = new AndroidAudioFocusService();
@@ -101,10 +104,45 @@ public partial class SimplifiedVoiceView : UserControl
         if (chatItems != null)
             chatItems.ItemsSource = _messages;
 
+        if (_autoCheck != null)
+            _autoCheck.IsCheckedChanged += OnAutoCheckedChanged;
+
         DetachedFromVisualTree += OnDetached;
     }
 
     private VoiceConversationViewModel? VM => DataContext as VoiceConversationViewModel;
+
+    // ── Auto-continue toggle ───────────────────────────────────────────
+    private async void OnAutoCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        // Start the mic loop when auto-turn is enabled and the session is ready but idle.
+        if (_autoCheck?.IsChecked != true || !_sessionReady || _conversationActive || _isDisposed)
+            return;
+
+        _loopCts?.Dispose();
+        _loopCts = new CancellationTokenSource();
+        _conversationActive = true;
+        UpdateButtons();
+
+        try
+        {
+            await RunConversationLoopAsync(_loopCts.Token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Conversation loop failed");
+            SetStatus($"Error: {ex.Message}");
+        }
+        finally
+        {
+            _conversationActive = false;
+            _isPaused = false;
+            _isSpeaking = false;
+            UpdateButtons();
+            SetMicState(_sessionReady ? "ready" : "idle");
+        }
+    }
 
     // ── Start/End Chat toggle ──────────────────────────────────────────
     private async void OnChatToggleClick(object? sender, RoutedEventArgs e)
@@ -262,7 +300,7 @@ public partial class SimplifiedVoiceView : UserControl
 
                 if (evt.Type == "chunk" && evt.Text is not null)
                 {
-                    accumulated.Append(evt.Text);
+                    accumulated.Append(AnsiEscapePattern.Replace(evt.Text, ""));
                     assistantBubble.Text = accumulated.ToString();
                     ScrollToBottom();
 
@@ -324,6 +362,13 @@ public partial class SimplifiedVoiceView : UserControl
                     ScrollToBottom();
                     break;
                 }
+            }
+
+            // Convert bare URIs to markdown links in the final accumulated display text.
+            if (isDone)
+            {
+                assistantBubble.Text = TextTransformations.ConvertBareUrisToMarkdownLinks(assistantBubble.Text ?? "");
+                ScrollToBottom();
             }
 
             // Speak any remaining buffered text
@@ -973,6 +1018,8 @@ public partial class SimplifiedVoiceView : UserControl
         if (_isDisposed) return;
         _isDisposed = true;
         DetachedFromVisualTree -= OnDetached;
+        if (_autoCheck != null)
+            _autoCheck.IsCheckedChanged -= OnAutoCheckedChanged;
         _loopCts?.Cancel();
         _tts.Stop();
         _tts.Dispose();

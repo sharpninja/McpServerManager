@@ -9,6 +9,7 @@ using McpServerManager.Core.Cqrs;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Services;
+using McpServerManager.Core.Utilities;
 
 namespace McpServerManager.Core.ViewModels;
 
@@ -180,7 +181,9 @@ public partial class ChatWindowViewModel : ViewModelBase
                 if (token.IsCancellationRequested && !result.WasCancelled) return;
                 assistantMsg.Text = result.WasCancelled
                     ? "[Cancelled]"
-                    : (result.Success ? (result.ReplyText ?? "") : "Error: " + (result.ErrorMessage ?? "Unknown error"));
+                    : (result.Success
+                        ? TextTransformations.ConvertBareUrisToMarkdownLinks(result.ReplyText ?? "")
+                        : "Error: " + (result.ErrorMessage ?? "Unknown error"));
                 IsLoading = false;
                 SendCommand.NotifyCanExecuteChanged();
             });
