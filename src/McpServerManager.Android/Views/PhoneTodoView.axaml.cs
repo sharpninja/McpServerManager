@@ -55,9 +55,9 @@ public partial class PhoneTodoView : UserControl
 
     private async void OnLoaded(object? sender, RoutedEventArgs e)
     {
+        // No auto-load here — workspace-change event triggers the initial load
+        // after the correct workspace path is set on the shared MCP client.
         _hasAutoLoaded = true;
-        if (DataContext is TodoListViewModel vm && vm.GroupedItems.Count == 0 && !vm.IsLoading)
-            await vm.LoadTodosCommand.ExecuteAsync(null);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -77,9 +77,6 @@ public partial class PhoneTodoView : UserControl
 
         SyncEditorFromViewModel(_currentVm);
         RefreshFormattedDetailFromViewModel();
-
-        if (_hasAutoLoaded && _currentVm.GroupedItems.Count == 0 && !_currentVm.IsLoading)
-            _ = _currentVm.LoadTodosCommand.ExecuteAsync(null);
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

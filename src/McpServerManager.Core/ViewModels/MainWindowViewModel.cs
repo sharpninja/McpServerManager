@@ -68,6 +68,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     internal readonly Mediator _mediator = new();
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
 
+    /// <summary>Raised when the active workspace path changes. Child VMs subscribe to refresh reactively.</summary>
+    public event Action<string>? WorkspacePathChanged;
+
     /// <summary>ViewModel for the Todo tab. Created lazily on first access.</summary>
     public TodoListViewModel TodoViewModel => _todoViewModel ??= CreateTodoViewModel();
     private TodoListViewModel? _todoViewModel;
@@ -76,6 +79,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     {
         var vm = new TodoListViewModel(_clipboardService, _mcpTodoService);
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
+        WorkspacePathChanged += path => DispatchToUi(() => _ = vm.RefreshForConnectionChangeAsync());
         return vm;
     }
 
@@ -88,6 +92,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         var vm = new WorkspaceViewModel(_clipboardService, _mcpWorkspaceService);
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
         vm.WorkspaceCatalogChanged += change => _ = RefreshWorkspacePickerAfterCatalogChangeAsync(change);
+        WorkspacePathChanged += path => DispatchToUi(() => _ = vm.RefreshForConnectionChangeAsync());
         return vm;
     }
 
@@ -128,6 +133,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 ?? string.Empty
         };
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
+        WorkspacePathChanged += path => DispatchToUi(() => _ = vm.RefreshForConnectionChangeAsync());
         return vm;
     }
 
@@ -434,6 +440,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
         if (_hasRegisteredCqrsHandlers)
             RegisterMcpServiceHandlers();
+
+        // Notify child VMs reactively — they self-refresh without imperative ordering.
+        WorkspacePathChanged?.Invoke(resolvedPath);
     }
 
     private async Task<string?> ResolveActiveConnectionApiKeyAsync(WorkspaceConnectionOption option, string baseUrl)
@@ -1062,8 +1071,14 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             ?? WorkspaceConnections[0];
 
         _suppressWorkspaceSelectionChanged = true;
-        SelectedWorkspaceConnection = selected;
-        _suppressWorkspaceSelectionChanged = false;
+        try
+        {
+            SelectedWorkspaceConnection = selected;
+        }
+        finally
+        {
+            _suppressWorkspaceSelectionChanged = false;
+        }
 
         // Initial picker population suppresses selection-changed switching to avoid duplicate work,
         // but we still need one real connection switch to set workspace path and refresh views.
@@ -1164,6 +1179,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     private async Task RefreshAllViewsForConnectionChangeAsync()
     {
+        // Session logs are owned by MainWindowViewModel — refresh directly.
         _logger.LogDebug("[Workspace Switch] Refreshing session logs...");
         try
         {
@@ -1176,52 +1192,8 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 ex.GetType().Name, ex.Message);
         }
 
-        if (_todoViewModel != null)
-        {
-            _logger.LogDebug("[Workspace Switch] Refreshing todo view...");
-            try
-            {
-                await _todoViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
-                _logger.LogDebug("[Workspace Switch] Todo view refreshed OK");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[Workspace Switch] Todo refresh failed ({ExType}: {ExMsg}); continuing",
-                    ex.GetType().Name, ex.Message);
-            }
-        }
-
-        if (_workspaceViewModel != null)
-        {
-            _logger.LogDebug("[Workspace Switch] Refreshing workspace view...");
-            try
-            {
-                await _workspaceViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
-                _logger.LogDebug("[Workspace Switch] Workspace view refreshed OK");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[Workspace Switch] Workspace view refresh failed ({ExType}: {ExMsg}); continuing",
-                    ex.GetType().Name, ex.Message);
-            }
-        }
-
-        if (_voiceConversationViewModel != null)
-        {
-            _logger.LogDebug("[Workspace Switch] Refreshing voice view...");
-            try
-            {
-                _voiceConversationViewModel.WorkspacePath = _mcpClient.WorkspacePath ?? string.Empty;
-                await _voiceConversationViewModel.RefreshForConnectionChangeAsync().ConfigureAwait(true);
-                _logger.LogDebug("[Workspace Switch] Voice view refreshed OK");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[Workspace Switch] Voice refresh failed ({ExType}: {ExMsg}); continuing",
-                    ex.GetType().Name, ex.Message);
-            }
-        }
-
+        // Child VMs (Todo, Workspace, Voice) are refreshed reactively via
+        // WorkspacePathChanged event — no imperative calls needed here.
         _logger.LogDebug("[Workspace Switch] All views refreshed.");
     }
 

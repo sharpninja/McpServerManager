@@ -59,12 +59,10 @@ public partial class TodoListView : UserControl
         }
     }
 
-    private async void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (_hasAutoLoaded) return;
+        // No auto-load — workspace-change event triggers the initial load.
         _hasAutoLoaded = true;
-        if (DataContext is TodoListViewModel vm)
-            await vm.LoadTodosCommand.ExecuteAsync(null);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

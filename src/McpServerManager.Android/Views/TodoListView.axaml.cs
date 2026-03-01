@@ -34,11 +34,10 @@ public partial class TodoListView : UserControl
             SaveCurrentSplitterToSettings(_wasPortrait.Value);
     }
 
-    private async void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        // No auto-load — workspace-change event triggers the initial load.
         _hasAutoLoaded = true;
-        if (DataContext is TodoListViewModel vm && vm.GroupedItems.Count == 0 && !vm.IsLoading)
-            await vm.LoadTodosCommand.ExecuteAsync(null);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -47,9 +46,6 @@ public partial class TodoListView : UserControl
         {
             vm.GetEditorText = () => Editor.Text;
             vm.PropertyChanged += OnViewModelPropertyChanged;
-            // Auto-load if DataContext arrived after Loaded event
-            if (_hasAutoLoaded && vm.GroupedItems.Count == 0 && !vm.IsLoading)
-                _ = vm.LoadTodosCommand.ExecuteAsync(null);
         }
     }
 
