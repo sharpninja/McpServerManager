@@ -30,6 +30,7 @@ public class ChatMessage : INotifyPropertyChanged
     private static readonly IBrush s_systemBrush = new SolidColorBrush(Color.FromArgb(40, 200, 160, 0));
 
     private string _text = "";
+    private string _timingText = "";
 
     public string Role { get; init; } = "";
 
@@ -44,6 +45,30 @@ public class ChatMessage : INotifyPropertyChanged
         }
     }
 
+    /// <summary>Formatted timing info displayed below assistant bubbles.</summary>
+    public string TimingText
+    {
+        get => _timingText;
+        set
+        {
+            if (_timingText == value) return;
+            _timingText = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TimingText)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasTiming)));
+        }
+    }
+
+    /// <summary>When the user submitted the request that produced this response.</summary>
+    public DateTimeOffset? RequestTimestamp { get; set; }
+
+    /// <summary>Elapsed time from request submission to first response chunk.</summary>
+    public TimeSpan? FirstResponseDuration { get; set; }
+
+    /// <summary>Elapsed time from request submission to final response.</summary>
+    public TimeSpan? FinalResponseDuration { get; set; }
+
+    public bool HasTiming => !string.IsNullOrEmpty(_timingText);
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public HorizontalAlignment HAlign =>
@@ -56,6 +81,27 @@ public class ChatMessage : INotifyPropertyChanged
 
     private bool IsUser => string.Equals(Role, "user", StringComparison.OrdinalIgnoreCase);
     private bool IsSystem => string.Equals(Role, "system", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Updates timing text. Pass <paramref name="elapsed"/> for live updates during streaming.</summary>
+    public void UpdateTiming(TimeSpan? elapsed = null)
+    {
+        if (RequestTimestamp is null) return;
+        var ts = RequestTimestamp.Value.ToLocalTime().ToString("h:mm:ss tt");
+        var first = FirstResponseDuration.HasValue
+            ? FormatDuration(FirstResponseDuration.Value) : "—";
+        var current = elapsed ?? FinalResponseDuration;
+        var total = current.HasValue ? FormatDuration(current.Value) : "—";
+        var suffix = FinalResponseDuration.HasValue ? "" : " ⏳";
+        TimingText = $"{ts}  ·  first: {first}  ·  total: {total}{suffix}";
+    }
+
+    /// <summary>Sets timing text from captured durations (finalized).</summary>
+    public void SetTimingFromDurations() => UpdateTiming();
+
+    private static string FormatDuration(TimeSpan d) =>
+        d.TotalSeconds < 1 ? $"{d.TotalMilliseconds:F0}ms"
+        : d.TotalMinutes < 1 ? $"{d.TotalSeconds:F1}s"
+        : $"{d.TotalMinutes:F1}m";
 }
 
 public partial class SimplifiedVoiceView : UserControl
@@ -280,6 +326,7 @@ public partial class SimplifiedVoiceView : UserControl
             var transcript = listenResult.Transcript!;
 
             // 2. Show user message in chat
+            var requestTime = DateTimeOffset.UtcNow;
             _messages.Add(new ChatMessage { Role = "user", Text = transcript });
             ScrollToBottom();
 
@@ -287,7 +334,7 @@ public partial class SimplifiedVoiceView : UserControl
             vm.TranscriptInput = transcript;
             SetMicState("thinking");
 
-            var assistantBubble = new ChatMessage { Role = "assistant" };
+            var assistantBubble = new ChatMessage { Role = "assistant", RequestTimestamp = requestTime };
             _messages.Add(assistantBubble);
             ScrollToBottom();
 
@@ -296,6 +343,7 @@ public partial class SimplifiedVoiceView : UserControl
             var sentenceBuffer = new StringBuilder();
             var spokenUpTo = 0;
             var isDone = false;
+            var firstChunkReceived = false;
             _isSpeaking = true;
             _ttsStopped = false;
             UpdateButtons();
@@ -306,6 +354,14 @@ public partial class SimplifiedVoiceView : UserControl
 
                 if (evt.Type == "chunk" && evt.Text is not null)
                 {
+                    var elapsed = DateTimeOffset.UtcNow - requestTime;
+                    if (!firstChunkReceived)
+                    {
+                        firstChunkReceived = true;
+                        assistantBubble.FirstResponseDuration = elapsed;
+                    }
+                    assistantBubble.UpdateTiming(elapsed);
+
                     accumulated.Append(AnsiEscapePattern.Replace(evt.Text, ""));
                     assistantBubble.Text = accumulated.ToString();
                     ScrollToBottom();
@@ -360,6 +416,7 @@ public partial class SimplifiedVoiceView : UserControl
                 else if (evt.Type == "done")
                 {
                     isDone = true;
+                    assistantBubble.FinalResponseDuration = DateTimeOffset.UtcNow - requestTime;
                 }
                 else if (evt.Type == "error")
                 {
@@ -374,6 +431,7 @@ public partial class SimplifiedVoiceView : UserControl
             if (isDone)
             {
                 assistantBubble.Text = TextTransformations.ConvertBareUrisToMarkdownLinks(assistantBubble.Text ?? "");
+                assistantBubble.SetTimingFromDurations();
                 ScrollToBottom();
             }
 
@@ -425,23 +483,38 @@ public partial class SimplifiedVoiceView : UserControl
         _messages.Add(new ChatMessage { Role = "system", Text = seedPrompt });
         ScrollToBottom();
 
-        var seedBubble = new ChatMessage { Role = "assistant" };
+        var seedRequestTime = DateTimeOffset.UtcNow;
+        var seedBubble = new ChatMessage { Role = "assistant", RequestTimestamp = seedRequestTime };
         _messages.Add(seedBubble);
         ScrollToBottom();
 
         var seedAccum = new StringBuilder();
+        var seedFirstChunk = false;
         await foreach (var evt in vm.SubmitTurnStreamingAsync(seedPrompt, ct).ConfigureAwait(true))
         {
             if (evt.Type == "chunk" && evt.Text is not null)
             {
+                var seedElapsed = DateTimeOffset.UtcNow - seedRequestTime;
+                if (!seedFirstChunk)
+                {
+                    seedFirstChunk = true;
+                    seedBubble.FirstResponseDuration = seedElapsed;
+                }
+                seedBubble.UpdateTiming(seedElapsed);
                 seedAccum.Append(evt.Text);
                 seedBubble.Text = seedAccum.ToString();
                 ScrollToBottom();
+            }
+            else if (evt.Type == "done")
+            {
+                seedBubble.FinalResponseDuration = DateTimeOffset.UtcNow - seedRequestTime;
             }
         }
 
         if (seedAccum.Length == 0)
             seedBubble.Text = vm.AssistantDisplayText ?? vm.StatusText ?? "(no response)";
+
+        seedBubble.SetTimingFromDurations();
 
         await _tts.SpeakAsync("Copilot ready", vm.Language, ct).ConfigureAwait(true);
         SetStatus("Copilot ready. Listening...");

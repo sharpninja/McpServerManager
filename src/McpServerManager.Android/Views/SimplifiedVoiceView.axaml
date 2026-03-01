@@ -35,7 +35,13 @@
                                         HorizontalAlignment="Stretch"
                                         Background="{Binding BubbleBrush}"
                                         IsVisible="{Binding IsAssistant}">
-                                    <md:MarkdownScrollViewer Markdown="{Binding Text}" Margin="0"/>
+                                    <StackPanel>
+                                        <md:MarkdownScrollViewer Markdown="{Binding Text}" Margin="0"/>
+                                        <TextBlock Text="{Binding TimingText}"
+                                                   IsVisible="{Binding HasTiming}"
+                                                   FontSize="13" Opacity="0.5" Margin="2,4,2,0"
+                                                   FontStyle="Italic" TextWrapping="Wrap"/>
+                                    </StackPanel>
                                 </Border>
                             </Panel>
                         </DataTemplate>
