@@ -23,8 +23,6 @@ public partial class VoiceConversationViewModel : ViewModelBase
 
     private McpVoiceConversationService _voiceService;
     private CancellationTokenSource? _activeTurnCts;
-    private string _mcpBaseUrl;
-    private string? _mcpApiKey;
 
     [ObservableProperty] private string _sessionId = string.Empty;
     [ObservableProperty] private string _language = "en-US";
@@ -65,8 +63,6 @@ public partial class VoiceConversationViewModel : ViewModelBase
     /// </summary>
     public VoiceConversationViewModel(McpVoiceConversationService service)
     {
-        _mcpBaseUrl = "";
-        _mcpApiKey = null;
         _voiceService = service ?? throw new ArgumentNullException(nameof(service));
     }
 
