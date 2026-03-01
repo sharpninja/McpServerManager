@@ -111,7 +111,10 @@ public class ChatMessage : INotifyPropertyChanged
     /// <summary>Sets timing text from captured durations (finalized).</summary>
     public void SetTimingFromDurations() => UpdateTiming();
 
-    private static string FormatDuration(TimeSpan d) =>
+    private static string FormatDuration(TimeSpan d) => FormatDurationStatic(d);
+
+    /// <summary>Formats a duration for display. Used by ChatLogService.</summary>
+    public static string FormatDurationStatic(TimeSpan d) =>
         d.TotalSeconds < 1 ? $"{d.TotalMilliseconds:F0}ms"
         : d.TotalMinutes < 1 ? $"{d.TotalSeconds:F1}s"
         : $"{d.TotalMinutes:F1}m";
@@ -448,6 +451,22 @@ public partial class SimplifiedVoiceView : UserControl
                 ScrollToBottom();
             }
 
+            // Persist the exchange to the rolling chat log
+            ChatLogService.Instance.LogExchange(new ChatLogEntry
+            {
+                SessionId = vm.SessionId,
+                RequestTimestamp = requestTime.ToString("O"),
+                RequestText = transcript,
+                ResponseText = assistantBubble.Text,
+                FirstResponseDuration = assistantBubble.FirstResponseDuration.HasValue
+                    ? ChatMessage.FormatDurationStatic(assistantBubble.FirstResponseDuration.Value) : null,
+                TotalDuration = assistantBubble.FinalResponseDuration.HasValue
+                    ? ChatMessage.FormatDurationStatic(assistantBubble.FinalResponseDuration.Value) : null,
+                FirstResponseMs = (long?)assistantBubble.FirstResponseDuration?.TotalMilliseconds,
+                TotalMs = (long?)assistantBubble.FinalResponseDuration?.TotalMilliseconds,
+                Success = isDone
+            });
+
             // Speak any remaining buffered text
             var remainder = sentenceBuffer.ToString().Trim();
             if (!string.IsNullOrWhiteSpace(remainder) && !_ttsStopped)
@@ -528,6 +547,21 @@ public partial class SimplifiedVoiceView : UserControl
             seedBubble.Text = vm.AssistantDisplayText ?? vm.StatusText ?? "(no response)";
 
         seedBubble.SetTimingFromDurations();
+
+        ChatLogService.Instance.LogExchange(new ChatLogEntry
+        {
+            SessionId = vm.SessionId,
+            RequestTimestamp = seedRequestTime.ToString("O"),
+            RequestText = seedPrompt,
+            ResponseText = seedBubble.Text,
+            FirstResponseDuration = seedBubble.FirstResponseDuration.HasValue
+                ? ChatMessage.FormatDurationStatic(seedBubble.FirstResponseDuration.Value) : null,
+            TotalDuration = seedBubble.FinalResponseDuration.HasValue
+                ? ChatMessage.FormatDurationStatic(seedBubble.FinalResponseDuration.Value) : null,
+            FirstResponseMs = (long?)seedBubble.FirstResponseDuration?.TotalMilliseconds,
+            TotalMs = (long?)seedBubble.FinalResponseDuration?.TotalMilliseconds,
+            Success = true
+        });
 
         await _tts.SpeakAsync("Copilot ready", vm.Language, ct).ConfigureAwait(true);
         SetStatus("Copilot ready. Listening...");
