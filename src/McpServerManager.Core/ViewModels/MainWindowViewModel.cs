@@ -402,13 +402,20 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
         _activeMcpBaseUrl = _defaultMcpBaseUrl;
 
-        ApplyWorkspaceConnectionOptions(
-            new[]
-            {
-                WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, primaryWorkspaceRootPath: null, apiKey: _defaultMcpApiKey)
-            },
-            preferredSelection: null,
-            preferredBaseUrl: _defaultMcpBaseUrl);
+        // Pre-populate the workspace picker with a placeholder.
+        // No switch is triggered here — the real switch happens in LoadWorkspaceConnectionsAsync
+        // after the workspace catalog is fetched and the saved workspace key is resolved.
+        var defaultOption = WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, primaryWorkspaceRootPath: null, _defaultMcpApiKey);
+        WorkspaceConnections = new ObservableCollection<WorkspaceConnectionOption>(new[] { defaultOption });
+        _suppressWorkspaceSelectionChanged = true;
+        try
+        {
+            SelectedWorkspaceConnection = defaultOption;
+        }
+        finally
+        {
+            _suppressWorkspaceSelectionChanged = false;
+        }
     }
 
     private static string NormalizeMcpBaseUrl(string mcpBaseUrl)
