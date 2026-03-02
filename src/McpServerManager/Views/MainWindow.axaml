@@ -301,11 +301,14 @@
         <!-- Status Bar. Bottom of window for both orientations; row/column set in code-behind -->
         <Border x:Name="StatusBarBorder" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Padding="8,6">
             <Grid ColumnDefinitions="*,Auto">
-                <SelectableTextBlock Grid.Column="0"
-                                     Text="{Binding StatusMessage}"
-                                     FontWeight="Bold"
-                                     VerticalAlignment="Center"
-                                     HorizontalAlignment="Left"/>
+                <ScrollViewer Grid.Column="0"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <SelectableTextBlock Text="{Binding StatusMessage}"
+                                         FontWeight="Bold"
+                                         VerticalAlignment="Center"
+                                         HorizontalAlignment="Left"/>
+                </ScrollViewer>
                 <SelectableTextBlock Grid.Column="1"
                            Text="{Binding AppVersionDisplay}"
                            VerticalAlignment="Center"

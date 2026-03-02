@@ -32,13 +32,17 @@
         <!-- Status Bar -->
         <views:AnimatedStatusBar Grid.Row="1" Margin="6,0,6,6" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
             <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-                <SelectableTextBlock x:Name="StatusMessageText"
-                                     Grid.Column="0"
-                                     Text="{Binding StatusViewModel.Status}"
-                                     FontWeight="Bold"
-                                     VerticalAlignment="Center"
-                                     TextTrimming="CharacterEllipsis"
-                                     PointerPressed="StatusMessageText_OnPointerPressed"/>
+                <ScrollViewer Grid.Column="0"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <SelectableTextBlock x:Name="StatusMessageText"
+                                         Text="{Binding StatusViewModel.Status}"
+                                         FontWeight="Bold"
+                                         VerticalAlignment="Center"
+                                         PointerPressed="StatusMessageText_OnPointerPressed"
+                                         PointerReleased="StatusMessageText_OnPointerReleased"
+                                         PointerCaptureLost="StatusMessageText_OnPointerCaptureLost"/>
+                </ScrollViewer>
                 <ComboBox Grid.Column="1"
                           MinWidth="220"
                           MaxWidth="340"
