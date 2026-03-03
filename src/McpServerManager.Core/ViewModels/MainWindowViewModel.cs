@@ -409,17 +409,15 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         _mcpWorkspaceService = new McpWorkspaceService(_mcpClient, _defaultMcpBaseUri);
 
         _activeMcpBaseUrl = _defaultMcpBaseUrl;
-        _agentEventStreamService = new McpAgentEventStreamService(
+        _agentEventStreamService = AgentEventStreamFactory.Create(
             _activeMcpBaseUrl,
             apiKey: _defaultMcpApiKey,
-            bearerToken: _activeBearerToken)
-        {
-            ResolveBaseUrl = () => _activeMcpBaseUrl,
-            ResolveBearerToken = () => _activeBearerToken,
-            ResolveApiKey = () => _defaultMcpApiKey,
-            ResolveWorkspacePath = () => SelectedWorkspaceConnection?.WorkspaceRootPath
-                ?? _mcpClient.WorkspacePath
-        };
+            bearerToken: _activeBearerToken,
+            resolveBaseUrl: () => _activeMcpBaseUrl,
+            resolveBearerToken: () => _activeBearerToken,
+            resolveApiKey: () => _defaultMcpApiKey,
+            resolveWorkspacePath: () => SelectedWorkspaceConnection?.WorkspaceRootPath
+                ?? _mcpClient.WorkspacePath);
 
         // Pre-populate the workspace picker with a placeholder.
         // No switch is triggered here — the real switch happens in LoadWorkspaceConnectionsAsync
