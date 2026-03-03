@@ -489,31 +489,47 @@ public sealed class AndroidWakeWordForegroundService : Service
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
     {
-        var action = intent?.Action;
-        if (string.Equals(action, ActionStop, StringComparison.Ordinal))
+        StartCommandResult Core()
         {
-            StopForegroundCompat();
-            StopSelfResult(startId);
-            return StartCommandResult.NotSticky;
+            var action = intent?.Action;
+            if (string.Equals(action, ActionStop, StringComparison.Ordinal))
+            {
+                StopForegroundCompat();
+                StopSelfResult(startId);
+                return StartCommandResult.NotSticky;
+            }
+
+            var notificationManager = GetSystemService(Context.NotificationService) as NotificationManager;
+            if (notificationManager != null)
+                EnsureChannel(notificationManager);
+
+            var statusText = intent?.GetStringExtra(ExtraStatusText);
+            var notification = BuildNotification(statusText);
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
+                StartForeground(NotificationId, notification, global::Android.Content.PM.ForegroundService.TypeMicrophone);
+            else
+                StartForeground(NotificationId, notification);
+            return StartCommandResult.Sticky;
         }
 
-        var notificationManager = GetSystemService(Context.NotificationService) as NotificationManager;
-        if (notificationManager != null)
-            EnsureChannel(notificationManager);
-
-        var statusText = intent?.GetStringExtra(ExtraStatusText);
-        var notification = BuildNotification(statusText);
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
-            StartForeground(NotificationId, notification, global::Android.Content.PM.ForegroundService.TypeMicrophone);
-        else
-            StartForeground(NotificationId, notification);
-        return StartCommandResult.Sticky;
+        return AndroidCrashDiagnostics.ExecuteFatal(
+            "AndroidWakeWordForegroundService.OnStartCommand",
+            Core,
+            "Wake-word foreground service crashed while processing a start/stop command.");
     }
 
     public override void OnDestroy()
     {
-        StopForegroundCompat();
-        base.OnDestroy();
+        void Core()
+        {
+            StopForegroundCompat();
+            base.OnDestroy();
+        }
+
+        AndroidCrashDiagnostics.ExecuteFatal(
+            "AndroidWakeWordForegroundService.OnDestroy",
+            Core,
+            "Wake-word foreground service crashed while shutting down.");
     }
 
     private Notification BuildNotification(string? statusText)

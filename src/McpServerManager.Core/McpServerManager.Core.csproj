@@ -13,18 +13,19 @@
     <PackageReference Include="Avalonia" Version="11.3.12" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
     <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.12" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="FluentAvaloniaUI" Version="2.4.1" />
     <PackageReference Include="GitVersion.MsBuild" Version="6.6.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Handlebars.Net" Version="2.1.6" />
-    <PackageReference Include="YamlDotNet" Version="15.1.0" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Client\McpServer.Client.csproj" />
+    <ProjectReference Include="..\..\lib\McpServer\src\McpServer.UI.Core\McpServer.UI.Core.csproj" />
     <ProjectReference Include="..\..\lib\Markdown.Avalonia\Markdown.Avalonia\Markdown.Avalonia.csproj" />
   </ItemGroup>
 </Project>

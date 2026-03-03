@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using McpServerManager.Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace McpServerManager.Core.Services;
 
@@ -23,6 +24,8 @@ namespace McpServerManager.Core.Services;
 public sealed class McpVoiceConversationService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly ILogger s_logger = AppLogService.Instance.CreateLogger("McpVoiceConversationService");
+    private const string NgrokSkipBrowserWarningHeader = "ngrok-skip-browser-warning";
 
     private readonly string _baseUrl;
     private readonly string? _apiKey;
@@ -104,72 +107,41 @@ public sealed class McpVoiceConversationService
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         ArgumentNullException.ThrowIfNull(request);
 
-        var client = await CreateAuthorizedClientAsync(TimeSpan.FromMinutes(5), cancellationToken).ConfigureAwait(false);
-        HttpResponseMessage? response = null;
-        try
+        var yieldedAnyEvents = false;
+        IAsyncEnumerable<McpVoiceTurnStreamEvent>? fallbackStream = null;
+        await using var enumerator = StreamTurnCoreAsync(sessionId, request, cancellationToken)
+            .GetAsyncEnumerator(cancellationToken);
+
+        while (true)
         {
-            var jsonBody = JsonSerializer.Serialize(request, JsonOptions);
-            using var content = new StringContent(jsonBody, System.Text.Encoding.UTF8, "application/json");
-
-            var httpRequest = new HttpRequestMessage(HttpMethod.Post,
-                $"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}/turn/stream")
-            { Content = content };
-            // SSE requires text/event-stream Accept header for proper proxy behavior
-            httpRequest.Headers.Accept.Clear();
-            httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
-
-            // ResponseHeadersRead starts returning stream data immediately
-            response = await client.SendAsync(
-                httpRequest,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken).ConfigureAwait(false);
-            await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            using var reader = new StreamReader(stream);
-
-            while (!reader.EndOfStream)
+            bool hasNext;
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
-
-                if (line is null)
-                    break;
-
-                // SSE format: "data: {json}"
-                if (!line.StartsWith("data: ", StringComparison.Ordinal))
-                    continue;
-
-                var json = line.AsSpan(6);
-                if (json.IsEmpty)
-                    continue;
-
-                McpVoiceTurnStreamEvent? evt;
-                try
-                {
-                    evt = JsonSerializer.Deserialize<McpVoiceTurnStreamEvent>(json, JsonOptions);
-                }
-                catch (JsonException)
-                {
-                    continue;
-                }
-
-                if (evt is not null)
-                {
-                    if (evt.Text is not null)
-                        evt = evt with { Text = SanitizeStreamText(evt.Text) };
-                    yield return evt;
-                }
-
-                if (evt?.Type is "done" or "error")
-                    yield break;
+                hasNext = await enumerator.MoveNextAsync().ConfigureAwait(false);
             }
+            catch (Exception ex) when (ShouldFallbackToNonStreamingTurn(ex, cancellationToken, yieldedAnyEvents))
+            {
+                s_logger.LogWarning(
+                    ex,
+                    "Streaming voice transport failed before the first SSE event for session {SessionId}; falling back to non-streaming turn.",
+                    sessionId);
+
+                fallbackStream = SubmitTurnWithFallbackAsync(sessionId, request, cancellationToken);
+                break;
+            }
+
+            if (!hasNext)
+                yield break;
+
+            yieldedAnyEvents = true;
+            yield return enumerator.Current;
         }
-        finally
-        {
-            response?.Dispose();
-            client.Dispose();
-        }
+
+        if (fallbackStream is null)
+            yield break;
+
+        await foreach (var evt in fallbackStream.ConfigureAwait(false))
+            yield return evt;
     }
 
     /// <summary>
@@ -280,6 +252,7 @@ public sealed class McpVoiceConversationService
             client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
 
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        client.DefaultRequestHeaders.TryAddWithoutValidation(NgrokSkipBrowserWarningHeader, "true");
 
         if (!string.IsNullOrWhiteSpace(workspacePath))
             client.DefaultRequestHeaders.Add("X-Workspace-Path", workspacePath);
@@ -325,6 +298,149 @@ public sealed class McpVoiceConversationService
         }
         catch { /* not JSON or missing field — use raw body */ }
         return body;
+    }
+
+    private async IAsyncEnumerable<McpVoiceTurnStreamEvent> StreamTurnCoreAsync(
+        string sessionId,
+        McpVoiceTurnRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var client = await CreateAuthorizedClientAsync(TimeSpan.FromMinutes(5), cancellationToken).ConfigureAwait(false);
+        HttpResponseMessage? response = null;
+        try
+        {
+            var jsonBody = JsonSerializer.Serialize(request, JsonOptions);
+            using var content = new StringContent(jsonBody, System.Text.Encoding.UTF8, "application/json");
+
+            using var httpRequest = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}/turn/stream")
+            { Content = content };
+
+            // SSE requires text/event-stream Accept header for proper proxy behavior.
+            httpRequest.Headers.Accept.Clear();
+            httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+
+            response = await client.SendAsync(
+                httpRequest,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken).ConfigureAwait(false);
+            await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var reader = new StreamReader(stream);
+
+            while (!reader.EndOfStream)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+                if (line is null)
+                    yield break;
+
+                if (!line.StartsWith("data: ", StringComparison.Ordinal))
+                    continue;
+
+                var json = line.AsSpan(6);
+                if (json.IsEmpty)
+                    continue;
+
+                McpVoiceTurnStreamEvent? evt;
+                try
+                {
+                    evt = JsonSerializer.Deserialize<McpVoiceTurnStreamEvent>(json, JsonOptions);
+                }
+                catch (JsonException)
+                {
+                    continue;
+                }
+
+                if (evt is null)
+                    continue;
+
+                if (evt.Text is not null)
+                    evt = evt with { Text = SanitizeStreamText(evt.Text) };
+
+                yield return evt;
+
+                if (evt.Type is "done" or "error")
+                    yield break;
+            }
+        }
+        finally
+        {
+            response?.Dispose();
+            client.Dispose();
+        }
+    }
+
+    private async IAsyncEnumerable<McpVoiceTurnStreamEvent> SubmitTurnWithFallbackAsync(
+        string sessionId,
+        McpVoiceTurnRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var response = await SubmitTurnAsync(sessionId, request, cancellationToken).ConfigureAwait(false);
+        var displayText = SanitizeStreamText(response.AssistantDisplayText ?? string.Empty);
+
+        if (!string.IsNullOrWhiteSpace(displayText))
+        {
+            yield return new McpVoiceTurnStreamEvent
+            {
+                Type = "chunk",
+                TurnId = response.TurnId,
+                Text = displayText
+            };
+        }
+
+        if (!string.IsNullOrWhiteSpace(response.Error) &&
+            !string.Equals(response.Status, "completed", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return new McpVoiceTurnStreamEvent
+            {
+                Type = "error",
+                TurnId = response.TurnId,
+                Status = response.Status,
+                Message = response.Error,
+                ToolCalls = response.ToolCalls,
+                LatencyMs = response.LatencyMs
+            };
+            yield break;
+        }
+
+        yield return new McpVoiceTurnStreamEvent
+        {
+            Type = "done",
+            TurnId = response.TurnId,
+            Status = string.IsNullOrWhiteSpace(response.Status) ? "completed" : response.Status,
+            ToolCalls = response.ToolCalls,
+            LatencyMs = response.LatencyMs
+        };
+    }
+
+    private static bool ShouldFallbackToNonStreamingTurn(Exception ex, CancellationToken cancellationToken, bool yieldedAnyEvents)
+        => !cancellationToken.IsCancellationRequested &&
+           !yieldedAnyEvents &&
+           IsStreamingTransportFailure(ex);
+
+    private static bool IsStreamingTransportFailure(Exception ex)
+    {
+        for (var current = ex; current is not null; current = current.InnerException)
+        {
+            if (current is OperationCanceledException)
+                return false;
+
+            var message = current.Message;
+            if (string.IsNullOrWhiteSpace(message))
+                continue;
+
+            if (message.Contains("socket closed", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("connection reset", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("unexpected end of stream", StringComparison.OrdinalIgnoreCase))
+            {
+                return current is HttpRequestException or WebException or IOException || ReferenceEquals(current, ex);
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

@@ -126,6 +126,9 @@ public partial class SimplifiedVoiceView : UserControl
     private readonly IAndroidTextToSpeechService _tts = new AndroidTextToSpeechService();
     private readonly IAndroidAudioFocusService _audioFocus = new AndroidAudioFocusService();
     private readonly ObservableCollection<ChatMessage> _messages = new();
+    private readonly CancellationTokenSource _viewLifetimeCts = new();
+    private readonly object _activeOperationsSync = new();
+    private readonly HashSet<Task> _activeOperations = [];
 
     private ScrollViewer? _chatScroller;
     private ToggleButton? _autoCheck;
@@ -144,6 +147,7 @@ public partial class SimplifiedVoiceView : UserControl
     private string? _manualText;
     private bool _foregroundServiceRunning;
     private Timer? _heartbeatTimer;
+    private int _heartbeatInFlight;
     private TextBox? _textInputBox;
     private Button? _pauseButton;
     private Button? _stopButton;
@@ -181,15 +185,15 @@ public partial class SimplifiedVoiceView : UserControl
             return;
 
         _loopCts?.Dispose();
-        _loopCts = new CancellationTokenSource();
+        _loopCts = CancellationTokenSource.CreateLinkedTokenSource(_viewLifetimeCts.Token);
         _conversationActive = true;
         UpdateButtons();
 
         try
         {
-            await RunConversationLoopAsync(_loopCts.Token).ConfigureAwait(true);
+            await TrackOperationAsync(RunConversationLoopAsync(_loopCts.Token)).ConfigureAwait(true);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) when (_loopCts?.IsCancellationRequested == true || _viewLifetimeCts.IsCancellationRequested) { }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Conversation loop failed");
@@ -209,37 +213,49 @@ public partial class SimplifiedVoiceView : UserControl
     private async void OnChatToggleClick(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
+        if (_isDisposed)
+            return;
 
-        if (_sessionReady)
+        try
         {
-            // End the session
-            _loopCts?.Cancel();
-            _conversationActive = false;
-            _tts.Stop();
+            if (_sessionReady)
+            {
+                // End the session
+                _loopCts?.Cancel();
+                _conversationActive = false;
+                _tts.Stop();
 
-            var vm = VM;
-            if (vm != null && !string.IsNullOrWhiteSpace(vm.SessionId))
-                await vm.EndSessionCommand.ExecuteAsync(null).ConfigureAwait(true);
+                var vm = VM;
+                if (vm != null && !string.IsNullOrWhiteSpace(vm.SessionId))
+                    await vm.EndSessionCommand.ExecuteAsync(null).ConfigureAwait(true);
 
-            _sessionReady = false;
-            _isPaused = false;
-            _isSpeaking = false;
-            _ttsStopped = false;
-            StopForegroundService();
-            UpdateButtons();
-            UpdateInputPreview(null);
-            SetMicState("idle");
-            SetStatus("Session ended.");
+                _sessionReady = false;
+                _isPaused = false;
+                _isSpeaking = false;
+                _ttsStopped = false;
+                StopForegroundService();
+                UpdateButtons();
+                UpdateInputPreview(null);
+                SetMicState("idle");
+                SetStatus("Session ended.");
+            }
+            else
+            {
+                // Start a new session
+                await TrackOperationAsync(StartSessionAsync(_viewLifetimeCts.Token)).ConfigureAwait(true);
+            }
         }
-        else
+        catch (OperationCanceledException) when (_viewLifetimeCts.IsCancellationRequested) { }
+        catch (Exception ex)
         {
-            // Start a new session
-            await StartSessionAsync().ConfigureAwait(true);
+            _logger.LogError(ex, "Chat toggle failed");
+            SetStatus($"Error: {ex.Message}");
         }
     }
 
-    private async Task StartSessionAsync()
+    private async Task StartSessionAsync(CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         var vm = VM;
         if (vm == null) return;
 
@@ -252,6 +268,7 @@ public partial class SimplifiedVoiceView : UserControl
         ScrollToBottom();
 
         await vm.CreateSessionCommand.ExecuteAsync(null).ConfigureAwait(true);
+        ct.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(vm.SessionId))
         {
             var reason = string.IsNullOrWhiteSpace(vm.StatusText) ? "Failed to create session." : vm.StatusText;
@@ -268,20 +285,24 @@ public partial class SimplifiedVoiceView : UserControl
         ScrollToBottom();
 
         // Seed session: tell Copilot to read workspace instructions
-        await SeedSessionAsync(vm, CancellationToken.None).ConfigureAwait(true);
+        await SeedSessionAsync(vm, ct).ConfigureAwait(true);
+        ct.ThrowIfCancellationRequested();
+        if (_isDisposed)
+            return;
 
         _sessionReady = true;
         _conversationActive = true;
         _isPaused = false;
         _ttsStopped = false;
-        _loopCts = new CancellationTokenSource();
+        _loopCts?.Dispose();
+        _loopCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         UpdateButtons();
 
         // Start foreground service to keep voice alive in background
         StartForegroundService("Voice session active. Listening...");
 
         // Start heartbeat to keep session alive during idle periods
-        _heartbeatTimer = new Timer(OnHeartbeatTick, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+        StartHeartbeatTimer();
 
         // Announce readiness and start listening
         PlayChime();
@@ -298,8 +319,7 @@ public partial class SimplifiedVoiceView : UserControl
         }
         finally
         {
-            _heartbeatTimer?.Dispose();
-            _heartbeatTimer = null;
+            StopHeartbeatTimer();
             _conversationActive = false;
             _isPaused = false;
             _isSpeaking = false;
@@ -311,6 +331,7 @@ public partial class SimplifiedVoiceView : UserControl
     // ── Main conversation loop ─────────────────────────────────────────
     private async Task RunConversationLoopAsync(CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         var vm = VM;
         if (vm == null) return;
 
@@ -419,11 +440,8 @@ public partial class SimplifiedVoiceView : UserControl
                     while (spokenUpTo < sentences.Count && !_ttsStopped)
                     {
                         SetMicState("speaking");
-                        try
-                        {
-                            await _tts.SpeakAsync(sentences[spokenUpTo], vm.Language, ct).ConfigureAwait(true);
-                        }
-                        catch (OperationCanceledException) when (_ttsStopped) { break; }
+                        if (!await TrySpeakAsync(sentences[spokenUpTo], vm.Language, ct).ConfigureAwait(true))
+                            break;
                         spokenUpTo++;
                     }
                 }
@@ -470,11 +488,7 @@ public partial class SimplifiedVoiceView : UserControl
             if (!string.IsNullOrWhiteSpace(remainder) && !_ttsStopped)
             {
                 SetMicState("speaking");
-                try
-                {
-                    await _tts.SpeakAsync(remainder, vm.Language, ct).ConfigureAwait(true);
-                }
-                catch (OperationCanceledException) { /* ok */ }
+                _ = await TrySpeakAsync(remainder, vm.Language, ct).ConfigureAwait(true);
             }
 
             _isSpeaking = false;
@@ -497,6 +511,7 @@ public partial class SimplifiedVoiceView : UserControl
     // ── Seed session with workspace instructions ──────────────────────
     private async Task SeedSessionAsync(VoiceConversationViewModel vm, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         var workspacePath = vm.WorkspacePath;
         if (string.IsNullOrWhiteSpace(workspacePath))
         {
@@ -561,13 +576,16 @@ public partial class SimplifiedVoiceView : UserControl
             Success = true
         });
 
-        await _tts.SpeakAsync("Copilot ready", vm.Language, ct).ConfigureAwait(true);
+        if (!await TrySpeakAsync("Copilot ready", vm.Language, ct).ConfigureAwait(true))
+            return;
+
         SetStatus("Copilot ready. Listening...");
     }
 
     // ── Listen loop with command detection ─────────────────────────────
     private async Task<ListenResult> ListenForCommandAsync(CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         var accumulated = new StringBuilder();
         var emptyCount = 0;
 
@@ -788,7 +806,18 @@ public partial class SimplifiedVoiceView : UserControl
 
     private void SetStatus(string text)
     {
-        if (VM != null) VM.StatusText = text;
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            if (!_isDisposed && VM != null)
+                VM.StatusText = text;
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_isDisposed && VM != null)
+                VM.StatusText = text;
+        });
     }
 
     private void UpdateInputPreview(string? text)
@@ -883,21 +912,67 @@ public partial class SimplifiedVoiceView : UserControl
 
     private void OnHeartbeatTick(object? state)
     {
-        var vm = VM;
-        if (vm == null || !_sessionReady || string.IsNullOrWhiteSpace(vm.SessionId)) return;
+        if (_isDisposed || _viewLifetimeCts.IsCancellationRequested)
+            return;
 
-        _ = Task.Run(async () =>
+        if (Interlocked.Exchange(ref _heartbeatInFlight, 1) == 1)
+            return;
+
+        _ = TrackOperationAsync(RunHeartbeatAsync());
+    }
+
+    private void StartHeartbeatTimer()
+    {
+        StopHeartbeatTimer();
+        _heartbeatTimer = new Timer(OnHeartbeatTick, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+    }
+
+    private void StopHeartbeatTimer()
+    {
+        Interlocked.Exchange(ref _heartbeatInFlight, 0);
+        var timer = Interlocked.Exchange(ref _heartbeatTimer, null);
+        timer?.Dispose();
+    }
+
+    private async Task RunHeartbeatAsync()
+    {
+        string? sessionId = null;
+
+        try
         {
-            try
+            var heartbeatRequest = await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                await vm.RefreshStatusCommand.ExecuteAsync(null).ConfigureAwait(false);
-                _logger.LogDebug("Heartbeat OK for session {SessionId}", vm.SessionId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Heartbeat failed for session {SessionId}", vm.SessionId);
-            }
-        });
+                if (_isDisposed || !_sessionReady)
+                    return (SessionId: (string?)null, RefreshTask: (Task?)null);
+
+                var vm = VM;
+                if (vm == null || string.IsNullOrWhiteSpace(vm.SessionId))
+                    return (SessionId: (string?)null, RefreshTask: (Task?)null);
+
+                return (SessionId: vm.SessionId, RefreshTask: (Task?)vm.RefreshStatusCommand.ExecuteAsync(null));
+            });
+
+            if (heartbeatRequest.RefreshTask == null || string.IsNullOrWhiteSpace(heartbeatRequest.SessionId))
+                return;
+
+            sessionId = heartbeatRequest.SessionId;
+            await heartbeatRequest.RefreshTask.ConfigureAwait(false);
+            _logger.LogDebug("Heartbeat OK for session {SessionId}", sessionId);
+        }
+        catch (OperationCanceledException) when (_viewLifetimeCts.IsCancellationRequested || _loopCts?.IsCancellationRequested == true)
+        {
+        }
+        catch (Exception ex)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+                _logger.LogWarning(ex, "Heartbeat failed.");
+            else
+                _logger.LogWarning(ex, "Heartbeat failed for session {SessionId}", sessionId);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _heartbeatInFlight, 0);
+        }
     }
 
     private void UpdateButtons()
@@ -965,19 +1040,8 @@ public partial class SimplifiedVoiceView : UserControl
             // Speak the corresponding sentence
             if (i < speakSentences.Length)
             {
-                try
-                {
-                    await _tts.SpeakAsync(speakSentences[i], language, ct).ConfigureAwait(true);
-                }
-                catch (OperationCanceledException) when (_ttsStopped)
-                {
+                if (!await TrySpeakAsync(speakSentences[i], language, ct).ConfigureAwait(true))
                     break;
-                }
-                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-                {
-                    // TTS interrupted (e.g. Stop() during speaking), break
-                    break;
-                }
             }
         }
 
@@ -1104,6 +1168,79 @@ public partial class SimplifiedVoiceView : UserControl
             DispatcherPriority.Background);
     }
 
+    private Task TrackOperationAsync(Task operation)
+    {
+        lock (_activeOperationsSync)
+            _activeOperations.Add(operation);
+
+        _ = operation.ContinueWith(static (task, state) =>
+        {
+            var view = (SimplifiedVoiceView)state!;
+            lock (view._activeOperationsSync)
+                view._activeOperations.Remove(task);
+        }, this, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+
+        return operation;
+    }
+
+    private async Task<bool> TrySpeakAsync(string text, string? language, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(text) || _ttsStopped || _isDisposed || _viewLifetimeCts.IsCancellationRequested)
+            return false;
+
+        try
+        {
+            await _tts.SpeakAsync(text, language, ct).ConfigureAwait(true);
+            return true;
+        }
+        catch (OperationCanceledException) when (_ttsStopped || ct.IsCancellationRequested || _viewLifetimeCts.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (ObjectDisposedException ex) when (_isDisposed && string.Equals(ex.ObjectName, nameof(AndroidTextToSpeechService), StringComparison.Ordinal))
+        {
+            _logger.LogDebug(ex, "Ignoring TTS after voice view teardown");
+            return false;
+        }
+        catch (InvalidOperationException ex) when (_isDisposed && ex.Message.Contains("Android activity is not available.", StringComparison.Ordinal))
+        {
+            _logger.LogDebug(ex, "Ignoring TTS after Android activity teardown");
+            return false;
+        }
+    }
+
+    private async Task DisposeServicesAfterOperationsAsync()
+    {
+        try
+        {
+            Task[] trackedOperations;
+            lock (_activeOperationsSync)
+                trackedOperations = [.. _activeOperations];
+
+            if (trackedOperations.Length > 0)
+            {
+                var drainTask = Task.WhenAll(trackedOperations);
+                var completedTask = await Task.WhenAny(drainTask, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(false);
+                if (completedTask != drainTask)
+                    _logger.LogDebug("Timed out waiting for voice view operations to finish before disposal.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Voice view operation drain failed during teardown");
+        }
+        finally
+        {
+            StopHeartbeatTimer();
+            _loopCts?.Dispose();
+            _tts.Dispose();
+            _stt.Dispose();
+            _audioFocus.Dispose();
+            _viewLifetimeCts.Dispose();
+            StopForegroundService();
+        }
+    }
+
     // ── Foreground service helpers ───────────────────────────────────────
 
     private void StartForegroundService(string statusText)
@@ -1163,11 +1300,9 @@ public partial class SimplifiedVoiceView : UserControl
         DetachedFromVisualTree -= OnDetached;
         if (_autoCheck != null)
             _autoCheck.IsCheckedChanged -= OnAutoCheckedChanged;
+        _viewLifetimeCts.Cancel();
         _loopCts?.Cancel();
         _tts.Stop();
-        _tts.Dispose();
-        _stt.Dispose();
-        _audioFocus.Dispose();
-        StopForegroundService();
+        _ = DisposeServicesAfterOperationsAsync();
     }
 }

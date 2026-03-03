@@ -19,4 +19,18 @@ public class MainApplication : global::Android.App.Application
         : base(handle, transfer)
     {
     }
+
+    public override void OnCreate()
+    {
+        void Core()
+        {
+            base.OnCreate();
+            Services.AndroidCrashDiagnostics.Initialize(this);
+        }
+
+        Services.AndroidCrashDiagnostics.ExecuteFatal(
+            "MainApplication.OnCreate",
+            Core,
+            "Android application crashed while installing early crash diagnostics.");
+    }
 }

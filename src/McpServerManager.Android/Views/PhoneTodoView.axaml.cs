@@ -33,8 +33,6 @@ public partial class PhoneTodoView : UserControl
         DataContextChanged += OnDataContextChanged;
         Loaded += OnLoaded;
         AttachedToVisualTree += OnAttachedToVisualTree;
-        Editor.FontFamily = new Avalonia.Media.FontFamily("avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code");
-        Editor.WordWrap = true;
         UpdateScreenVisibility();
         RefreshFormattedDetailFromViewModel();
     }

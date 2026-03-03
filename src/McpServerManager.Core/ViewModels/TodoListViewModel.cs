@@ -21,9 +21,11 @@ public partial class TodoListViewModel : ViewModelBase
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("TodoListViewModel");
     private readonly Mediator _mediator = new();
     private readonly IClipboardService _clipboardService;
+    private readonly UiCoreViewModelEvaluator _uiCoreEvaluator;
     private List<TodoListEntry> _allEntries = new();
     private CancellationTokenSource? _activeCts;
     private bool _isBusyHandlerRegistered;
+    private bool _hasRunUiCoreListEvaluation;
 
     // ── Observable properties ───────────────────────────────────────────────
 
@@ -65,6 +67,7 @@ public partial class TodoListViewModel : ViewModelBase
     public TodoListViewModel(IClipboardService clipboardService, McpTodoService service)
     {
         _clipboardService = clipboardService;
+        _uiCoreEvaluator = new UiCoreViewModelEvaluator(todoService: service);
         RegisterCqrsHandlers(service);
     }
 
@@ -74,7 +77,9 @@ public partial class TodoListViewModel : ViewModelBase
         // Design-time / standalone fallback — creates its own client.
         var client = McpServerRestClientFactory.Create(AppSettings.ResolveMcpBaseUrl(), TimeSpan.FromSeconds(5));
         var promptClient = McpServerRestClientFactory.Create(AppSettings.ResolveMcpBaseUrl(), TimeSpan.FromMinutes(15));
-        RegisterCqrsHandlers(new McpTodoService(client, promptClient));
+        var todoService = new McpTodoService(client, promptClient);
+        _uiCoreEvaluator = new UiCoreViewModelEvaluator(todoService: todoService);
+        RegisterCqrsHandlers(todoService);
     }
 
     private void RegisterCqrsHandlers(McpTodoService service)
@@ -668,6 +673,7 @@ public partial class TodoListViewModel : ViewModelBase
             var result = await _mediator.QueryAsync<QueryTodosQuery, McpTodoQueryResult>(
                 new QueryTodosQuery { Done = IncludeCompleted ? null : false });
 
+            await EvaluateUiCoreTodoListParityAsync(result);
             _allEntries = BuildEntries(result.Items);
             ApplyFilters();
             RestoreSelectionById(previouslySelectedId);
@@ -696,6 +702,40 @@ public partial class TodoListViewModel : ViewModelBase
         {
             IsLoading = false;
         }
+    }
+
+    private async Task EvaluateUiCoreTodoListParityAsync(McpTodoQueryResult currentResult)
+    {
+        if (_hasRunUiCoreListEvaluation)
+            return;
+
+        _hasRunUiCoreListEvaluation = true;
+        var evaluation = await _uiCoreEvaluator
+            .EvaluateTodoListAsync(currentResult, IncludeCompleted)
+            .ConfigureAwait(true);
+
+        if (!evaluation.Success)
+        {
+            _logger.LogWarning(
+                "UI.Core TodoListViewModel evaluation failed: {Error}",
+                evaluation.Error ?? "unknown error");
+            return;
+        }
+
+        if (evaluation.IsMatch)
+        {
+            _logger.LogInformation(
+                "UI.Core TodoListViewModel parity check passed ({Count} items).",
+                evaluation.CurrentCount);
+            return;
+        }
+
+        _logger.LogWarning(
+            "UI.Core TodoListViewModel parity mismatch. Current={CurrentCount}, UiCore={UiCoreCount}, MissingInUiCore=[{MissingInUiCore}], MissingInCurrent=[{MissingInCurrent}]",
+            evaluation.CurrentCount,
+            evaluation.UiCoreCount,
+            string.Join(", ", evaluation.MissingInUiCore),
+            string.Join(", ", evaluation.MissingInCurrent));
     }
 
     private void RestoreSelectionById(string? todoId)

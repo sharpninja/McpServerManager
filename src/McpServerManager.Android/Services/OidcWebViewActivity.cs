@@ -60,64 +60,88 @@ public class OidcWebViewActivity : Activity
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
-        base.OnCreate(savedInstanceState);
-        _logger.LogInformation("OidcWebViewActivity OnCreate");
-        _currentInstance = new WeakReference<OidcWebViewActivity>(this);
-
-        var url = Intent?.GetStringExtra("url");
-        if (string.IsNullOrWhiteSpace(url))
+        void Core()
         {
-            _logger.LogWarning("OidcWebViewActivity started without a URL; finishing");
-            Finish();
-            return;
+            base.OnCreate(savedInstanceState);
+            _logger.LogInformation("OidcWebViewActivity OnCreate");
+            _currentInstance = new WeakReference<OidcWebViewActivity>(this);
+
+            var url = Intent?.GetStringExtra("url");
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                _logger.LogWarning("OidcWebViewActivity started without a URL; finishing");
+                Finish();
+                return;
+            }
+
+            _webView = new WebView(this);
+            _webView.Settings.JavaScriptEnabled = true;
+            _webView.Settings.DomStorageEnabled = true;
+            _webView.Settings.SetSupportMultipleWindows(false);
+            _webView.Settings.UserAgentString = _webView.Settings.UserAgentString?
+                .Replace("; wv)", ")"); // Remove "wv" marker so sites don't block WebView
+
+            _webView.SetWebViewClient(new OidcWebViewClient());
+            SetContentView(_webView);
+
+            _logger.LogInformation("OidcWebViewActivity loading URL: {Url}", url);
+            _webView.LoadUrl(url);
+
+            ScheduleTimeoutDialog();
         }
 
-        _webView = new WebView(this);
-        _webView.Settings.JavaScriptEnabled = true;
-        _webView.Settings.DomStorageEnabled = true;
-        _webView.Settings.SetSupportMultipleWindows(false);
-        _webView.Settings.UserAgentString = _webView.Settings.UserAgentString?
-            .Replace("; wv)", ")"); // Remove "wv" marker so sites don't block WebView
-
-        _webView.SetWebViewClient(new OidcWebViewClient());
-        SetContentView(_webView);
-
-        _logger.LogInformation("OidcWebViewActivity loading URL: {Url}", url);
-        _webView.LoadUrl(url);
-
-        ScheduleTimeoutDialog();
+        AndroidCrashDiagnostics.ExecuteFatal(
+            "OidcWebViewActivity.OnCreate",
+            Core,
+            "OIDC WebView activity crashed during creation.");
     }
 
     public override void OnBackPressed()
     {
-        if (_webView != null && _webView.CanGoBack())
+        void Core()
         {
-            _webView.GoBack();
-            return;
+            if (_webView != null && _webView.CanGoBack())
+            {
+                _webView.GoBack();
+                return;
+            }
+
+            _logger.LogInformation("OidcWebViewActivity back pressed; finishing");
+            base.OnBackPressed();
         }
 
-        _logger.LogInformation("OidcWebViewActivity back pressed; finishing");
-        base.OnBackPressed();
+        AndroidCrashDiagnostics.ExecuteFatal(
+            "OidcWebViewActivity.OnBackPressed",
+            Core,
+            "OIDC WebView activity crashed while handling back navigation.");
     }
 
     protected override void OnDestroy()
     {
-        _logger.LogInformation("OidcWebViewActivity OnDestroy");
-        CancelTimeout();
-
-        if (_currentInstance != null && _currentInstance.TryGetTarget(out var instance) && instance == this)
+        void Core()
         {
-            _currentInstance = null;
+            _logger.LogInformation("OidcWebViewActivity OnDestroy");
+            CancelTimeout();
+
+            if (_currentInstance != null && _currentInstance.TryGetTarget(out var instance) && instance == this)
+            {
+                _currentInstance = null;
+            }
+
+            if (_webView != null)
+            {
+                _webView.StopLoading();
+                _webView.Destroy();
+                _webView = null;
+            }
+
+            base.OnDestroy();
         }
 
-        if (_webView != null)
-        {
-            _webView.StopLoading();
-            _webView.Destroy();
-            _webView = null;
-        }
-
-        base.OnDestroy();
+        AndroidCrashDiagnostics.ExecuteFatal(
+            "OidcWebViewActivity.OnDestroy",
+            Core,
+            "OIDC WebView activity crashed while shutting down.");
     }
 
     /// <summary>Schedules the force-close dialog after <see cref="TimeoutSeconds"/>.</summary>

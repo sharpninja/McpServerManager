@@ -2,7 +2,6 @@ using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using AvaloniaEdit;
 using McpServerManager.Core.ViewModels;
 
 namespace McpServerManager.Android.Views;
@@ -86,14 +85,12 @@ public partial class WorkspaceView : UserControl
             SetEditorTextIfDifferent(WorkspacePlanPromptEditor, vm.EditorPlanPromptText);
     }
 
-    private static void ConfigurePromptEditor(TextEditor editor)
+    private static void ConfigurePromptEditor(TextBox editor)
     {
-        editor.FontFamily = new Avalonia.Media.FontFamily("avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code");
-        editor.WordWrap = true;
         editor.Text = "";
     }
 
-    private static void SetEditorTextIfDifferent(TextEditor editor, string? text)
+    private static void SetEditorTextIfDifferent(TextBox editor, string? text)
     {
         var next = text ?? "";
         if (!string.Equals(editor.Text ?? "", next, StringComparison.Ordinal))

@@ -19,54 +19,103 @@ public class MainActivity : AvaloniaMainActivity<App>
 {
     protected override void OnCreate(Bundle? savedInstanceState)
     {
-        global::Android.Util.Log.Info("McpSM", "[MainActivity] OnCreate entered");
-        base.OnCreate(savedInstanceState);
-        AndroidActivityHost.Register(this);
-        global::Android.Util.Log.Info("McpSM", "[MainActivity] OnCreate completed");
+        void Core()
+        {
+            global::Android.Util.Log.Info("McpSM", "[MainActivity] OnCreate entered");
+            base.OnCreate(savedInstanceState);
+            AndroidActivityHost.Register(this);
+            global::Android.Util.Log.Info("McpSM", "[MainActivity] OnCreate completed");
+        }
+
+        AndroidCrashDiagnostics.ExecuteFatal(
+            "MainActivity.OnCreate",
+            Core,
+            "Main Android activity crashed during creation.");
     }
 
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
     {
-        global::Android.Util.Log.Info("McpSM", "[MainActivity] CustomizeAppBuilder");
-        return base.CustomizeAppBuilder(builder)
-            .WithInterFont();
+        AppBuilder Core()
+        {
+            global::Android.Util.Log.Info("McpSM", "[MainActivity] CustomizeAppBuilder");
+            return base.CustomizeAppBuilder(builder)
+                .WithInterFont();
+        }
+
+        return AndroidCrashDiagnostics.ExecuteFatal(
+            "MainActivity.CustomizeAppBuilder",
+            Core,
+            "Main Android activity crashed while building the Avalonia application host.");
     }
 
     public override void OnConfigurationChanged(Configuration newConfig)
     {
-        base.OnConfigurationChanged(newConfig);
-        DeviceFormFactor.NotifyDisplayChanged();
+        void Core()
+        {
+            base.OnConfigurationChanged(newConfig);
+            DeviceFormFactor.NotifyDisplayChanged();
+        }
+
+        AndroidCrashDiagnostics.ExecuteFatal(
+            "MainActivity.OnConfigurationChanged",
+            Core,
+            "Main Android activity crashed while reacting to a configuration change.");
     }
 
     protected override void OnResume()
     {
-        base.OnResume();
-        AndroidActivityHost.Register(this);
+        void Core()
+        {
+            base.OnResume();
+            AndroidActivityHost.Register(this);
+        }
+
+        AndroidCrashDiagnostics.ExecuteFatal(
+            "MainActivity.OnResume",
+            Core,
+            "Main Android activity crashed while resuming.");
     }
 
     public override void OnRequestPermissionsResult(int requestCode, string[]? permissions, Permission[] grantResults)
     {
-        AndroidActivityHost.OnRequestPermissionsResult(requestCode, permissions, grantResults);
-        base.OnRequestPermissionsResult(requestCode, permissions ?? [], grantResults);
+        void Core()
+        {
+            AndroidActivityHost.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+            base.OnRequestPermissionsResult(requestCode, permissions ?? [], grantResults);
+        }
+
+        AndroidCrashDiagnostics.ExecuteFatal(
+            "MainActivity.OnRequestPermissionsResult",
+            Core,
+            "Main Android activity crashed while dispatching runtime-permission results.");
     }
 
 #pragma warning disable CS0618 // OnBackPressed is deprecated; used here to preserve expected Android back behavior in Avalonia phone views.
     public override void OnBackPressed()
     {
-        bool handled;
-        if (Dispatcher.UIThread.CheckAccess())
+        bool Core()
         {
-            handled = AndroidBackNavigationService.TryHandleBack();
-        }
-        else
-        {
-            handled = Dispatcher.UIThread.InvokeAsync(AndroidBackNavigationService.TryHandleBack).GetAwaiter().GetResult();
+            bool handled;
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                handled = AndroidBackNavigationService.TryHandleBack();
+            }
+            else
+            {
+                handled = Dispatcher.UIThread.InvokeAsync(AndroidBackNavigationService.TryHandleBack).GetAwaiter().GetResult();
+            }
+
+            if (handled)
+                return true;
+
+            base.OnBackPressed();
+            return false;
         }
 
-        if (handled)
-            return;
-
-        base.OnBackPressed();
+        AndroidCrashDiagnostics.ExecuteFatal(
+            "MainActivity.OnBackPressed",
+            Core,
+            "Main Android activity crashed while processing a back-navigation request.");
     }
 #pragma warning restore CS0618
 }

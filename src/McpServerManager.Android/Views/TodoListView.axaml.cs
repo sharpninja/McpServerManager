@@ -22,8 +22,6 @@ public partial class TodoListView : UserControl
         SizeChanged += OnSizeChanged;
         DataContextChanged += OnDataContextChanged;
         Loaded += OnLoaded;
-        Editor.FontFamily = new Avalonia.Media.FontFamily("avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code");
-        Editor.WordWrap = true;
     }
 
     public void ApplySettings(LayoutSettings settings) => _layoutSettings = settings;

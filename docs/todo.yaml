@@ -491,3 +491,32 @@ DEPLOY-STATUS:
     description:
     - Pipeline run 22580481045 completed successfully.
     - F-Droid index-v1.json resolves to McpServerManager-0.0.1-160.apk (versionCode 101) at https://sharpninja.github.io/McpServerManager/repo.
+Infrastructure:
+  high-priority:
+  - id: android-crash-diagnostics-pipeline
+    title: Android crash diagnostics pipeline and repro workflow
+    estimate: 6h
+    done: true
+    completed: 2026-03-03T00:00:00Z
+    description:
+    - Implement early Android/global crash capture with persistent artifacts for phone crash diagnosis.
+    - Add device-side Motorola repro workflow artifacts for logcat, tombstone, and process-exit-reason capture.
+    done-summary: Implemented shared Android crash diagnostics with early application hookup, persistent fatal/exit/boundary artifacts, adb collection workflow script/docs, and verified the Android Debug build succeeds.
+    technical-details:
+    - Install Java uncaught-exception handling in MainApplication before Avalonia App initialization.
+    - Persist fatal crash reports and native-boundary breadcrumbs under app files directory for recovery on next launch.
+    - Add repository script/documentation for adb-based capture workflow.
+    functional-requirements:
+    - FR-RTUI-117
+    technical-requirements:
+    - TR-RTUI-127
+    - TR-RTUI-128
+    implementation-tasks:
+    - task: Add Android crash diagnostics service and early MainApplication hookup
+      done: true
+    - task: Persist and replay fatal crash reports plus active native-operation breadcrumbs
+      done: true
+    - task: Add adb collection script and workflow documentation
+      done: true
+    - task: Validate Android project builds after diagnostics changes
+      done: true

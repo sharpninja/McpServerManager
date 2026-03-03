@@ -11,7 +11,6 @@ using McpServerManager.Core.ViewModels;
 using System;
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace McpServerManager.Android;
 
@@ -20,114 +19,132 @@ public partial class App : Application
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("App");
     public override void Initialize()
     {
-        AvaloniaXamlLoader.Load(this);
+        AndroidCrashDiagnostics.ExecuteFatal(
+            "App.Initialize",
+            () => AvaloniaXamlLoader.Load(this),
+            "Android Avalonia application crashed while loading XAML resources.");
     }
 
     public override void OnFrameworkInitializationCompleted()
     {
-        WireGlobalExceptionHandlers();
-
-        if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+        void Core()
         {
-            DisableAvaloniaDataAnnotationValidation();
-            AndroidLogcatBridge.EnsureInitialized();
-            AndroidOidcJwtCacheInvalidationMonitor.EnsureInitialized();
-            global::Android.Util.Log.Info("McpSM", "[App] OnFrameworkInitializationCompleted entered (Android)");
-
-            try
+            if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
             {
-                var connectionVm = new ConnectionViewModel();
-                connectionVm.SetExternalUrlOpener(AndroidBrowserService.TryOpenUrl);
-                connectionVm.SetOidcPostTokenForegroundActivator(AndroidBrowserService.TryBringAppToForeground);
-                connectionVm.SetQrCodeScanner(AndroidQrScannerService.ScanQrCodeAsync);
-                connectionVm.SetOidcTokenCacheAccessors(
-                    () => AndroidConnectionPreferencesService.TryLoadOidcJwt(connectionVm.Host, connectionVm.Port, out var jwtToken)
-                        ? jwtToken
-                        : null,
-                    token =>
-                    {
-                        if (string.IsNullOrWhiteSpace(token))
-                        {
-                            AndroidConnectionPreferencesService.ClearOidcJwt();
-                            return;
-                        }
+                DisableAvaloniaDataAnnotationValidation();
+                AndroidLogcatBridge.EnsureInitialized();
+                AndroidCrashDiagnostics.ReplayPendingDiagnostics();
+                AndroidOidcJwtCacheInvalidationMonitor.EnsureInitialized();
+                global::Android.Util.Log.Info("McpSM", "[App] OnFrameworkInitializationCompleted entered (Android)");
 
-                        AndroidConnectionPreferencesService.SaveOidcJwt(connectionVm.Host, connectionVm.Port, token);
-                    });
-                var connectionView = new ConnectionDialogView { DataContext = connectionVm };
-                singleView.MainView = connectionView;
-
-                void OpenMainView(string mcpBaseUrl, string? mcpApiKey, string? bearerToken)
+                try
                 {
-                    try
-                    {
-                        _logger.LogInformation("OpenMainView: entered for {McpBaseUrl}. TokenPresent={HasToken}, BearerPresent={HasBearer}", mcpBaseUrl, !string.IsNullOrWhiteSpace(mcpApiKey), !string.IsNullOrWhiteSpace(bearerToken));
-                        if (Uri.TryCreate(mcpBaseUrl, UriKind.Absolute, out var uri))
+                    var connectionVm = new ConnectionViewModel();
+                    connectionVm.SetExternalUrlOpener(AndroidBrowserService.TryOpenUrl);
+                    connectionVm.SetOidcPostTokenForegroundActivator(AndroidBrowserService.TryBringAppToForeground);
+                    connectionVm.SetQrCodeScanner(AndroidQrScannerService.ScanQrCodeAsync);
+                    connectionVm.SetOidcTokenCacheAccessors(
+                        () => AndroidConnectionPreferencesService.TryLoadOidcJwt(connectionVm.Host, connectionVm.Port, out var jwtToken)
+                            ? jwtToken
+                            : null,
+                        token =>
                         {
-                            var saveHost = uri.Host;
-                            var savePort = uri.Port.ToString(CultureInfo.InvariantCulture);
-                            _logger.LogInformation("OpenMainView: saving connection {Host}:{Port}", saveHost, savePort);
-                            AndroidConnectionPreferencesService.Save(saveHost, savePort);
-                            _logger.LogInformation("OpenMainView: save call completed for {Host}:{Port}", saveHost, savePort);
-                        }
-                        else
-                        {
-                            _logger.LogWarning("OpenMainView: Uri.TryCreate failed for '{McpBaseUrl}' — connection not saved", mcpBaseUrl);
-                        }
+                            if (string.IsNullOrWhiteSpace(token))
+                            {
+                                AndroidConnectionPreferencesService.ClearOidcJwt();
+                                return;
+                            }
 
-                        var clipboardService = new AndroidClipboardService();
-                        var systemNotificationService = new AndroidSystemNotificationService();
-                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, systemNotificationService);
-                        vm.SaveWorkspaceKey = AndroidConnectionPreferencesService.SaveWorkspaceKey;
-                        vm.LoadWorkspaceKey = AndroidConnectionPreferencesService.LoadWorkspaceKey;
-                        vm.LogoutRequested += (_, _) =>
+                            AndroidConnectionPreferencesService.SaveOidcJwt(connectionVm.Host, connectionVm.Port, token);
+                        });
+                    var connectionView = new ConnectionDialogView { DataContext = connectionVm };
+                    singleView.MainView = connectionView;
+
+                    void OpenMainView(string mcpBaseUrl, string? mcpApiKey, string? bearerToken)
+                    {
+                        try
                         {
-                            _logger.LogInformation("Logout requested; clearing tokens and returning to connection dialog");
-                            connectionVm.LogoutCommand.Execute(null);
-                            AndroidConnectionPreferencesService.ClearOidcJwt();
+                            _logger.LogInformation("OpenMainView: entered for {McpBaseUrl}. TokenPresent={HasToken}, BearerPresent={HasBearer}", mcpBaseUrl, !string.IsNullOrWhiteSpace(mcpApiKey), !string.IsNullOrWhiteSpace(bearerToken));
+                            if (Uri.TryCreate(mcpBaseUrl, UriKind.Absolute, out var uri))
+                            {
+                                var saveHost = uri.Host;
+                                var savePort = uri.Port.ToString(CultureInfo.InvariantCulture);
+                                _logger.LogInformation("OpenMainView: saving connection {Host}:{Port}", saveHost, savePort);
+                                AndroidConnectionPreferencesService.Save(saveHost, savePort);
+                                _logger.LogInformation("OpenMainView: save call completed for {Host}:{Port}", saveHost, savePort);
+                            }
+                            else
+                            {
+                                _logger.LogWarning("OpenMainView: Uri.TryCreate failed for '{McpBaseUrl}' — connection not saved", mcpBaseUrl);
+                            }
+
+                            var clipboardService = new AndroidClipboardService();
+                            var systemNotificationService = new AndroidSystemNotificationService();
+                            var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, systemNotificationService);
+                            vm.SaveWorkspaceKey = AndroidConnectionPreferencesService.SaveWorkspaceKey;
+                            vm.LoadWorkspaceKey = AndroidConnectionPreferencesService.LoadWorkspaceKey;
+                            vm.LogoutRequested += (_, _) =>
+                            {
+                                _logger.LogInformation("Logout requested; clearing tokens and returning to connection dialog");
+                                connectionVm.LogoutCommand.Execute(null);
+                                AndroidConnectionPreferencesService.ClearOidcJwt();
+                                connectionVm.IsConnecting = false;
+                                connectionVm.ErrorMessage = "";
+                                singleView.MainView = connectionView;
+                            };
+                            singleView.MainView = new AdaptiveMainView { DataContext = vm };
+                            vm.InitializeAfterWindowShown();
+                        }
+                        catch (Exception ex)
+                        {
+                            AndroidCrashDiagnostics.RecordDiagnosticEvent(
+                                "App.OpenMainView",
+                                ex,
+                                "Failed while constructing Android main view after connection success.");
+                            _logger.LogError(ex, "Connection failed");
+                            connectionVm.ErrorMessage = $"Connection failed: {ex.Message}";
                             connectionVm.IsConnecting = false;
-                            connectionVm.ErrorMessage = "";
                             singleView.MainView = connectionView;
-                        };
-                        singleView.MainView = new AdaptiveMainView { DataContext = vm };
-                        vm.InitializeAfterWindowShown();
+                        }
                     }
-                    catch (Exception ex)
+
+                    connectionVm.Connected += connection =>
                     {
-                        _logger.LogError(ex, "Connection failed");
-                        connectionVm.ErrorMessage = $"Connection failed: {ex.Message}";
-                        connectionVm.IsConnecting = false;
-                        singleView.MainView = connectionView;
+                        _logger.LogInformation("Connected event fired for {McpBaseUrl}. TokenPresent={HasToken}, BearerPresent={HasBearer}", connection.BaseUrl, !string.IsNullOrWhiteSpace(connection.ApiKey), !string.IsNullOrWhiteSpace(connection.BearerToken));
+                        OpenMainView(connection.BaseUrl, connection.ApiKey, connection.BearerToken);
+                    };
+
+                    if (AndroidConnectionPreferencesService.TryLoad(out var savedHost, out var savedPort))
+                    {
+                        _logger.LogInformation("Startup: loaded saved connection {Host}:{Port}; auto-connecting", savedHost, savedPort);
+                        connectionVm.Host = savedHost;
+                        connectionVm.Port = savedPort;
+                        connectionVm.ErrorMessage = "";
+                        _logger.LogInformation("Startup: VM updated with saved Host={Host}, Port={Port}; executing ConnectCommand", connectionVm.Host, connectionVm.Port);
+                        connectionVm.ConnectCommand.Execute(null);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Startup: no saved connection found; showing connection dialog with defaults Host={Host}, Port={Port}", connectionVm.Host, connectionVm.Port);
                     }
                 }
-
-                connectionVm.Connected += connection =>
+                catch (Exception ex)
                 {
-                    _logger.LogInformation("Connected event fired for {McpBaseUrl}. TokenPresent={HasToken}, BearerPresent={HasBearer}", connection.BaseUrl, !string.IsNullOrWhiteSpace(connection.ApiKey), !string.IsNullOrWhiteSpace(connection.BearerToken));
-                    OpenMainView(connection.BaseUrl, connection.ApiKey, connection.BearerToken);
-                };
-
-                if (AndroidConnectionPreferencesService.TryLoad(out var savedHost, out var savedPort))
-                {
-                    _logger.LogInformation("Startup: loaded saved connection {Host}:{Port}; auto-connecting", savedHost, savedPort);
-                    connectionVm.Host = savedHost;
-                    connectionVm.Port = savedPort;
-                    connectionVm.ErrorMessage = "";
-                    _logger.LogInformation("Startup: VM updated with saved Host={Host}, Port={Port}; executing ConnectCommand", connectionVm.Host, connectionVm.Port);
-                    connectionVm.ConnectCommand.Execute(null);
-                }
-                else
-                {
-                    _logger.LogInformation("Startup: no saved connection found; showing connection dialog with defaults Host={Host}, Port={Port}", connectionVm.Host, connectionVm.Port);
+                    AndroidCrashDiagnostics.RecordDiagnosticEvent(
+                        "App.OnFrameworkInitializationCompleted",
+                        ex,
+                        "Android application initialization failed after Avalonia framework startup.");
+                    _logger.LogError(ex, "Android init failed");
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Android init failed");
-            }
+
+            base.OnFrameworkInitializationCompleted();
         }
 
-        base.OnFrameworkInitializationCompleted();
+        AndroidCrashDiagnostics.ExecuteFatal(
+            "App.OnFrameworkInitializationCompleted",
+            Core,
+            "Android Avalonia application crashed while completing framework initialization.");
     }
 
     private void DisableAvaloniaDataAnnotationValidation()
@@ -136,29 +153,5 @@ public partial class App : Application
             BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
         foreach (var plugin in dataValidationPluginsToRemove)
             BindingPlugins.DataValidators.Remove(plugin);
-    }
-
-    private static void WireGlobalExceptionHandlers()
-    {
-        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
-        {
-            var ex = args.ExceptionObject as Exception;
-            _logger.LogError(ex, "Unhandled exception");
-            StatusViewModel.Instance.AddStatus(ex?.ToString() ?? args.ExceptionObject?.ToString() ?? "Unknown unhandled exception");
-        };
-
-        global::Android.Runtime.AndroidEnvironment.UnhandledExceptionRaiser += (_, args) =>
-        {
-            _logger.LogError(args.Exception, "Android Java unhandled exception");
-            StatusViewModel.Instance.AddStatus(args.Exception?.ToString() ?? "Unknown Android Java unhandled exception");
-            args.Handled = false;
-        };
-
-        TaskScheduler.UnobservedTaskException += (_, args) =>
-        {
-            _logger.LogError(args.Exception, "Unobserved task exception");
-            StatusViewModel.Instance.AddStatus(args.Exception.ToString());
-            args.SetObserved();
-        };
     }
 }

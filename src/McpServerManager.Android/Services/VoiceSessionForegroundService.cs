@@ -53,41 +53,56 @@ public sealed class VoiceSessionForegroundService : Service
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
     {
-        var action = intent?.Action;
-
-        if (string.Equals(action, ActionStop, StringComparison.Ordinal))
+        StartCommandResult Core()
         {
-            StopForegroundCompat();
-            StopSelfResult(startId);
-            return StartCommandResult.NotSticky;
-        }
+            var action = intent?.Action;
 
-        var notificationManager = GetSystemService(NotificationService) as NotificationManager;
-        if (notificationManager != null)
-            EnsureChannel(notificationManager);
+            if (string.Equals(action, ActionStop, StringComparison.Ordinal))
+            {
+                StopForegroundCompat();
+                StopSelfResult(startId);
+                return StartCommandResult.NotSticky;
+            }
 
-        var statusText = intent?.GetStringExtra(ExtraStatusText);
-        var notification = BuildNotification(statusText);
+            var notificationManager = GetSystemService(NotificationService) as NotificationManager;
+            if (notificationManager != null)
+                EnsureChannel(notificationManager);
 
-        if (string.Equals(action, ActionUpdateStatus, StringComparison.Ordinal))
-        {
-            // Just update the notification text
-            notificationManager?.Notify(NotificationId, notification);
+            var statusText = intent?.GetStringExtra(ExtraStatusText);
+            var notification = BuildNotification(statusText);
+
+            if (string.Equals(action, ActionUpdateStatus, StringComparison.Ordinal))
+            {
+                notificationManager?.Notify(NotificationId, notification);
+                return StartCommandResult.Sticky;
+            }
+
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
+                StartForeground(NotificationId, notification, global::Android.Content.PM.ForegroundService.TypeMicrophone);
+            else
+                StartForeground(NotificationId, notification);
+
             return StartCommandResult.Sticky;
         }
 
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
-            StartForeground(NotificationId, notification, global::Android.Content.PM.ForegroundService.TypeMicrophone);
-        else
-            StartForeground(NotificationId, notification);
-
-        return StartCommandResult.Sticky;
+        return AndroidCrashDiagnostics.ExecuteFatal(
+            "VoiceSessionForegroundService.OnStartCommand",
+            Core,
+            "Voice session foreground service crashed while processing a start/update/stop command.");
     }
 
     public override void OnDestroy()
     {
-        StopForegroundCompat();
-        base.OnDestroy();
+        void Core()
+        {
+            StopForegroundCompat();
+            base.OnDestroy();
+        }
+
+        AndroidCrashDiagnostics.ExecuteFatal(
+            "VoiceSessionForegroundService.OnDestroy",
+            Core,
+            "Voice session foreground service crashed while shutting down.");
     }
 
     private Notification BuildNotification(string? statusText)

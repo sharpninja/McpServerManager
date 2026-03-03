@@ -23,6 +23,7 @@ public sealed class McpAgentEventStreamService
     {
         PropertyNameCaseInsensitive = true
     };
+    private const string NgrokSkipBrowserWarningHeader = "ngrok-skip-browser-warning";
 
     private readonly string _baseUrl;
     private readonly string? _apiKey;
@@ -162,6 +163,8 @@ public sealed class McpAgentEventStreamService
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
         else if (!string.IsNullOrWhiteSpace(apiKey))
             client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
+
+        client.DefaultRequestHeaders.TryAddWithoutValidation(NgrokSkipBrowserWarningHeader, "true");
 
         if (!string.IsNullOrWhiteSpace(workspacePath))
             client.DefaultRequestHeaders.Add("X-Workspace-Path", workspacePath);

@@ -31,6 +31,7 @@ public sealed class AndroidVoskWakeWordEngine : IAndroidWakeWordEngine
     private AudioRecord? _audioRecord;
     private Model? _model;
     private VoskRecognizer? _recognizer;
+    private IDisposable? _crashBoundary;
     private AndroidWakeWordSettings _settings = new();
     private bool _disposed;
 
@@ -91,6 +92,9 @@ public sealed class AndroidVoskWakeWordEngine : IAndroidWakeWordEngine
 
             _audioRecord = audioRecord;
             _runCts = new CancellationTokenSource();
+            _crashBoundary = AndroidCrashDiagnostics.BeginBoundary(
+                "VoskWakeWordMonitoring",
+                $"Phrase={_settings.SelectedWakePhrase}; SampleRate={SampleRate}");
             IsRunning = true;
             _loopTask = Task.Run(() => DetectionLoopAsync(_runCts.Token), CancellationToken.None);
 
@@ -281,6 +285,9 @@ public sealed class AndroidVoskWakeWordEngine : IAndroidWakeWordEngine
 
         _runCts?.Dispose();
         _runCts = null;
+
+        try { _crashBoundary?.Dispose(); } catch { }
+        _crashBoundary = null;
     }
 
     private static AudioRecord CreateAudioRecord()

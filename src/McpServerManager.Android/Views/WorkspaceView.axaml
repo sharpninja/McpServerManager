@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
-             xmlns:avedit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+             xmlns:controls="using:McpServerManager.Android.Controls"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
              x:Class="McpServerManager.Android.Views.WorkspaceView"
              x:DataType="vm:WorkspaceViewModel">
@@ -123,12 +123,9 @@
             <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
                     BorderThickness="1"
                     CornerRadius="4">
-              <avedit:TextEditor x:Name="WorkspacePromptEditor"
-                                 Height="220"
-                                 FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
-                                 FontSize="13"
-                                 ShowLineNumbers="True"
-                                 WordWrap="True"/>
+              <controls:AndroidPlainTextEditor x:Name="WorkspacePromptEditor"
+                                               Height="220"
+                                               FontSize="13"/>
             </Border>
 
             <SelectableTextBlock Text="Status Prompt Override" FontWeight="SemiBold"/>
@@ -139,12 +136,9 @@
             <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
                     BorderThickness="1"
                     CornerRadius="4">
-              <avedit:TextEditor x:Name="WorkspaceStatusPromptEditor"
-                                 Height="160"
-                                 FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
-                                 FontSize="13"
-                                 ShowLineNumbers="True"
-                                 WordWrap="True"/>
+              <controls:AndroidPlainTextEditor x:Name="WorkspaceStatusPromptEditor"
+                                               Height="160"
+                                               FontSize="13"/>
             </Border>
 
             <SelectableTextBlock Text="Implement Prompt Override" FontWeight="SemiBold"/>
@@ -155,12 +149,9 @@
             <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
                     BorderThickness="1"
                     CornerRadius="4">
-              <avedit:TextEditor x:Name="WorkspaceImplementPromptEditor"
-                                 Height="160"
-                                 FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
-                                 FontSize="13"
-                                 ShowLineNumbers="True"
-                                 WordWrap="True"/>
+              <controls:AndroidPlainTextEditor x:Name="WorkspaceImplementPromptEditor"
+                                               Height="160"
+                                               FontSize="13"/>
             </Border>
 
             <SelectableTextBlock Text="Plan Prompt Override" FontWeight="SemiBold"/>
@@ -171,12 +162,9 @@
             <Border BorderBrush="{DynamicResource SystemBaseMediumLowColor}"
                     BorderThickness="1"
                     CornerRadius="4">
-              <avedit:TextEditor x:Name="WorkspacePlanPromptEditor"
-                                 Height="160"
-                                 FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
-                                 FontSize="13"
-                                 ShowLineNumbers="True"
-                                 WordWrap="True"/>
+              <controls:AndroidPlainTextEditor x:Name="WorkspacePlanPromptEditor"
+                                               Height="160"
+                                               FontSize="13"/>
             </Border>
 
             <TextBlock Text="{Binding ProcessStatusText}" TextWrapping="Wrap" Foreground="{DynamicResource SubtleForeground}"/>

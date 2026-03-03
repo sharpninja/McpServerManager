@@ -12,16 +12,20 @@ using McpServerManager.Core.Commands;
 using McpServerManager.Core.Cqrs;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace McpServerManager.Core.ViewModels;
 
 public partial class WorkspaceViewModel : ViewModelBase
 {
+    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("WorkspaceViewModel");
     private readonly Mediator _mediator = new();
     private readonly IClipboardService _clipboardService;
+    private readonly UiCoreViewModelEvaluator _uiCoreEvaluator;
     private readonly List<WorkspaceListEntry> _allEntries = new();
     private string? _editingWorkspaceKey;
     private bool _isBusyHandlerRegistered;
+    private bool _hasRunUiCoreListEvaluation;
     private Timer? _healthTimer;
     private bool _isHealthCheckRunning;
     private bool _hasLoadedGlobalPrompt;
@@ -81,6 +85,7 @@ public partial class WorkspaceViewModel : ViewModelBase
     public WorkspaceViewModel(IClipboardService clipboardService, McpWorkspaceService service)
     {
         _clipboardService = clipboardService;
+        _uiCoreEvaluator = new UiCoreViewModelEvaluator(workspaceService: service);
         RegisterCqrsHandlers(service);
         NewWorkspace();
     }
@@ -92,7 +97,9 @@ public partial class WorkspaceViewModel : ViewModelBase
         var baseUrl = AppSettings.ResolveMcpBaseUrl();
         var normalizedUrl = McpServerRestClientFactory.NormalizeBaseUrl(baseUrl);
         var client = McpServerRestClientFactory.Create(baseUrl, TimeSpan.FromSeconds(5));
-        RegisterCqrsHandlers(new McpWorkspaceService(client, new Uri(normalizedUrl, UriKind.Absolute)));
+        var workspaceService = new McpWorkspaceService(client, new Uri(normalizedUrl, UriKind.Absolute));
+        _uiCoreEvaluator = new UiCoreViewModelEvaluator(workspaceService: workspaceService);
+        RegisterCqrsHandlers(workspaceService);
         NewWorkspace();
     }
 
@@ -574,6 +581,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         try
         {
             var result = await _mediator.QueryAsync<QueryWorkspacesQuery, McpWorkspaceQueryResult>(new QueryWorkspacesQuery());
+            await EvaluateUiCoreWorkspaceListParityAsync(result);
 
             _allEntries.Clear();
             _allEntries.AddRange(result.Items.Select(ToEntry)
@@ -611,6 +619,40 @@ public partial class WorkspaceViewModel : ViewModelBase
         {
             IsLoading = false;
         }
+    }
+
+    private async Task EvaluateUiCoreWorkspaceListParityAsync(McpWorkspaceQueryResult currentResult)
+    {
+        if (_hasRunUiCoreListEvaluation)
+            return;
+
+        _hasRunUiCoreListEvaluation = true;
+        var evaluation = await _uiCoreEvaluator
+            .EvaluateWorkspaceListAsync(currentResult)
+            .ConfigureAwait(true);
+
+        if (!evaluation.Success)
+        {
+            _logger.LogWarning(
+                "UI.Core WorkspaceListViewModel evaluation failed: {Error}",
+                evaluation.Error ?? "unknown error");
+            return;
+        }
+
+        if (evaluation.IsMatch)
+        {
+            _logger.LogInformation(
+                "UI.Core WorkspaceListViewModel parity check passed ({Count} items).",
+                evaluation.CurrentCount);
+            return;
+        }
+
+        _logger.LogWarning(
+            "UI.Core WorkspaceListViewModel parity mismatch. Current={CurrentCount}, UiCore={UiCoreCount}, MissingInUiCore=[{MissingInUiCore}], MissingInCurrent=[{MissingInCurrent}]",
+            evaluation.CurrentCount,
+            evaluation.UiCoreCount,
+            string.Join(", ", evaluation.MissingInUiCore),
+            string.Join(", ", evaluation.MissingInCurrent));
     }
 
     private async Task<bool> TryReloadWorkspaceEditorByKeyAsync(string key, bool updateStatus)

@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
              xmlns:conv="using:McpServerManager.Core.Converters"
-             xmlns:avedit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+             xmlns:controls="using:McpServerManager.Android.Controls"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="720"
              x:Class="McpServerManager.Android.Views.PhoneTodoView"
              x:Name="TodoRoot"
@@ -246,11 +246,8 @@
                                  TextTrimming="CharacterEllipsis"/>
 
             <Border Grid.Row="2" Margin="6,0,6,6" CornerRadius="6" Background="{DynamicResource SystemAltHighColor}">
-                <avedit:TextEditor x:Name="Editor"
-                                   FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
-                                   FontSize="20"
-                                   ShowLineNumbers="True"
-                                   WordWrap="True"/>
+                <controls:AndroidPlainTextEditor x:Name="Editor"
+                                                 FontSize="20"/>
             </Border>
         </Grid>
     </Grid>

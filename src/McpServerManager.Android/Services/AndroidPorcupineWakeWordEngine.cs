@@ -43,6 +43,7 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
     private Task? _loopTask;
     private Porcupine? _porcupine;
     private AudioRecord? _audioRecord;
+    private IDisposable? _crashBoundary;
     private AndroidWakeWordSettings _settings = new();
     private string[] _activePhrases = [];
     private bool _disposed;
@@ -133,6 +134,9 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
             _audioRecord = audioRecord;
             _activePhrases = [keywordPhrase];
             _runCts = new CancellationTokenSource();
+            _crashBoundary = AndroidCrashDiagnostics.BeginBoundary(
+                "PorcupineWakeWordMonitoring",
+                $"Phrase={keywordPhrase}; Sensitivity={settings.Sensitivity}");
             _loopTask = Task.Run(() => DetectionLoopAsync(porcupine, audioRecord, _activePhrases, _runCts.Token), CancellationToken.None);
             IsRunning = true;
 
@@ -599,6 +603,16 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
         _runCts = null;
         _audioRecord = null;
         _porcupine = null;
+        try
+        {
+            _crashBoundary?.Dispose();
+        }
+        catch
+        {
+            // Best effort only.
+        }
+
+        _crashBoundary = null;
     }
 
     private void ThrowIfDisposed()

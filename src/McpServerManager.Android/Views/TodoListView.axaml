@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
              xmlns:conv="using:McpServerManager.Core.Converters"
-             xmlns:avedit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+             xmlns:controls="using:McpServerManager.Android.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="McpServerManager.Android.Views.TodoListView"
              x:Name="TodoRoot"
@@ -181,11 +181,8 @@
           </StackPanel>
           <!-- Editor or placeholder -->
           <Panel Grid.Row="1">
-            <avedit:TextEditor x:Name="Editor"
-                               FontFamily="avares://McpServerManager.Android/Assets/Fonts/FiraCode-Regular.ttf#Fira Code"
-                               FontSize="14"
-                               ShowLineNumbers="True"
-                               WordWrap="True"/>
+            <controls:AndroidPlainTextEditor x:Name="Editor"
+                                             FontSize="14"/>
           </Panel>
         </Grid>
       </Border>
