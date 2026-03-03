@@ -94,3 +94,11 @@ Features:
       done: true
     - task: Build and verify no compilation errors
       done: true
+DEPLOY-STATUS:
+  high-priority:
+  - id: deploy-status-20260302-1512z
+    title: APK Published and Verified at 20260302-1512Z
+    done: true
+    description:
+    - Pipeline run 22580481045 completed successfully.
+    - F-Droid index-v1.json resolves to McpServerManager-0.0.1-160.apk (versionCode 101) at https://sharpninja.github.io/McpServerManager/repo.

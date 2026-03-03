@@ -76,12 +76,14 @@ public partial class App : Application
                         }
 
                         var clipboardService = new AndroidClipboardService();
-                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken);
+                        var systemNotificationService = new AndroidSystemNotificationService();
+                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, systemNotificationService);
                         vm.SaveWorkspaceKey = AndroidConnectionPreferencesService.SaveWorkspaceKey;
                         vm.LoadWorkspaceKey = AndroidConnectionPreferencesService.LoadWorkspaceKey;
                         vm.LogoutRequested += (_, _) =>
                         {
                             _logger.LogInformation("Logout requested; clearing tokens and returning to connection dialog");
+                            connectionVm.LogoutCommand.Execute(null);
                             AndroidConnectionPreferencesService.ClearOidcJwt();
                             connectionVm.IsConnecting = false;
                             connectionVm.ErrorMessage = "";
@@ -143,6 +145,13 @@ public partial class App : Application
             var ex = args.ExceptionObject as Exception;
             _logger.LogError(ex, "Unhandled exception");
             StatusViewModel.Instance.AddStatus(ex?.ToString() ?? args.ExceptionObject?.ToString() ?? "Unknown unhandled exception");
+        };
+
+        global::Android.Runtime.AndroidEnvironment.UnhandledExceptionRaiser += (_, args) =>
+        {
+            _logger.LogError(args.Exception, "Android Java unhandled exception");
+            StatusViewModel.Instance.AddStatus(args.Exception?.ToString() ?? "Unknown Android Java unhandled exception");
+            args.Handled = false;
         };
 
         TaskScheduler.UnobservedTaskException += (_, args) =>

@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:McpServerManager.Core.ViewModels"
+             xmlns:models="using:McpServerManager.Core.Models"
+             mc:Ignorable="d"
+             x:Class="McpServerManager.Desktop.Views.VoiceConversationView"
+             x:DataType="vm:VoiceConversationViewModel"
+             d:DesignWidth="1000"
+             d:DesignHeight="700">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="8" Margin="8">
+
+            <Border Classes="phone-outline-card" Padding="10">
+                <StackPanel Spacing="6">
+                    <SelectableTextBlock Text="{Binding SessionId}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <SelectableTextBlock Text="{Binding StatusText}" Classes="subtle-text" TextWrapping="Wrap"/>
+                    <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+                        <Button Grid.Column="0" Content="Start Session" Command="{Binding CreateSessionCommand}"/>
+                        <Button Grid.Column="1" Content="Refresh Status" Command="{Binding RefreshStatusCommand}"/>
+                        <Button Grid.Column="2" Content="End Session" Command="{Binding EndSessionCommand}"/>
+                        <TextBox Grid.Column="4" Width="110" Text="{Binding Language, Mode=TwoWay}" Watermark="en-US"/>
+                    </Grid>
+                    <SelectableTextBlock Text="{Binding LastTurnId}" Classes="subtle-text" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="phone-outline-card" Padding="10">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Transcript Input" FontWeight="SemiBold"/>
+                    <TextBox Text="{Binding TranscriptInput, Mode=TwoWay}"
+                             MinHeight="72"
+                             MaxHeight="160"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Watermark="Type a message to submit..."/>
+                    <WrapPanel Orientation="Horizontal" ItemHeight="32" ItemWidth="130">
+                        <Button Content="Submit Turn" Command="{Binding SubmitTurnCommand}" Margin="0,0,6,6"/>
+                        <Button Content="Clear Input" Command="{Binding ClearTurnInputCommand}" Margin="0,0,6,6"/>
+                        <Button Content="Interrupt" Command="{Binding InterruptCommand}" Margin="0,0,6,6"/>
+                        <Button Content="Send ESC" Command="{Binding SendEscapeCommand}" Margin="0,0,6,6"/>
+                        <Button Content="Refresh Transcript" Command="{Binding RefreshTranscriptCommand}" Margin="0,0,6,6"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="phone-outline-card" Padding="10">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Assistant Response" FontWeight="SemiBold"/>
+                    <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" Padding="8" MinHeight="80">
+                        <SelectableTextBlock Text="{Binding AssistantDisplayText}" TextWrapping="Wrap"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="phone-outline-card" Padding="10">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Transcript" FontWeight="SemiBold"/>
+                    <ListBox ItemsSource="{Binding TranscriptItems}" MaxHeight="360">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:McpVoiceTranscriptEntry">
+                                <Border Margin="0,0,0,6" Padding="6" BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1">
+                                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*">
+                                        <SelectableTextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Role}" FontWeight="SemiBold"/>
+                                        <SelectableTextBlock Grid.Row="0"
+                                                             Grid.Column="1"
+                                                             Text="{Binding TimestampUtc}"
+                                                             HorizontalAlignment="Right"
+                                                             Classes="subtle-text"
+                                                             TextTrimming="CharacterEllipsis"/>
+                                        <SelectableTextBlock Grid.Row="1"
+                                                             Grid.ColumnSpan="2"
+                                                             Text="{Binding Text}"
+                                                             TextWrapping="Wrap"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

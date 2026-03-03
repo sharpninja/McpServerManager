@@ -422,25 +422,26 @@ public partial class TodoListViewModel : ViewModelBase
     private async Task CopilotStatusAsync()
     {
         if (SelectedEntry?.Item is not { } item) return;
-        await RunTodoPromptCommandAsync("status", item, TodoPromptActionKind.Status);
+        await RunTodoPromptCommandAsync(item, TodoPromptActionKind.Status);
     }
 
     [RelayCommand]
     private async Task CopilotPlanAsync()
     {
         if (SelectedEntry?.Item is not { } item) return;
-        await RunTodoPromptCommandAsync("plan", item, TodoPromptActionKind.Plan);
+        await RunTodoPromptCommandAsync(item, TodoPromptActionKind.Plan);
     }
 
     [RelayCommand]
     private async Task CopilotImplementAsync()
     {
         if (SelectedEntry?.Item is not { } item) return;
-        await RunTodoPromptCommandAsync("implement", item, TodoPromptActionKind.Implement);
+        await RunTodoPromptCommandAsync(item, TodoPromptActionKind.Implement);
     }
 
-    private async Task RunTodoPromptCommandAsync(string action, McpTodoFlatItem item, TodoPromptActionKind promptAction)
+    private async Task RunTodoPromptCommandAsync(McpTodoFlatItem item, TodoPromptActionKind promptAction)
     {
+        var action = promptAction.ToString().ToLowerInvariant();
         _activeCts?.Cancel();
         _activeCts = new CancellationTokenSource();
         var ct = _activeCts.Token;

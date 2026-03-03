@@ -5,7 +5,6 @@ using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.Logging;
 using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
-using McpServerManager.Core.ViewModels;
 using McpServerManager.Desktop.Services;
 using McpServerManager.Desktop.Views;
 using System;
@@ -84,12 +83,14 @@ public partial class App : Application
                         }
 
                         var clipboardService = new DesktopClipboardService(desktop);
-                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken);
+                        var notificationService = new DesktopSystemNotificationService();
+                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, notificationService);
                         var mainWindow = new MainWindow { DataContext = vm };
 
                         vm.LogoutRequested += (_, _) =>
                         {
                             _logger.LogInformation("Logout requested; returning to connection dialog");
+                            connectionVm.LogoutCommand.Execute(null);
                             DesktopConnectionPreferencesService.ClearOidcJwt();
                             connectionVm.IsConnecting = false;
                             connectionVm.ErrorMessage = "";

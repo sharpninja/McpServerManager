@@ -49,11 +49,15 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     private const string McpAgentPrefix = "MCP_AGENT://";
 
     private readonly IClipboardService _clipboardService;
+    private readonly ISystemNotificationService _systemNotificationService;
     private string _defaultMcpBaseUrl = "";
     private string? _defaultMcpApiKey;
     private Uri _defaultMcpBaseUri = new("http://localhost");
     private string _activeMcpBaseUrl = "";
     private string? _activeBearerToken;
+    private McpAgentEventStreamService _agentEventStreamService = null!;
+    private CancellationTokenSource? _agentEventListenerCts;
+    private bool _agentEventListenerStarted;
 
     // Shared pre-authenticated clients — created once at connection time.
     private McpServerClient _mcpClient = null!;
@@ -350,25 +354,29 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     private bool _isNavigatingHistory;
 
     public MainWindowViewModel(IClipboardService clipboardService)
+        : this(clipboardService, GetMcpBaseUrl(), mcpApiKey: null, bearerToken: null, systemNotificationService: null)
     {
-        _clipboardService = clipboardService;
-        InitializeMcpEndpoint(GetMcpBaseUrl());
-        RegisterCqrsHandlers();
     }
 
     public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl)
-        : this(clipboardService, mcpBaseUrl, mcpApiKey: null)
+        : this(clipboardService, mcpBaseUrl, mcpApiKey: null, bearerToken: null, systemNotificationService: null)
     {
     }
 
     public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey)
-        : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null)
+        : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null, systemNotificationService: null)
     {
     }
 
-    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey, string? bearerToken)
+    public MainWindowViewModel(
+        IClipboardService clipboardService,
+        string mcpBaseUrl,
+        string? mcpApiKey,
+        string? bearerToken,
+        ISystemNotificationService? systemNotificationService = null)
     {
         _clipboardService = clipboardService;
+        _systemNotificationService = systemNotificationService ?? NoOpSystemNotificationService.Instance;
         _activeBearerToken = string.IsNullOrWhiteSpace(bearerToken) ? null : bearerToken.Trim();
         InitializeMcpEndpoint(mcpBaseUrl, mcpApiKey);
         RegisterCqrsHandlers();
@@ -401,6 +409,17 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         _mcpWorkspaceService = new McpWorkspaceService(_mcpClient, _defaultMcpBaseUri);
 
         _activeMcpBaseUrl = _defaultMcpBaseUrl;
+        _agentEventStreamService = new McpAgentEventStreamService(
+            _activeMcpBaseUrl,
+            apiKey: _defaultMcpApiKey,
+            bearerToken: _activeBearerToken)
+        {
+            ResolveBaseUrl = () => _activeMcpBaseUrl,
+            ResolveBearerToken = () => _activeBearerToken,
+            ResolveApiKey = () => _defaultMcpApiKey,
+            ResolveWorkspacePath = () => SelectedWorkspaceConnection?.WorkspaceRootPath
+                ?? _mcpClient.WorkspacePath
+        };
 
         // Pre-populate the workspace picker with a placeholder.
         // No switch is triggered here — the real switch happens in LoadWorkspaceConnectionsAsync
@@ -450,6 +469,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
         // Notify child VMs reactively — they self-refresh without imperative ordering.
         WorkspacePathChanged?.Invoke(resolvedPath);
+
+        if (_agentEventListenerStarted)
+            StartAgentEventListener(restart: true);
     }
 
     private async Task<string?> ResolveActiveConnectionApiKeyAsync(WorkspaceConnectionOption option, string baseUrl)
@@ -680,6 +702,188 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     {
         _ = _mediator.SendAsync(new Commands.InitializeFromMcpCommand(this));
         _ = LoadWorkspaceConnectionsAsync();
+        StartAgentEventListener();
+    }
+
+    private void StartAgentEventListener(bool restart = false)
+    {
+        if (restart)
+        {
+            StopAgentEventListener();
+        }
+
+        if (_agentEventListenerStarted)
+            return;
+
+        _agentEventListenerCts = new CancellationTokenSource();
+        _agentEventListenerStarted = true;
+        _ = Task.Run(() => RunAgentEventListenerLoopAsync(_agentEventListenerCts.Token));
+    }
+
+    private void StopAgentEventListener()
+    {
+        _agentEventListenerCts?.Cancel();
+        _agentEventListenerCts?.Dispose();
+        _agentEventListenerCts = null;
+        _agentEventListenerStarted = false;
+    }
+
+    private async Task RunAgentEventListenerLoopAsync(CancellationToken cancellationToken)
+    {
+        var hasReportedFailure = false;
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await foreach (var changeEvent in _agentEventStreamService
+                                   .StreamEventsAsync(cancellationToken: cancellationToken)
+                                   .ConfigureAwait(false))
+                {
+                    if (!IsActionableAgentEvent(changeEvent))
+                        continue;
+
+                    var message = BuildActionableAgentEventMessage(changeEvent);
+                    await DispatchToUiAsync(() => StatusMessage = message).ConfigureAwait(false);
+                    await _systemNotificationService
+                        .NotifyAgentEventAsync(changeEvent, message, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+
+                hasReportedFailure = false;
+
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogInformation("[Agent Events] Stream ended; reconnecting.");
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[Agent Events] Listener failed; reconnecting.");
+                if (!hasReportedFailure)
+                {
+                    await DispatchToUiAsync(() => StatusMessage = $"Agent event listener unavailable: {ex.Message}").ConfigureAwait(false);
+                    hasReportedFailure = true;
+                }
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+            }
+        }
+    }
+
+    private static bool IsActionableAgentEvent(McpIncomingChangeEvent changeEvent)
+    {
+        if (!IsAgentScopedEvent(changeEvent))
+            return false;
+
+        return MatchesActionableAgentState(changeEvent.Action)
+            || MatchesActionableAgentState(changeEvent.EventType)
+            || MatchesActionableAgentState(changeEvent.Status)
+            || MatchesActionableAgentState(TryGetExtensionString(changeEvent, "action"))
+            || MatchesActionableAgentState(TryGetExtensionString(changeEvent, "eventType"))
+            || MatchesActionableAgentState(TryGetExtensionString(changeEvent, "status"))
+            || MatchesActionableAgentState(TryGetExtensionString(changeEvent, "state"));
+    }
+
+    private static bool IsAgentScopedEvent(McpIncomingChangeEvent changeEvent)
+    {
+        if (!string.IsNullOrWhiteSpace(changeEvent.AgentId))
+            return true;
+
+        if (!string.IsNullOrWhiteSpace(TryGetExtensionString(changeEvent, "agentId")))
+            return true;
+
+        if (!string.IsNullOrWhiteSpace(changeEvent.Category) &&
+            changeEvent.Category.Contains("agent", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (!string.IsNullOrWhiteSpace(changeEvent.ResourceUri) &&
+            changeEvent.ResourceUri.Contains("/agent", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var extensionResourceUri = TryGetExtensionString(changeEvent, "resourceUri");
+        return !string.IsNullOrWhiteSpace(extensionResourceUri) &&
+               extensionResourceUri.Contains("/agent", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool MatchesActionableAgentState(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        var normalized = value.Trim();
+        return normalized.Equals("launch", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("launched", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("completed", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("failed", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("blocked", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildActionableAgentEventMessage(McpIncomingChangeEvent changeEvent)
+    {
+        var action = FirstNonEmpty(
+                changeEvent.Action,
+                changeEvent.EventType,
+                changeEvent.Status,
+                TryGetExtensionString(changeEvent, "status"),
+                TryGetExtensionString(changeEvent, "state"),
+                TryGetExtensionString(changeEvent, "action"),
+                TryGetExtensionString(changeEvent, "eventType"))
+            ?? "updated";
+
+        var normalizedAction = action.Trim().ToLowerInvariant() switch
+        {
+            "launched" => "launch",
+            _ => action.Trim()
+        };
+
+        var agentId = FirstNonEmpty(
+            changeEvent.AgentId,
+            TryGetExtensionString(changeEvent, "agentId"),
+            changeEvent.EntityId,
+            TryGetExtensionString(changeEvent, "entityId"));
+
+        return string.IsNullOrWhiteSpace(agentId)
+            ? $"Agent event: {normalizedAction}"
+            : $"Agent {agentId}: {normalizedAction}";
+    }
+
+    private static string? TryGetExtensionString(McpIncomingChangeEvent changeEvent, string key)
+    {
+        if (changeEvent.ExtensionData is null ||
+            !changeEvent.ExtensionData.TryGetValue(key, out var extensionValue))
+            return null;
+
+        return extensionValue.ValueKind switch
+        {
+            JsonValueKind.Null => null,
+            JsonValueKind.Undefined => null,
+            JsonValueKind.String => extensionValue.GetString(),
+            _ => extensionValue.ToString()
+        };
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                return value;
+        }
+
+        return null;
     }
 
     /// <summary>Platform callback to persist the selected workspace key.</summary>
@@ -1488,7 +1692,11 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     private void OpenChatWindow() => OpenChatWindowRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand]
-    private void Logout() => LogoutRequested?.Invoke(this, EventArgs.Empty);
+    private void Logout()
+    {
+        StopAgentEventListener();
+        LogoutRequested?.Invoke(this, EventArgs.Empty);
+    }
 
     /// <summary>Register or clear the context consumer (chat window). When set, we call it when the user navigates to JSON or details.</summary>
     public void SetContextConsumer(Action<string>? consumer) => _contextConsumer = consumer;
@@ -2109,6 +2317,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     internal async Task ReloadFromMcpAsyncInternal()
     {
+        var isInitialMcpLoad = _mcpSessions.Count == 0;
         var sessions = await McpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(true);
         var byPath = new Dictionary<string, UnifiedSessionLog>(StringComparer.OrdinalIgnoreCase);
         foreach (var s in sessions)
@@ -2143,9 +2352,19 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 Nodes.Add(sourceNode);
             }
 
-             // Cache sessions so the auto-triggered ALL_JSON load doesn't re-fetch from MCP.
+            // Cache sessions so the auto-triggered ALL_JSON load doesn't re-fetch from MCP.
             _cachedSessionsForAutoLoad = uniqueSessions;
-            RestoreTreeSelection(previousPath, allJsonNode);
+            if (OperatingSystem.IsAndroid() && isInitialMcpLoad &&
+                (string.IsNullOrEmpty(previousPath) ||
+                 string.Equals(previousPath, "ALL_JSON_VIRTUAL_NODE", StringComparison.OrdinalIgnoreCase)))
+            {
+                // Avoid startup ANR by deferring the heavy ALL_JSON load until explicit user selection.
+                SelectedNode = null;
+            }
+            else
+            {
+                RestoreTreeSelection(previousPath, allJsonNode);
+            }
             StatusMessage = $"Loaded {_mcpSessions.Count} session(s) from MCP.";
         });
     }
