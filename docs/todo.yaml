@@ -3,10 +3,20 @@ Architecture:
   - id: evaluate-ui-core-viewmodels
     title: Evaluate refactoring to use the ViewModels in McpServer.UI.Core
     estimate: 4h
-    done: false
+    done: true
+    completed: 2026-03-03T02:39:33.9308291Z
     description:
-    - McpServer.UI.Core contains shared ViewModels (RunSyncViewModel, SyncStatusViewModel were removed but other VMs may exist). Evaluate whether McpServerManager.Core ViewModels can be refactored to reuse or extend the ViewModels provided by McpServer.UI.Core to reduce duplication and improve maintainability.
-    - This is especially relevant after the /mcp/ to /mcpserver/ route rename and sync endpoint removal — the UI.Core layer has been updated accordingly.
+    - Copilot implemented an evaluation spike to compare existing McpServerManager.Core list ViewModels with McpServer.UI.Core list ViewModels; this was not a full replacement refactor.
+    - Added a new UiCoreViewModelEvaluator service that instantiates UI.Core TodoListViewModel and WorkspaceListViewModel through adapter query handlers, then compares normalized ID sets and counts.
+    - Wired one-time parity checks into TodoListViewModel.LoadTodosCoreAsync and WorkspaceViewModel.LoadWorkspacesCoreAsync; mismatches are logged and do not alter current UX/data flow.
+    - Updated Core project references/version alignment to include McpServer.UI.Core (plus CommunityToolkit.Mvvm 8.4.0 and YamlDotNet 16.3.0 updates).
+    - No dependency TODO with an implementation plan was created, and the primary runtime ViewModels remain McpServerManager.Core implementations.
+    done-summary: Investigation confirms Copilot added parity-evaluation instrumentation (UiCoreViewModelEvaluator + one-time checks in TODO/workspace loading) and dependency alignment, but did not migrate runtime list ViewModels to McpServer.UI.Core.
+    technical-details:
+    - src/McpServerManager.Core/Services/UiCoreViewModelEvaluator.cs (new)
+    - src/McpServerManager.Core/ViewModels/TodoListViewModel.cs (parity check call + logging)
+    - src/McpServerManager.Core/ViewModels/WorkspaceViewModel.cs (parity check call + logging)
+    - src/McpServerManager.Core/McpServerManager.Core.csproj (McpServer.UI.Core reference + package alignment)
   - id: RT-REFACTOR
     title: Observable ConnectionState refactor
     estimate: 8h
@@ -65,6 +75,385 @@ Architecture:
       done: false
     - task: '[005] Final audit pass for remaining push patterns'
       done: false
+  - id: uicore-vm-relay-gaps
+    title: 'Gap tracker: apps vs UI.Core ViewModels + RelayCommands'
+    estimate: 2d
+    note: Gap tracker completed after GAP-020 RelayCommand closure and parity-inventory synchronization to plan phases.
+    done: true
+    completed: 2026-03-03T12:40:56Z
+    description:
+    - Living inventory of concrete refactor gaps between current app ViewModels and McpServer.UI.Core ViewModels/RelayCommands.
+    - 'GAP-001 Runtime dispatch mismatch: app uses McpServerManager.Core.Cqrs.Mediator while UI.Core requires McpServer.Cqrs.Dispatcher + Result<T> pipeline semantics.'
+    - 'GAP-002 Missing adapter layer: app has no implementations of McpServer.UI.Core.Services.ITodoApiClient or IWorkspaceApiClient.'
+    - 'GAP-003 Todo architecture mismatch: current TodoListViewModel combines list + detail + markdown editor + prompt streaming; UI.Core splits these across TodoListViewModel and TodoDetailViewModel (plus prompt-specific VMs).'
+    - 'GAP-004 Todo command surface mismatch: Desktop/Android bindings require NewTodo/SaveEditor/RefreshEditor/ToggleDone/StopAction/OpenAiChat/Copilot* commands not exposed by UI.Core list VM.'
+    - 'GAP-005 Todo data-shape mismatch: current UI binds GroupedItems/TodoListEntry and markdown EditorText; UI.Core exposes flat Items + structured detail fields.'
+    - 'GAP-006 Phone TODO UX coupling: PhoneTodoView code-behind depends on CurrentTodoDetail + existing command/property names; direct UI.Core replacement would break navigation/edit flows.'
+    - 'GAP-007 Workspace command coverage mismatch: current WorkspaceViewModel includes create/update/delete/status/health/start/stop/global-prompt operations; UI.Core workspace VMs currently expose list/get/policy/init only.'
+    - 'GAP-008 Workspace editor-shape mismatch: app binds EditorPromptTemplateText/StatusPrompt/ImplementPrompt/PlanPrompt and global prompt fields not represented in UI.Core WorkspaceDetailViewModel.'
+    - 'GAP-009 MainWindow coupling mismatch: WorkspaceCatalogChanged event and connection-picker refresh logic depend on current WorkspaceViewModel contracts.'
+    - 'GAP-010 Workspace context propagation mismatch: app uses WorkspacePathChanged event fan-out; UI.Core expects shared WorkspaceContextViewModel.ActiveWorkspacePath updates.'
+    - 'GAP-011 Auth policy wiring gap: UI.Core handlers expect IAuthorizationPolicyService/IRoleContext services; app currently has no explicit registrations for these abstractions.'
+    - 'GAP-012 Busy/logging semantics mismatch: app log view reads AppLogService entries while UI.Core dispatcher has its own dispatch-log provider model.'
+    - 'GAP-013 TODO command matrix mismatch (explicit): NewTodo/SaveNewTodo/CancelNewTodo/StopAction/EditorZoom*/OpenAiChat/ClearEditor have no direct UI.Core command equivalents.'
+    - 'GAP-014 Workspace command matrix mismatch (explicit): NewWorkspace/SaveEditor/DeleteSelected/GetSelectedStatus/CheckSelectedWorkspaceHealth/Start/Stop/Load|Save|ResetGlobalPrompt have no direct UI.Core workspace VM command equivalents.'
+    - 'GAP-015 Selection model mismatch: current bindings use SelectedEntry object while UI.Core list VMs expose SelectedIndex + SelectedItem derived access.'
+    - 'GAP-016 Formatting model mismatch: current TODO editor is markdown-first; UI.Core detail editor is structured fields-first.'
+    - 'DECISION-UI-FIRST: favor McpServer.UI.Core contracts; refactor Desktop/Android app layers toward UI.Core ViewModels/RelayCommands instead of preserving legacy app-specific command/property surfaces as the long-term target.'
+    - 'Closure policy A: where UI.Core already provides equivalent behavior, app naming/shapes will migrate to UI.Core semantics.'
+    - 'Closure policy B: when behavior is missing in UI.Core, prefer adding reusable UI.Core message/handler/viewmodel coverage first; app-local wrappers are temporary scaffolding only and must have explicit removal checkpoints.'
+    - 'GAP-017 Endpoint handler coverage mismatch: live server exposes operations with no McpServer.UI.Core handler path (103 missing operations across 13 domains in current audit).'
+    - 'GAP-018 Cross-host parity scope mismatch: migration inventory is currently Desktop/Android-centric, but required target includes Director TUI and Blazor Web UI with identical core logic and endpoint coverage.'
+    - 'GAP-019 Extension boundary gap: host-specific behavior must layer via host ViewModels that extend/combine McpServer.UI ViewModels; shared endpoint logic must not fork per host.'
+    - 'GAP-020 RelayCommand-chain omissions: Workspace init, Tunnel lifecycle, and Template detail operations currently use method-only ViewModel calls (no exposed RelayCommand), violating the required RelayCommand -> Handler -> ViewModel mutation contract.'
+    done-summary: Closed GAP-020 by adding missing UI.Core RelayCommands for workspace init, tunnel lifecycle, and template detail flows; synchronized sequencing/coverage artifacts (including TUI+Blazor parity inventory) and validated with build + tests.
+    remaining: Execute M1 and M2 first to close handler and RelayCommand-chain gaps, then run M3 normalization, M4 audit/remediation, and M5 Director/Web migration.
+    technical-details:
+    - 'Current app surfaces inspected: src/McpServerManager.Core/ViewModels/TodoListViewModel.cs, WorkspaceViewModel.cs, MainWindowViewModel.cs, src/McpServerManager.Desktop/Views/TodoListView.axaml, WorkspaceView.axaml, src/McpServerManager.Android/Views/TodoListView.axaml, PhoneTodoView.axaml(.cs), WorkspaceView.axaml(.cs).'
+    - 'UI.Core surfaces inspected: lib/McpServer/src/McpServer.UI.Core/ViewModels/TodoListViewModel.cs, TodoDetailViewModel.cs, WorkspaceListViewModel.cs, WorkspaceDetailViewModel.cs, WorkspacePolicyViewModel.cs, ServiceCollectionExtensions.cs.'
+    - 'Adapter contracts inspected: lib/McpServer/src/McpServer.UI.Core/Services/ITodoApiClient.cs, IWorkspaceApiClient.cs and Director reference adapters in lib/McpServer/src/McpServer.Director/.'
+    - 'TODO binding command inventory (Desktop/Android + Phone handlers): NewTodo, Refresh, CopySelectedId, StopAction, SaveNewTodo, CancelNewTodo, ClearFilters, OpenSelectedTodo, ToggleDone, AnalyzeRequirements, DeleteSelected, SaveEditor, RefreshEditor, EditorZoomIn/Out, OpenAiChat, CopilotStatus/Plan/Implement, ClearEditor.'
+    - 'UI.Core TODO command inventory: TodoList.Refresh + TodoDetail.Load/Create/Save/Delete/AnalyzeRequirements/GenerateStatus/GeneratePlan/GenerateImplement.'
+    - 'Workspace binding command inventory (Desktop/Android): NewWorkspace, Refresh, OpenSelectedWorkspace, CopySelectedKey, GetSelectedStatus, CheckSelectedWorkspaceHealth, InitSelectedWorkspace, StartSelectedWorkspace, StopSelectedWorkspace, DeleteSelected, ClearFilters, LoadGlobalPrompt, SaveGlobalPrompt, ResetGlobalPrompt, SaveEditor.'
+    - 'UI.Core workspace command inventory: WorkspaceList.Refresh + WorkspaceDetail.GetWorkspace + WorkspacePolicy.Save (+ handler-level InitWorkspace support without first-class tab VM command surface).'
+    - 'Current parity evaluator artifact to retire later: src/McpServerManager.Core/Services/UiCoreViewModelEvaluator.cs.'
+    - 'Direction confirmed by user: planning must favor McpServer.UI.Core and treat app-specific surfaces as migration debt, not preservation targets.'
+    - 'Endpoint coverage audit (live swagger @ host.docker.internal:7147): 138 total operations, 37 operations currently represented by McpServer.UI.Core handlers, 103 missing handler-covered operations. Largest uncovered domains: requirements (20), agent-pool (15), agents (14), github (13), tools (12), voice (9), workspace (7).'
+    - 'Cross-host directive confirmed by user: Desktop, Android, Director TUI, and Blazor Web UI must converge on the same McpServer.UI handler/message endpoint coverage.'
+    - 'Layering rule confirmed: app-specific behavior is implemented via host ViewModels extending/composing McpServer.UI ViewModels; base endpoint/dispatcher logic remains in UI.Core.'
+    - 'Repository evidence: Director TUI host exists at lib/McpServer/src/McpServer.Director; Blazor host mapping must be included in capability-matrix discovery so parity plan covers all UI layers.'
+    - 'Use-case matrix artifact added: docs/architecture/compliance/UI-USECASE-MATRIX.md (Phone/Tablet/Desktop/TUI presence matrix, endpoint-group Mermaid diagrams, 16 complete RelayCommand paths, 8 RelayCommand-chain omissions).'
+    - Divergent behavior annotations added per use case in docs/architecture/compliance/UI-USECASE-MATRIX.md (complete + omission use cases).
+    - Plan sequencing re-organized into five major phases (M1..M5) to drive closure of GAP-017 endpoint-handler gaps and GAP-020 RelayCommand-chain omissions in a test-first order.
+    - 'Requirements baseline linked: docs/Project/Functional-Requirements.md, Technical-Requirements.md, TR-per-FR-Mapping.md, Requirements-Matrix.md, Testing-Requirements.md now track FR-RTUI-001..006/101..116 and TR-RTUI-001..006/101..126.'
+    - 'GAP-020 closure implemented in UI.Core: HealthSnapshotsViewModel.InitializeWorkspaceCommand, TunnelListViewModel.Refresh/Enable/Disable/Start/Stop/RestartCommand, TemplateDetailViewModel.Load/Save/Delete/TestCommand.'
+    - 'Use-case matrix updated: docs/architecture/compliance/UI-USECASE-MATRIX.md now shows no open RelayCommand-chain omissions and includes Blazor parity inventory status.'
+    - 'Validation evidence: dotnet build lib/McpServer/src/McpServer.UI.Core/McpServer.UI.Core.csproj (0 warnings, 0 errors) and dotnet test lib/McpServer/tests/McpServer.Cqrs.Tests/McpServer.Cqrs.Tests.csproj (41 passed).'
+    functional-requirements:
+    - FR-RTUI-001
+    - FR-RTUI-002
+    - FR-RTUI-003
+    - FR-RTUI-004
+    - FR-RTUI-005
+    - FR-RTUI-006
+    - FR-RTUI-101
+    - FR-RTUI-102
+    - FR-RTUI-103
+    - FR-RTUI-104
+    - FR-RTUI-105
+    - FR-RTUI-106
+    - FR-RTUI-107
+    - FR-RTUI-108
+    - FR-RTUI-109
+    - FR-RTUI-110
+    - FR-RTUI-111
+    - FR-RTUI-112
+    - FR-RTUI-113
+    - FR-RTUI-114
+    - FR-RTUI-115
+    - FR-RTUI-116
+    technical-requirements:
+    - TR-RTUI-001
+    - TR-RTUI-002
+    - TR-RTUI-003
+    - TR-RTUI-004
+    - TR-RTUI-005
+    - TR-RTUI-006
+    - TR-RTUI-101
+    - TR-RTUI-102
+    - TR-RTUI-103
+    - TR-RTUI-104
+    - TR-RTUI-105
+    - TR-RTUI-106
+    - TR-RTUI-107
+    - TR-RTUI-108
+    - TR-RTUI-109
+    - TR-RTUI-110
+    - TR-RTUI-111
+    - TR-RTUI-112
+    - TR-RTUI-113
+    - TR-RTUI-114
+    - TR-RTUI-115
+    - TR-RTUI-116
+    - TR-RTUI-117
+    - TR-RTUI-118
+    - TR-RTUI-119
+    - TR-RTUI-120
+    - TR-RTUI-121
+    - TR-RTUI-122
+    - TR-RTUI-123
+    - TR-RTUI-124
+    - TR-RTUI-125
+    - TR-RTUI-126
+    implementation-tasks:
+    - task: Catalog current Core ViewModels and command surfaces in production use
+      done: true
+    - task: Catalog available UI.Core ViewModels and command surfaces
+      done: true
+    - task: Build explicit command/property mapping matrix (Current -> UI.Core -> Adapter/Wrapper required)
+      done: true
+    - task: Define gap closure strategy per gap (direct adopt vs adapter wrapper vs UI.Core extension)
+      done: true
+    - task: Continuously sync discovered gaps into plan TODO sequencing
+      done: true
+    - task: Record cross-host parity directive (Desktop/Android/Director TUI/Blazor) and extension-only layering rule
+      done: true
+    - task: Expand gap inventory to include Director TUI + Blazor Web UI command/flow/endpoint surfaces
+      done: true
+    - task: Create cross-UI use-case matrix + Mermaid endpoint-group diagrams with RelayCommand -> Handler -> ViewModel mutation paths
+      done: true
+    - task: Close GAP-020 by adding RelayCommands for Workspace init, Tunnel lifecycle, and Template detail operations
+      done: true
+    - task: Annotate every use case with UI-divergent behavior list across Phone/Tablet/Desktop/TUI
+      done: true
+    - task: Sync gap closure sequencing to five major phases (M1..M5) and test-gate each phase
+      done: true
+    - task: Record five-major-phase execution model and align gap sequencing
+      done: true
+  - id: uicore-vm-relay-plan
+    title: 'Excruciating plan: refactor apps to UI.Core ViewModels + RelayCommands'
+    estimate: 5d
+    note: 'M4.1 completed: RequestTracker-local FR/TR/TEST audit artifacts published and linked.'
+    done: false
+    description:
+    - Exhaustive multi-phase UI-first migration plan to move Desktop + Android TODO/Workspace tabs from app-owned ViewModels to McpServer.UI.Core ViewModels/RelayCommands, with app layers adapting to UI.Core as the canonical contract.
+    - 'Scope: src/McpServerManager.Core + Desktop/Android Todo/Workspace views + MainWindow wiring. Out of scope for first pass: Voice, Request Tracker, AGENTS viewer, and Settings tabs (no direct UI.Core equivalents yet).'
+    - 'Primary success criteria: (1) Todo + Workspace UX parity, (2) commands execute through UI.Core dispatch path, (3) workspace switching still propagates correctly, (4) old parity evaluator spike removed after stable migration.'
+    - 'Execution policy: UI-first cutover. Refactor app ViewModels/views to align with UI.Core contracts; use only minimal temporary adapters where unavoidable during incremental migration.'
+    - 'Companion tracker: uicore-vm-relay-gaps must be updated whenever new incompatibilities alter sequencing, scope, or risk.'
+    - 'Strategic directive applied: favor McpServer.UI.Core by planning app refactors toward UI.Core semantics instead of preserving long-term app-specific command/property surfaces.'
+    - 'Cross-host directive: migration scope includes Desktop, Android, Director TUI, and Blazor Web UI; all hosts must share the same McpServer.UI logic and endpoint coverage baseline.'
+    - 'Layering directive: host-specific behavior is allowed only as extension/composition over McpServer.UI ViewModels, not as host-specific forks of core endpoint logic.'
+    - 'Major phase re-organization applied per directive: implementation is now governed by five primary phases spanning handler coverage, ViewModel/RelayCommand backfill, cross-UI normalization, requirements audit/remediation, and Director/Web migration.'
+    - 'Major Phase 1: Backfill Missing Handlers with Unit Tests.'
+    - 'Major Phase 2: Backfill missing ViewModels and Relay Commands with Unit and Integration Tests.'
+    - 'Major Phase 3: Normalize ViewModel and RelayCommand usage across all UI surfaces and UI tests.'
+    - 'Major Phase 4: As-Built Requirements Audit and Remediation.'
+    - 'Major Phase 5: Migrate Director and Web UI to McpServerManager workspace.'
+    remaining: 'Major-phase order in force: M1 handler backfill, M2 ViewModel/RelayCommand backfill, M3 cross-UI normalization, M4.2 requirements remediation, M5 Director/Web migration.'
+    technical-details:
+    - 'Phase ordering: P0 discovery baselines -> P1 runtime/adapters -> P2 compatibility wrappers -> P3 TODO tab migration -> P4 Workspace tab migration -> P5 legacy removal -> P6 validation/rollout.'
+    - 'Runtime target: instantiate McpServer.Cqrs.Dispatcher + AddUiCore registrations in app composition root, not only ad hoc evaluator construction.'
+    - 'Adapter target: implement app-host adapters for McpServer.UI.Core.Services.ITodoApiClient and IWorkspaceApiClient using existing McpTodoService/McpWorkspaceService plus prompt-stream aggregation.'
+    - 'Context target: map MainWindow workspace selection events to shared McpServer.UI.Core.ViewModels.WorkspaceContextViewModel.ActiveWorkspacePath.'
+    - 'Compatibility target: keep only short-lived transitional wrappers; final state is direct UI binding to UI.Core list/detail ViewModels and commands wherever coverage exists.'
+    - 'Gap-driven constraints: GAP-001..GAP-016 tracked in uicore-vm-relay-gaps, with UI-first closure policy now in effect.'
+    - 'Refactor cleanup target: remove src/McpServerManager.Core/Services/UiCoreViewModelEvaluator.cs and one-time parity hooks once migrated paths are production.'
+    - 'Verification target: run full Desktop + Android smoke checks for TODO/workspace lifecycle operations before removing legacy code paths.'
+    - 'Matrix baseline captured: TODO + Workspace command inventories extracted from Desktop/Android XAML bindings and compared against UI.Core command surfaces.'
+    - 'Workspace coverage strategy baseline: prioritize extending reusable UI.Core workspace surfaces before introducing any app-local long-term operation paths.'
+    - 'Endpoint matrix checkpoint (strict handler criterion): 138 live swagger operations, 37 operations with at least one McpServer.UI.Core handler path, 103 operations with no handler coverage.'
+    - 'Host matrix target: Desktop/Android/Director TUI/Blazor consume one shared UI.Core handler/message surface; endpoint gaps are implemented in UI.Core once and reused everywhere.'
+    - 'Extension pattern target: host-specific ViewModels may add UX affordances/events but delegate shared CRUD/prompt/workspace operations to UI.Core commands/dispatcher.'
+    - Cross-UI use-case matrix baseline captured in docs/architecture/compliance/UI-USECASE-MATRIX.md, including endpoint-group Mermaid diagrams and RelayCommand-chain omissions requiring closure.
+    - Use-case matrix now includes per-use-case UI divergence annotations to guide parity closure work (especially P1.8/P1.9/P6.10).
+    - 'Major Phase 1 scope: implement missing UI.Core handler coverage for endpoint gaps (GAP-017 domains) and add per-handler unit tests validating success/error/authorization behavior.'
+    - 'Major Phase 2 scope: backfill UI.Core ViewModels + RelayCommands for uncovered operations (including GAP-020 surfaces) with unit + integration tests for RelayCommand -> Handler -> mutation chains.'
+    - 'Major Phase 3 scope: migrate Phone/Tablet/Desktop/TUI bindings and host extension layers to normalized UI.Core command usage, then enforce cross-host UI test parity.'
+    - 'Major Phase 4 scope: run as-built FR/TR/TEST requirements audit, remediate drift, and verify legacy/superseded VM pathways are eliminated.'
+    - 'Major Phase 5 scope: migrate Director and Blazor/Web host composition into McpServerManager workspace with shared UI.Core runtime wiring and parity smoke validation.'
+    - 'As-built requirements audit artifacts published under docs/Project: Functional-Requirements.md, Technical-Requirements.md, TR-per-FR-Mapping.md, Requirements-Matrix.md, Testing-Requirements.md (projected + uncaptured Android/Desktop coverage).'
+    - 'P1.8 completed: UI.Core now exposes RelayCommands for workspace init, tunnel lifecycle, and template detail operations; closure reflected in UI-USECASE-MATRIX and gap tracker completion evidence.'
+    - 'P1.9 completed: Director TUI host bindings now execute UI.Core RelayCommands for workspace init, tunnel lifecycle, and template detail operations (HealthScreen, TunnelScreen, TemplatesScreen), removing method-only call paths for these flows.'
+    depends-on:
+    - uicore-vm-relay-gaps
+    functional-requirements:
+    - FR-RTUI-001
+    - FR-RTUI-002
+    - FR-RTUI-003
+    - FR-RTUI-004
+    - FR-RTUI-005
+    - FR-RTUI-006
+    - FR-RTUI-101
+    - FR-RTUI-102
+    - FR-RTUI-103
+    - FR-RTUI-104
+    - FR-RTUI-105
+    - FR-RTUI-106
+    - FR-RTUI-107
+    - FR-RTUI-108
+    - FR-RTUI-109
+    - FR-RTUI-110
+    - FR-RTUI-111
+    - FR-RTUI-112
+    - FR-RTUI-113
+    - FR-RTUI-114
+    - FR-RTUI-115
+    - FR-RTUI-116
+    technical-requirements:
+    - TR-RTUI-001
+    - TR-RTUI-002
+    - TR-RTUI-003
+    - TR-RTUI-004
+    - TR-RTUI-005
+    - TR-RTUI-006
+    - TR-RTUI-101
+    - TR-RTUI-102
+    - TR-RTUI-103
+    - TR-RTUI-104
+    - TR-RTUI-105
+    - TR-RTUI-106
+    - TR-RTUI-107
+    - TR-RTUI-108
+    - TR-RTUI-109
+    - TR-RTUI-110
+    - TR-RTUI-111
+    - TR-RTUI-112
+    - TR-RTUI-113
+    - TR-RTUI-114
+    - TR-RTUI-115
+    - TR-RTUI-116
+    - TR-RTUI-117
+    - TR-RTUI-118
+    - TR-RTUI-119
+    - TR-RTUI-120
+    - TR-RTUI-121
+    - TR-RTUI-122
+    - TR-RTUI-123
+    - TR-RTUI-124
+    - TR-RTUI-125
+    - TR-RTUI-126
+    implementation-tasks:
+    - task: P0.1 Create dedicated plan + gaps TODO trackers and wire dependency
+      done: true
+    - task: P0.2 Capture first concrete gap batch (architecture + command-surface mismatches)
+      done: true
+    - task: P0.3 Build explicit command/property mapping matrix for TODO views (Desktop/Android/Phone)
+      done: true
+    - task: P0.4 Build explicit command/property mapping matrix for Workspace views (Desktop/Android)
+      done: true
+    - task: 'P0.5 Define migration contract table: Current symbol -> UI.Core symbol -> bridge strategy'
+      done: true
+    - task: P0.6 Apply UI-first strategy decision (favor McpServer.UI.Core; apps refactor toward UI.Core contracts)
+      done: true
+    - task: P1.1 Add app composition root for UI.Core runtime (ServiceCollection + Dispatcher + AddUiCore)
+      done: false
+    - task: P1.2 Register ILoggerFactory + Dispatcher logger provider consistently with AppLogService
+      done: false
+    - task: P1.3 Implement ITodoApiClient adapter over McpTodoService (list/get/create/update/delete/analyze/prompt)
+      done: false
+    - task: P1.4 Implement IWorkspaceApiClient adapter over McpWorkspaceService (list/get/policy/init)
+      done: false
+    - task: P1.5 Decide and implement auth policy services (allow-all vs app-specific role context)
+      done: false
+    - task: P1.6 Add runtime self-test to resolve TodoListViewModel, TodoDetailViewModel, WorkspaceListViewModel, WorkspaceDetailViewModel
+      done: false
+    - task: P2.1 Create temporary Todo bridge layer only where needed while driving primary UI flow through UI.Core TodoList/TodoDetail ViewModels
+      done: false
+    - task: P2.2 Create temporary Workspace bridge layer only where needed while driving primary UI flow through UI.Core Workspace ViewModels
+      done: false
+    - task: 'P2.3 Implement mapping layer: TodoListItem/TodoDetail <-> McpTodoFlatItem/TodoListEntry/group models'
+      done: false
+    - task: 'P2.4 Implement mapping layer: WorkspaceSummary/WorkspaceDetail <-> WorkspaceListEntry/editor fields'
+      done: false
+    - task: P2.5 Preserve workspace catalog change notifications expected by MainWindow picker refresh
+      done: false
+    - task: P2.6 Synchronize MainWindow WorkspacePathChanged with UI.Core WorkspaceContextViewModel
+      done: false
+    - task: 'P3.1 TODO migration: wire list refresh/filter path through UI.Core TodoListViewModel'
+      done: false
+    - task: 'P3.2 TODO migration: wire open/load/save/delete/analyze through UI.Core TodoDetailViewModel'
+      done: false
+    - task: 'P3.3 TODO migration: preserve markdown editor workflow via structured-field <-> markdown bridge'
+      done: false
+    - task: 'P3.4 TODO migration: preserve prompt generation UX (status/plan/implement) via UI.Core prompt commands'
+      done: false
+    - task: 'P3.5 TODO migration: preserve cancellation/StopAction semantics for long-running prompt workflows'
+      done: false
+    - task: 'P3.6 TODO migration: preserve OpenAiChatRequested event and tab integration'
+      done: false
+    - task: P3.7 Desktop TodoListView binding update and validation
+      done: false
+    - task: P3.8 Android TodoListView binding update and validation
+      done: false
+    - task: P3.9 PhoneTodoView code-behind refactor to new shell/UI.Core contracts
+      done: false
+    - task: 'P4.1 Workspace migration: wire list/detail base operations through UI.Core workspace VMs'
+      done: false
+    - task: P4.2 Resolve GAP-007/GAP-008 by extending UI.Core workspace command/viewmodel coverage first; keep app-local wrappers temporary with removal gates
+      done: false
+    - task: P4.3 Desktop WorkspaceView binding update and validation
+      done: false
+    - task: P4.4 Android WorkspaceView binding update and validation
+      done: false
+    - task: P4.5 Preserve periodic health timer and indicator UX
+      done: false
+    - task: P4.6 Preserve global prompt load/save/reset workflow
+      done: false
+    - task: P5.1 Switch MainWindowViewModel factories to new Todo/Workspace shell/UI.Core-backed ViewModels
+      done: false
+    - task: P5.2 Remove legacy TodoListViewModel/WorkspaceViewModel mediator command plumbing when no longer used
+      done: false
+    - task: P5.3 Remove parity spike artifacts (UiCoreViewModelEvaluator + one-time checks)
+      done: false
+    - task: P5.4 Remove dead command handlers/models introduced only for superseded paths
+      done: false
+    - task: P6.1 Add automated tests for adapters and mapping logic
+      done: false
+    - task: P6.2 Add automated tests for shell command forwarding and workspace-context propagation
+      done: false
+    - task: P6.3 Run Desktop manual smoke suite (todo CRUD/filter/editor/prompts + workspace lifecycle)
+      done: false
+    - task: P6.4 Run Android tablet/phone smoke suite (todo flows + workspace flows + tab switching)
+      done: false
+    - task: P6.5 Remove remaining references to superseded VM paths and confirm zero matches via rg checks
+      done: false
+    - task: P6.6 Finalize migration notes + rollback strategy + close gap tracker
+      done: false
+    - task: P0.7 Build full endpoint-path coverage matrix (live swagger vs UI.Core services/handlers) and classify gaps by domain
+      done: true
+    - task: P0.8 Apply cross-host parity directive (Desktop/Android/Director TUI/Blazor share one UI.Core logic + endpoint surface)
+      done: true
+    - task: P1.7 Build host capability matrix for Desktop/Android/Director TUI/Blazor (commands, flows, endpoint needs)
+      done: false
+    - task: P3.10 Director TUI TODO flow migration to UI.Core base ViewModels with host extension layer
+      done: false
+    - task: P3.11 Blazor TODO flow migration to UI.Core base ViewModels with host extension layer
+      done: false
+    - task: P4.7 Director TUI Workspace flow migration to UI.Core base ViewModels with host extension layer
+      done: false
+    - task: P4.8 Blazor Workspace flow migration to UI.Core base ViewModels with host extension layer
+      done: false
+    - task: P5.5 Enforce extension-only host customization; remove host-specific forks of shared endpoint logic
+      done: false
+    - task: P6.7 Run Director TUI smoke suite (todo/workspace flows via UI.Core path)
+      done: false
+    - task: P6.8 Run Blazor Web UI smoke suite (todo/workspace flows via UI.Core path)
+      done: false
+    - task: P6.9 Verify Desktop/Android/Director/Blazor share identical endpoint/handler coverage for common features
+      done: false
+    - task: P0.9 Create cross-UI use-case matrix (Phone/Tablet/Desktop/TUI) with RelayCommand -> Handler -> ViewModel mutation paths and Mermaid endpoint-group diagrams
+      done: true
+    - task: P1.8 Add missing RelayCommands in UI.Core for Workspace init, Tunnel lifecycle, and Template detail operations
+      done: true
+    - task: P1.9 Refactor TUI and host bindings to consume new RelayCommands (remove method-only command paths)
+      done: true
+    - task: P6.10 Verify every active use-case row has complete RelayCommand -> Handler -> ViewModel mutation path
+      done: false
+    - task: P0.10 Annotate each matrix use case with UI-divergent behavior list to drive parity closure sequencing
+      done: true
+    - task: M1.1 Backfill missing UI.Core handlers for uncovered endpoint domains and add handler unit tests
+      done: false
+    - task: M1.2 Produce handler coverage test matrix (endpoint -> message -> handler -> expected result)
+      done: false
+    - task: M2.1 Backfill missing UI.Core ViewModels and RelayCommands (including Workspace init, Tunnel lifecycle, Template detail flows)
+      done: false
+    - task: M2.2 Add unit + integration tests for every new RelayCommand -> Handler -> ViewModel mutation chain
+      done: false
+    - task: M3.1 Normalize ViewModel and RelayCommand usage across Phone/Tablet/Desktop/TUI host surfaces
+      done: false
+    - task: M3.2 Add/expand UI tests to enforce normalized command behavior across all host UIs
+      done: false
+    - task: M4.1 Execute as-built requirements audit (FR/TR/TEST mappings) against implemented behavior
+      done: true
+    - task: M4.2 Remediate requirements drift and close audit findings with evidence
+      done: false
+    - task: M5.1 Migrate Director TUI host composition and runtime wiring to McpServerManager workspace baseline
+      done: false
+    - task: M5.2 Migrate Blazor/Web UI host composition and runtime wiring to McpServerManager workspace baseline
+      done: false
+    - task: P0.11 Reorganize implementation plan into five major phases (M1..M5) per user directive
+      done: true
 Features:
   high-priority:
   - id: settings-tab-speech-filter-words
