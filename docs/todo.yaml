@@ -78,9 +78,8 @@ Architecture:
   - id: uicore-vm-relay-gaps
     title: 'Gap tracker: apps vs UI.Core ViewModels + RelayCommands'
     estimate: 2d
-    note: Gap tracker completed after GAP-020 RelayCommand closure and parity-inventory synchronization to plan phases.
-    done: true
-    completed: 2026-03-03T12:40:56Z
+    note: Refreshed after GAP-020 closure; the tracker remains open because active Desktop/Android workspace lifecycle, global-prompt, and workspace-health flows are still app-local and not yet shared through UI.Core.
+    done: false
     description:
     - Living inventory of concrete refactor gaps between current app ViewModels and McpServer.UI.Core ViewModels/RelayCommands.
     - 'GAP-001 Runtime dispatch mismatch: app uses McpServerManager.Core.Cqrs.Mediator while UI.Core requires McpServer.Cqrs.Dispatcher + Result<T> pipeline semantics.'
@@ -102,12 +101,11 @@ Architecture:
     - 'DECISION-UI-FIRST: favor McpServer.UI.Core contracts; refactor Desktop/Android app layers toward UI.Core ViewModels/RelayCommands instead of preserving legacy app-specific command/property surfaces as the long-term target.'
     - 'Closure policy A: where UI.Core already provides equivalent behavior, app naming/shapes will migrate to UI.Core semantics.'
     - 'Closure policy B: when behavior is missing in UI.Core, prefer adding reusable UI.Core message/handler/viewmodel coverage first; app-local wrappers are temporary scaffolding only and must have explicit removal checkpoints.'
-    - 'GAP-017 Endpoint handler coverage mismatch: live server exposes operations with no McpServer.UI.Core handler path (103 missing operations across 13 domains in current audit).'
+    - 'GAP-017 Endpoint handler coverage mismatch: live swagger currently exposes 138 HTTP operations; 103 remain without a distinct McpServer.UI.Core handler-covered HTTP operation, spanning 13 domains in the refreshed audit.'
     - 'GAP-018 Cross-host parity scope mismatch: migration inventory is currently Desktop/Android-centric, but required target includes Director TUI and Blazor Web UI with identical core logic and endpoint coverage.'
     - 'GAP-019 Extension boundary gap: host-specific behavior must layer via host ViewModels that extend/combine McpServer.UI ViewModels; shared endpoint logic must not fork per host.'
-    - 'GAP-020 RelayCommand-chain omissions: Workspace init, Tunnel lifecycle, and Template detail operations currently use method-only ViewModel calls (no exposed RelayCommand), violating the required RelayCommand -> Handler -> ViewModel mutation contract.'
-    done-summary: Closed GAP-020 by adding missing UI.Core RelayCommands for workspace init, tunnel lifecycle, and template detail flows; synchronized sequencing/coverage artifacts (including TUI+Blazor parity inventory) and validated with build + tests.
-    remaining: Execute M1 and M2 first to close handler and RelayCommand-chain gaps, then run M3 normalization, M4 audit/remediation, and M5 Director/Web migration.
+    - 'GAP-020 CLOSED: Workspace init, tunnel lifecycle, and template detail flows are now RelayCommand-backed in UI.Core and consumed from Director TUI; the remaining omission rows are concentrated in Desktop/Android workspace lifecycle, global-prompt, and workspace-health flows.'
+    remaining: Execute M1 first for active workspace handler gaps (create/delete/status/start/stop/global prompt plus a shared workspace-health path), then M2 for the corresponding shared ViewModels/RelayCommands before cross-host normalization in M3.
     technical-details:
     - 'Current app surfaces inspected: src/McpServerManager.Core/ViewModels/TodoListViewModel.cs, WorkspaceViewModel.cs, MainWindowViewModel.cs, src/McpServerManager.Desktop/Views/TodoListView.axaml, WorkspaceView.axaml, src/McpServerManager.Android/Views/TodoListView.axaml, PhoneTodoView.axaml(.cs), WorkspaceView.axaml(.cs).'
     - 'UI.Core surfaces inspected: lib/McpServer/src/McpServer.UI.Core/ViewModels/TodoListViewModel.cs, TodoDetailViewModel.cs, WorkspaceListViewModel.cs, WorkspaceDetailViewModel.cs, WorkspacePolicyViewModel.cs, ServiceCollectionExtensions.cs.'
@@ -118,17 +116,17 @@ Architecture:
     - 'UI.Core workspace command inventory: WorkspaceList.Refresh + WorkspaceDetail.GetWorkspace + WorkspacePolicy.Save (+ handler-level InitWorkspace support without first-class tab VM command surface).'
     - 'Current parity evaluator artifact to retire later: src/McpServerManager.Core/Services/UiCoreViewModelEvaluator.cs.'
     - 'Direction confirmed by user: planning must favor McpServer.UI.Core and treat app-specific surfaces as migration debt, not preservation targets.'
-    - 'Endpoint coverage audit (live swagger @ host.docker.internal:7147): 138 total operations, 37 operations currently represented by McpServer.UI.Core handlers, 103 missing handler-covered operations. Largest uncovered domains: requirements (20), agent-pool (15), agents (14), github (13), tools (12), voice (9), workspace (7).'
+    - 'Endpoint coverage audit refresh (live swagger @ PAYTON-DESKTOP:7147 on 2026-03-03): 138 total HTTP operations, 35 distinct HTTP operations currently covered by McpServer.UI.Core handlers (38 handler/message types across 10 domains), 103 uncovered operations. Largest uncovered domains remain requirements (20), agent-pool (15), agents (14), github (13), tools (12), voice (9), and workspace (7).'
     - 'Cross-host directive confirmed by user: Desktop, Android, Director TUI, and Blazor Web UI must converge on the same McpServer.UI handler/message endpoint coverage.'
     - 'Layering rule confirmed: app-specific behavior is implemented via host ViewModels extending/composing McpServer.UI ViewModels; base endpoint/dispatcher logic remains in UI.Core.'
     - 'Repository evidence: Director TUI host exists at lib/McpServer/src/McpServer.Director; Blazor host mapping must be included in capability-matrix discovery so parity plan covers all UI layers.'
-    - 'Use-case matrix artifact added: docs/architecture/compliance/UI-USECASE-MATRIX.md (Phone/Tablet/Desktop/TUI presence matrix, endpoint-group Mermaid diagrams, 16 complete RelayCommand paths, 8 RelayCommand-chain omissions).'
+    - 'Use-case matrix artifact refreshed: docs/architecture/compliance/UI-USECASE-MATRIX.md now records 28 complete RelayCommand paths and 9 open omission rows, with all open omissions concentrated in active Desktop/Android workspace lifecycle, global-prompt, and workspace-health flows.'
     - Divergent behavior annotations added per use case in docs/architecture/compliance/UI-USECASE-MATRIX.md (complete + omission use cases).
     - Plan sequencing re-organized into five major phases (M1..M5) to drive closure of GAP-017 endpoint-handler gaps and GAP-020 RelayCommand-chain omissions in a test-first order.
     - 'Requirements baseline linked: docs/Project/Functional-Requirements.md, Technical-Requirements.md, TR-per-FR-Mapping.md, Requirements-Matrix.md, Testing-Requirements.md now track FR-RTUI-001..006/101..116 and TR-RTUI-001..006/101..126.'
     - 'GAP-020 closure implemented in UI.Core: HealthSnapshotsViewModel.InitializeWorkspaceCommand, TunnelListViewModel.Refresh/Enable/Disable/Start/Stop/RestartCommand, TemplateDetailViewModel.Load/Save/Delete/TestCommand.'
-    - 'Use-case matrix updated: docs/architecture/compliance/UI-USECASE-MATRIX.md now shows no open RelayCommand-chain omissions and includes Blazor parity inventory status.'
-    - 'Validation evidence: dotnet build lib/McpServer/src/McpServer.UI.Core/McpServer.UI.Core.csproj (0 warnings, 0 errors) and dotnet test lib/McpServer/tests/McpServer.Cqrs.Tests/McpServer.Cqrs.Tests.csproj (41 passed).'
+    - 'Use-case matrix refreshed: GAP-020 stays closed, but the matrix now restores the remaining active omission rows for workspace create/save/delete/status/start/stop, workspace health probe, and global prompt load/save-reset.'
+    - 'Validation evidence refresh (2026-03-03): dotnet build lib/McpServer/src/McpServer.UI.Core/McpServer.UI.Core.csproj reported Build succeeded with 0 warnings / 0 errors; dotnet test lib/McpServer/tests/McpServer.Cqrs.Tests/McpServer.Cqrs.Tests.csproj passed (41/41); dotnet test lib/McpServer/tests/McpServer.Director.Tests/McpServer.Director.Tests.csproj compiled but finished with 49 passed / 8 failed because the suite depends on AGENTS bootstrap discovery, default endpoint reachability, and local C: temp space.'
     functional-requirements:
     - FR-RTUI-001
     - FR-RTUI-002
@@ -210,10 +208,12 @@ Architecture:
       done: true
     - task: Record five-major-phase execution model and align gap sequencing
       done: true
+    - task: Refresh the gap tracker after GAP-020 closure so remaining Desktop/Android workspace, global-prompt, and workspace-health omissions stay explicit
+      done: true
   - id: uicore-vm-relay-plan
     title: 'Excruciating plan: refactor apps to UI.Core ViewModels + RelayCommands'
     estimate: 5d
-    note: 'M4.1 completed: RequestTracker-local FR/TR/TEST audit artifacts published and linked.'
+    note: 'M4.1 completed and the as-built refresh now shows 38 UI.Core handler types, 35 distinct HTTP operations with UI.Core coverage, 28 complete RelayCommand chains, and 9 open workspace/health omission rows.'
     done: false
     description:
     - Exhaustive multi-phase UI-first migration plan to move Desktop + Android TODO/Workspace tabs from app-owned ViewModels to McpServer.UI.Core ViewModels/RelayCommands, with app layers adapting to UI.Core as the canonical contract.
@@ -230,7 +230,7 @@ Architecture:
     - 'Major Phase 3: Normalize ViewModel and RelayCommand usage across all UI surfaces and UI tests.'
     - 'Major Phase 4: As-Built Requirements Audit and Remediation.'
     - 'Major Phase 5: Migrate Director and Web UI to McpServerManager workspace.'
-    remaining: 'Major-phase order in force: M1 handler backfill, M2 ViewModel/RelayCommand backfill, M3 cross-UI normalization, M4.2 requirements remediation, M5 Director/Web migration.'
+    remaining: 'Major-phase order in force: M1 handler backfill first, starting with workspace create/delete/status/start/stop/global-prompt plus shared workspace-health coverage; then M2 shared ViewModel/RelayCommand backfill for those flows; then M3 normalization, M4.2 remediation, and M5 Director/Web migration.'
     technical-details:
     - 'Phase ordering: P0 discovery baselines -> P1 runtime/adapters -> P2 compatibility wrappers -> P3 TODO tab migration -> P4 Workspace tab migration -> P5 legacy removal -> P6 validation/rollout.'
     - 'Runtime target: instantiate McpServer.Cqrs.Dispatcher + AddUiCore registrations in app composition root, not only ad hoc evaluator construction.'
@@ -242,18 +242,18 @@ Architecture:
     - 'Verification target: run full Desktop + Android smoke checks for TODO/workspace lifecycle operations before removing legacy code paths.'
     - 'Matrix baseline captured: TODO + Workspace command inventories extracted from Desktop/Android XAML bindings and compared against UI.Core command surfaces.'
     - 'Workspace coverage strategy baseline: prioritize extending reusable UI.Core workspace surfaces before introducing any app-local long-term operation paths.'
-    - 'Endpoint matrix checkpoint (strict handler criterion): 138 live swagger operations, 37 operations with at least one McpServer.UI.Core handler path, 103 operations with no handler coverage.'
+    - 'Endpoint matrix checkpoint (strict handler criterion, refreshed 2026-03-03): 138 live swagger operations, 35 distinct HTTP operations with at least one McpServer.UI.Core handler path, 38 UI.Core handler/message types, and 103 operations with no handler coverage.'
     - 'Host matrix target: Desktop/Android/Director TUI/Blazor consume one shared UI.Core handler/message surface; endpoint gaps are implemented in UI.Core once and reused everywhere.'
     - 'Extension pattern target: host-specific ViewModels may add UX affordances/events but delegate shared CRUD/prompt/workspace operations to UI.Core commands/dispatcher.'
-    - Cross-UI use-case matrix baseline captured in docs/architecture/compliance/UI-USECASE-MATRIX.md, including endpoint-group Mermaid diagrams and RelayCommand-chain omissions requiring closure.
+    - Cross-UI use-case matrix refreshed in docs/architecture/compliance/UI-USECASE-MATRIX.md, including endpoint-group Mermaid diagrams, 28 complete RelayCommand chains, and 9 active omission rows requiring closure.
     - Use-case matrix now includes per-use-case UI divergence annotations to guide parity closure work (especially P1.8/P1.9/P6.10).
     - 'Major Phase 1 scope: implement missing UI.Core handler coverage for endpoint gaps (GAP-017 domains) and add per-handler unit tests validating success/error/authorization behavior.'
-    - 'Major Phase 2 scope: backfill UI.Core ViewModels + RelayCommands for uncovered operations (including GAP-020 surfaces) with unit + integration tests for RelayCommand -> Handler -> mutation chains.'
+    - 'Major Phase 2 scope: backfill UI.Core ViewModels + RelayCommands for the remaining uncovered active flows (especially workspace create/delete/status/start/stop, global prompt load/save-reset, and shared workspace-health probe) with unit + integration tests for RelayCommand -> Handler -> mutation chains.'
     - 'Major Phase 3 scope: migrate Phone/Tablet/Desktop/TUI bindings and host extension layers to normalized UI.Core command usage, then enforce cross-host UI test parity.'
     - 'Major Phase 4 scope: run as-built FR/TR/TEST requirements audit, remediate drift, and verify legacy/superseded VM pathways are eliminated.'
     - 'Major Phase 5 scope: migrate Director and Blazor/Web host composition into McpServerManager workspace with shared UI.Core runtime wiring and parity smoke validation.'
     - 'As-built requirements audit artifacts published under docs/Project: Functional-Requirements.md, Technical-Requirements.md, TR-per-FR-Mapping.md, Requirements-Matrix.md, Testing-Requirements.md (projected + uncaptured Android/Desktop coverage).'
-    - 'P1.8 completed: UI.Core now exposes RelayCommands for workspace init, tunnel lifecycle, and template detail operations; closure reflected in UI-USECASE-MATRIX and gap tracker completion evidence.'
+    - 'P1.8 completed: UI.Core now exposes RelayCommands for workspace init, tunnel lifecycle, and template detail operations; closure reflected in the refreshed UI-USECASE-MATRIX and gap tracker evidence.'
     - 'P1.9 completed: Director TUI host bindings now execute UI.Core RelayCommands for workspace init, tunnel lifecycle, and template detail operations (HealthScreen, TunnelScreen, TemplatesScreen), removing method-only call paths for these flows.'
     depends-on:
     - uicore-vm-relay-gaps
@@ -405,7 +405,7 @@ Architecture:
     - task: P0.8 Apply cross-host parity directive (Desktop/Android/Director TUI/Blazor share one UI.Core logic + endpoint surface)
       done: true
     - task: P1.7 Build host capability matrix for Desktop/Android/Director TUI/Blazor (commands, flows, endpoint needs)
-      done: false
+      done: true
     - task: P3.10 Director TUI TODO flow migration to UI.Core base ViewModels with host extension layer
       done: false
     - task: P3.11 Blazor TODO flow migration to UI.Core base ViewModels with host extension layer
@@ -432,13 +432,19 @@ Architecture:
       done: false
     - task: P0.10 Annotate each matrix use case with UI-divergent behavior list to drive parity closure sequencing
       done: true
+    - task: P0.12 Refresh plan, gap-tracker, and use-case-matrix artifacts to the current as-built state after independent gap-closure work lands
+      done: true
     - task: M1.1 Backfill missing UI.Core handlers for uncovered endpoint domains and add handler unit tests
       done: false
     - task: M1.2 Produce handler coverage test matrix (endpoint -> message -> handler -> expected result)
       done: false
-    - task: M2.1 Backfill missing UI.Core ViewModels and RelayCommands (including Workspace init, Tunnel lifecycle, Template detail flows)
+    - task: M1.3 Backfill the active workspace HTTP operations missing from UI.Core (create/delete/status/start/stop/global prompt) and add focused handler tests before host migration resumes
+      done: false
+    - task: M2.1 Backfill missing UI.Core ViewModels and RelayCommands for remaining active gaps (workspace create/delete/status/start/stop, global prompt load/save-reset, and shared workspace-health flow)
       done: false
     - task: M2.2 Add unit + integration tests for every new RelayCommand -> Handler -> ViewModel mutation chain
+      done: false
+    - task: M2.3 Add shared workspace detail/global-prompt/health-probe ViewModels that can be reused by Desktop, Android, Director, and future Blazor hosts
       done: false
     - task: M3.1 Normalize ViewModel and RelayCommand usage across Phone/Tablet/Desktop/TUI host surfaces
       done: false

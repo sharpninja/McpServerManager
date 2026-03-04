@@ -14,16 +14,45 @@ This matrix shows current-state UI presence and identifies omissions where the c
 - `Complete`: row has an explicit RelayCommand path to a handler and a concrete ViewModel state mutation.
 - `Gap`: use case exists, but there is no exposed RelayCommand chain yet.
 
+## Coverage Summary
+
+- Refreshed against live swagger at `http://PAYTON-DESKTOP:7147/swagger/v1/swagger.json` on `2026-03-03`.
+- `38` UI.Core handler types currently exist across `10` endpoint domains.
+- `35 / 138` distinct HTTP operations currently have at least one UI.Core handler path.
+- This matrix currently records `28` complete RelayCommand use cases and `9` active omission rows.
+- Session-log list/detail use cases share one swagger `GET /mcpserver/sessionlog` operation, so use-case totals and distinct HTTP-operation totals do not match one-to-one.
+
+## Endpoint-Domain Coverage Snapshot
+
+| Domain | Live HTTP Ops | UI.Core-Covered HTTP Ops | Notes |
+| --- | --- | --- | --- |
+| `health` | `1` | `1` | Covered via `CheckHealthQueryHandler`. |
+| `auth` | `5` | `1` | Only `GET /auth/config` is UI.Core-backed today. |
+| `context` | `4` | `4` | Fully handler-covered in UI.Core. |
+| `repo` | `3` | `3` | Fully handler-covered in UI.Core. |
+| `sessionlog` | `3` | `1` | Read-only `GET /mcpserver/sessionlog` is covered; append/dialog POST flows are not. |
+| `templates` | `8` | `6` | `resolve` and ad-hoc `/templates/test` remain uncovered. |
+| `todo` | `13` | `9` | Move + queued prompt operations remain uncovered. |
+| `tunnel` | `7` | `6` | Direct provider-status query remains uncovered. |
+| `workspace` | `11` | `4` | Create/delete/status/start/stop/global-prompt operations remain uncovered. |
+| `requirements` | `20` | `0` | No UI.Core handler coverage yet. |
+| `tools` | `12` | `0` | No UI.Core handler coverage yet. |
+| `gh` | `13` | `0` | No UI.Core handler coverage yet. |
+| `voice` | `9` | `0` | No UI.Core handler coverage yet. |
+| `agents` | `14` | `0` | No UI.Core handler coverage yet. |
+| `agent-pool` | `15` | `0` | No UI.Core handler coverage yet. |
+| `events` | `1` | `0` | No UI.Core handler coverage yet. |
+
 ## Blazor Surface Inventory Status
 
 - Blazor is a required parity target, but there is no Blazor host implementation in this workspace yet.
 - Endpoint/use-case inventory for Blazor is therefore tracked as expected parity with the same UI.Core RelayCommand surfaces listed below.
-- Migration status for Blazor wiring remains in plan phase `M5` (`P3.11`, `P4.8`, `M5.2`).
+- Migration status for Blazor wiring remains in plan phase `M5` (`P3.11`, `P4.8`, `M5.2`), and parity is still blocked by the open workspace/global-prompt/health omission rows listed below.
 
 | Endpoint Group | Expected UI.Core RelayCommand Surface for Blazor | Current Blazor Status |
 | --- | --- | --- |
 | TODO | `TodoListViewModel.RefreshCommand`, `TodoDetailViewModel.*Command` | Not yet wired in RequestTracker |
-| Workspace | `WorkspaceListViewModel.RefreshCommand`, `WorkspaceDetailViewModel.GetWorkspaceCommand`, `WorkspacePolicyViewModel.SaveCommand`, `HealthSnapshotsViewModel.InitializeWorkspaceCommand` | Not yet wired in RequestTracker |
+| Workspace | `WorkspaceListViewModel.RefreshCommand`, `WorkspaceDetailViewModel.GetWorkspaceCommand`, `WorkspacePolicyViewModel.SaveCommand`, `HealthSnapshotsViewModel.InitializeWorkspaceCommand` | Not yet wired in RequestTracker; parity is still blocked by missing shared create/delete/status/start/stop/global-prompt/workspace-health flows |
 | SessionLog | `SessionLogListViewModel.RefreshCommand`, `SessionLogDetailViewModel.LoadCommand` | Not yet wired in RequestTracker |
 | Health | `HealthSnapshotsViewModel.CheckHealthCommand` | Not yet wired in RequestTracker |
 | Templates | `TemplateListViewModel.RefreshCommand`, `TemplateDetailViewModel.Load/Save/Delete/TestCommand` | Not yet wired in RequestTracker |
@@ -64,7 +93,17 @@ This matrix shows current-state UI presence and identifies omissions where the c
 
 ## Omissions (Use Case Exists, RelayCommand Chain Missing)
 
-No open omissions in this matrix after GAP-020 closure. Workspace init, tunnel lifecycle, and template detail operations are now RelayCommand-backed in UI.Core.
+| Endpoint Group | User Use Case | UI Tags | Current Host Command / Mutation | Missing Shared RelayCommand Chain |
+| --- | --- | --- | --- | --- |
+| Workspace | Create workspace (`POST /mcpserver/workspace`) | `[Tablet, Desktop]` | `WorkspaceViewModel.NewWorkspaceCommand` seeds an app-local draft that is later persisted by `SaveEditorCommand` | No shared `CreateWorkspaceCommandHandler` or reusable UI.Core create-workspace ViewModel/RelayCommand |
+| Workspace | Save workspace editor (`PUT /mcpserver/workspace/{key}` full editor fields) | `[Tablet, Desktop]` | `WorkspaceViewModel.SaveEditorCommand` mutates app-local editor fields and list selection | No shared UI.Core save-workspace RelayCommand for the Desktop/Android editor path; `UpdateWorkspacePolicyCommandHandler` only covers the TUI policy subset |
+| Workspace | Delete workspace (`DELETE /mcpserver/workspace/{key}`) | `[Tablet, Desktop]` | `WorkspaceViewModel.DeleteSelectedCommand` mutates app-local selection and list state | No `DeleteWorkspaceCommandHandler` or reusable UI.Core delete-workspace ViewModel/RelayCommand |
+| Workspace | Get workspace status (`GET /mcpserver/workspace/{key}/status`) | `[Tablet, Desktop]` | `WorkspaceViewModel.GetSelectedStatusCommand` updates `ProcessStatusText` and indicator state | No `GetWorkspaceStatusQueryHandler` or shared UI.Core status ViewModel/RelayCommand |
+| Health | Check selected workspace health (`GET /health` against selected workspace base URL) | `[Tablet, Desktop]` | `WorkspaceViewModel.CheckSelectedWorkspaceHealthCommand` mutates `ProcessStatusText` and `HealthIndicator*` properties | No shared UI.Core workspace-health probe query/command or health-specific ViewModel mutation path |
+| Workspace | Start workspace (`POST /mcpserver/workspace/{key}/start`) | `[Tablet, Desktop]` | `WorkspaceViewModel.StartSelectedWorkspaceCommand` mutates app-local process-status fields | No `StartWorkspaceCommandHandler` or shared UI.Core lifecycle command |
+| Workspace | Stop workspace (`POST /mcpserver/workspace/{key}/stop`) | `[Tablet, Desktop]` | `WorkspaceViewModel.StopSelectedWorkspaceCommand` mutates app-local process-status fields | No `StopWorkspaceCommandHandler` or shared UI.Core lifecycle command |
+| Workspace | Load global prompt (`GET /mcpserver/workspace/prompt`) | `[Desktop]` | `WorkspaceViewModel.LoadGlobalPromptCommand` hydrates `GlobalPromptText` in the app-local VM | No `GetWorkspacePromptQueryHandler` or shared UI.Core prompt ViewModel |
+| Workspace | Save / reset global prompt (`PUT /mcpserver/workspace/prompt`) | `[Desktop]` | `WorkspaceViewModel.SaveGlobalPromptCommand` and `ResetGlobalPromptCommand` mutate `GlobalPromptText` app-locally | No `UpdateWorkspacePromptCommandHandler` or shared UI.Core prompt ViewModel / RelayCommand chain |
 
 ---
 
@@ -161,6 +200,35 @@ No open omissions in this matrix after GAP-020 closure. Workspace init, tunnel l
   - `TUI`: Filter + table workflow with template management context.
   - `Phone/Tablet/Desktop`: Use case not surfaced in current shells.
 
+### Open-omission use cases
+
+- `Create workspace` (`POST /mcpserver/workspace`)
+  - `Tablet/Desktop`: Draft-first editor flow still starts from the app-local `WorkspaceViewModel`; no shared UI.Core create-workspace surface exists yet.
+
+- `Save workspace editor` (`PUT /mcpserver/workspace/{key}` full editor fields)
+  - `Tablet/Desktop`: Save commits the broader workspace editor model from the app-local VM; UI.Core only covers the narrower TUI policy-save path today.
+
+- `Delete workspace` (`DELETE /mcpserver/workspace/{key}`)
+  - `Tablet/Desktop`: Delete is still an app-local list/detail mutation path with no shared UI.Core delete command surface.
+
+- `Get workspace status` (`GET /mcpserver/workspace/{key}/status`)
+  - `Tablet/Desktop`: Status polling is still app-local and writes directly into process-status text/indicator state.
+
+- `Check selected workspace health` (`GET /health` against selected workspace base URL)
+  - `Tablet/Desktop`: Health probe remains app-local and separate from the shared `HealthSnapshotsViewModel.CheckHealthCommand` path used by TUI.
+
+- `Start workspace` (`POST /mcpserver/workspace/{key}/start`)
+  - `Tablet/Desktop`: Lifecycle start remains app-local and is not reusable by Director or a future Blazor host.
+
+- `Stop workspace` (`POST /mcpserver/workspace/{key}/stop`)
+  - `Tablet/Desktop`: Lifecycle stop remains app-local and is not reusable by Director or a future Blazor host.
+
+- `Load global prompt` (`GET /mcpserver/workspace/prompt`)
+  - `Desktop`: Global prompt hydration exists only in the desktop workspace surface; Android/Director/Blazor have no shared UI.Core prompt surface to adopt.
+
+- `Save / reset global prompt` (`PUT /mcpserver/workspace/prompt`)
+  - `Desktop`: Save and reset remain app-local prompt-editor workflows, so parity cannot yet converge on a shared command chain.
+
 ### GAP-020 use cases (closed, now RelayCommand-backed)
 
 - `Init workspace` (`POST /mcpserver/workspace/{key}/init`) — `CLOSED`
@@ -254,14 +322,36 @@ flowchart LR
   W2(("Get workspace detail<br/>[Tablet, Desktop, TUI]"))
   W3(("Save workspace policy<br/>[TUI]"))
   W4(("Init workspace<br/>[Tablet, Desktop, TUI]"))
+  W5(("Create workspace<br/>[Tablet, Desktop] (Gap)"))
+  W6(("Save workspace editor<br/>[Tablet, Desktop] (Gap)"))
+  W7(("Delete workspace<br/>[Tablet, Desktop] (Gap)"))
+  W8(("Get workspace status<br/>[Tablet, Desktop] (Gap)"))
+  W9(("Start workspace<br/>[Tablet, Desktop] (Gap)"))
+  W10(("Stop workspace<br/>[Tablet, Desktop] (Gap)"))
+  W11(("Load global prompt<br/>[Desktop] (Gap)"))
+  W12(("Save / reset global prompt<br/>[Desktop] (Gap)"))
 
   Tablet --> W1
   Tablet --> W2
   Tablet --> W4
+  Tablet --> W5
+  Tablet --> W6
+  Tablet --> W7
+  Tablet --> W8
+  Tablet --> W9
+  Tablet --> W10
 
   Desktop --> W1
   Desktop --> W2
   Desktop --> W4
+  Desktop --> W5
+  Desktop --> W6
+  Desktop --> W7
+  Desktop --> W8
+  Desktop --> W9
+  Desktop --> W10
+  Desktop --> W11
+  Desktop --> W12
 
   TUI --> W1
   TUI --> W2
@@ -297,8 +387,11 @@ flowchart LR
   TUI([TUI])
 
   H1(("Check health snapshot<br/>[TUI]"))
+  H2(("Check selected workspace health<br/>[Tablet, Desktop] (Gap)"))
 
   TUI --> H1
+  Tablet --> H2
+  Desktop --> H2
 ```
 
 ### Template Endpoints
@@ -353,6 +446,8 @@ flowchart LR
 
 - `lib/McpServer/src/McpServer.UI.Core/ViewModels/*`
 - `lib/McpServer/src/McpServer.UI.Core/Handlers/*`
+- `src/McpServerManager.Core/ViewModels/TodoListViewModel.cs`
+- `src/McpServerManager.Core/ViewModels/WorkspaceViewModel.cs`
 - `src/McpServerManager.Desktop/Views/*`
 - `src/McpServerManager.Android/Views/*`
 - `lib/McpServer/src/McpServer.Director/Screens/*`
