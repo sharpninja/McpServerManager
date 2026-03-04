@@ -103,6 +103,12 @@ public sealed class McpTodoCreateRequest
     [JsonPropertyName("estimate")]
     public string? Estimate { get; set; }
 
+    [JsonPropertyName("note")]
+    public string? Note { get; set; }
+
+    [JsonPropertyName("remaining")]
+    public string? Remaining { get; set; }
+
     [JsonPropertyName("description")]
     public List<string>? Description { get; set; }
 

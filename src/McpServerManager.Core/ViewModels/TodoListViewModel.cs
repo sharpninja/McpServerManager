@@ -1,117 +1,109 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Logging;
+using McpServer.UI.Core.Messages;
+using McpServer.UI.Core.ViewModels;
 using McpServerManager.Core.Commands;
-using McpServerManager.Core.Cqrs;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Services;
+using Microsoft.Extensions.Logging;
+using UiCoreTodoDetailViewModel = McpServer.UI.Core.ViewModels.TodoDetailViewModel;
+using UiCoreTodoListViewModel = McpServer.UI.Core.ViewModels.TodoListViewModel;
+using UiCoreWorkspaceContextViewModel = McpServer.UI.Core.ViewModels.WorkspaceContextViewModel;
 
 namespace McpServerManager.Core.ViewModels;
 
 public partial class TodoListViewModel : ViewModelBase
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("TodoListViewModel");
-    private readonly Mediator _mediator = new();
+
     private readonly IClipboardService _clipboardService;
-    private readonly UiCoreViewModelEvaluator _uiCoreEvaluator;
+    private readonly UiCoreAppRuntime _runtime;
+    private readonly UiCoreTodoListViewModel _listVm;
+    private readonly UiCoreTodoDetailViewModel _detailVm;
     private List<TodoListEntry> _allEntries = new();
     private CancellationTokenSource? _activeCts;
-    private bool _isBusyHandlerRegistered;
-    private bool _hasRunUiCoreListEvaluation;
-
-    // ── Observable properties ───────────────────────────────────────────────
 
     [ObservableProperty] private ObservableCollection<TodoListGroup> _groupedItems = new();
     [ObservableProperty] private TodoListEntry? _selectedEntry;
     [ObservableProperty] private string _statusText = "Ready";
     [ObservableProperty] private bool _isLoading;
 
-    // Filters
     [ObservableProperty] private int _selectedPriorityIndex;
     [ObservableProperty] private int _selectedScopeIndex;
     [ObservableProperty] private string _filterText = "";
     [ObservableProperty] private bool _includeCompleted;
 
-    // New-todo form
     [ObservableProperty] private bool _isCreatingNew;
     [ObservableProperty] private string _newTodoTitle = "";
-    [ObservableProperty] private int _newTodoPriorityIndex = 1; // 0=High, 1=Medium, 2=Low
+    [ObservableProperty] private int _newTodoPriorityIndex = 1;
 
-    // Editor
     [ObservableProperty] private string _editorText = "";
     [ObservableProperty] private string _editorTitle = "";
     [ObservableProperty] private double _editorFontSize = 13;
     [ObservableProperty] private bool _isCopilotRunning;
     [ObservableProperty] private McpTodoFlatItem? _currentTodoDetail;
 
-    /// <summary>Set by the view code-behind to read current TextEditor content.</summary>
     public Func<string>? GetEditorText { get; set; }
 
-    /// <summary>Raised when a status message should appear on the global status bar.</summary>
     public event Action<string>? GlobalStatusChanged;
 
-    public static IReadOnlyList<string> PriorityOptions { get; } = new[] { "All", "High", "Medium", "Low" };
-    public static IReadOnlyList<string> ScopeOptions { get; } = new[] { "Title", "ID", "All Fields" };
-    public static IReadOnlyList<string> NewPriorityOptions { get; } = new[] { "High", "Medium", "Low" };
+    public event EventHandler? OpenAiChatRequested;
 
-    // ── Constructor ─────────────────────────────────────────────────────────
+    public static IReadOnlyList<string> PriorityOptions { get; } = ["All", "High", "Medium", "Low"];
+    public static IReadOnlyList<string> ScopeOptions { get; } = ["Title", "ID", "All Fields"];
+    public static IReadOnlyList<string> NewPriorityOptions { get; } = ["High", "Medium", "Low"];
 
-    public TodoListViewModel(IClipboardService clipboardService, McpTodoService service)
+    internal TodoListViewModel(IClipboardService clipboardService, UiCoreAppRuntime runtime)
     {
         _clipboardService = clipboardService;
-        _uiCoreEvaluator = new UiCoreViewModelEvaluator(todoService: service);
-        RegisterCqrsHandlers(service);
+        _runtime = runtime;
+        _listVm = runtime.GetRequiredService<UiCoreTodoListViewModel>();
+        _detailVm = runtime.GetRequiredService<UiCoreTodoDetailViewModel>();
+    }
+
+    public TodoListViewModel(IClipboardService clipboardService, McpTodoService service)
+        : this(
+            clipboardService,
+            new UiCoreAppRuntime(
+                todoService: service,
+                workspaceContext: new UiCoreWorkspaceContextViewModel()))
+    {
     }
 
     public TodoListViewModel(IClipboardService clipboardService)
     {
         _clipboardService = clipboardService;
-        // Design-time / standalone fallback — creates its own client.
         var client = McpServerRestClientFactory.Create(AppSettings.ResolveMcpBaseUrl(), TimeSpan.FromSeconds(5));
         var promptClient = McpServerRestClientFactory.Create(AppSettings.ResolveMcpBaseUrl(), TimeSpan.FromMinutes(15));
         var todoService = new McpTodoService(client, promptClient);
-        _uiCoreEvaluator = new UiCoreViewModelEvaluator(todoService: todoService);
-        RegisterCqrsHandlers(todoService);
+        _runtime = new UiCoreAppRuntime(
+            todoService: todoService,
+            workspaceContext: new UiCoreWorkspaceContextViewModel());
+        _listVm = _runtime.GetRequiredService<UiCoreTodoListViewModel>();
+        _detailVm = _runtime.GetRequiredService<UiCoreTodoDetailViewModel>();
     }
 
-    private void RegisterCqrsHandlers(McpTodoService service)
+    public void ApplyWorkspacePath(string? workspacePath)
     {
-        if (!_isBusyHandlerRegistered)
-        {
-            _mediator.IsBusyChanged += busy =>
-            {
-                Avalonia.Threading.Dispatcher.UIThread.Post(() => IsLoading = busy);
-            };
-            _isBusyHandlerRegistered = true;
-        }
-
-        _mediator.RegisterQuery(new QueryTodosHandler(service));
-        _mediator.RegisterQuery(new GetTodoByIdHandler(service));
-        _mediator.Register<CreateTodoCommand, McpTodoMutationResult>(new CreateTodoHandler(service));
-        _mediator.Register<UpdateTodoCommand, McpTodoMutationResult>(new UpdateTodoHandler(service));
-        _mediator.Register<DeleteTodoCommand, McpTodoMutationResult>(new DeleteTodoHandler(service));
-        _mediator.Register<AnalyzeTodoRequirementsCommand, McpRequirementsAnalysisResult>(new AnalyzeTodoRequirementsHandler(service));
-        _mediator.Register<StreamTodoPromptCommand, IAsyncEnumerable<string>>(new StreamTodoPromptHandler(service));
+        _runtime.WorkspaceContext.ActiveWorkspacePath = workspacePath ?? string.Empty;
+        CurrentTodoDetail = null;
+        EditorText = "";
+        EditorTitle = "";
     }
 
     public Task RefreshForConnectionChangeAsync() => LoadTodosAsync();
-
-    // ── Filter change triggers ──────────────────────────────────────────────
 
     partial void OnSelectedPriorityIndexChanged(int value) => ApplyFilters();
     partial void OnSelectedScopeIndexChanged(int value) => ApplyFilters();
     partial void OnFilterTextChanged(string value) => ApplyFilters();
     partial void OnIncludeCompletedChanged(bool value) => _ = LoadTodosAsync();
-
-    // ── Commands ────────────────────────────────────────────────────────────
 
     [RelayCommand]
     private async Task LoadTodosAsync() => await LoadTodosCoreAsync(forceEditorReload: false);
@@ -141,79 +133,86 @@ public partial class TodoListViewModel : ViewModelBase
     [RelayCommand]
     private async Task ToggleDoneAsync()
     {
-        if (SelectedEntry?.Item is not { } item) return;
+        if (SelectedEntry?.Item is not { } item)
+            return;
+
         try
         {
-            var result = await _mediator.SendAsync<UpdateTodoCommand, McpTodoMutationResult>(
-                new UpdateTodoCommand(item.Id, new McpTodoUpdateRequest { Done = !item.Done }));
-            if (result.Success)
+            var vm = CreateScratchDetailVm();
+            vm.EditorId = item.Id;
+            vm.EditorDone = !item.Done;
+            await vm.SaveAsync();
+
+            if (!string.IsNullOrWhiteSpace(vm.ErrorMessage))
             {
-                StatusText = item.Done ? $"Reopened {item.Id}" : $"Completed {item.Id}";
-                await LoadTodosAsync();
-                if (string.Equals(CurrentTodoDetail?.Id, item.Id, StringComparison.OrdinalIgnoreCase))
-                    await TryRefreshEditorByIdAsync(item.Id, updateStatus: false);
+                StatusText = "Failed: " + vm.ErrorMessage;
+                return;
             }
-            else
-            {
-                StatusText = $"Failed: {result.Error}";
-            }
+
+            StatusText = item.Done ? $"Reopened {item.Id}" : $"Completed {item.Id}";
+            await LoadTodosAsync();
+            if (string.Equals(CurrentTodoDetail?.Id, item.Id, StringComparison.OrdinalIgnoreCase))
+                await TryRefreshEditorByIdAsync(item.Id, updateStatus: false);
         }
         catch (Exception ex)
         {
-            StatusText = $"Error: {ex.Message}";
+            StatusText = "Error: " + ex.Message;
         }
     }
 
     [RelayCommand]
     private async Task DeleteSelectedAsync()
     {
-        if (SelectedEntry?.Item is not { } item) return;
+        if (SelectedEntry?.Item is not { } item)
+            return;
+
         try
         {
-            var result = await _mediator.SendAsync<DeleteTodoCommand, McpTodoMutationResult>(
-                new DeleteTodoCommand(item.Id));
-            if (result.Success)
+            var vm = CreateScratchDetailVm();
+            vm.EditorId = item.Id;
+            await vm.DeleteAsync();
+
+            if (!string.IsNullOrWhiteSpace(vm.ErrorMessage))
             {
-                StatusText = $"Deleted {item.Id}";
-                if (string.Equals(CurrentTodoDetail?.Id, item.Id, StringComparison.OrdinalIgnoreCase))
-                {
-                    CurrentTodoDetail = null;
-                    EditorText = "";
-                    EditorTitle = "";
-                }
-                await LoadTodosAsync();
+                StatusText = "Delete failed: " + vm.ErrorMessage;
+                return;
             }
-            else
-            {
-                StatusText = $"Delete failed: {result.Error}";
-            }
+
+            StatusText = $"Deleted {item.Id}";
+            if (string.Equals(CurrentTodoDetail?.Id, item.Id, StringComparison.OrdinalIgnoreCase))
+                ClearEditor();
+
+            await LoadTodosAsync();
         }
         catch (Exception ex)
         {
-            StatusText = $"Error: {ex.Message}";
+            StatusText = "Error: " + ex.Message;
         }
     }
 
     [RelayCommand]
     private async Task AnalyzeRequirementsAsync()
     {
-        if (SelectedEntry?.Item is not { } item) return;
-        StatusText = $"Analyzing {item.Id}…";
-        _activeCts?.Cancel();
-        _activeCts = new CancellationTokenSource();
-        var ct = _activeCts.Token;
+        if (SelectedEntry?.Item is not { } item)
+            return;
+
+        StatusText = $"Analyzing {item.Id}...";
+        ReplaceActiveCancellation();
+
         try
         {
-            var result = await _mediator.SendAsync<AnalyzeTodoRequirementsCommand, McpRequirementsAnalysisResult>(
-                new AnalyzeTodoRequirementsCommand(item.Id), ct);
-            if (result.Success)
+            var vm = CreateScratchDetailVm();
+            vm.EditorId = item.Id;
+            await vm.AnalyzeRequirementsAsync(_activeCts!.Token);
+
+            if (!string.IsNullOrWhiteSpace(vm.ErrorMessage))
             {
-                StatusText = $"Requirements for {item.Id}: {(result.FunctionalRequirements?.Count ?? 0)} functional, {(result.TechnicalRequirements?.Count ?? 0)} technical";
+                StatusText = "Analysis failed: " + vm.ErrorMessage;
+                return;
             }
-            else
-            {
-                StatusText = $"Analysis failed: {result.Error}";
-            }
+
+            var result = vm.RequirementsAnalysis;
+            StatusText = $"Requirements for {item.Id}: {(result?.FunctionalRequirements.Count ?? 0)} functional, {(result?.TechnicalRequirements.Count ?? 0)} technical";
         }
         catch (OperationCanceledException)
         {
@@ -221,7 +220,7 @@ public partial class TodoListViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusText = $"Error: {ex.Message}";
+            StatusText = "Error: " + ex.Message;
         }
     }
 
@@ -256,65 +255,53 @@ public partial class TodoListViewModel : ViewModelBase
             return;
         }
 
-        var priority = NewPriorityOptions[NewTodoPriorityIndex];
         var id = $"TODO-{DateTime.UtcNow:yyyyMMddHHmmss}";
+        var priority = NewPriorityOptions[Math.Clamp(NewTodoPriorityIndex, 0, NewPriorityOptions.Count - 1)].ToLowerInvariant();
 
         try
         {
-            var result = await _mediator.SendAsync<CreateTodoCommand, McpTodoMutationResult>(
-                new CreateTodoCommand(new McpTodoCreateRequest
-                {
-                    Id = id,
-                    Title = title,
-                    Priority = priority.ToLowerInvariant(),
-                    Section = "general"
-                }));
+            var vm = CreateScratchDetailVm();
+            vm.BeginNewDraft("general");
+            vm.EditorId = id;
+            vm.EditorTitle = title;
+            vm.EditorSection = "general";
+            vm.EditorPriority = priority;
+            await vm.CreateAsync();
 
-            if (result.Success)
+            if (!string.IsNullOrWhiteSpace(vm.ErrorMessage))
             {
-                StatusText = $"Created {id}";
-                IsCreatingNew = false;
-                NewTodoTitle = "";
-                await LoadTodosAsync();
+                StatusText = "Create failed: " + vm.ErrorMessage;
+                return;
             }
-            else
-            {
-                StatusText = $"Create failed: {result.Error}";
-            }
+
+            StatusText = $"Created {id}";
+            IsCreatingNew = false;
+            NewTodoTitle = "";
+            await LoadTodosAsync();
         }
         catch (Exception ex)
         {
-            StatusText = $"Error: {ex.Message}";
+            StatusText = "Error: " + ex.Message;
         }
     }
 
     [RelayCommand]
     private async Task OpenSelectedTodoAsync()
     {
-        if (SelectedEntry?.Item is not { } item) return;
-        GlobalStatusChanged?.Invoke($"Opening {item.Id}…");
-        try
+        if (SelectedEntry?.Item is not { } item)
+            return;
+
+        GlobalStatusChanged?.Invoke($"Opening {item.Id}...");
+        var opened = await TryRefreshEditorByIdAsync(item.Id, updateStatus: false);
+        if (opened)
         {
-            var fresh = await _mediator.QueryAsync<GetTodoByIdQuery, McpTodoFlatItem?>(
-                new GetTodoByIdQuery(item.Id));
-            if (fresh != null)
-            {
-                CurrentTodoDetail = fresh;
-                EditorText = TodoMarkdown.ToMarkdown(fresh);
-                EditorTitle = fresh.Id;
-                GlobalStatusChanged?.Invoke($"Opened {fresh.Id}.");
-            }
-            else
-            {
-                CurrentTodoDetail = null;
-                StatusText = $"Todo {item.Id} not found";
-                GlobalStatusChanged?.Invoke($"Todo {item.Id} not found.");
-            }
+            GlobalStatusChanged?.Invoke($"Opened {item.Id}.");
+            StatusText = $"Opened {item.Id}";
         }
-        catch (Exception ex)
+        else
         {
-            StatusText = $"Error opening: {ex.Message}";
-            GlobalStatusChanged?.Invoke($"Error opening todo: {ex.Message}");
+            StatusText = $"Todo {item.Id} not found";
+            GlobalStatusChanged?.Invoke($"Todo {item.Id} not found.");
         }
     }
 
@@ -322,72 +309,60 @@ public partial class TodoListViewModel : ViewModelBase
     private async Task SaveEditorAsync()
     {
         var text = GetEditorText?.Invoke() ?? EditorText;
-        if (string.IsNullOrWhiteSpace(text)) return;
+        if (string.IsNullOrWhiteSpace(text))
+            return;
 
-        var id = TodoMarkdown.ExtractId(text);
-        var isNew = string.IsNullOrEmpty(id)
-                    || string.Equals(id, "NEW-TODO", StringComparison.OrdinalIgnoreCase);
+        var parsed = TodoMarkdown.FromMarkdown(text);
+        var parsedId = TodoMarkdown.ExtractId(text);
+        var isNew = string.IsNullOrWhiteSpace(parsedId) ||
+                    string.Equals(parsedId, "NEW-TODO", StringComparison.OrdinalIgnoreCase);
+        var effectiveId = isNew ? $"TODO-{DateTime.UtcNow:yyyyMMddHHmmss}" : parsedId!.Trim();
+        var effectiveTitle = parsed.Title ?? "Untitled";
 
-        GlobalStatusChanged?.Invoke(isNew ? "Creating todo…" : $"Saving {id}…");
+        ReplaceActiveCancellation();
+        GlobalStatusChanged?.Invoke(isNew ? "Creating todo..." : $"Saving {effectiveId}...");
+
         try
         {
+            PrepareDetailEditorFromMarkdown(_detailVm, effectiveId, parsed, isNew);
             if (isNew)
-            {
-                // New todo: generate a real ID and create via MCP
-                var newId = $"TODO-{DateTime.UtcNow:yyyyMMddHHmmss}";
-                var updateReq = TodoMarkdown.FromMarkdown(text);
-                var createReq = new McpTodoCreateRequest
-                {
-                    Id = newId,
-                    Title = updateReq.Title ?? "Untitled",
-                    Priority = updateReq.Priority ?? "medium",
-                    Section = updateReq.Section ?? "general",
-                    Description = updateReq.Description,
-                    TechnicalDetails = updateReq.TechnicalDetails,
-                    ImplementationTasks = updateReq.ImplementationTasks,
-                    DependsOn = updateReq.DependsOn,
-                    Estimate = updateReq.Estimate
-                };
-
-                var result = await _mediator.SendAsync<CreateTodoCommand, McpTodoMutationResult>(
-                    new CreateTodoCommand(createReq));
-                if (result.Success)
-                {
-                    StatusText = $"Created {newId}";
-                    GlobalStatusChanged?.Invoke($"Created todo {newId}.");
-                    EditorTitle = newId;
-                    await LoadTodosAsync();
-                    await TryRefreshEditorByIdAsync(newId, updateStatus: false);
-                }
-                else
-                {
-                    StatusText = $"Create failed: {result.Error}";
-                    GlobalStatusChanged?.Invoke($"Create failed: {result.Error}");
-                }
-            }
+                await _detailVm.CreateAsync(_activeCts!.Token);
             else
+                await _detailVm.SaveAsync(_activeCts!.Token);
+
+            if (!string.IsNullOrWhiteSpace(_detailVm.ErrorMessage))
             {
-                var updateReq = TodoMarkdown.FromMarkdown(text);
-                var result = await _mediator.SendAsync<UpdateTodoCommand, McpTodoMutationResult>(
-                    new UpdateTodoCommand(id!, updateReq));
-                if (result.Success)
-                {
-                    StatusText = $"Saved {id}";
-                    GlobalStatusChanged?.Invoke($"Saved todo {id}.");
-                    await LoadTodosAsync();
-                    await TryRefreshEditorByIdAsync(id!, updateStatus: false);
-                }
-                else
-                {
-                    StatusText = $"Save failed: {result.Error}";
-                    GlobalStatusChanged?.Invoke($"Save failed: {result.Error}");
-                }
+                StatusText = (isNew ? "Create failed: " : "Save failed: ") + _detailVm.ErrorMessage;
+                GlobalStatusChanged?.Invoke(StatusText);
+                return;
             }
+
+            var savedDetail = _detailVm.Detail;
+            if (savedDetail is null)
+            {
+                StatusText = isNew
+                    ? $"Create failed: {effectiveTitle}"
+                    : $"Save failed: {effectiveId}";
+                GlobalStatusChanged?.Invoke(StatusText);
+                return;
+            }
+
+            var savedId = savedDetail.Id;
+            StatusText = isNew ? $"Created {savedId}" : $"Saved {savedId}";
+            GlobalStatusChanged?.Invoke(StatusText);
+
+            await LoadTodosCoreAsync(forceEditorReload: false);
+            await TryRefreshEditorByIdAsync(savedId, updateStatus: false);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = isNew ? "Create cancelled" : "Save cancelled";
+            GlobalStatusChanged?.Invoke(StatusText);
         }
         catch (Exception ex)
         {
-            StatusText = $"Error saving: {ex.Message}";
-            GlobalStatusChanged?.Invoke($"Error saving todo: {ex.Message}");
+            StatusText = (isNew ? "Error creating: " : "Error saving: ") + ex.Message;
+            GlobalStatusChanged?.Invoke(StatusText);
         }
     }
 
@@ -403,7 +378,9 @@ public partial class TodoListViewModel : ViewModelBase
     private async Task RefreshEditorAsync()
     {
         var editorTodoId = GetCurrentEditorTodoId();
-        if (string.IsNullOrWhiteSpace(editorTodoId)) return;
+        if (string.IsNullOrWhiteSpace(editorTodoId))
+            return;
+
         await TryRefreshEditorByIdAsync(editorTodoId, updateStatus: true);
     }
 
@@ -413,168 +390,106 @@ public partial class TodoListViewModel : ViewModelBase
     [RelayCommand]
     private void EditorZoomOut() => EditorFontSize = Math.Max(EditorFontSize - 2, 8);
 
-    // ── AI Chat ─────────────────────────────────────────────────────────────
-
-    /// <summary>Raised when the user clicks the AI button; platform code-behind opens the chat window.</summary>
-    public event EventHandler? OpenAiChatRequested;
-
     [RelayCommand]
     private void OpenAiChat() => OpenAiChatRequested?.Invoke(this, EventArgs.Empty);
-
-    // ── Copilot CLI Commands ────────────────────────────────────────────────
 
     [RelayCommand]
     private async Task CopilotStatusAsync()
     {
-        if (SelectedEntry?.Item is not { } item) return;
+        if (SelectedEntry?.Item is not { } item)
+            return;
+
         await RunTodoPromptCommandAsync(item, TodoPromptActionKind.Status);
     }
 
     [RelayCommand]
     private async Task CopilotPlanAsync()
     {
-        if (SelectedEntry?.Item is not { } item) return;
+        if (SelectedEntry?.Item is not { } item)
+            return;
+
         await RunTodoPromptCommandAsync(item, TodoPromptActionKind.Plan);
     }
 
     [RelayCommand]
     private async Task CopilotImplementAsync()
     {
-        if (SelectedEntry?.Item is not { } item) return;
+        if (SelectedEntry?.Item is not { } item)
+            return;
+
         await RunTodoPromptCommandAsync(item, TodoPromptActionKind.Implement);
     }
 
     private async Task RunTodoPromptCommandAsync(McpTodoFlatItem item, TodoPromptActionKind promptAction)
     {
         var action = promptAction.ToString().ToLowerInvariant();
-        _activeCts?.Cancel();
-        _activeCts = new CancellationTokenSource();
-        var ct = _activeCts.Token;
+        ReplaceActiveCancellation();
 
         IsCopilotRunning = true;
         EditorTitle = $"{item.Id} — {action} prompt";
-        EditorText = $"⏳ Requesting {action} prompt for {item.Id} from MCP server…\n";
-        StatusText = $"{Capitalize(action)} prompt: {item.Id}…";
-
-        var sb = new StringBuilder();
-        sb.AppendLine($"⏳ Requesting {action} prompt for {item.Id} from MCP server…");
-        sb.AppendLine();
+        EditorText = $"Requesting {action} prompt for {item.Id} from MCP server...";
+        StatusText = $"{Capitalize(action)} prompt: {item.Id}...";
 
         try
         {
-            var stream = await _mediator.SendAsync<StreamTodoPromptCommand, IAsyncEnumerable<string>>(
-                new StreamTodoPromptCommand(item.Id, promptAction), ct);
+            var vm = CreateScratchDetailVm();
+            vm.EditorId = item.Id;
 
-            var receivedAnyLine = false;
-            var receivedErrorLine = false;
-            var uiFlushStopwatch = Stopwatch.StartNew();
-            var linesSinceUiFlush = 0;
-            await foreach (var line in stream.WithCancellation(ct))
+            switch (promptAction)
             {
-                receivedAnyLine = true;
-                if (!string.IsNullOrWhiteSpace(line) &&
-                    line.StartsWith("error:", StringComparison.OrdinalIgnoreCase))
-                {
-                    receivedErrorLine = true;
-                }
-
-                sb.AppendLine(line);
-                linesSinceUiFlush++;
-
-                // Flush to the UI thread periodically to show real-time streaming.
-                // The await foreach runs on a threadpool thread (SSE reader uses ConfigureAwait(false)),
-                // so we must dispatch EditorText updates explicitly.
-                if (linesSinceUiFlush >= 4 || uiFlushStopwatch.ElapsedMilliseconds >= 80)
-                {
-                    var snapshot = sb.ToString();
-                    Avalonia.Threading.Dispatcher.UIThread.Post(() => EditorText = snapshot);
-                    linesSinceUiFlush = 0;
-                    uiFlushStopwatch.Restart();
-                }
+                case TodoPromptActionKind.Status:
+                    await vm.GenerateStatusPromptAsync(_activeCts!.Token);
+                    break;
+                case TodoPromptActionKind.Plan:
+                    await vm.GeneratePlanPromptAsync(_activeCts!.Token);
+                    break;
+                case TodoPromptActionKind.Implement:
+                    await vm.GenerateImplementPromptAsync(_activeCts!.Token);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(promptAction), promptAction, null);
             }
 
-            if (!receivedAnyLine)
+            if (!string.IsNullOrWhiteSpace(vm.ErrorMessage))
             {
-                sb.AppendLine("❌ Error: MCP server returned no prompt output.");
-                sb.AppendLine("The server likely failed before emitting any SSE data.");
-                var text = sb.ToString();
-                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    EditorText = text;
-                    StatusText = $"{Capitalize(action)} prompt error: no output from MCP server";
-                });
+                EditorText = $"Error: {vm.ErrorMessage}";
+                StatusText = $"{Capitalize(action)} prompt error: {vm.ErrorMessage}";
+                return;
             }
-            else if (receivedErrorLine)
-            {
-                sb.AppendLine();
-                sb.AppendLine($"❌ {Capitalize(action)} prompt failed.");
-                var text = sb.ToString();
-                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    EditorText = text;
-                    StatusText = $"{Capitalize(action)} prompt error: {item.Id}";
-                });
-            }
-            else
-            {
-                sb.AppendLine();
-                sb.AppendLine($"✅ {Capitalize(action)} prompt completed.");
-                var text = sb.ToString();
-                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    EditorText = text;
-                    StatusText = $"{Capitalize(action)} prompt done: {item.Id}";
-                });
-            }
+
+            EditorText = vm.PromptOutput?.Text ?? string.Empty;
+            StatusText = $"{Capitalize(action)} prompt done: {item.Id}";
         }
         catch (OperationCanceledException)
         {
-            sb.AppendLine();
-            sb.AppendLine("🛑 Cancelled.");
-            var text = sb.ToString();
-            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                EditorText = text;
-                StatusText = $"{Capitalize(action)} prompt cancelled";
-            });
+            EditorText = $"{EditorText}{Environment.NewLine}{Environment.NewLine}Cancelled.";
+            StatusText = $"{Capitalize(action)} prompt cancelled";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "TODO prompt {Action} failed for {Id}", action, item.Id);
-            sb.AppendLine();
-            sb.AppendLine($"❌ Error: {ex.Message}");
-            var text = sb.ToString();
-            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                EditorText = text;
-                StatusText = $"{Capitalize(action)} prompt error: {ex.Message}";
-            });
+            EditorText = $"Error: {ex.Message}";
+            StatusText = $"{Capitalize(action)} prompt error: {ex.Message}";
         }
         finally
         {
-            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => IsCopilotRunning = false);
+            IsCopilotRunning = false;
         }
     }
 
-    private static string Capitalize(string value)
-        => string.IsNullOrEmpty(value) ? value : char.ToUpperInvariant(value[0]) + value.Substring(1);
-
-    /// <summary>Builds a context string with current todo data for the AI assistant.</summary>
     public string GetTodoContextForAgent()
     {
         var sb = new StringBuilder();
         sb.AppendLine("--- Todo context ---");
 
-        // Current editor content (the open todo)
-        var editorText = GetEditorText?.Invoke() ?? EditorText;
-        if (!string.IsNullOrWhiteSpace(editorText))
+        var editorContent = GetEditorText?.Invoke() ?? EditorText;
+        if (!string.IsNullOrWhiteSpace(editorContent))
         {
             sb.AppendLine();
             sb.AppendLine("## Currently open todo (YAML):");
-            sb.AppendLine(editorText.Trim());
+            sb.AppendLine(editorContent.Trim());
         }
 
-        // Full list summary
         if (_allEntries.Count > 0)
         {
             sb.AppendLine();
@@ -582,14 +497,11 @@ public partial class TodoListViewModel : ViewModelBase
             foreach (var entry in _allEntries)
             {
                 var item = entry.Item;
-                if (item == null) continue;
+                if (item == null)
+                    continue;
+
                 var doneTag = item.Done ? " [DONE]" : "";
                 sb.AppendLine($"- {item.Id} | {item.Priority} | {item.Title}{doneTag}");
-                if (item.Description is { Count: > 0 })
-                {
-                    foreach (var d in item.Description)
-                        sb.AppendLine($"    {d}");
-                }
             }
         }
 
@@ -598,13 +510,10 @@ public partial class TodoListViewModel : ViewModelBase
         return sb.ToString();
     }
 
-    // ── Filtering & grouping ────────────────────────────────────────────────
-
     private void ApplyFilters()
     {
         IEnumerable<TodoListEntry> source = _allEntries;
 
-        // Priority filter
         var priorityTag = SelectedPriorityIndex switch
         {
             1 => "high",
@@ -612,10 +521,13 @@ public partial class TodoListViewModel : ViewModelBase
             3 => "low",
             _ => ""
         };
-        if (!string.IsNullOrEmpty(priorityTag))
-            source = source.Where(e => string.Equals(e.Item?.Priority, priorityTag, StringComparison.OrdinalIgnoreCase));
 
-        // Text filter with boolean expression support
+        if (!string.IsNullOrEmpty(priorityTag))
+        {
+            source = source.Where(e =>
+                string.Equals(e.Item?.Priority, priorityTag, StringComparison.OrdinalIgnoreCase));
+        }
+
         var text = (FilterText ?? "").Trim();
         if (!string.IsNullOrEmpty(text))
         {
@@ -625,18 +537,18 @@ public partial class TodoListViewModel : ViewModelBase
                 2 => "all",
                 _ => "title"
             };
-            var matcher = Services.BooleanSearchParser.Parse(text);
+            var matcher = BooleanSearchParser.Parse(text);
             source = source.Where(e => MatchesTextFilter(e.Item, matcher, scopeTag));
         }
 
-        var filtered = source.ToList();
-
-        // Group by priority, sort items within each group by ID
-        var groups = filtered
+        var groups = source
+            .ToList()
             .GroupBy(e => e.PriorityGroup)
             .OrderBy(g => PrioritySortKey(g.First().Item?.Priority))
-            .Select(g => new TodoListGroup(g.Key, new ObservableCollection<TodoListEntry>(
-                g.OrderBy(e => e.Item?.Id, StringComparer.OrdinalIgnoreCase))))
+            .Select(g => new TodoListGroup(
+                g.Key,
+                new ObservableCollection<TodoListEntry>(
+                    g.OrderBy(e => e.Item?.Id, StringComparer.OrdinalIgnoreCase))))
             .ToList();
 
         GroupedItems = new ObservableCollection<TodoListGroup>(groups);
@@ -644,21 +556,23 @@ public partial class TodoListViewModel : ViewModelBase
 
     private static bool MatchesTextFilter(McpTodoFlatItem? item, Func<string, bool> matcher, string scope)
     {
-        if (item == null) return false;
+        if (item == null)
+            return false;
+
         var searchable = scope switch
         {
             "id" => item.Id ?? "",
             "title" => item.Title ?? "",
-            _ => string.Join(" ",
+            _ => string.Join(
+                " ",
                 new[] { item.Id, item.Title, item.Section, item.Priority, item.Note, item.Estimate, item.Remaining }
                     .Concat(item.Description ?? Enumerable.Empty<string>())
                     .Concat(item.TechnicalDetails ?? Enumerable.Empty<string>())
                     .Where(s => !string.IsNullOrEmpty(s)))
         };
+
         return matcher(searchable);
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private async Task LoadTodosCoreAsync(bool forceEditorReload)
     {
@@ -666,15 +580,29 @@ public partial class TodoListViewModel : ViewModelBase
         var editorTodoId = forceEditorReload ? GetCurrentEditorTodoId() : null;
 
         IsLoading = true;
-        StatusText = forceEditorReload ? "Refreshing…" : "Loading…";
-        GlobalStatusChanged?.Invoke(forceEditorReload ? "Refreshing todos…" : "Loading todos…");
+        StatusText = forceEditorReload ? "Refreshing..." : "Loading...";
+        GlobalStatusChanged?.Invoke(forceEditorReload ? "Refreshing todos..." : "Loading todos...");
+
         try
         {
-            var result = await _mediator.QueryAsync<QueryTodosQuery, McpTodoQueryResult>(
-                new QueryTodosQuery { Done = IncludeCompleted ? null : false });
+            _listVm.Keyword = null;
+            _listVm.Priority = null;
+            _listVm.Section = null;
+            _listVm.TodoId = null;
+            _listVm.Done = IncludeCompleted ? null : false;
+            await _listVm.LoadAsync();
 
-            await EvaluateUiCoreTodoListParityAsync(result);
-            _allEntries = BuildEntries(result.Items);
+            if (!string.IsNullOrWhiteSpace(_listVm.ErrorMessage))
+            {
+                _allEntries = [];
+                ApplyFilters();
+                SelectedEntry = null;
+                StatusText = "Error: " + _listVm.ErrorMessage;
+                GlobalStatusChanged?.Invoke($"Todo load failed: {_listVm.ErrorMessage}");
+                return;
+            }
+
+            _allEntries = BuildEntries(_listVm.Items);
             ApplyFilters();
             RestoreSelectionById(previouslySelectedId);
 
@@ -685,14 +613,14 @@ public partial class TodoListViewModel : ViewModelBase
                 refreshNote = refreshed ? " • editor refreshed" : " • editor not found";
             }
 
-            StatusText = $"{result.TotalCount} item(s){refreshNote}";
+            StatusText = $"{_listVm.TotalCount} item(s){refreshNote}";
             GlobalStatusChanged?.Invoke(forceEditorReload
-                ? $"Refreshed {result.TotalCount} todo(s)."
-                : $"Loaded {result.TotalCount} todo(s).");
+                ? $"Refreshed {_listVm.TotalCount} todo(s)."
+                : $"Loaded {_listVm.TotalCount} todo(s).");
         }
         catch (Exception ex)
         {
-            _allEntries = new List<TodoListEntry>();
+            _allEntries = [];
             ApplyFilters();
             SelectedEntry = null;
             StatusText = "Error: " + ex.Message;
@@ -702,40 +630,6 @@ public partial class TodoListViewModel : ViewModelBase
         {
             IsLoading = false;
         }
-    }
-
-    private async Task EvaluateUiCoreTodoListParityAsync(McpTodoQueryResult currentResult)
-    {
-        if (_hasRunUiCoreListEvaluation)
-            return;
-
-        _hasRunUiCoreListEvaluation = true;
-        var evaluation = await _uiCoreEvaluator
-            .EvaluateTodoListAsync(currentResult, IncludeCompleted)
-            .ConfigureAwait(true);
-
-        if (!evaluation.Success)
-        {
-            _logger.LogWarning(
-                "UI.Core TodoListViewModel evaluation failed: {Error}",
-                evaluation.Error ?? "unknown error");
-            return;
-        }
-
-        if (evaluation.IsMatch)
-        {
-            _logger.LogInformation(
-                "UI.Core TodoListViewModel parity check passed ({Count} items).",
-                evaluation.CurrentCount);
-            return;
-        }
-
-        _logger.LogWarning(
-            "UI.Core TodoListViewModel parity mismatch. Current={CurrentCount}, UiCore={UiCoreCount}, MissingInUiCore=[{MissingInUiCore}], MissingInCurrent=[{MissingInCurrent}]",
-            evaluation.CurrentCount,
-            evaluation.UiCoreCount,
-            string.Join(", ", evaluation.MissingInUiCore),
-            string.Join(", ", evaluation.MissingInCurrent));
     }
 
     private void RestoreSelectionById(string? todoId)
@@ -756,12 +650,16 @@ public partial class TodoListViewModel : ViewModelBase
         var markdownId = TodoMarkdown.ExtractId(editorContent);
         if (!string.IsNullOrWhiteSpace(markdownId) &&
             !string.Equals(markdownId, "NEW-TODO", StringComparison.OrdinalIgnoreCase))
+        {
             return markdownId;
+        }
 
         if (string.IsNullOrWhiteSpace(EditorTitle) ||
             string.Equals(EditorTitle, "NEW-TODO", StringComparison.OrdinalIgnoreCase) ||
             EditorTitle.Contains(" — ", StringComparison.Ordinal))
+        {
             return null;
+        }
 
         return EditorTitle.Trim();
     }
@@ -770,9 +668,16 @@ public partial class TodoListViewModel : ViewModelBase
     {
         try
         {
-            var fresh = await _mediator.QueryAsync<GetTodoByIdQuery, McpTodoFlatItem?>(
-                new GetTodoByIdQuery(todoId));
-            if (fresh == null)
+            _detailVm.TodoId = todoId;
+            await _detailVm.LoadAsync();
+            if (!string.IsNullOrWhiteSpace(_detailVm.ErrorMessage))
+            {
+                if (updateStatus)
+                    StatusText = "Error refreshing: " + _detailVm.ErrorMessage;
+                return false;
+            }
+
+            if (_detailVm.Detail is null)
             {
                 CurrentTodoDetail = null;
                 if (string.Equals(EditorTitle, todoId, StringComparison.OrdinalIgnoreCase))
@@ -780,49 +685,106 @@ public partial class TodoListViewModel : ViewModelBase
                     EditorText = "";
                     EditorTitle = "";
                 }
+
                 if (updateStatus)
                     StatusText = $"Todo {todoId} not found";
                 return false;
             }
 
-            CurrentTodoDetail = fresh;
-            EditorText = TodoMarkdown.ToMarkdown(fresh);
-            EditorTitle = fresh.Id;
-            RestoreSelectionById(fresh.Id);
+            ApplyDetailToHost(_detailVm.Detail);
+            RestoreSelectionById(_detailVm.Detail.Id);
             if (updateStatus)
-                StatusText = $"Refreshed {fresh.Id}";
+                StatusText = $"Refreshed {_detailVm.Detail.Id}";
             return true;
         }
         catch (Exception ex)
         {
             if (updateStatus)
-                StatusText = $"Error refreshing: {ex.Message}";
+                StatusText = "Error refreshing: " + ex.Message;
             return false;
         }
     }
 
-    private static List<TodoListEntry> BuildEntries(List<McpTodoFlatItem>? items)
+    private void ApplyDetailToHost(TodoDetail detail)
     {
-        if (items == null || items.Count == 0) return new();
+        CurrentTodoDetail = UiCoreMessageMapper.ToMcpTodoFlatItem(detail);
+        EditorText = TodoMarkdown.ToMarkdown(CurrentTodoDetail);
+        EditorTitle = detail.Id;
+    }
+
+    private static void PrepareDetailEditorFromMarkdown(
+        UiCoreTodoDetailViewModel viewModel,
+        string todoId,
+        McpTodoUpdateRequest request,
+        bool isNew)
+    {
+        if (isNew)
+            viewModel.BeginNewDraft(request.Section ?? "general");
+
+        viewModel.EditorId = todoId;
+        viewModel.EditorTitle = request.Title ?? string.Empty;
+        viewModel.EditorSection = request.Section ?? (isNew ? "general" : string.Empty);
+        viewModel.EditorPriority = request.Priority ?? (isNew ? "medium" : string.Empty);
+        viewModel.EditorDone = request.Done ?? false;
+        viewModel.EditorEstimate = request.Estimate;
+        viewModel.EditorNote = request.Note;
+        viewModel.EditorCompletedDate = request.CompletedDate;
+        viewModel.EditorDoneSummary = request.DoneSummary;
+        viewModel.EditorRemaining = request.Remaining;
+        viewModel.EditorDescriptionText = FormatLines(request.Description);
+        viewModel.EditorTechnicalDetailsText = FormatLines(request.TechnicalDetails);
+        viewModel.EditorImplementationTasksText = FormatTasks(request.ImplementationTasks);
+        viewModel.EditorDependsOnText = FormatLines(request.DependsOn);
+        viewModel.EditorFunctionalRequirementsText = FormatLines(request.FunctionalRequirements);
+        viewModel.EditorTechnicalRequirementsText = FormatLines(request.TechnicalRequirements);
+    }
+
+    private void ReplaceActiveCancellation()
+    {
+        _activeCts?.Cancel();
+        _activeCts?.Dispose();
+        _activeCts = new CancellationTokenSource();
+    }
+
+    private UiCoreTodoDetailViewModel CreateScratchDetailVm()
+        => _runtime.GetRequiredService<UiCoreTodoDetailViewModel>();
+
+    private static List<TodoListEntry> BuildEntries(IEnumerable<TodoListItem> items)
+    {
         return items
-            .Select(i => new TodoListEntry
+            .Select(static item =>
             {
-                PriorityGroup = "Priority: " + FormatPriority(i.Priority),
-                DisplayLine = $"{i.Id} · {i.Priority} · {i.Title}",
-                Item = i
+                var flat = new McpTodoFlatItem
+                {
+                    Id = item.Id,
+                    Title = item.Title,
+                    Section = item.Section,
+                    Priority = item.Priority,
+                    Done = item.Done,
+                    Estimate = item.Estimate
+                };
+
+                return new TodoListEntry
+                {
+                    PriorityGroup = "Priority: " + FormatPriority(flat.Priority),
+                    DisplayLine = $"{flat.Id} · {flat.Priority} · {flat.Title}",
+                    Item = flat
+                };
             })
             .OrderBy(e => PrioritySortKey(e.Item?.Priority))
-            .ThenBy(e => e.Item?.Id)
+            .ThenBy(e => e.Item?.Id, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
-    private static string FormatPriority(string? p)
+    private static string FormatPriority(string? priority)
     {
-        if (string.IsNullOrWhiteSpace(p)) return "Other";
-        return char.ToUpperInvariant(p[0]) + p.Substring(1).ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(priority))
+            return "Other";
+
+        return char.ToUpperInvariant(priority[0]) + priority.Substring(1).ToLowerInvariant();
     }
 
-    private static int PrioritySortKey(string? p) => (p?.Trim().ToUpperInvariant()) switch
+    private static int PrioritySortKey(string? priority) => (priority?.Trim().ToUpperInvariant()) switch
     {
         "HIGH" => 0,
         "MEDIUM" => 1,
@@ -830,16 +792,33 @@ public partial class TodoListViewModel : ViewModelBase
         _ => 3
     };
 
-    /// <summary>Calculates implementation progress as "done/total".</summary>
+    private static string Capitalize(string value)
+        => string.IsNullOrEmpty(value) ? value : char.ToUpperInvariant(value[0]) + value[1..];
+
+    private static string? FormatLines(IEnumerable<string>? values)
+    {
+        var lines = values?.Where(static value => !string.IsNullOrWhiteSpace(value)).ToList();
+        return lines is { Count: > 0 } ? string.Join(Environment.NewLine, lines) : null;
+    }
+
+    private static string? FormatTasks(IEnumerable<McpTodoFlatTask>? tasks)
+    {
+        var entries = tasks?
+            .Where(static task => !string.IsNullOrWhiteSpace(task.Task))
+            .Select(static task => $"{(task.Done ? "[x]" : "[ ]")} {task.Task}")
+            .ToList();
+        return entries is { Count: > 0 } ? string.Join(Environment.NewLine, entries) : null;
+    }
+
     public static string GetTaskProgress(McpTodoFlatItem? item)
     {
-        if (item?.ImplementationTasks is not { Count: > 0 } tasks) return "";
-        var done = tasks.Count(t => t.Done);
+        if (item?.ImplementationTasks is not { Count: > 0 } tasks)
+            return string.Empty;
+
+        var done = tasks.Count(static task => task.Done);
         return $"{done}/{tasks.Count}";
     }
 }
-
-// ── Display models ──────────────────────────────────────────────────────────
 
 public sealed class TodoListEntry
 {
@@ -850,11 +829,13 @@ public sealed class TodoListEntry
 
 public sealed class TodoListGroup
 {
-    public string Name { get; }
-    public ObservableCollection<TodoListEntry> Items { get; }
     public TodoListGroup(string name, ObservableCollection<TodoListEntry> items)
     {
         Name = name;
         Items = items;
     }
+
+    public string Name { get; }
+
+    public ObservableCollection<TodoListEntry> Items { get; }
 }

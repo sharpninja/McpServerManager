@@ -277,7 +277,11 @@ public sealed class McpWorkspaceService
             PromptTemplate = item.PromptTemplate,
             StatusPrompt = item.StatusPrompt,
             ImplementPrompt = item.ImplementPrompt,
-            PlanPrompt = item.PlanPrompt
+            PlanPrompt = item.PlanPrompt,
+            BannedLicenses = item.BannedLicenses?.ToList(),
+            BannedCountriesOfOrigin = item.BannedCountriesOfOrigin?.ToList(),
+            BannedOrganizations = item.BannedOrganizations?.ToList(),
+            BannedIndividuals = item.BannedIndividuals?.ToList()
         };
     }
 
@@ -296,7 +300,11 @@ public sealed class McpWorkspaceService
             PromptTemplate = request.PromptTemplate,
             StatusPrompt = request.StatusPrompt,
             ImplementPrompt = request.ImplementPrompt,
-            PlanPrompt = request.PlanPrompt
+            PlanPrompt = request.PlanPrompt,
+            BannedLicenses = request.BannedLicenses?.ToList(),
+            BannedCountriesOfOrigin = request.BannedCountriesOfOrigin?.ToList(),
+            BannedOrganizations = request.BannedOrganizations?.ToList(),
+            BannedIndividuals = request.BannedIndividuals?.ToList()
         };
     }
 
@@ -314,7 +322,11 @@ public sealed class McpWorkspaceService
             PromptTemplate = request.PromptTemplate,
             StatusPrompt = request.StatusPrompt,
             ImplementPrompt = request.ImplementPrompt,
-            PlanPrompt = request.PlanPrompt
+            PlanPrompt = request.PlanPrompt,
+            BannedLicenses = request.BannedLicenses?.ToList(),
+            BannedCountriesOfOrigin = request.BannedCountriesOfOrigin?.ToList(),
+            BannedOrganizations = request.BannedOrganizations?.ToList(),
+            BannedIndividuals = request.BannedIndividuals?.ToList()
         };
     }
 

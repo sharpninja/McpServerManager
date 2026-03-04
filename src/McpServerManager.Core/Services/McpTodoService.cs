@@ -150,6 +150,8 @@ public sealed class McpTodoService
             Section = request.Section,
             Priority = request.Priority,
             Estimate = request.Estimate,
+            Note = request.Note,
+            Remaining = request.Remaining,
             Description = request.Description?.ToList(),
             TechnicalDetails = request.TechnicalDetails?.ToList(),
             ImplementationTasks = request.ImplementationTasks?.Select(Map).ToList(),

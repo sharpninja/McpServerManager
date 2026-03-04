@@ -4,34 +4,40 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Threading;
 using Avalonia.Media;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using McpServerManager.Core.Commands;
-using McpServerManager.Core.Cqrs;
+using McpServer.UI.Core.Messages;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Services;
 using Microsoft.Extensions.Logging;
+using UiCoreWorkspaceContextViewModel = McpServer.UI.Core.ViewModels.WorkspaceContextViewModel;
+using UiCoreWorkspaceDetailViewModel = McpServer.UI.Core.ViewModels.WorkspaceDetailViewModel;
+using UiCoreWorkspaceGlobalPromptViewModel = McpServer.UI.Core.ViewModels.WorkspaceGlobalPromptViewModel;
+using UiCoreWorkspaceHealthProbeViewModel = McpServer.UI.Core.ViewModels.WorkspaceHealthProbeViewModel;
+using UiCoreWorkspaceListViewModel = McpServer.UI.Core.ViewModels.WorkspaceListViewModel;
 
 namespace McpServerManager.Core.ViewModels;
 
 public partial class WorkspaceViewModel : ViewModelBase
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("WorkspaceViewModel");
-    private readonly Mediator _mediator = new();
+
     private readonly IClipboardService _clipboardService;
-    private readonly UiCoreViewModelEvaluator _uiCoreEvaluator;
-    private readonly List<WorkspaceListEntry> _allEntries = new();
+    private readonly UiCoreAppRuntime _runtime;
+    private readonly UiCoreWorkspaceListViewModel _listVm;
+    private readonly UiCoreWorkspaceDetailViewModel _detailVm;
+    private readonly UiCoreWorkspaceGlobalPromptViewModel _globalPromptVm;
+    private readonly UiCoreWorkspaceHealthProbeViewModel _healthVm;
+    private readonly List<WorkspaceListEntry> _allEntries = [];
     private string? _editingWorkspaceKey;
-    private bool _isBusyHandlerRegistered;
-    private bool _hasRunUiCoreListEvaluation;
     private Timer? _healthTimer;
     private bool _isHealthCheckRunning;
     private bool _hasLoadedGlobalPrompt;
     private long _selectionDetailsLoadSequence;
 
-    [ObservableProperty] private ObservableCollection<WorkspaceListEntry> _filteredItems = new();
+    [ObservableProperty] private ObservableCollection<WorkspaceListEntry> _filteredItems = [];
     [ObservableProperty] private WorkspaceListEntry? _selectedEntry;
     [ObservableProperty] private string _filterText = "";
     [ObservableProperty] private bool _isLoading;
@@ -60,6 +66,7 @@ public partial class WorkspaceViewModel : ViewModelBase
     [ObservableProperty] private bool _isGlobalPromptLoading;
 
     public bool IsEditingExisting => !string.IsNullOrWhiteSpace(_editingWorkspaceKey);
+
     public string EditorModeText => IsEditingExisting
         ? $"Editing workspace: {_editingWorkspaceKey}"
         : "Creating new workspace";
@@ -67,66 +74,47 @@ public partial class WorkspaceViewModel : ViewModelBase
     public event Action<string>? GlobalStatusChanged;
     public event Action<WorkspaceCatalogChangeEvent>? WorkspaceCatalogChanged;
 
-    /// <summary>Set by the view code-behind to read current per-workspace prompt editor content.</summary>
     public Func<string>? GetWorkspacePromptEditorText { get; set; }
-
-    /// <summary>Set by the view code-behind to read current workspace status prompt editor content.</summary>
     public Func<string>? GetWorkspaceStatusPromptEditorText { get; set; }
-
-    /// <summary>Set by the view code-behind to read current workspace implement prompt editor content.</summary>
     public Func<string>? GetWorkspaceImplementPromptEditorText { get; set; }
-
-    /// <summary>Set by the view code-behind to read current workspace plan prompt editor content.</summary>
     public Func<string>? GetWorkspacePlanPromptEditorText { get; set; }
-
-    /// <summary>Set by the desktop view code-behind to read current global prompt editor content.</summary>
     public Func<string>? GetGlobalPromptEditorText { get; set; }
 
-    public WorkspaceViewModel(IClipboardService clipboardService, McpWorkspaceService service)
+    internal WorkspaceViewModel(IClipboardService clipboardService, UiCoreAppRuntime runtime)
     {
         _clipboardService = clipboardService;
-        _uiCoreEvaluator = new UiCoreViewModelEvaluator(workspaceService: service);
-        RegisterCqrsHandlers(service);
+        _runtime = runtime;
+        _listVm = runtime.GetRequiredService<UiCoreWorkspaceListViewModel>();
+        _detailVm = runtime.GetRequiredService<UiCoreWorkspaceDetailViewModel>();
+        _globalPromptVm = runtime.GetRequiredService<UiCoreWorkspaceGlobalPromptViewModel>();
+        _healthVm = runtime.GetRequiredService<UiCoreWorkspaceHealthProbeViewModel>();
         NewWorkspace();
+    }
+
+    public WorkspaceViewModel(IClipboardService clipboardService, McpWorkspaceService service)
+        : this(
+            clipboardService,
+            new UiCoreAppRuntime(
+                workspaceService: service,
+                workspaceContext: new UiCoreWorkspaceContextViewModel()))
+    {
     }
 
     public WorkspaceViewModel(IClipboardService clipboardService)
     {
         _clipboardService = clipboardService;
-        // Design-time / standalone fallback — creates its own client.
         var baseUrl = AppSettings.ResolveMcpBaseUrl();
         var normalizedUrl = McpServerRestClientFactory.NormalizeBaseUrl(baseUrl);
         var client = McpServerRestClientFactory.Create(baseUrl, TimeSpan.FromSeconds(5));
         var workspaceService = new McpWorkspaceService(client, new Uri(normalizedUrl, UriKind.Absolute));
-        _uiCoreEvaluator = new UiCoreViewModelEvaluator(workspaceService: workspaceService);
-        RegisterCqrsHandlers(workspaceService);
+        _runtime = new UiCoreAppRuntime(
+            workspaceService: workspaceService,
+            workspaceContext: new UiCoreWorkspaceContextViewModel());
+        _listVm = _runtime.GetRequiredService<UiCoreWorkspaceListViewModel>();
+        _detailVm = _runtime.GetRequiredService<UiCoreWorkspaceDetailViewModel>();
+        _globalPromptVm = _runtime.GetRequiredService<UiCoreWorkspaceGlobalPromptViewModel>();
+        _healthVm = _runtime.GetRequiredService<UiCoreWorkspaceHealthProbeViewModel>();
         NewWorkspace();
-    }
-
-    private void RegisterCqrsHandlers(McpWorkspaceService service)
-    {
-        if (!_isBusyHandlerRegistered)
-        {
-            _mediator.IsBusyChanged += busy =>
-            {
-                Dispatcher.UIThread.Post(() => IsLoading = busy);
-            };
-            _isBusyHandlerRegistered = true;
-        }
-
-        _mediator.RegisterQuery(new QueryWorkspacesHandler(service));
-        _mediator.RegisterQuery(new GetWorkspaceByIdHandler(service));
-        _mediator.RegisterQuery(new GetWorkspaceStatusHandler(service));
-        _mediator.RegisterQuery(new GetWorkspaceHealthHandler(service));
-        _mediator.RegisterQuery(new GetWorkspaceGlobalPromptHandler(service));
-        _mediator.Register<CreateWorkspaceCommand, McpWorkspaceMutationResult>(new CreateWorkspaceHandler(service));
-        _mediator.Register<UpdateWorkspaceCommand, McpWorkspaceMutationResult>(new UpdateWorkspaceHandler(service));
-        _mediator.Register<DeleteWorkspaceCommand, McpWorkspaceMutationResult>(new DeleteWorkspaceHandler(service));
-        _mediator.Register<InitWorkspaceCommand, McpWorkspaceInitResult>(new InitWorkspaceHandler(service));
-        _mediator.Register<StartWorkspaceCommand, McpWorkspaceProcessStatus>(new StartWorkspaceHandler(service));
-        _mediator.Register<StopWorkspaceCommand, McpWorkspaceProcessStatus>(new StopWorkspaceHandler(service));
-        _mediator.Register<UpdateWorkspaceGlobalPromptCommand, McpWorkspaceGlobalPromptResult>(
-            new UpdateWorkspaceGlobalPromptHandler(service));
     }
 
     public Task RefreshForConnectionChangeAsync() => LoadWorkspacesCoreAsync(forceEditorReload: true);
@@ -152,6 +140,7 @@ public partial class WorkspaceViewModel : ViewModelBase
             _selectionDetailsLoadSequence++;
             StopHealthTimer();
             UpdateHealthIndicator(null, "Select a workspace");
+            ProcessStatusText = "";
             return;
         }
 
@@ -169,15 +158,11 @@ public partial class WorkspaceViewModel : ViewModelBase
     private async Task RefreshAsync() => await LoadWorkspacesCoreAsync(forceEditorReload: true);
 
     [RelayCommand]
-    private async Task LoadGlobalPromptAsync()
-    {
-        await LoadGlobalPromptCoreAsync(updateStatusBar: true);
-    }
+    private async Task LoadGlobalPromptAsync() => await LoadGlobalPromptCoreAsync(updateStatusBar: true);
 
     [RelayCommand]
     private async Task SaveGlobalPromptAsync()
     {
-        var template = GetGlobalPromptEditorText?.Invoke() ?? GlobalPromptTemplateText;
         if (IsGlobalPromptLoading)
             return;
 
@@ -185,15 +170,10 @@ public partial class WorkspaceViewModel : ViewModelBase
         GlobalPromptStatusText = "Saving global prompt...";
         try
         {
-            var result = await _mediator.SendAsync<UpdateWorkspaceGlobalPromptCommand, McpWorkspaceGlobalPromptResult>(
-                new UpdateWorkspaceGlobalPromptCommand(BlankToNullPreserveContent(template)));
-
-            GlobalPromptTemplateText = result.Template ?? "";
-            GlobalPromptIsDefault = result.IsDefault;
+            _globalPromptVm.TemplateText = GetGlobalPromptEditorText?.Invoke() ?? GlobalPromptTemplateText;
+            await _globalPromptVm.SaveAsync();
+            SyncGlobalPromptFromVm(defaultStatus: "Saved global prompt");
             _hasLoadedGlobalPrompt = true;
-            GlobalPromptStatusText = result.IsDefault
-                ? "Saved global prompt (using built-in default)"
-                : "Saved global prompt";
             GlobalStatusChanged?.Invoke(GlobalPromptStatusText);
         }
         catch (Exception ex)
@@ -213,9 +193,23 @@ public partial class WorkspaceViewModel : ViewModelBase
         if (IsGlobalPromptLoading)
             return;
 
-        // Empty/null tells the server to revert to the built-in template.
-        GlobalPromptTemplateText = "";
-        await SaveGlobalPromptAsync();
+        IsGlobalPromptLoading = true;
+        try
+        {
+            await _globalPromptVm.ResetAsync();
+            SyncGlobalPromptFromVm(defaultStatus: "Saved global prompt (using built-in default)");
+            _hasLoadedGlobalPrompt = true;
+            GlobalStatusChanged?.Invoke(GlobalPromptStatusText);
+        }
+        catch (Exception ex)
+        {
+            GlobalPromptStatusText = "Global prompt save failed: " + ex.Message;
+            GlobalStatusChanged?.Invoke(GlobalPromptStatusText);
+        }
+        finally
+        {
+            IsGlobalPromptLoading = false;
+        }
     }
 
     [RelayCommand]
@@ -230,10 +224,11 @@ public partial class WorkspaceViewModel : ViewModelBase
     {
         SelectedEntry = null;
         SetEditingWorkspaceKey(null);
-        CheckSelectedWorkspaceHealthCommand.NotifyCanExecuteChanged();
         StopHealthTimer();
         UpdateHealthIndicator(null, "Select a workspace");
         ProcessStatusText = "";
+        _detailVm.BeginNewDraft();
+
         EditorKey = "";
         EditorName = "";
         EditorWorkspacePath = "";
@@ -254,7 +249,9 @@ public partial class WorkspaceViewModel : ViewModelBase
     private async Task OpenSelectedWorkspaceAsync()
     {
         var key = GetKeyForActions();
-        if (string.IsNullOrWhiteSpace(key)) return;
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
         await TryReloadWorkspaceEditorByKeyAsync(key, updateStatus: true);
     }
 
@@ -271,23 +268,27 @@ public partial class WorkspaceViewModel : ViewModelBase
     private async Task DeleteSelectedAsync()
     {
         var key = GetKeyForActions();
-        if (string.IsNullOrWhiteSpace(key)) return;
+        if (string.IsNullOrWhiteSpace(key))
+            return;
 
         try
         {
-            var result = await _mediator.SendAsync<DeleteWorkspaceCommand, McpWorkspaceMutationResult>(
-                new DeleteWorkspaceCommand(key));
-            if (!result.Success)
+            _detailVm.WorkspacePath = key;
+            _detailVm.EditorWorkspacePath = key;
+            _detailVm.IsNewDraft = false;
+            await _detailVm.DeleteAsync();
+            if (!string.IsNullOrWhiteSpace(_detailVm.ErrorMessage))
             {
-                StatusText = $"Delete failed: {result.Error}";
+                StatusText = "Delete failed: " + _detailVm.ErrorMessage;
                 return;
             }
 
             StatusText = $"Deleted {key}";
             if (string.Equals(_editingWorkspaceKey, key, StringComparison.OrdinalIgnoreCase))
                 NewWorkspace();
+
             await LoadWorkspacesAsync();
-            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Deleted, key, result.Workspace);
+            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Deleted, key, null);
         }
         catch (Exception ex)
         {
@@ -299,13 +300,20 @@ public partial class WorkspaceViewModel : ViewModelBase
     private async Task GetSelectedStatusAsync()
     {
         var key = GetKeyForActions();
-        if (string.IsNullOrWhiteSpace(key)) return;
+        if (string.IsNullOrWhiteSpace(key))
+            return;
 
         try
         {
-            var status = await _mediator.QueryAsync<GetWorkspaceStatusQuery, McpWorkspaceProcessStatus>(
-                new GetWorkspaceStatusQuery(key));
-            ProcessStatusText = FormatProcessStatus(status);
+            _healthVm.WorkspacePath = key;
+            await _healthVm.GetStatusAsync();
+            if (!string.IsNullOrWhiteSpace(_healthVm.ErrorMessage))
+            {
+                StatusText = "Error: " + _healthVm.ErrorMessage;
+                return;
+            }
+
+            ProcessStatusText = _healthVm.ProcessStatusText;
             StatusText = $"Status loaded for {key}";
         }
         catch (Exception ex)
@@ -320,23 +328,26 @@ public partial class WorkspaceViewModel : ViewModelBase
         await CheckWorkspaceHealthForSelectionAsync(updateStatusText: true);
     }
 
+    private bool CanCheckSelectedWorkspaceHealth() => !string.IsNullOrWhiteSpace(SelectedEntry?.Key);
+
     [RelayCommand]
     private async Task InitSelectedWorkspaceAsync()
     {
         var key = GetKeyForActions();
-        if (string.IsNullOrWhiteSpace(key)) return;
+        if (string.IsNullOrWhiteSpace(key))
+            return;
 
         try
         {
-            var result = await _mediator.SendAsync<InitWorkspaceCommand, McpWorkspaceInitResult>(
-                new InitWorkspaceCommand(key));
-            if (!result.Success)
+            _healthVm.WorkspacePath = key;
+            await _healthVm.InitializeAsync();
+            if (!string.IsNullOrWhiteSpace(_healthVm.ErrorMessage))
             {
-                StatusText = $"Init failed: {result.Error}";
+                StatusText = "Init failed: " + _healthVm.ErrorMessage;
                 return;
             }
 
-            var fileCount = result.FilesCreated?.Count ?? 0;
+            var fileCount = _healthVm.LastInitInfo?.SeededDefinitions ?? 0;
             StatusText = $"Initialized {key} ({fileCount} files)";
         }
         catch (Exception ex)
@@ -349,25 +360,27 @@ public partial class WorkspaceViewModel : ViewModelBase
     private async Task StartSelectedWorkspaceAsync()
     {
         var key = GetKeyForActions();
-        if (string.IsNullOrWhiteSpace(key)) return;
+        if (string.IsNullOrWhiteSpace(key))
+            return;
 
         try
         {
-            var status = await _mediator.SendAsync<StartWorkspaceCommand, McpWorkspaceProcessStatus>(
-                new StartWorkspaceCommand(key));
-            ProcessStatusText = FormatProcessStatus(status);
-            if (!string.IsNullOrWhiteSpace(status.Error))
+            _healthVm.WorkspacePath = key;
+            await _healthVm.StartAsync();
+            if (!string.IsNullOrWhiteSpace(_healthVm.ErrorMessage))
             {
-                StatusText = $"Start failed for {key}: {status.Error}";
+                StatusText = $"Start failed for {key}: {_healthVm.ErrorMessage}";
+                return;
             }
-            else if (status.IsRunning)
-            {
+
+            ProcessStatusText = _healthVm.ProcessStatusText;
+            var state = _healthVm.LastProcessState;
+            if (!string.IsNullOrWhiteSpace(state?.Error))
+                StatusText = $"Start failed for {key}: {state.Error}";
+            else if (state?.IsRunning == true)
                 StatusText = $"Started {key}";
-            }
             else
-            {
                 StatusText = $"Start failed for {key}: workspace did not report a running process";
-            }
         }
         catch (Exception ex)
         {
@@ -379,13 +392,20 @@ public partial class WorkspaceViewModel : ViewModelBase
     private async Task StopSelectedWorkspaceAsync()
     {
         var key = GetKeyForActions();
-        if (string.IsNullOrWhiteSpace(key)) return;
+        if (string.IsNullOrWhiteSpace(key))
+            return;
 
         try
         {
-            var status = await _mediator.SendAsync<StopWorkspaceCommand, McpWorkspaceProcessStatus>(
-                new StopWorkspaceCommand(key));
-            ProcessStatusText = FormatProcessStatus(status);
+            _healthVm.WorkspacePath = key;
+            await _healthVm.StopAsync();
+            if (!string.IsNullOrWhiteSpace(_healthVm.ErrorMessage))
+            {
+                StatusText = $"Stop failed for {key}: {_healthVm.ErrorMessage}";
+                return;
+            }
+
+            ProcessStatusText = _healthVm.ProcessStatusText;
             StatusText = $"Stop requested for {key}";
         }
         catch (Exception ex)
@@ -398,7 +418,9 @@ public partial class WorkspaceViewModel : ViewModelBase
     private async Task CopySelectedKeyAsync()
     {
         var key = GetKeyForActions();
-        if (string.IsNullOrWhiteSpace(key)) return;
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
         await _clipboardService.SetTextAsync(key);
         StatusText = $"Copied {key}";
     }
@@ -411,41 +433,29 @@ public partial class WorkspaceViewModel : ViewModelBase
             return;
         }
 
-        var request = new McpWorkspaceCreateRequest
-        {
-            Name = NullIfWhiteSpace(EditorName),
-            WorkspacePath = NullIfWhiteSpace(EditorWorkspacePath),
-            TodoPath = NullIfWhiteSpace(EditorTodoPath),
-            DataDirectory = NullIfWhiteSpace(EditorDataDirectory),
-            TunnelProvider = NullIfWhiteSpace(EditorTunnelProvider),
-            RunAs = NullIfWhiteSpace(EditorRunAs),
-            IsPrimary = EditorIsPrimary,
-            IsEnabled = EditorIsEnabled,
-            PromptTemplate = BlankToNullPreserveContent(GetWorkspacePromptEditorText?.Invoke() ?? EditorPromptTemplateText),
-            StatusPrompt = BlankToNullPreserveContent(GetWorkspaceStatusPromptEditorText?.Invoke() ?? EditorStatusPromptText),
-            ImplementPrompt = BlankToNullPreserveContent(GetWorkspaceImplementPromptEditorText?.Invoke() ?? EditorImplementPromptText),
-            PlanPrompt = BlankToNullPreserveContent(GetWorkspacePlanPromptEditorText?.Invoke() ?? EditorPlanPromptText)
-        };
-
         try
         {
-            var result = await _mediator.SendAsync<CreateWorkspaceCommand, McpWorkspaceMutationResult>(
-                new CreateWorkspaceCommand(request));
-            if (!result.Success)
+            ApplyEditorToDetailVm(forCreate: true);
+            await _detailVm.CreateAsync();
+            if (!string.IsNullOrWhiteSpace(_detailVm.ErrorMessage))
             {
-                StatusText = $"Create failed: {result.Error}";
+                StatusText = "Create failed: " + _detailVm.ErrorMessage;
                 return;
             }
 
-            var key = ResolveKey(result.Workspace) ??
-                      NullIfWhiteSpace(EditorWorkspacePath) ??
-                      "";
-            EditorKey = key;
+            if (_detailVm.Detail is null)
+            {
+                StatusText = "Create failed: workspace was not returned";
+                return;
+            }
+
+            var key = _detailVm.Detail.WorkspacePath;
+            PopulateEditor(_detailVm.Detail);
             SetEditingWorkspaceKey(key);
             StatusText = $"Created {key}";
             await LoadWorkspacesAsync();
             SelectEntryByKey(key);
-            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Created, key, result.Workspace);
+            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Created, key, _detailVm.Detail);
         }
         catch (Exception ex)
         {
@@ -459,35 +469,28 @@ public partial class WorkspaceViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(key))
             return;
 
-        var request = new McpWorkspaceUpdateRequest
-        {
-            Name = NullIfWhiteSpace(EditorName),
-            TodoPath = NullIfWhiteSpace(EditorTodoPath),
-            DataDirectory = NullIfWhiteSpace(EditorDataDirectory),
-            TunnelProvider = NullIfWhiteSpace(EditorTunnelProvider),
-            RunAs = NullIfWhiteSpace(EditorRunAs),
-            IsPrimary = EditorIsPrimary,
-            IsEnabled = EditorIsEnabled,
-            PromptTemplate = BlankToNullPreserveContent(GetWorkspacePromptEditorText?.Invoke() ?? EditorPromptTemplateText),
-            StatusPrompt = BlankToNullPreserveContent(GetWorkspaceStatusPromptEditorText?.Invoke() ?? EditorStatusPromptText),
-            ImplementPrompt = BlankToNullPreserveContent(GetWorkspaceImplementPromptEditorText?.Invoke() ?? EditorImplementPromptText),
-            PlanPrompt = BlankToNullPreserveContent(GetWorkspacePlanPromptEditorText?.Invoke() ?? EditorPlanPromptText)
-        };
-
         try
         {
-            var result = await _mediator.SendAsync<UpdateWorkspaceCommand, McpWorkspaceMutationResult>(
-                new UpdateWorkspaceCommand(key, request));
-            if (!result.Success)
+            ApplyEditorToDetailVm(forCreate: false);
+            await _detailVm.SaveAsync();
+            if (!string.IsNullOrWhiteSpace(_detailVm.ErrorMessage))
             {
-                StatusText = $"Save failed: {result.Error}";
+                StatusText = "Save failed: " + _detailVm.ErrorMessage;
                 return;
             }
 
+            if (_detailVm.Detail is null)
+            {
+                StatusText = "Save failed: workspace was not returned";
+                return;
+            }
+
+            PopulateEditor(_detailVm.Detail);
+            SetEditingWorkspaceKey(key);
             StatusText = $"Saved {key}";
             await LoadWorkspacesAsync();
             SelectEntryByKey(key);
-            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Updated, key, result.Workspace);
+            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Updated, key, _detailVm.Detail);
         }
         catch (Exception ex)
         {
@@ -495,49 +498,39 @@ public partial class WorkspaceViewModel : ViewModelBase
         }
     }
 
-    private static WorkspaceListEntry ToEntry(McpWorkspaceItem item)
+    private static WorkspaceListEntry ToEntry(WorkspaceSummary item)
     {
-        var key = ResolveKey(item) ?? "";
+        var key = item.WorkspacePath;
         var title = string.IsNullOrWhiteSpace(item.Name) ? key : item.Name.Trim();
         var flags = new List<string>();
-        if (item.IsPrimary == true)
+        if (item.IsPrimary)
             flags.Add("Primary");
-        if (item.IsEnabled == false)
+        if (!item.IsEnabled)
             flags.Add("Disabled");
-        var flagsText = flags.Count == 0 ? "" : $" | {string.Join(", ", flags)}";
-        var subtitle = string.IsNullOrWhiteSpace(item.WorkspacePath)
-            ? flagsText.TrimStart(' ', '|').Trim()
-            : $"{item.WorkspacePath}{flagsText}";
-        var searchable = string.Join(" ",
-            new[]
-            {
-                key,
-                item.Name,
-                item.WorkspacePath,
-                item.TodoPath,
-                item.DataDirectory,
-                item.TunnelProvider,
-                item.RunAs,
-                item.IsPrimary == true ? "primary" : null,
-                item.IsEnabled == false ? "disabled" : "enabled"
-            }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
+        var flagsText = flags.Count == 0 ? "" : $" | {string.Join(", ", flags)}";
         return new WorkspaceListEntry
         {
-            Item = item,
+            Item = new McpWorkspaceItem
+            {
+                WorkspacePath = item.WorkspacePath,
+                Name = item.Name,
+                IsPrimary = item.IsPrimary,
+                IsEnabled = item.IsEnabled
+            },
             Key = key,
             Title = title,
-            Subtitle = subtitle,
-            SearchText = searchable
+            Subtitle = flagsText.TrimStart(' ', '|').Trim(),
+            SearchText = string.Join(
+                " ",
+                new[]
+                {
+                    key,
+                    item.Name,
+                    item.IsPrimary ? "primary" : null,
+                    item.IsEnabled ? "enabled" : "disabled"
+                }.Where(static value => !string.IsNullOrWhiteSpace(value)))
         };
-    }
-
-    private static string? ResolveKey(McpWorkspaceItem? item)
-    {
-        if (item == null) return null;
-        if (!string.IsNullOrWhiteSpace(item.WorkspacePath))
-            return item.WorkspacePath.Trim();
-        return null;
     }
 
     private void ApplyFilters()
@@ -547,28 +540,28 @@ public partial class WorkspaceViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(text))
         {
             var matcher = BooleanSearchParser.Parse(text);
-            source = source.Where(e => matcher(e.SearchText));
+            source = source.Where(entry => matcher(entry.SearchText));
         }
 
         FilteredItems = new ObservableCollection<WorkspaceListEntry>(
-            source
-                .OrderBy(e => e.Title, StringComparer.OrdinalIgnoreCase));
+            source.OrderBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase));
     }
 
-    private void PopulateEditor(McpWorkspaceItem item)
+    private void PopulateEditor(WorkspaceDetail detail)
     {
-        EditorName = item.Name ?? "";
-        EditorWorkspacePath = item.WorkspacePath ?? "";
-        EditorTodoPath = item.TodoPath ?? "";
-        EditorDataDirectory = item.DataDirectory ?? "";
-        EditorTunnelProvider = item.TunnelProvider ?? "";
-        EditorRunAs = item.RunAs ?? "";
-        EditorIsPrimary = item.IsPrimary ?? false;
-        EditorIsEnabled = item.IsEnabled ?? true;
-        EditorPromptTemplateText = item.PromptTemplate ?? "";
-        EditorStatusPromptText = item.StatusPrompt ?? "";
-        EditorImplementPromptText = item.ImplementPrompt ?? "";
-        EditorPlanPromptText = item.PlanPrompt ?? "";
+        EditorKey = detail.WorkspacePath;
+        EditorName = detail.Name;
+        EditorWorkspacePath = detail.WorkspacePath;
+        EditorTodoPath = detail.TodoPath;
+        EditorDataDirectory = detail.DataDirectory ?? "";
+        EditorTunnelProvider = detail.TunnelProvider ?? "";
+        EditorRunAs = detail.RunAs ?? "";
+        EditorIsPrimary = detail.IsPrimary;
+        EditorIsEnabled = detail.IsEnabled;
+        EditorPromptTemplateText = detail.PromptTemplate ?? "";
+        EditorStatusPromptText = detail.StatusPrompt;
+        EditorImplementPromptText = detail.ImplementPrompt;
+        EditorPlanPromptText = detail.PlanPrompt;
     }
 
     private async Task LoadWorkspacesCoreAsync(bool forceEditorReload)
@@ -580,12 +573,21 @@ public partial class WorkspaceViewModel : ViewModelBase
         var selectedKey = SelectedEntry?.Key ?? _editingWorkspaceKey;
         try
         {
-            var result = await _mediator.QueryAsync<QueryWorkspacesQuery, McpWorkspaceQueryResult>(new QueryWorkspacesQuery());
-            await EvaluateUiCoreWorkspaceListParityAsync(result);
+            await _listVm.LoadAsync();
+            if (!string.IsNullOrWhiteSpace(_listVm.ErrorMessage))
+            {
+                _allEntries.Clear();
+                ApplyFilters();
+                StatusText = "Error: " + _listVm.ErrorMessage;
+                GlobalStatusChanged?.Invoke($"Workspace load failed: {_listVm.ErrorMessage}");
+                return;
+            }
 
             _allEntries.Clear();
-            _allEntries.AddRange(result.Items.Select(ToEntry)
-                .OrderBy(e => e.Title, StringComparer.OrdinalIgnoreCase));
+            _allEntries.AddRange(
+                _listVm.Workspaces
+                    .Select(ToEntry)
+                    .OrderBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase));
 
             ApplyFilters();
             SelectedEntry = null;
@@ -603,10 +605,10 @@ public partial class WorkspaceViewModel : ViewModelBase
             if (!_hasLoadedGlobalPrompt || forceEditorReload)
                 await LoadGlobalPromptCoreAsync(updateStatusBar: false);
 
-            StatusText = $"{result.TotalCount} workspace(s){refreshNote}";
+            StatusText = $"{_listVm.TotalCount} workspace(s){refreshNote}";
             GlobalStatusChanged?.Invoke(forceEditorReload
-                ? $"Refreshed {result.TotalCount} workspace(s)."
-                : $"Loaded {result.TotalCount} workspace(s).");
+                ? $"Refreshed {_listVm.TotalCount} workspace(s)."
+                : $"Loaded {_listVm.TotalCount} workspace(s).");
         }
         catch (Exception ex)
         {
@@ -621,40 +623,6 @@ public partial class WorkspaceViewModel : ViewModelBase
         }
     }
 
-    private async Task EvaluateUiCoreWorkspaceListParityAsync(McpWorkspaceQueryResult currentResult)
-    {
-        if (_hasRunUiCoreListEvaluation)
-            return;
-
-        _hasRunUiCoreListEvaluation = true;
-        var evaluation = await _uiCoreEvaluator
-            .EvaluateWorkspaceListAsync(currentResult)
-            .ConfigureAwait(true);
-
-        if (!evaluation.Success)
-        {
-            _logger.LogWarning(
-                "UI.Core WorkspaceListViewModel evaluation failed: {Error}",
-                evaluation.Error ?? "unknown error");
-            return;
-        }
-
-        if (evaluation.IsMatch)
-        {
-            _logger.LogInformation(
-                "UI.Core WorkspaceListViewModel parity check passed ({Count} items).",
-                evaluation.CurrentCount);
-            return;
-        }
-
-        _logger.LogWarning(
-            "UI.Core WorkspaceListViewModel parity mismatch. Current={CurrentCount}, UiCore={UiCoreCount}, MissingInUiCore=[{MissingInUiCore}], MissingInCurrent=[{MissingInCurrent}]",
-            evaluation.CurrentCount,
-            evaluation.UiCoreCount,
-            string.Join(", ", evaluation.MissingInUiCore),
-            string.Join(", ", evaluation.MissingInCurrent));
-    }
-
     private async Task<bool> TryReloadWorkspaceEditorByKeyAsync(string key, bool updateStatus)
     {
         if (updateStatus)
@@ -662,21 +630,27 @@ public partial class WorkspaceViewModel : ViewModelBase
 
         try
         {
-            var fresh = await _mediator.QueryAsync<GetWorkspaceByIdQuery, McpWorkspaceItem?>(
-                new GetWorkspaceByIdQuery(key));
-            if (fresh == null)
+            _detailVm.WorkspacePath = key;
+            await _detailVm.LoadAsync();
+            if (!string.IsNullOrWhiteSpace(_detailVm.ErrorMessage))
+            {
+                if (updateStatus)
+                    StatusText = "Error: " + _detailVm.ErrorMessage;
+                return false;
+            }
+
+            if (_detailVm.Detail is null)
             {
                 if (updateStatus)
                     StatusText = $"Workspace {key} not found";
                 return false;
             }
 
-            PopulateEditor(fresh);
-            var resolvedKey = ResolveKey(fresh) ?? key;
-            SetEditingWorkspaceKey(resolvedKey);
-            SelectEntryByKey(resolvedKey);
+            PopulateEditor(_detailVm.Detail);
+            SetEditingWorkspaceKey(_detailVm.Detail.WorkspacePath);
+            SelectEntryByKey(_detailVm.Detail.WorkspacePath);
             if (updateStatus)
-                StatusText = $"Loaded {resolvedKey}";
+                StatusText = $"Loaded {_detailVm.Detail.WorkspacePath}";
             return true;
         }
         catch (Exception ex)
@@ -691,8 +665,8 @@ public partial class WorkspaceViewModel : ViewModelBase
     {
         try
         {
-            var fresh = await _mediator.QueryAsync<GetWorkspaceByIdQuery, McpWorkspaceItem?>(
-                new GetWorkspaceByIdQuery(key));
+            _detailVm.WorkspacePath = key;
+            await _detailVm.LoadAsync();
 
             if (loadSequence != _selectionDetailsLoadSequence)
                 return;
@@ -700,18 +674,22 @@ public partial class WorkspaceViewModel : ViewModelBase
             if (!string.Equals(SelectedEntry?.Key, key, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            if (fresh == null)
+            if (!string.IsNullOrWhiteSpace(_detailVm.ErrorMessage))
+            {
+                StatusText = "Error: " + _detailVm.ErrorMessage;
+                return;
+            }
+
+            if (_detailVm.Detail is null)
             {
                 StatusText = $"Workspace {key} not found";
                 return;
             }
 
-            PopulateEditor(fresh);
-            var resolvedKey = ResolveKey(fresh) ?? key;
-            SetEditingWorkspaceKey(resolvedKey);
-
-            if (!string.Equals(resolvedKey, key, StringComparison.OrdinalIgnoreCase))
-                SelectEntryByKey(resolvedKey);
+            PopulateEditor(_detailVm.Detail);
+            SetEditingWorkspaceKey(_detailVm.Detail.WorkspacePath);
+            if (!string.Equals(_detailVm.Detail.WorkspacePath, key, StringComparison.OrdinalIgnoreCase))
+                SelectEntryByKey(_detailVm.Detail.WorkspacePath);
         }
         catch (Exception ex)
         {
@@ -727,9 +705,11 @@ public partial class WorkspaceViewModel : ViewModelBase
 
     private void SelectEntryByKey(string? key)
     {
-        if (string.IsNullOrWhiteSpace(key)) return;
-        var entry = FilteredItems.FirstOrDefault(e =>
-            string.Equals(e.Key, key, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        var entry = FilteredItems.FirstOrDefault(item =>
+            string.Equals(item.Key, key, StringComparison.OrdinalIgnoreCase));
         if (entry != null)
             SelectedEntry = entry;
     }
@@ -742,8 +722,8 @@ public partial class WorkspaceViewModel : ViewModelBase
         OnPropertyChanged(nameof(EditorModeText));
     }
 
-    private static string? NullIfWhiteSpace(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string? NullIfWhiteSpace(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string? BlankToNullPreserveContent(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value;
@@ -755,18 +735,11 @@ public partial class WorkspaceViewModel : ViewModelBase
 
         IsGlobalPromptLoading = true;
         GlobalPromptStatusText = "Loading global prompt...";
-
         try
         {
-            var result = await _mediator.QueryAsync<GetWorkspaceGlobalPromptQuery, McpWorkspaceGlobalPromptResult>(
-                new GetWorkspaceGlobalPromptQuery());
-            GlobalPromptTemplateText = result.Template ?? "";
-            GlobalPromptIsDefault = result.IsDefault;
+            await _globalPromptVm.LoadAsync();
+            SyncGlobalPromptFromVm(defaultStatus: "Loaded global prompt");
             _hasLoadedGlobalPrompt = true;
-            GlobalPromptStatusText = result.IsDefault
-                ? "Loaded global prompt (built-in default)"
-                : "Loaded global prompt";
-
             if (updateStatusBar)
                 GlobalStatusChanged?.Invoke(GlobalPromptStatusText);
         }
@@ -782,12 +755,19 @@ public partial class WorkspaceViewModel : ViewModelBase
         }
     }
 
+    private void SyncGlobalPromptFromVm(string defaultStatus)
+    {
+        GlobalPromptTemplateText = _globalPromptVm.TemplateText;
+        GlobalPromptIsDefault = _globalPromptVm.IsDefault;
+        GlobalPromptStatusText = _globalPromptVm.StatusMessage ?? defaultStatus;
+    }
+
     private void RaiseWorkspaceCatalogChanged(
         WorkspaceCatalogChangeKind changeKind,
         string? fallbackKey,
-        McpWorkspaceItem? workspace)
+        WorkspaceDetail? workspace)
     {
-        var key = ResolveKey(workspace) ?? NullIfWhiteSpace(fallbackKey);
+        var key = NullIfWhiteSpace(workspace?.WorkspacePath) ?? NullIfWhiteSpace(fallbackKey);
         if (string.IsNullOrWhiteSpace(key))
             return;
 
@@ -802,10 +782,9 @@ public partial class WorkspaceViewModel : ViewModelBase
 
     private string? GetKeyForActions()
     {
-        var key = _editingWorkspaceKey ??
-                  NullIfWhiteSpace(SelectedEntry?.Item.WorkspacePath) ??
-                  NullIfWhiteSpace(EditorWorkspacePath);
-        return key;
+        return _editingWorkspaceKey ??
+               NullIfWhiteSpace(SelectedEntry?.Item.WorkspacePath) ??
+               NullIfWhiteSpace(EditorWorkspacePath);
     }
 
     private async Task CheckWorkspaceHealthForSelectionAsync(bool updateStatusText)
@@ -826,21 +805,32 @@ public partial class WorkspaceViewModel : ViewModelBase
 
         try
         {
-            var health = await _mediator.QueryAsync<GetWorkspaceHealthQuery, McpWorkspaceHealthResult>(
-                new GetWorkspaceHealthQuery(key));
+            _healthVm.WorkspacePath = key;
+            await _healthVm.CheckHealthAsync();
 
             if (!string.Equals(SelectedEntry?.Key, key, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            ProcessStatusText = FormatHealthStatus(health);
-            UpdateHealthIndicator(health.Success, health.Success
+            if (!string.IsNullOrWhiteSpace(_healthVm.ErrorMessage))
+            {
+                UpdateHealthIndicator(false, $"Health error: {_healthVm.ErrorMessage}");
+                if (updateStatusText)
+                    StatusText = "Error: " + _healthVm.ErrorMessage;
+                return;
+            }
+
+            var health = _healthVm.LastHealthState;
+            ProcessStatusText = _healthVm.HealthStatusText;
+            UpdateHealthIndicator(health?.Success, health?.Success == true
                 ? $"Healthy: {key}"
                 : $"Unhealthy: {key}");
 
             if (updateStatusText)
-                StatusText = health.Success
+            {
+                StatusText = health?.Success == true
                     ? $"Health OK for {key}"
                     : $"Health failed for {key}";
+            }
         }
         catch (Exception ex)
         {
@@ -862,10 +852,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         StopHealthTimer();
         _healthTimer = new Timer(_ =>
         {
-            Dispatcher.UIThread.Post(() =>
-            {
-                _ = CheckWorkspaceHealthForSelectionAsync(updateStatusText: false);
-            });
+            Dispatcher.UIThread.Post(() => _ = CheckWorkspaceHealthForSelectionAsync(updateStatusText: false));
         }, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
     }
 
@@ -880,40 +867,30 @@ public partial class WorkspaceViewModel : ViewModelBase
         HealthIndicatorBrush = isHealthy switch
         {
             true => Brushes.LimeGreen,
-            false => Brushes.IndianRed,
+            false => Brushes.OrangeRed,
             _ => Brushes.Gray
         };
         HealthIndicatorTooltip = tooltip;
     }
 
-    private static string FormatProcessStatus(McpWorkspaceProcessStatus status)
+    private void ApplyEditorToDetailVm(bool forCreate)
     {
-        var state = status.IsRunning ? "Running" : "Stopped";
-        var pid = status.Pid.HasValue ? $"PID {status.Pid.Value}" : "PID n/a";
-        var port = status.Port.HasValue ? $"Port {status.Port.Value}" : "Port n/a";
-        var uptime = string.IsNullOrWhiteSpace(status.Uptime) ? "" : $", Uptime {status.Uptime}";
-        var error = string.IsNullOrWhiteSpace(status.Error) ? "" : $" ({status.Error})";
-        return $"{state}, {pid}, {port}{uptime}{error}";
-    }
+        if (forCreate)
+            _detailVm.BeginNewDraft(EditorWorkspacePath);
 
-    private bool CanCheckSelectedWorkspaceHealth() => SelectedEntry?.Item != null;
-
-    private static string FormatHealthStatus(McpWorkspaceHealthResult health)
-    {
-        var status = health.StatusCode > 0 ? $"HTTP {health.StatusCode}" : "HTTP n/a";
-        var url = string.IsNullOrWhiteSpace(health.Url) ? "" : $" @ {health.Url}";
-        var body = string.IsNullOrWhiteSpace(health.Body)
-            ? ""
-            : $" | {TruncateSingleLine(health.Body, 180)}";
-        var error = string.IsNullOrWhiteSpace(health.Error) ? "" : $" ({health.Error})";
-        return $"{(health.Success ? "Healthy" : "Unhealthy")} {status}{url}{body}{error}";
-    }
-
-    private static string TruncateSingleLine(string text, int maxLength)
-    {
-        var singleLine = (text ?? "").Replace('\r', ' ').Replace('\n', ' ').Trim();
-        if (singleLine.Length <= maxLength) return singleLine;
-        return singleLine.Substring(0, Math.Max(0, maxLength - 3)) + "...";
+        _detailVm.WorkspacePath = _editingWorkspaceKey ?? EditorWorkspacePath;
+        _detailVm.EditorWorkspacePath = EditorWorkspacePath.Trim();
+        _detailVm.EditorName = NullIfWhiteSpace(EditorName) ?? string.Empty;
+        _detailVm.EditorTodoPath = NullIfWhiteSpace(EditorTodoPath) ?? string.Empty;
+        _detailVm.EditorDataDirectory = NullIfWhiteSpace(EditorDataDirectory) ?? string.Empty;
+        _detailVm.EditorTunnelProvider = NullIfWhiteSpace(EditorTunnelProvider) ?? string.Empty;
+        _detailVm.EditorRunAs = NullIfWhiteSpace(EditorRunAs) ?? string.Empty;
+        _detailVm.EditorIsPrimary = EditorIsPrimary;
+        _detailVm.EditorIsEnabled = EditorIsEnabled;
+        _detailVm.EditorPromptTemplateText = BlankToNullPreserveContent(GetWorkspacePromptEditorText?.Invoke() ?? EditorPromptTemplateText) ?? string.Empty;
+        _detailVm.EditorStatusPromptText = BlankToNullPreserveContent(GetWorkspaceStatusPromptEditorText?.Invoke() ?? EditorStatusPromptText) ?? string.Empty;
+        _detailVm.EditorImplementPromptText = BlankToNullPreserveContent(GetWorkspaceImplementPromptEditorText?.Invoke() ?? EditorImplementPromptText) ?? string.Empty;
+        _detailVm.EditorPlanPromptText = BlankToNullPreserveContent(GetWorkspacePlanPromptEditorText?.Invoke() ?? EditorPlanPromptText) ?? string.Empty;
     }
 }
 

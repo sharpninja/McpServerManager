@@ -56,6 +56,18 @@ public sealed class McpWorkspaceItem
 
     [JsonPropertyName("planPrompt")]
     public string? PlanPrompt { get; set; }
+
+    [JsonPropertyName("bannedLicenses")]
+    public List<string>? BannedLicenses { get; set; }
+
+    [JsonPropertyName("bannedCountriesOfOrigin")]
+    public List<string>? BannedCountriesOfOrigin { get; set; }
+
+    [JsonPropertyName("bannedOrganizations")]
+    public List<string>? BannedOrganizations { get; set; }
+
+    [JsonPropertyName("bannedIndividuals")]
+    public List<string>? BannedIndividuals { get; set; }
 }
 
 public sealed class McpWorkspaceCreateRequest
@@ -95,6 +107,18 @@ public sealed class McpWorkspaceCreateRequest
 
     [JsonPropertyName("planPrompt")]
     public string? PlanPrompt { get; set; }
+
+    [JsonPropertyName("bannedLicenses")]
+    public List<string>? BannedLicenses { get; set; }
+
+    [JsonPropertyName("bannedCountriesOfOrigin")]
+    public List<string>? BannedCountriesOfOrigin { get; set; }
+
+    [JsonPropertyName("bannedOrganizations")]
+    public List<string>? BannedOrganizations { get; set; }
+
+    [JsonPropertyName("bannedIndividuals")]
+    public List<string>? BannedIndividuals { get; set; }
 }
 
 public sealed class McpWorkspaceUpdateRequest
@@ -131,6 +155,18 @@ public sealed class McpWorkspaceUpdateRequest
 
     [JsonPropertyName("planPrompt")]
     public string? PlanPrompt { get; set; }
+
+    [JsonPropertyName("bannedLicenses")]
+    public List<string>? BannedLicenses { get; set; }
+
+    [JsonPropertyName("bannedCountriesOfOrigin")]
+    public List<string>? BannedCountriesOfOrigin { get; set; }
+
+    [JsonPropertyName("bannedOrganizations")]
+    public List<string>? BannedOrganizations { get; set; }
+
+    [JsonPropertyName("bannedIndividuals")]
+    public List<string>? BannedIndividuals { get; set; }
 }
 
 public sealed class McpWorkspaceMutationResult
