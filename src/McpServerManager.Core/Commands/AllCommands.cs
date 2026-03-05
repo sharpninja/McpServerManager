@@ -7,7 +7,7 @@ namespace McpServerManager.Core.Commands;
 
 public sealed record NavigateBackCommand() : ICommand<bool>;
 
-public sealed class NavigateBackHandler(ICommandTarget target) : ICommandHandler<NavigateBackCommand, bool>
+public sealed class NavigateBackHandler(INavigationTarget target) : ICommandHandler<NavigateBackCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(NavigateBackCommand command, CallContext context)
     {
@@ -18,7 +18,7 @@ public sealed class NavigateBackHandler(ICommandTarget target) : ICommandHandler
 
 public sealed record NavigateForwardCommand() : ICommand<bool>;
 
-public sealed class NavigateForwardHandler(ICommandTarget target) : ICommandHandler<NavigateForwardCommand, bool>
+public sealed class NavigateForwardHandler(INavigationTarget target) : ICommandHandler<NavigateForwardCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(NavigateForwardCommand command, CallContext context)
     {
@@ -31,7 +31,7 @@ public sealed class NavigateForwardHandler(ICommandTarget target) : ICommandHand
 
 public sealed record RefreshViewCommand() : ICommand<bool>;
 
-public sealed class RefreshViewHandler(ICommandTarget target) : ICommandHandler<RefreshViewCommand, bool>
+public sealed class RefreshViewHandler(INavigationTarget target) : ICommandHandler<RefreshViewCommand, bool>
 {
     public async Task<Result<bool>> HandleAsync(RefreshViewCommand command, CallContext context)
     {
@@ -44,7 +44,7 @@ public sealed class RefreshViewHandler(ICommandTarget target) : ICommandHandler<
 
 public sealed record ShowRequestDetailsCommand(Models.Json.SearchableEntry Entry) : ICommand<bool>;
 
-public sealed class ShowRequestDetailsHandler(ICommandTarget target) : ICommandHandler<ShowRequestDetailsCommand, bool>
+public sealed class ShowRequestDetailsHandler(IRequestDetailsTarget target) : ICommandHandler<ShowRequestDetailsCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(ShowRequestDetailsCommand command, CallContext context)
     {
@@ -55,7 +55,7 @@ public sealed class ShowRequestDetailsHandler(ICommandTarget target) : ICommandH
 
 public sealed record CloseRequestDetailsCommand() : ICommand<bool>;
 
-public sealed class CloseRequestDetailsHandler(ICommandTarget target) : ICommandHandler<CloseRequestDetailsCommand, bool>
+public sealed class CloseRequestDetailsHandler(IRequestDetailsTarget target) : ICommandHandler<CloseRequestDetailsCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(CloseRequestDetailsCommand command, CallContext context)
     {
@@ -66,7 +66,7 @@ public sealed class CloseRequestDetailsHandler(ICommandTarget target) : ICommand
 
 public sealed record NavigateToPreviousRequestCommand() : ICommand<bool>;
 
-public sealed class NavigateToPreviousRequestHandler(ICommandTarget target) : ICommandHandler<NavigateToPreviousRequestCommand, bool>
+public sealed class NavigateToPreviousRequestHandler(IRequestDetailsTarget target) : ICommandHandler<NavigateToPreviousRequestCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(NavigateToPreviousRequestCommand command, CallContext context)
     {
@@ -77,7 +77,7 @@ public sealed class NavigateToPreviousRequestHandler(ICommandTarget target) : IC
 
 public sealed record NavigateToNextRequestCommand() : ICommand<bool>;
 
-public sealed class NavigateToNextRequestHandler(ICommandTarget target) : ICommandHandler<NavigateToNextRequestCommand, bool>
+public sealed class NavigateToNextRequestHandler(IRequestDetailsTarget target) : ICommandHandler<NavigateToNextRequestCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(NavigateToNextRequestCommand command, CallContext context)
     {
@@ -90,7 +90,7 @@ public sealed class NavigateToNextRequestHandler(ICommandTarget target) : IComma
 
 public sealed record SelectSearchEntryCommand(Models.Json.SearchableEntry Entry) : ICommand<bool>;
 
-public sealed class SelectSearchEntryHandler(ICommandTarget target) : ICommandHandler<SelectSearchEntryCommand, bool>
+public sealed class SelectSearchEntryHandler(IRequestDetailsTarget target) : ICommandHandler<SelectSearchEntryCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(SelectSearchEntryCommand command, CallContext context)
     {
@@ -103,7 +103,7 @@ public sealed class SelectSearchEntryHandler(ICommandTarget target) : ICommandHa
 
 public sealed record CopyTextCommand(string Text) : ICommand<bool>;
 
-public sealed class CopyTextHandler(ICommandTarget target) : ICommandHandler<CopyTextCommand, bool>
+public sealed class CopyTextHandler(IClipboardTarget target) : ICommandHandler<CopyTextCommand, bool>
 {
     public async Task<Result<bool>> HandleAsync(CopyTextCommand command, CallContext context)
     {
@@ -114,7 +114,7 @@ public sealed class CopyTextHandler(ICommandTarget target) : ICommandHandler<Cop
 
 public sealed record CopyOriginalJsonCommand(Models.Json.UnifiedRequestEntry? Entry) : ICommand<bool>;
 
-public sealed class CopyOriginalJsonHandler(ICommandTarget target) : ICommandHandler<CopyOriginalJsonCommand, bool>
+public sealed class CopyOriginalJsonHandler(IClipboardTarget target) : ICommandHandler<CopyOriginalJsonCommand, bool>
 {
     public async Task<Result<bool>> HandleAsync(CopyOriginalJsonCommand command, CallContext context)
     {
@@ -127,7 +127,7 @@ public sealed class CopyOriginalJsonHandler(ICommandTarget target) : ICommandHan
 
 public sealed record OpenPreviewInBrowserCommand() : ICommand<bool>;
 
-public sealed class OpenPreviewInBrowserHandler(ICommandTarget target) : ICommandHandler<OpenPreviewInBrowserCommand, bool>
+public sealed class OpenPreviewInBrowserHandler(IPreviewTarget target) : ICommandHandler<OpenPreviewInBrowserCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(OpenPreviewInBrowserCommand command, CallContext context)
     {
@@ -138,7 +138,7 @@ public sealed class OpenPreviewInBrowserHandler(ICommandTarget target) : IComman
 
 public sealed record ToggleShowRawMarkdownCommand() : ICommand<bool>;
 
-public sealed class ToggleShowRawMarkdownHandler(ICommandTarget target) : ICommandHandler<ToggleShowRawMarkdownCommand, bool>
+public sealed class ToggleShowRawMarkdownHandler(IPreviewTarget target) : ICommandHandler<ToggleShowRawMarkdownCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(ToggleShowRawMarkdownCommand command, CallContext context)
     {
@@ -151,7 +151,7 @@ public sealed class ToggleShowRawMarkdownHandler(ICommandTarget target) : IComma
 
 public sealed record ArchiveCurrentCommand() : ICommand<bool>;
 
-public sealed class ArchiveCurrentHandler(ICommandTarget target) : ICommandHandler<ArchiveCurrentCommand, bool>
+public sealed class ArchiveCurrentHandler(IArchiveTarget target) : ICommandHandler<ArchiveCurrentCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(ArchiveCurrentCommand command, CallContext context)
     {
@@ -162,7 +162,7 @@ public sealed class ArchiveCurrentHandler(ICommandTarget target) : ICommandHandl
 
 public sealed record ArchiveTreeItemCommand(Models.FileNode? Node) : ICommand<bool>;
 
-public sealed class ArchiveTreeItemHandler(ICommandTarget target) : ICommandHandler<ArchiveTreeItemCommand, bool>
+public sealed class ArchiveTreeItemHandler(IArchiveTarget target) : ICommandHandler<ArchiveTreeItemCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(ArchiveTreeItemCommand command, CallContext context)
     {
@@ -175,7 +175,7 @@ public sealed class ArchiveTreeItemHandler(ICommandTarget target) : ICommandHand
 
 public sealed record OpenTreeItemCommand(Models.FileNode? Node) : ICommand<bool>;
 
-public sealed class OpenTreeItemHandler(ICommandTarget target) : ICommandHandler<OpenTreeItemCommand, bool>
+public sealed class OpenTreeItemHandler(INavigationTarget target) : ICommandHandler<OpenTreeItemCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(OpenTreeItemCommand command, CallContext context)
     {
@@ -188,7 +188,7 @@ public sealed class OpenTreeItemHandler(ICommandTarget target) : ICommandHandler
 
 public sealed record OpenAgentConfigCommand() : ICommand<bool>;
 
-public sealed class OpenAgentConfigHandler(ICommandTarget target) : ICommandHandler<OpenAgentConfigCommand, bool>
+public sealed class OpenAgentConfigHandler(IConfigTarget target) : ICommandHandler<OpenAgentConfigCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(OpenAgentConfigCommand command, CallContext context)
     {
@@ -199,7 +199,7 @@ public sealed class OpenAgentConfigHandler(ICommandTarget target) : ICommandHand
 
 public sealed record OpenPromptTemplatesCommand() : ICommand<bool>;
 
-public sealed class OpenPromptTemplatesHandler(ICommandTarget target) : ICommandHandler<OpenPromptTemplatesCommand, bool>
+public sealed class OpenPromptTemplatesHandler(IConfigTarget target) : ICommandHandler<OpenPromptTemplatesCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(OpenPromptTemplatesCommand command, CallContext context)
     {
@@ -212,7 +212,7 @@ public sealed class OpenPromptTemplatesHandler(ICommandTarget target) : ICommand
 
 public sealed record PhoneNavigateSectionCommand(string? SectionKey) : ICommand<bool>;
 
-public sealed class PhoneNavigateSectionHandler(ICommandTarget target) : ICommandHandler<PhoneNavigateSectionCommand, bool>
+public sealed class PhoneNavigateSectionHandler(INavigationTarget target) : ICommandHandler<PhoneNavigateSectionCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(PhoneNavigateSectionCommand command, CallContext context)
     {
@@ -225,7 +225,7 @@ public sealed class PhoneNavigateSectionHandler(ICommandTarget target) : IComman
 
 public sealed record TreeItemTappedCommand(Models.FileNode? Node) : ICommand<bool>;
 
-public sealed class TreeItemTappedHandler(ICommandTarget target) : ICommandHandler<TreeItemTappedCommand, bool>
+public sealed class TreeItemTappedHandler(INavigationTarget target) : ICommandHandler<TreeItemTappedCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(TreeItemTappedCommand command, CallContext context)
     {
@@ -238,7 +238,7 @@ public sealed class TreeItemTappedHandler(ICommandTarget target) : ICommandHandl
 
 public sealed record JsonNodeDoubleTappedCommand(Models.Json.JsonTreeNode? Node) : ICommand<bool>;
 
-public sealed class JsonNodeDoubleTappedHandler(ICommandTarget target) : ICommandHandler<JsonNodeDoubleTappedCommand, bool>
+public sealed class JsonNodeDoubleTappedHandler(INavigationTarget target) : ICommandHandler<JsonNodeDoubleTappedCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(JsonNodeDoubleTappedCommand command, CallContext context)
     {
@@ -251,7 +251,7 @@ public sealed class JsonNodeDoubleTappedHandler(ICommandTarget target) : IComman
 
 public sealed record SearchRowTappedCommand(Models.Json.SearchableEntry? Entry) : ICommand<bool>;
 
-public sealed class SearchRowTappedHandler(ICommandTarget target) : ICommandHandler<SearchRowTappedCommand, bool>
+public sealed class SearchRowTappedHandler(IRequestDetailsTarget target) : ICommandHandler<SearchRowTappedCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(SearchRowTappedCommand command, CallContext context)
     {
@@ -264,7 +264,7 @@ public sealed class SearchRowTappedHandler(ICommandTarget target) : ICommandHand
 
 public sealed record SearchRowDoubleTappedCommand(Models.Json.SearchableEntry? Entry) : ICommand<bool>;
 
-public sealed class SearchRowDoubleTappedHandler(ICommandTarget target) : ICommandHandler<SearchRowDoubleTappedCommand, bool>
+public sealed class SearchRowDoubleTappedHandler(IRequestDetailsTarget target) : ICommandHandler<SearchRowDoubleTappedCommand, bool>
 {
     public Task<Result<bool>> HandleAsync(SearchRowDoubleTappedCommand command, CallContext context)
     {

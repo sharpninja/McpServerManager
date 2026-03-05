@@ -21,7 +21,7 @@ public sealed class DataLoadingHandlerTests
         _target.Setup(t => t.DispatchToUi(It.IsAny<Action>()));
         _target.Setup(t => t.TrackBackgroundWork(It.IsAny<Task>()));
 
-        var handler = new InitializeFromMcpHandler(_target.Object);
+        var handler = new InitializeFromMcpHandler(_target.Object, _target.Object);
         var result = await handler.HandleAsync(new InitializeFromMcpCommand(), _ctx);
 
         result.IsSuccess.Should().BeTrue();
@@ -37,7 +37,7 @@ public sealed class DataLoadingHandlerTests
         _target.Setup(t => t.DispatchToUi(It.IsAny<Action>()));
         _target.Setup(t => t.TrackBackgroundWork(It.IsAny<Task>()));
 
-        var handler = new RefreshAndLoadAllJsonHandler(_target.Object);
+        var handler = new RefreshAndLoadAllJsonHandler(_target.Object, _target.Object);
         var result = await handler.HandleAsync(new RefreshAndLoadAllJsonCommand(), _ctx);
 
         result.IsSuccess.Should().BeTrue();
@@ -51,7 +51,7 @@ public sealed class DataLoadingHandlerTests
         _target.Setup(t => t.DispatchToUi(It.IsAny<Action>()));
         _target.Setup(t => t.TrackBackgroundWork(It.IsAny<Task>()));
 
-        var handler = new RefreshAndLoadAllJsonHandler(_target.Object);
+        var handler = new RefreshAndLoadAllJsonHandler(_target.Object, _target.Object);
         var result = await handler.HandleAsync(new RefreshAndLoadAllJsonCommand("Claude"), _ctx);
 
         result.IsSuccess.Should().BeTrue();
@@ -66,7 +66,7 @@ public sealed class DataLoadingHandlerTests
         _target.Setup(t => t.DispatchToUi(It.IsAny<Action>()));
         _target.Setup(t => t.TrackBackgroundWork(It.IsAny<Task>()));
 
-        var handler = new RefreshAndLoadAgentJsonHandler(_target.Object);
+        var handler = new RefreshAndLoadAgentJsonHandler(_target.Object, _target.Object);
         var result = await handler.HandleAsync(new RefreshAndLoadAgentJsonCommand("Copilot"), _ctx);
 
         result.IsSuccess.Should().BeTrue();
@@ -81,7 +81,7 @@ public sealed class DataLoadingHandlerTests
         _target.Setup(t => t.DispatchToUi(It.IsAny<Action>()));
         _target.Setup(t => t.TrackBackgroundWork(It.IsAny<Task>()));
 
-        var handler = new RefreshAndLoadSessionHandler(_target.Object);
+        var handler = new RefreshAndLoadSessionHandler(_target.Object, _target.Object);
         var result = await handler.HandleAsync(new RefreshAndLoadSessionCommand("/path/to/session"), _ctx);
 
         result.IsSuccess.Should().BeTrue();
@@ -95,7 +95,7 @@ public sealed class DataLoadingHandlerTests
     public async Task LoadJsonFileHandler_HandleAsync_CallsLoadJson()
     {
         _target.Setup(t => t.DispatchToUi(It.IsAny<Action>()));
-        var handler = new LoadJsonFileHandler(_target.Object);
+        var handler = new LoadJsonFileHandler(_target.Object, _target.Object);
         var result = await handler.HandleAsync(new LoadJsonFileCommand("test.json"), _ctx);
 
         result.IsSuccess.Should().BeTrue();

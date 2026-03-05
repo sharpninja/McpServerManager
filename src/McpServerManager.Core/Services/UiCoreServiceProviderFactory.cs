@@ -54,8 +54,16 @@ internal static class UiCoreServiceProviderFactory
         services.AddSingleton(jsonParsingService ?? new JsonParsingService());
         services.AddSingleton(fileSystemWatcherService ?? new FileSystemWatcherService());
 
-        // Register ICommandTarget for CQRS handler DI
+        // Register ICommandTarget and granular sub-interfaces for CQRS handler DI
         services.AddSingleton<Commands.ICommandTarget>(commandTarget);
+        services.AddSingleton<Commands.INavigationTarget>(sp => sp.GetRequiredService<Commands.ICommandTarget>());
+        services.AddSingleton<Commands.IRequestDetailsTarget>(sp => sp.GetRequiredService<Commands.ICommandTarget>());
+        services.AddSingleton<Commands.IPreviewTarget>(sp => sp.GetRequiredService<Commands.ICommandTarget>());
+        services.AddSingleton<Commands.IArchiveTarget>(sp => sp.GetRequiredService<Commands.ICommandTarget>());
+        services.AddSingleton<Commands.ISessionDataTarget>(sp => sp.GetRequiredService<Commands.ICommandTarget>());
+        services.AddSingleton<Commands.IClipboardTarget>(sp => sp.GetRequiredService<Commands.ICommandTarget>());
+        services.AddSingleton<Commands.IConfigTarget>(sp => sp.GetRequiredService<Commands.ICommandTarget>());
+        services.AddSingleton<Commands.IUiDispatchTarget>(sp => sp.GetRequiredService<Commands.ICommandTarget>());
 
         services.AddCqrsDispatcher();
         // Scan app command handlers for DI-based handler discovery
