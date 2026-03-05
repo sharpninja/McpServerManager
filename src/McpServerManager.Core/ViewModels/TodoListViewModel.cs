@@ -9,7 +9,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using McpServer.UI.Core.Messages;
 using McpServer.UI.Core.ViewModels;
-using McpServerManager.Core.Commands;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -377,7 +376,8 @@ public partial class TodoListViewModel : ViewModelBase
         if (SelectedEntry?.Item is not { } item)
             return;
 
-        await RunTodoPromptCommandAsync(item, TodoPromptActionKind.Status);
+        await RunTodoPromptCommandAsync(item, "status",
+            static (vm, ct) => vm.GenerateStatusPromptAsync(ct));
     }
 
     [RelayCommand]
@@ -386,7 +386,8 @@ public partial class TodoListViewModel : ViewModelBase
         if (SelectedEntry?.Item is not { } item)
             return;
 
-        await RunTodoPromptCommandAsync(item, TodoPromptActionKind.Plan);
+        await RunTodoPromptCommandAsync(item, "plan",
+            static (vm, ct) => vm.GeneratePlanPromptAsync(ct));
     }
 
     [RelayCommand]
@@ -395,12 +396,15 @@ public partial class TodoListViewModel : ViewModelBase
         if (SelectedEntry?.Item is not { } item)
             return;
 
-        await RunTodoPromptCommandAsync(item, TodoPromptActionKind.Implement);
+        await RunTodoPromptCommandAsync(item, "implement",
+            static (vm, ct) => vm.GenerateImplementPromptAsync(ct));
     }
 
-    private async Task RunTodoPromptCommandAsync(McpTodoFlatItem item, TodoPromptActionKind promptAction)
+    private async Task RunTodoPromptCommandAsync(
+        McpTodoFlatItem item,
+        string action,
+        Func<UiCoreTodoDetailViewModel, CancellationToken, Task> generateAsync)
     {
-        var action = promptAction.ToString().ToLowerInvariant();
         ReplaceActiveCancellation();
 
         IsCopilotRunning = true;
@@ -413,20 +417,7 @@ public partial class TodoListViewModel : ViewModelBase
             var vm = CreateScratchDetailVm();
             vm.EditorId = item.Id;
 
-            switch (promptAction)
-            {
-                case TodoPromptActionKind.Status:
-                    await vm.GenerateStatusPromptAsync(_activeCts!.Token);
-                    break;
-                case TodoPromptActionKind.Plan:
-                    await vm.GeneratePlanPromptAsync(_activeCts!.Token);
-                    break;
-                case TodoPromptActionKind.Implement:
-                    await vm.GenerateImplementPromptAsync(_activeCts!.Token);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(promptAction), promptAction, null);
-            }
+            await generateAsync(vm, _activeCts!.Token);
 
             if (!string.IsNullOrWhiteSpace(vm.ErrorMessage))
             {
