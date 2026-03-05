@@ -82,18 +82,38 @@ internal sealed class UiCoreSessionLogApiClientAdapter : ISessionLogApiClient
         }
     }
 
-    public Task<SessionLogSubmitOutcome> SubmitSessionLogAsync(SubmitSessionLogCommand command, CancellationToken cancellationToken = default)
+    public async Task<SessionLogSubmitOutcome> SubmitSessionLogAsync(SubmitSessionLogCommand command, CancellationToken cancellationToken = default)
     {
-        // Submit is not supported through the app-side McpSessionLogService
-        // which only reads. The submit flow goes directly via REST API.
-        _logger.LogWarning("SessionLog submit not implemented through adapter — use REST API directly");
-        return Task.FromResult(new SessionLogSubmitOutcome(0, command.SessionLog.SourceType, command.SessionLog.SessionId));
+        ArgumentNullException.ThrowIfNull(command);
+        try
+        {
+            var dto = UiCoreMessageMapper.ToUnifiedSessionLogDto(command.SessionLog);
+            var result = await _service.SubmitAsync(dto, cancellationToken).ConfigureAwait(false);
+            return new SessionLogSubmitOutcome(result.Id, result.SourceType, result.SessionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SessionLog submit failed");
+            return new SessionLogSubmitOutcome(0, command.SessionLog.SourceType, command.SessionLog.SessionId);
+        }
     }
 
-    public Task<SessionLogDialogAppendOutcome> AppendSessionLogDialogAsync(AppendSessionLogDialogCommand command, CancellationToken cancellationToken = default)
+    public async Task<SessionLogDialogAppendOutcome> AppendSessionLogDialogAsync(AppendSessionLogDialogCommand command, CancellationToken cancellationToken = default)
     {
-        // Append is not supported through the app-side McpSessionLogService.
-        _logger.LogWarning("SessionLog dialog append not implemented through adapter — use REST API directly");
-        return Task.FromResult(new SessionLogDialogAppendOutcome(command.Agent, command.SessionId, command.RequestId, 0));
+        ArgumentNullException.ThrowIfNull(command);
+        try
+        {
+            var items = command.Items
+                .Select(UiCoreMessageMapper.ToProcessingDialogItemDto)
+                .ToList();
+            var result = await _service.AppendDialogAsync(
+                command.Agent, command.SessionId, command.RequestId, items, cancellationToken).ConfigureAwait(false);
+            return new SessionLogDialogAppendOutcome(result.Agent, result.SessionId, result.RequestId, result.TotalDialogCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SessionLog dialog append failed");
+            return new SessionLogDialogAppendOutcome(command.Agent, command.SessionId, command.RequestId, 0);
+        }
     }
 }

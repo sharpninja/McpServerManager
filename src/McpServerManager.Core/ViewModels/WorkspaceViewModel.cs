@@ -91,32 +91,6 @@ public partial class WorkspaceViewModel : ViewModelBase
         NewWorkspace();
     }
 
-    public WorkspaceViewModel(IClipboardService clipboardService, McpWorkspaceService service)
-        : this(
-            clipboardService,
-            new UiCoreAppRuntime(
-                workspaceService: service,
-                workspaceContext: new UiCoreWorkspaceContextViewModel()))
-    {
-    }
-
-    public WorkspaceViewModel(IClipboardService clipboardService)
-    {
-        _clipboardService = clipboardService;
-        var baseUrl = AppSettings.ResolveMcpBaseUrl();
-        var normalizedUrl = McpServerRestClientFactory.NormalizeBaseUrl(baseUrl);
-        var client = McpServerRestClientFactory.Create(baseUrl, TimeSpan.FromSeconds(5));
-        var workspaceService = new McpWorkspaceService(client, new Uri(normalizedUrl, UriKind.Absolute));
-        _runtime = new UiCoreAppRuntime(
-            workspaceService: workspaceService,
-            workspaceContext: new UiCoreWorkspaceContextViewModel());
-        _listVm = _runtime.GetRequiredService<UiCoreWorkspaceListViewModel>();
-        _detailVm = _runtime.GetRequiredService<UiCoreWorkspaceDetailViewModel>();
-        _globalPromptVm = _runtime.GetRequiredService<UiCoreWorkspaceGlobalPromptViewModel>();
-        _healthVm = _runtime.GetRequiredService<UiCoreWorkspaceHealthProbeViewModel>();
-        NewWorkspace();
-    }
-
     public Task RefreshForConnectionChangeAsync() => LoadWorkspacesCoreAsync(forceEditorReload: true);
 
     partial void OnFilterTextChanged(string value) => ApplyFilters();

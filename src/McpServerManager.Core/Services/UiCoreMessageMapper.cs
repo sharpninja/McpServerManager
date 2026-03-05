@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using McpServer.UI.Core.Messages;
 using McpServerManager.Core.Models;
+using ClientModels = McpServer.Client.Models;
 
 namespace McpServerManager.Core.Services;
 
@@ -445,4 +447,94 @@ internal static class UiCoreMessageMapper
 
     public static SessionLogDialogDetail ToSessionLogDialogDetail(Models.Json.UnifiedProcessingDialogItem dialog)
         => new(dialog.Timestamp, dialog.Role, dialog.Category, dialog.Content);
+
+    // ── Session log reverse mapping (UI.Core → client DTO for submit) ───────
+
+    public static ClientModels.UnifiedSessionLogDto ToUnifiedSessionLogDto(SessionLogDetail detail)
+        => new()
+        {
+            SourceType = detail.SourceType,
+            SessionId = detail.SessionId,
+            Title = detail.Title,
+            Model = detail.Model,
+            Started = detail.Started,
+            LastUpdated = detail.LastUpdated,
+            Status = detail.Status,
+            EntryCount = detail.EntryCount,
+            TotalTokens = detail.TotalTokens,
+            CursorSessionLabel = detail.CursorSessionLabel,
+            Workspace = detail.Workspace is null ? null : new ClientModels.WorkspaceInfoDto
+            {
+                Project = detail.Workspace.Project,
+                TargetFramework = detail.Workspace.TargetFramework,
+                Repository = detail.Workspace.Repository,
+                Branch = detail.Workspace.Branch,
+            },
+            CopilotStatistics = detail.CopilotStatistics is null ? null : new ClientModels.CopilotStatisticsDto
+            {
+                AverageSuccessScore = detail.CopilotStatistics.AverageSuccessScore,
+                TotalNetTokens = detail.CopilotStatistics.TotalNetTokens,
+                TotalNetPremiumRequests = detail.CopilotStatistics.TotalNetPremiumRequests,
+                CompletedCount = detail.CopilotStatistics.CompletedCount,
+                InProgressCount = detail.CopilotStatistics.InProgressCount,
+            },
+            Entries = detail.Entries.Select(ToUnifiedRequestEntryDto).ToList(),
+        };
+
+    public static ClientModels.UnifiedRequestEntryDto ToUnifiedRequestEntryDto(SessionLogEntryDetail entry)
+        => new()
+        {
+            RequestId = entry.RequestId,
+            Timestamp = entry.Timestamp,
+            QueryTitle = entry.QueryTitle,
+            QueryText = entry.QueryText,
+            Response = entry.Response,
+            Interpretation = entry.Interpretation,
+            Status = entry.Status,
+            Model = entry.Model,
+            ModelProvider = entry.ModelProvider,
+            TokenCount = entry.TokenCount,
+            FailureNote = entry.FailureNote,
+            Score = entry.Score,
+            IsPremium = entry.IsPremium,
+            Tags = entry.Tags?.ToList(),
+            ContextList = entry.ContextList?.ToList(),
+            DesignDecisions = entry.DesignDecisions?.ToList(),
+            RequirementsDiscovered = entry.RequirementsDiscovered?.ToList(),
+            FilesModified = entry.FilesModified?.ToList(),
+            Blockers = entry.Blockers?.ToList(),
+            Actions = entry.Actions?.Select(ToActionDto).ToList(),
+            ProcessingDialog = entry.ProcessingDialog?.Select(ToProcessingDialogItemDto).ToList(),
+            Commits = entry.Commits?.Select(ToSessionLogCommitDto).ToList(),
+        };
+
+    public static ClientModels.UnifiedActionDto ToActionDto(SessionLogActionDetail action)
+        => new()
+        {
+            Order = action.Order,
+            Description = action.Description,
+            Type = action.Type,
+            Status = action.Status,
+            FilePath = action.FilePath,
+        };
+
+    public static ClientModels.ProcessingDialogItemDto ToProcessingDialogItemDto(SessionLogDialogDetail dialog)
+        => new()
+        {
+            Timestamp = dialog.Timestamp,
+            Role = dialog.Role,
+            Content = dialog.Content,
+            Category = dialog.Category,
+        };
+
+    public static ClientModels.SessionLogCommitDto ToSessionLogCommitDto(SessionLogCommitDetail commit)
+        => new()
+        {
+            Sha = commit.Sha,
+            Branch = commit.Branch,
+            Message = commit.Message,
+            Author = commit.Author,
+            Timestamp = commit.Timestamp,
+            FilesChanged = commit.FilesChanged?.ToList(),
+        };
 }

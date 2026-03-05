@@ -162,4 +162,21 @@ public sealed class McpSessionLogService
             return dt;
         return null;
     }
+
+    /// <summary>Submits (upserts) a session log via the MCP server.</summary>
+    public async Task<ClientModels.SessionLogSubmitResult> SubmitAsync(
+        ClientModels.UnifiedSessionLogDto sessionLog,
+        CancellationToken cancellationToken = default)
+    {
+        return await _client.SessionLog.SubmitAsync(sessionLog, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Appends processing dialog items to a specific request entry.</summary>
+    public async Task<ClientModels.DialogAppendResult> AppendDialogAsync(
+        string agent, string sessionId, string requestId,
+        List<ClientModels.ProcessingDialogItemDto> items,
+        CancellationToken cancellationToken = default)
+    {
+        return await _client.SessionLog.AppendDialogAsync(agent, sessionId, requestId, items, cancellationToken).ConfigureAwait(false);
+    }
 }

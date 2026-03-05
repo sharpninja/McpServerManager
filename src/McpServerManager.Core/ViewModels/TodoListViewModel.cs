@@ -68,28 +68,6 @@ public partial class TodoListViewModel : ViewModelBase
         _detailVm = runtime.GetRequiredService<UiCoreTodoDetailViewModel>();
     }
 
-    public TodoListViewModel(IClipboardService clipboardService, McpTodoService service)
-        : this(
-            clipboardService,
-            new UiCoreAppRuntime(
-                todoService: service,
-                workspaceContext: new UiCoreWorkspaceContextViewModel()))
-    {
-    }
-
-    public TodoListViewModel(IClipboardService clipboardService)
-    {
-        _clipboardService = clipboardService;
-        var client = McpServerRestClientFactory.Create(AppSettings.ResolveMcpBaseUrl(), TimeSpan.FromSeconds(5));
-        var promptClient = McpServerRestClientFactory.Create(AppSettings.ResolveMcpBaseUrl(), TimeSpan.FromMinutes(15));
-        var todoService = new McpTodoService(client, promptClient);
-        _runtime = new UiCoreAppRuntime(
-            todoService: todoService,
-            workspaceContext: new UiCoreWorkspaceContextViewModel());
-        _listVm = _runtime.GetRequiredService<UiCoreTodoListViewModel>();
-        _detailVm = _runtime.GetRequiredService<UiCoreTodoDetailViewModel>();
-    }
-
     public void ApplyWorkspacePath(string? workspacePath)
     {
         _runtime.WorkspaceContext.ActiveWorkspacePath = workspacePath ?? string.Empty;
