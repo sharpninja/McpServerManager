@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
+             xmlns:conv="using:McpServerManager.Core.Converters"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:views="using:McpServerManager.Android.Views"
@@ -59,7 +60,7 @@
 
         <!-- Status Bar -->
         <views:AnimatedStatusBar Grid.Row="1" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
-            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="6">
+            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="6">
                 <ComboBox Grid.Row="0"
                           Grid.Column="0"
                           Grid.ColumnSpan="3"
@@ -102,6 +103,14 @@
                          HorizontalAlignment="Center"
                          ToolTip.Tip="{Binding WorkspaceHealthIndicatorTooltip}"/>
                 <SelectableTextBlock Grid.Row="1" Grid.Column="3" Text="{Binding AppVersionDisplay}" FontSize="18" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
+                <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4"
+                            Orientation="Horizontal" Spacing="6"
+                            IsVisible="{Binding StatusViewModel.IsCopilotRunning}">
+                    <Ellipse Width="10" Height="10" VerticalAlignment="Center"
+                             Fill="{Binding StatusViewModel.CopilotHeartbeatState, Converter={x:Static conv:HeartbeatStateToBrushConverter.Instance}}"/>
+                    <TextBlock Text="{Binding StatusViewModel.CopilotActivityText}" FontSize="17"
+                               VerticalAlignment="Center" Opacity="0.8"/>
+                </StackPanel>
             </Grid>
         </views:AnimatedStatusBar>
 

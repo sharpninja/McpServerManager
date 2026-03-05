@@ -94,6 +94,41 @@ public partial class PhoneTodoView : UserControl
         {
             RefreshFormattedDetailFromViewModel();
         }
+        else if (e.PropertyName == nameof(TodoListViewModel.SelectedEditorTab))
+        {
+            SyncTabContent(vm);
+        }
+    }
+
+    private void SyncTabContent(TodoListViewModel vm)
+    {
+        var tab = vm.SelectedEditorTab;
+        if (tab is null)
+        {
+            Editor.IsVisible = false;
+            MarkdownViewer.IsVisible = false;
+            return;
+        }
+
+        if (tab.IsMarkdown)
+        {
+            Editor.IsVisible = false;
+            MarkdownText.Text = tab.Content;
+            MarkdownViewer.IsVisible = true;
+            tab.PropertyChanged -= OnTabContentChanged;
+            tab.PropertyChanged += OnTabContentChanged;
+        }
+        else
+        {
+            MarkdownViewer.IsVisible = false;
+            Editor.IsVisible = true;
+        }
+    }
+
+    private void OnTabContentChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(EditorTab.Content) && sender is EditorTab tab && tab.IsMarkdown)
+            MarkdownText.Text = tab.Content;
     }
 
     private void SyncEditorFromViewModel(TodoListViewModel vm)

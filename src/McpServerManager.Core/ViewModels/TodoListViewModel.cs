@@ -48,6 +48,8 @@ public partial class TodoListViewModel : ViewModelBase
     [ObservableProperty] private double _editorFontSize = 13;
     [ObservableProperty] private bool _isCopilotRunning;
     [ObservableProperty] private McpTodoFlatItem? _currentTodoDetail;
+    [ObservableProperty] private ObservableCollection<EditorTab> _editorTabs = new();
+    [ObservableProperty] private EditorTab? _selectedEditorTab;
 
     public Func<string>? GetEditorText { get; set; }
 
@@ -64,6 +66,7 @@ public partial class TodoListViewModel : ViewModelBase
         _clipboardService = clipboardService;
         _runtime = runtime;
         _listVm = runtime.GetRequiredService<UiCoreTodoListViewModel>();
+        _listVm.Done = false; // default to open items only
         _detailVm = runtime.GetRequiredService<UiCoreTodoDetailViewModel>();
     }
 
@@ -73,6 +76,7 @@ public partial class TodoListViewModel : ViewModelBase
         CurrentTodoDetail = null;
         EditorText = "";
         EditorTitle = "";
+        EditorTabs.Clear();
     }
 
     public Task RefreshForConnectionChangeAsync() => LoadTodosAsync();
@@ -213,6 +217,7 @@ public partial class TodoListViewModel : ViewModelBase
     {
         EditorText = TodoMarkdown.BlankTemplate();
         EditorTitle = "NEW-TODO";
+        ResetEditorTabs("NEW-TODO", EditorText);
     }
 
     [RelayCommand]
@@ -349,6 +354,7 @@ public partial class TodoListViewModel : ViewModelBase
         EditorText = "";
         EditorTitle = "";
         CurrentTodoDetail = null;
+        EditorTabs.Clear();
     }
 
     [RelayCommand]
@@ -407,52 +413,99 @@ public partial class TodoListViewModel : ViewModelBase
     {
         ReplaceActiveCancellation();
 
+        var status = StatusViewModel.Instance;
         IsCopilotRunning = true;
-        EditorTitle = $"{item.Id} — {action} prompt";
-        EditorText = $"Requesting {action} prompt for {item.Id} from MCP server...";
+        status.IsCopilotRunning = true;
+        status.CopilotActivityText = "Connecting to Copilot...";
+        status.CopilotHeartbeatState = "connecting";
         StatusText = $"{Capitalize(action)} prompt: {item.Id}...";
 
+        // Create or reuse a copilot tab for this action
+        var tabHeader = char.ToUpper(action[0]) + action[1..];
+        var copilotTab = EditorTabs.FirstOrDefault(t => t.Header == tabHeader);
+        if (copilotTab is null)
+        {
+            copilotTab = EditorTab.CreateCopilotTab(action, $"Requesting {action} prompt for {item.Id}...");
+            EditorTabs.Add(copilotTab);
+        }
+        else
+        {
+            copilotTab.Content = $"Requesting {action} prompt for {item.Id}...";
+        }
+        SelectedEditorTab = copilotTab;
+
+        Timer? watchdog = null;
         try
         {
             var vm = CreateScratchDetailVm();
             vm.EditorId = item.Id;
 
-            // Forward streaming text to the editor as lines arrive
+            // Forward streaming text and heartbeat state to the copilot tab as lines arrive
             vm.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(UiCoreTodoDetailViewModel.StreamingPromptText)
                     && vm.StreamingPromptText is { } text)
                 {
-                    EditorText = text;
+                    copilotTab.Content = text;
+                    status.CopilotActivityText = "Copilot is responding";
+                    status.CopilotHeartbeatState = "receiving";
+                }
+                else if (e.PropertyName == nameof(UiCoreTodoDetailViewModel.LastHeartbeatUtc)
+                         && vm.LastHeartbeatUtc is not null)
+                {
+                    status.CopilotActivityText = "Copilot is thinking\u2026";
+                    status.CopilotHeartbeatState = "active";
                 }
             };
+
+            // Watchdog timer: check every 10s if heartbeats have stopped
+            watchdog = new Timer(_ =>
+            {
+                if (!IsCopilotRunning) return;
+                var last = vm.LastHeartbeatUtc;
+                if (last is null) return;
+
+                var elapsed = DateTimeOffset.UtcNow - last.Value;
+                if (elapsed.TotalSeconds > 30)
+                {
+                    status.CopilotActivityText = $"No heartbeat for {(int)elapsed.TotalSeconds}s \u2014 Copilot may have stalled";
+                    status.CopilotHeartbeatState = "stalled";
+                }
+                else if (elapsed.TotalSeconds > 15)
+                {
+                    status.CopilotActivityText = $"Last heartbeat {(int)elapsed.TotalSeconds}s ago";
+                    status.CopilotHeartbeatState = "warning";
+                }
+            }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(5));
 
             await generateAsync(vm, _activeCts!.Token);
 
             if (!string.IsNullOrWhiteSpace(vm.ErrorMessage))
             {
-                EditorText = $"Error: {vm.ErrorMessage}";
+                copilotTab.Content = $"Error: {vm.ErrorMessage}";
                 StatusText = $"{Capitalize(action)} prompt error: {vm.ErrorMessage}";
                 return;
             }
 
-            EditorText = vm.PromptOutput?.Text ?? vm.StreamingPromptText ?? string.Empty;
+            copilotTab.Content = vm.PromptOutput?.Text ?? vm.StreamingPromptText ?? string.Empty;
             StatusText = $"{Capitalize(action)} prompt done: {item.Id}";
         }
         catch (OperationCanceledException)
         {
-            EditorText = $"{EditorText}{Environment.NewLine}{Environment.NewLine}Cancelled.";
+            copilotTab.Content = $"{copilotTab.Content}{Environment.NewLine}{Environment.NewLine}Cancelled.";
             StatusText = $"{Capitalize(action)} prompt cancelled";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "TODO prompt {Action} failed for {Id}", action, item.Id);
-            EditorText = $"Error: {ex.Message}";
+            copilotTab.Content = $"Error: {ex.Message}";
             StatusText = $"{Capitalize(action)} prompt error: {ex.Message}";
         }
         finally
         {
+            watchdog?.Dispose();
             IsCopilotRunning = false;
+            status.ClearCopilotState();
         }
     }
 
@@ -663,6 +716,7 @@ public partial class TodoListViewModel : ViewModelBase
                 {
                     EditorText = "";
                     EditorTitle = "";
+                    EditorTabs.Clear();
                 }
 
                 if (updateStatus)
@@ -689,6 +743,7 @@ public partial class TodoListViewModel : ViewModelBase
         CurrentTodoDetail = UiCoreMessageMapper.ToMcpTodoFlatItem(detail);
         EditorText = TodoMarkdown.ToMarkdown(CurrentTodoDetail);
         EditorTitle = detail.Id;
+        ResetEditorTabs(detail.Id, EditorText);
     }
 
     private static void PrepareDetailEditorFromMarkdown(
@@ -723,6 +778,23 @@ public partial class TodoListViewModel : ViewModelBase
         _activeCts?.Cancel();
         _activeCts?.Dispose();
         _activeCts = new CancellationTokenSource();
+    }
+
+    /// <summary>Resets editor tabs to a single primary editor tab.</summary>
+    private void ResetEditorTabs(string todoId, string content)
+    {
+        EditorTabs.Clear();
+        var tab = EditorTab.CreateEditorTab(todoId, content);
+        EditorTabs.Add(tab);
+        SelectedEditorTab = tab;
+    }
+
+    /// <summary>Syncs the primary editor tab content when EditorText changes externally.</summary>
+    partial void OnEditorTextChanged(string value)
+    {
+        var primary = EditorTabs.FirstOrDefault(t => !t.IsMarkdown);
+        if (primary is not null && primary.Content != value)
+            primary.Content = value;
     }
 
     private UiCoreTodoDetailViewModel CreateScratchDetailVm()

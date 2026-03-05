@@ -168,7 +168,7 @@ public sealed class McpSessionLogService
         ClientModels.UnifiedSessionLogDto sessionLog,
         CancellationToken cancellationToken = default)
     {
-        return await _client.SessionLog.SubmitAsync(sessionLog, cancellationToken).ConfigureAwait(false);
+        return await _client.SessionLog.SubmitAsync(sessionLog, cancellationToken);
     }
 
     /// <summary>Appends processing dialog items to a specific request entry.</summary>
@@ -177,6 +177,6 @@ public sealed class McpSessionLogService
         List<ClientModels.ProcessingDialogItemDto> items,
         CancellationToken cancellationToken = default)
     {
-        return await _client.SessionLog.AppendDialogAsync(agent, sessionId, requestId, items, cancellationToken).ConfigureAwait(false);
+        return await _client.SessionLog.AppendDialogAsync(agent, sessionId, requestId, items, cancellationToken);
     }
 }

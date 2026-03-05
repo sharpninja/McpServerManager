@@ -81,6 +81,40 @@ public partial class TodoListView : UserControl
             Editor.Text = vm.EditorText;
         else if (e.PropertyName == nameof(TodoListViewModel.EditorFontSize))
             Editor.FontSize = vm.EditorFontSize;
+        else if (e.PropertyName == nameof(TodoListViewModel.SelectedEditorTab))
+            SyncTabContent(vm);
+    }
+
+    private void SyncTabContent(TodoListViewModel vm)
+    {
+        var tab = vm.SelectedEditorTab;
+        if (tab is null)
+        {
+            Editor.IsVisible = false;
+            MarkdownViewer.IsVisible = false;
+            return;
+        }
+
+        if (tab.IsMarkdown)
+        {
+            Editor.IsVisible = false;
+            MarkdownText.Text = tab.Content;
+            MarkdownViewer.IsVisible = true;
+            // Watch for streaming updates
+            tab.PropertyChanged -= OnTabContentChanged;
+            tab.PropertyChanged += OnTabContentChanged;
+        }
+        else
+        {
+            MarkdownViewer.IsVisible = false;
+            Editor.IsVisible = true;
+        }
+    }
+
+    private void OnTabContentChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(EditorTab.Content) && sender is EditorTab tab && tab.IsMarkdown)
+            MarkdownText.Text = tab.Content;
     }
 
     /// <summary>Called from XAML when a per-group ListBox selection changes. Ensures single selection across all groups and auto-opens the todo.</summary>

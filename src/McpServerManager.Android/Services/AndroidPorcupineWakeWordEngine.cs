@@ -58,7 +58,7 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
         var normalized = NormalizeSettings(settings);
         var restartRequired = false;
 
-        await _lifecycleLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _lifecycleLock.WaitAsync(cancellationToken);
         try
         {
             ThrowIfDisposed();
@@ -74,15 +74,15 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
 
         if (restartRequired)
         {
-            await StopAsync(cancellationToken).ConfigureAwait(false);
-            await StartAsync(cancellationToken).ConfigureAwait(false);
+            await StopAsync(cancellationToken);
+            await StartAsync(cancellationToken);
         }
     }
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        await _lifecycleLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _lifecycleLock.WaitAsync(cancellationToken);
 
         try
         {
@@ -91,7 +91,7 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
                 return;
 
             var context = Application.Context ?? throw new InvalidOperationException("Android application context is unavailable.");
-            await EnsureRecordAudioPermissionAsync(cancellationToken).ConfigureAwait(false);
+            await EnsureRecordAudioPermissionAsync(cancellationToken);
 
             var settings = NormalizeSettings(_settings);
             var accessKey = ResolvePicovoiceAccessKey(context);
@@ -105,8 +105,8 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
             var keywordPhrase = settings.SelectedWakePhrase;
             var keywordAssetFileName = GetKeywordAssetFileName(keywordPhrase);
             var keywordAssetPath = $"{KeywordAssetFolder}/{keywordAssetFileName}";
-            var keywordFilePath = await MaterializeRequiredAssetAsync(context, keywordAssetPath, cancellationToken).ConfigureAwait(false);
-            var modelFilePath = await MaterializeOptionalAssetAsync(context, OptionalModelAssetPath, cancellationToken).ConfigureAwait(false);
+            var keywordFilePath = await MaterializeRequiredAssetAsync(context, keywordAssetPath, cancellationToken);
+            var modelFilePath = await MaterializeOptionalAssetAsync(context, OptionalModelAssetPath, cancellationToken);
 
             var sensitivities = new[] { MapSensitivity(settings.Sensitivity) };
             var porcupine = CreatePorcupine(accessKey.Trim(), keywordFilePath, modelFilePath, sensitivities);
@@ -165,7 +165,7 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
         AudioRecord? audioRecord;
         Porcupine? porcupine;
 
-        await _lifecycleLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _lifecycleLock.WaitAsync(cancellationToken);
         try
         {
             if (_disposed)
@@ -213,7 +213,7 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
         {
             try
             {
-                await loopTask.WaitAsync(cancellationToken).ConfigureAwait(false);
+                await loopTask.WaitAsync(cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -295,7 +295,7 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
 
                     try
                     {
-                        await Task.Delay(20, cancellationToken).ConfigureAwait(false);
+                        await Task.Delay(20, cancellationToken);
                     }
                     catch (OperationCanceledException)
                     {
@@ -389,7 +389,7 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
         if (activity == null)
             return;
 
-        var granted = await AndroidActivityHost.RequestRecordAudioPermissionAsync(activity, cancellationToken).ConfigureAwait(false);
+        var granted = await AndroidActivityHost.RequestRecordAudioPermissionAsync(activity, cancellationToken);
         if (!granted)
             throw new InvalidOperationException("Microphone permission is required for wake-word monitoring.");
     }
@@ -486,7 +486,7 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
 
     private static async Task<string> MaterializeRequiredAssetAsync(Context context, string assetRelativePath, CancellationToken cancellationToken)
     {
-        var path = await MaterializeAssetInternalAsync(context, assetRelativePath, required: true, cancellationToken).ConfigureAwait(false);
+        var path = await MaterializeAssetInternalAsync(context, assetRelativePath, required: true, cancellationToken);
         return path!;
     }
 
@@ -520,7 +520,7 @@ public sealed class AndroidPorcupineWakeWordEngine : IAndroidWakeWordEngine
         {
             await using var destination = File.Create(destinationPath);
             await using var source = context.Assets.Open(assetRelativePath);
-            await source.CopyToAsync(destination, 81920, cancellationToken).ConfigureAwait(false);
+            await source.CopyToAsync(destination, 81920, cancellationToken);
             return destinationPath;
         }
         catch (Exception ex) when (!required)

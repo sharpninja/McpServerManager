@@ -65,7 +65,7 @@ public sealed class McpAgentEventStreamService
         string? category = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var client = await CreateAuthorizedClientAsync(Timeout.InfiniteTimeSpan).ConfigureAwait(false);
+        var client = await CreateAuthorizedClientAsync(Timeout.InfiniteTimeSpan);
         HttpResponseMessage? response = null;
 
         try
@@ -78,10 +78,10 @@ public sealed class McpAgentEventStreamService
             request.Headers.Accept.Clear();
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
-            response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-            await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+            response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            await EnsureSuccessAsync(response, cancellationToken);
 
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var reader = new StreamReader(stream);
 
             var payloadBuilder = new StringBuilder();
@@ -90,7 +90,7 @@ public sealed class McpAgentEventStreamService
             while (!reader.EndOfStream)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+                var line = await reader.ReadLineAsync(cancellationToken);
                 if (line is null)
                     break;
 
@@ -179,7 +179,7 @@ public sealed class McpAgentEventStreamService
 
         var body = response.Content is null
             ? string.Empty
-            : (await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false)).Trim();
+            : (await response.Content.ReadAsStringAsync(cancellationToken)).Trim();
 
         var message = response.StatusCode switch
         {

@@ -33,7 +33,7 @@ internal sealed class UiCoreSessionLogApiClientAdapter : ISessionLogApiClient
         ArgumentNullException.ThrowIfNull(query);
         try
         {
-            var all = await _service.GetAllSessionsAsync(cancellationToken).ConfigureAwait(false);
+            var all = await _service.GetAllSessionsAsync(cancellationToken);
 
             // Apply optional filters
             IEnumerable<Models.Json.UnifiedSessionLog> filtered = all;
@@ -71,7 +71,7 @@ internal sealed class UiCoreSessionLogApiClientAdapter : ISessionLogApiClient
     {
         try
         {
-            var all = await _service.GetAllSessionsAsync(cancellationToken).ConfigureAwait(false);
+            var all = await _service.GetAllSessionsAsync(cancellationToken);
             var match = all.FirstOrDefault(s => string.Equals(s.SessionId, sessionId, StringComparison.OrdinalIgnoreCase));
             return match is null ? null : UiCoreMessageMapper.ToSessionLogDetail(match);
         }
@@ -88,7 +88,7 @@ internal sealed class UiCoreSessionLogApiClientAdapter : ISessionLogApiClient
         try
         {
             var dto = UiCoreMessageMapper.ToUnifiedSessionLogDto(command.SessionLog);
-            var result = await _service.SubmitAsync(dto, cancellationToken).ConfigureAwait(false);
+            var result = await _service.SubmitAsync(dto, cancellationToken);
             return new SessionLogSubmitOutcome(result.Id, result.SourceType, result.SessionId);
         }
         catch (Exception ex)
@@ -107,7 +107,7 @@ internal sealed class UiCoreSessionLogApiClientAdapter : ISessionLogApiClient
                 .Select(UiCoreMessageMapper.ToProcessingDialogItemDto)
                 .ToList();
             var result = await _service.AppendDialogAsync(
-                command.Agent, command.SessionId, command.RequestId, items, cancellationToken).ConfigureAwait(false);
+                command.Agent, command.SessionId, command.RequestId, items, cancellationToken);
             return new SessionLogDialogAppendOutcome(result.Agent, result.SessionId, result.RequestId, result.TotalDialogCount);
         }
         catch (Exception ex)

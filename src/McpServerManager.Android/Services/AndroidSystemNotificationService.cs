@@ -42,7 +42,7 @@ public sealed class AndroidSystemNotificationService : ISystemNotificationServic
                 return;
             }
 
-            if (!await EnsureNotificationPermissionAsync(context, cancellationToken).ConfigureAwait(false))
+            if (!await EnsureNotificationPermissionAsync(context, cancellationToken))
                 return;
 
             var manager = context.GetSystemService(Context.NotificationService) as NotificationManager;
@@ -100,7 +100,7 @@ public sealed class AndroidSystemNotificationService : ISystemNotificationServic
         {
             var granted = await AndroidActivityHost
                 .RequestPostNotificationsPermissionAsync(activity, cancellationToken)
-                .ConfigureAwait(false);
+                ;
 
             if (!granted)
                 _logger.LogDebug("Skipping agent event notification: POST_NOTIFICATIONS permission denied.");

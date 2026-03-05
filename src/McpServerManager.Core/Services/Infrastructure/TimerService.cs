@@ -41,7 +41,7 @@ public sealed class TimerService : ITimerService
 
             try
             {
-                await _callback(cts.Token).ConfigureAwait(false);
+                await _callback(cts.Token);
             }
             catch (OperationCanceledException) { }
         }

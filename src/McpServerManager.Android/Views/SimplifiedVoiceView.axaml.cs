@@ -956,7 +956,7 @@ public partial class SimplifiedVoiceView : UserControl
                 return;
 
             sessionId = heartbeatRequest.SessionId;
-            await heartbeatRequest.RefreshTask.ConfigureAwait(false);
+            await heartbeatRequest.RefreshTask;
             _logger.LogDebug("Heartbeat OK for session {SessionId}", sessionId);
         }
         catch (OperationCanceledException) when (_viewLifetimeCts.IsCancellationRequested || _loopCts?.IsCancellationRequested == true)
@@ -1220,7 +1220,7 @@ public partial class SimplifiedVoiceView : UserControl
             if (trackedOperations.Length > 0)
             {
                 var drainTask = Task.WhenAll(trackedOperations);
-                var completedTask = await Task.WhenAny(drainTask, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(false);
+                var completedTask = await Task.WhenAny(drainTask, Task.Delay(TimeSpan.FromSeconds(3)));
                 if (completedTask != drainTask)
                     _logger.LogDebug("Timed out waiting for voice view operations to finish before disposal.");
             }

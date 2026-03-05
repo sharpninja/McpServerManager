@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:McpServerManager.Core.ViewModels"
+        xmlns:conv="using:McpServerManager.Core.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="using:McpServerManager.Desktop.Views"
@@ -44,7 +45,7 @@
 
         <!-- Status Bar -->
         <Border Grid.Row="1" Margin="8,0,8,8" Padding="8,6" Classes="phone-toolbar-card">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                 <ScrollViewer Grid.Column="0"
                               HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Disabled">
@@ -53,7 +54,14 @@
                                          VerticalAlignment="Center"
                                          HorizontalAlignment="Left"/>
                 </ScrollViewer>
-                <ComboBox Grid.Column="1"
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                            IsVisible="{Binding StatusViewModel.IsCopilotRunning}">
+                    <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                             Fill="{Binding StatusViewModel.CopilotHeartbeatState, Converter={x:Static conv:HeartbeatStateToBrushConverter.Instance}}"/>
+                    <TextBlock Text="{Binding StatusViewModel.CopilotActivityText}" FontSize="11"
+                               VerticalAlignment="Center" Opacity="0.8"/>
+                </StackPanel>
+                <ComboBox Grid.Column="2"
                           MinWidth="260"
                           MaxWidth="420"
                           ItemsSource="{Binding WorkspaceConnections}"
@@ -64,7 +72,7 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                <Ellipse Grid.Column="2"
+                <Ellipse Grid.Column="3"
                          Width="14"
                          Height="14"
                          Fill="{Binding WorkspaceHealthIndicatorBrush}"
@@ -73,12 +81,12 @@
                          VerticalAlignment="Center"
                          HorizontalAlignment="Center"
                          ToolTip.Tip="{Binding WorkspaceHealthIndicatorTooltip}"/>
-                <SelectableTextBlock Grid.Column="3"
+                <SelectableTextBlock Grid.Column="4"
                            Text="{Binding AppVersionDisplay}"
                            VerticalAlignment="Center"
                            HorizontalAlignment="Right"
                            Classes="subtle-text"/>
-                <Button Grid.Column="4"
+                <Button Grid.Column="5"
                         Content="Logout"
                         Command="{Binding LogoutCommand}"
                         VerticalAlignment="Center"

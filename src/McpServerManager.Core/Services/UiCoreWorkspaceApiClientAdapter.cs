@@ -26,7 +26,7 @@ internal sealed class UiCoreWorkspaceApiClientAdapter : IWorkspaceApiClient
 
     public async Task<ListWorkspacesResult> ListWorkspacesAsync(CancellationToken ct = default)
     {
-        var result = await _service.QueryAsync(ct).ConfigureAwait(false);
+        var result = await _service.QueryAsync(ct);
         return UiCoreMessageMapper.ToListWorkspacesResult(result);
     }
 
@@ -34,7 +34,7 @@ internal sealed class UiCoreWorkspaceApiClientAdapter : IWorkspaceApiClient
     {
         try
         {
-            var item = await _service.GetByIdAsync(workspacePath, ct).ConfigureAwait(false);
+            var item = await _service.GetByIdAsync(workspacePath, ct);
             return item is null ? null : UiCoreMessageMapper.ToWorkspaceDetail(item);
         }
         catch (McpNotFoundException ex)
@@ -56,7 +56,7 @@ internal sealed class UiCoreWorkspaceApiClientAdapter : IWorkspaceApiClient
                     BannedIndividuals = command.BannedIndividuals?.ToList(),
                 },
                 ct)
-            .ConfigureAwait(false);
+            ;
 
         return result.Success;
     }
@@ -68,7 +68,7 @@ internal sealed class UiCoreWorkspaceApiClientAdapter : IWorkspaceApiClient
             var result = await _service.CreateAsync(
                     UiCoreMessageMapper.ToWorkspaceCreateRequest(command),
                     ct)
-                .ConfigureAwait(false);
+                ;
 
             return UiCoreMessageMapper.ToWorkspaceMutationOutcome(result);
         }
@@ -92,7 +92,7 @@ internal sealed class UiCoreWorkspaceApiClientAdapter : IWorkspaceApiClient
                     command.WorkspacePath,
                     UiCoreMessageMapper.ToWorkspaceUpdateRequest(command),
                     ct)
-                .ConfigureAwait(false);
+                ;
 
             return UiCoreMessageMapper.ToWorkspaceMutationOutcome(result);
         }
@@ -112,7 +112,7 @@ internal sealed class UiCoreWorkspaceApiClientAdapter : IWorkspaceApiClient
     {
         try
         {
-            var result = await _service.DeleteAsync(command.WorkspacePath, ct).ConfigureAwait(false);
+            var result = await _service.DeleteAsync(command.WorkspacePath, ct);
             return UiCoreMessageMapper.ToWorkspaceMutationOutcome(result);
         }
         catch (McpNotFoundException ex)
@@ -124,31 +124,31 @@ internal sealed class UiCoreWorkspaceApiClientAdapter : IWorkspaceApiClient
 
     public async Task<WorkspaceProcessState> GetWorkspaceStatusAsync(string workspacePath, CancellationToken ct = default)
     {
-        var result = await _service.GetStatusAsync(workspacePath, ct).ConfigureAwait(false);
+        var result = await _service.GetStatusAsync(workspacePath, ct);
         return UiCoreMessageMapper.ToWorkspaceProcessState(result);
     }
 
     public async Task<WorkspaceProcessState> StartWorkspaceAsync(string workspacePath, CancellationToken ct = default)
     {
-        var result = await _service.StartAsync(workspacePath, ct).ConfigureAwait(false);
+        var result = await _service.StartAsync(workspacePath, ct);
         return UiCoreMessageMapper.ToWorkspaceProcessState(result);
     }
 
     public async Task<WorkspaceProcessState> StopWorkspaceAsync(string workspacePath, CancellationToken ct = default)
     {
-        var result = await _service.StopAsync(workspacePath, ct).ConfigureAwait(false);
+        var result = await _service.StopAsync(workspacePath, ct);
         return UiCoreMessageMapper.ToWorkspaceProcessState(result);
     }
 
     public async Task<WorkspaceHealthState> CheckWorkspaceHealthAsync(string workspacePath, CancellationToken ct = default)
     {
-        var result = await _service.GetHealthAsync(workspacePath, ct).ConfigureAwait(false);
+        var result = await _service.GetHealthAsync(workspacePath, ct);
         return UiCoreMessageMapper.ToWorkspaceHealthState(result);
     }
 
     public async Task<WorkspaceGlobalPromptState> GetWorkspaceGlobalPromptAsync(CancellationToken ct = default)
     {
-        var result = await _service.GetGlobalPromptAsync(ct).ConfigureAwait(false);
+        var result = await _service.GetGlobalPromptAsync(ct);
         return UiCoreMessageMapper.ToWorkspaceGlobalPromptState(result);
     }
 
@@ -157,14 +157,14 @@ internal sealed class UiCoreWorkspaceApiClientAdapter : IWorkspaceApiClient
         var result = await _service.UpdateGlobalPromptAsync(
                 new McpWorkspaceGlobalPromptUpdateRequest { Template = command.Template },
                 ct)
-            .ConfigureAwait(false);
+            ;
 
         return UiCoreMessageMapper.ToWorkspaceGlobalPromptState(result);
     }
 
     public async Task<WorkspaceInitInfo> InitWorkspaceAsync(string workspacePath, CancellationToken ct = default)
     {
-        var result = await _service.InitAsync(workspacePath, ct).ConfigureAwait(false);
+        var result = await _service.InitAsync(workspacePath, ct);
         if (!result.Success)
             throw new InvalidOperationException(result.Error ?? $"Workspace initialization failed for '{workspacePath}'.");
 

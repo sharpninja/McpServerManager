@@ -65,14 +65,14 @@ internal static class McpOidcAuthService
             var uri = new Uri(baseUri, "/auth/config");
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
             request.Headers.Accept.ParseAdd("application/json");
-            using var response = await s_http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            using var response = await s_http.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 s_logger.LogWarning("GET /auth/config returned HTTP {StatusCode} ({ReasonPhrase}) at {Uri}", (int)response.StatusCode, response.ReasonPhrase, uri);
                 return null;
             }
 
-            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
             var parsed = TryParseAuthConfig(body);
             s_logger.LogInformation(
                 "GET /auth/config success at {Uri}. enabled={Enabled}, clientId={ClientId}, hasDeviceEndpoint={HasDeviceEndpoint}, hasTokenEndpoint={HasTokenEndpoint}",
@@ -134,7 +134,7 @@ internal static class McpOidcAuthService
             {
                 Content = new FormUrlEncodedContent(revokePairs)
             };
-            using var revokeResponse = await s_http.SendAsync(revokeRequest, cancellationToken).ConfigureAwait(false);
+            using var revokeResponse = await s_http.SendAsync(revokeRequest, cancellationToken);
             s_logger.LogInformation("Token revocation returned HTTP {StatusCode}", (int)revokeResponse.StatusCode);
 
             // End the SSO session
@@ -148,7 +148,7 @@ internal static class McpOidcAuthService
                 Content = new FormUrlEncodedContent(logoutPairs)
             };
             logoutRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.Trim());
-            using var logoutResponse = await s_http.SendAsync(logoutRequest, cancellationToken).ConfigureAwait(false);
+            using var logoutResponse = await s_http.SendAsync(logoutRequest, cancellationToken);
             s_logger.LogInformation("SSO session logout returned HTTP {StatusCode}", (int)logoutResponse.StatusCode);
 
             return revokeResponse.IsSuccessStatusCode || logoutResponse.IsSuccessStatusCode;
@@ -189,8 +189,8 @@ internal static class McpOidcAuthService
         };
         request.Headers.Accept.ParseAdd("application/json");
 
-        using var response = await s_http.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        using var response = await s_http.SendAsync(request, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             s_logger.LogWarning(
@@ -255,7 +255,7 @@ internal static class McpOidcAuthService
 
         while (DateTime.UtcNow < expiresAtUtc)
         {
-            await Task.Delay(pollDelay, cancellationToken).ConfigureAwait(false);
+            await Task.Delay(pollDelay, cancellationToken);
 
             var pairs = new List<KeyValuePair<string, string>>
             {
@@ -274,8 +274,8 @@ internal static class McpOidcAuthService
             string body;
             try
             {
-                response = await s_http.SendAsync(request, cancellationToken).ConfigureAwait(false);
-                body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                response = await s_http.SendAsync(request, cancellationToken);
+                body = await response.Content.ReadAsStringAsync(cancellationToken);
                 transientNetworkErrorCount = 0;
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -392,8 +392,8 @@ internal static class McpOidcAuthService
                     s_logger.LogInformation("Fetching MCP API key from /api-key without bearer token at {Uri}", uri);
                 }
 
-                using var response = await s_http.SendAsync(request, cancellationToken).ConfigureAwait(false);
-                var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                using var response = await s_http.SendAsync(request, cancellationToken);
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
                 if (response.StatusCode == HttpStatusCode.ServiceUnavailable &&
                     DateTime.UtcNow < retryDeadlineUtc)
@@ -402,7 +402,7 @@ internal static class McpOidcAuthService
                         "GET /api-key returned 503 at {Uri}; retrying in {RetryDelayMs} ms",
                         uri,
                         (int)retryDelay.TotalMilliseconds);
-                    await Task.Delay(retryDelay, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(retryDelay, cancellationToken);
                     retryDelay = TimeSpan.FromMilliseconds(Math.Min(retryDelay.TotalMilliseconds * 2d, 1500d));
                     continue;
                 }

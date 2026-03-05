@@ -33,7 +33,7 @@ internal sealed class UiCoreTodoApiClientAdapter : ITodoApiClient
                 id: query.Id,
                 done: query.Done,
                 cancellationToken: cancellationToken)
-            .ConfigureAwait(false);
+            ;
 
         return UiCoreMessageMapper.ToListTodosResult(result);
     }
@@ -42,7 +42,7 @@ internal sealed class UiCoreTodoApiClientAdapter : ITodoApiClient
     {
         try
         {
-            var item = await _service.GetByIdAsync(todoId, cancellationToken).ConfigureAwait(false);
+            var item = await _service.GetByIdAsync(todoId, cancellationToken);
             return item is null ? null : UiCoreMessageMapper.ToTodoDetail(item);
         }
         catch (McpNotFoundException ex)
@@ -59,7 +59,7 @@ internal sealed class UiCoreTodoApiClientAdapter : ITodoApiClient
             var result = await _service.CreateAsync(
                     UiCoreMessageMapper.ToTodoCreateRequest(command),
                     cancellationToken)
-                .ConfigureAwait(false);
+                ;
 
             return UiCoreMessageMapper.ToTodoMutationOutcome(result);
         }
@@ -83,7 +83,7 @@ internal sealed class UiCoreTodoApiClientAdapter : ITodoApiClient
                     command.TodoId,
                     UiCoreMessageMapper.ToTodoUpdateRequest(command),
                     cancellationToken)
-                .ConfigureAwait(false);
+                ;
 
             return UiCoreMessageMapper.ToTodoMutationOutcome(result);
         }
@@ -103,7 +103,7 @@ internal sealed class UiCoreTodoApiClientAdapter : ITodoApiClient
     {
         try
         {
-            var result = await _service.DeleteAsync(command.TodoId, cancellationToken).ConfigureAwait(false);
+            var result = await _service.DeleteAsync(command.TodoId, cancellationToken);
             return UiCoreMessageMapper.ToTodoMutationOutcome(result);
         }
         catch (McpNotFoundException ex)
@@ -115,7 +115,7 @@ internal sealed class UiCoreTodoApiClientAdapter : ITodoApiClient
 
     public async Task<TodoRequirementsAnalysis> AnalyzeTodoRequirementsAsync(string todoId, CancellationToken cancellationToken = default)
     {
-        var result = await _service.AnalyzeRequirementsAsync(todoId, cancellationToken).ConfigureAwait(false);
+        var result = await _service.AnalyzeRequirementsAsync(todoId, cancellationToken);
         return UiCoreMessageMapper.ToTodoRequirementsAnalysis(result);
     }
 
@@ -144,7 +144,7 @@ internal sealed class UiCoreTodoApiClientAdapter : ITodoApiClient
         CancellationToken cancellationToken)
     {
         var lines = new List<string>();
-        await foreach (var line in stream.WithCancellation(cancellationToken).ConfigureAwait(false))
+        await foreach (var line in stream.WithCancellation(cancellationToken))
         {
             lines.Add(line);
         }

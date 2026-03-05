@@ -34,7 +34,7 @@ internal sealed class UiCoreEventStreamApiClientAdapter : IEventStreamApiClient
         IAsyncEnumerable<McpIncomingChangeEvent> source,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var evt in source.WithCancellation(cancellationToken).ConfigureAwait(false))
+        await foreach (var evt in source.WithCancellation(cancellationToken))
         {
             yield return new ChangeEventItem(
                 evt.Category ?? string.Empty,

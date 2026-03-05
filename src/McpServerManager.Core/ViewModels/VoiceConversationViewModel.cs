@@ -261,7 +261,7 @@ public partial class VoiceConversationViewModel : ViewModelBase
                         Language = Language,
                         ClientTimestampUtc = DateTimeOffset.UtcNow.ToString("O")
                     },
-                    linkedCts.Token).ConfigureAwait(false))
+                    linkedCts.Token))
                 {
                     lastEvent = evt;
                     if (evt.Type == "chunk" && evt.Text is not null)
@@ -269,7 +269,7 @@ public partial class VoiceConversationViewModel : ViewModelBase
                         accumulated.Append(AnsiEscapePattern.Replace(evt.Text, ""));
                         AssistantDisplayText = accumulated.ToString();
                     }
-                    await channel.Writer.WriteAsync(evt, linkedCts.Token).ConfigureAwait(false);
+                    await channel.Writer.WriteAsync(evt, linkedCts.Token);
                 }
             }
             catch (OperationCanceledException)
@@ -284,7 +284,7 @@ public partial class VoiceConversationViewModel : ViewModelBase
                 GlobalStatusChanged?.Invoke(StatusText);
                 await channel.Writer.WriteAsync(
                     new McpVoiceTurnStreamEvent { Type = "error", Message = ex.Message },
-                    CancellationToken.None).ConfigureAwait(false);
+                    CancellationToken.None);
             }
             finally
             {

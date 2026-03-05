@@ -73,9 +73,8 @@
                 </StackPanel>
             </Border>
 
-            <SelectableTextBlock Grid.Row="2"
+            <SelectableTextBlock Grid.Row="2" Margin="10,0,10,4"
                                  Text="{Binding StatusText}"
-                                 Margin="10,0,10,4"
                                  FontSize="19"
                                  Foreground="{DynamicResource SubtleForeground}"
                                  TextTrimming="CharacterEllipsis"/>
@@ -191,9 +190,8 @@
                         HorizontalContentAlignment="Center"/>
             </Grid>
 
-            <SelectableTextBlock Grid.Row="3"
+            <SelectableTextBlock Grid.Row="3" Margin="10,0,10,4"
                                  Text="{Binding StatusText}"
-                                 Margin="10,0,10,4"
                                  FontSize="19"
                                  Foreground="{DynamicResource SubtleForeground}"
                                  TextTrimming="CharacterEllipsis"/>
@@ -246,8 +244,35 @@
                                  TextTrimming="CharacterEllipsis"/>
 
             <Border Grid.Row="2" Margin="6,0,6,6" CornerRadius="6" Background="{DynamicResource SystemAltHighColor}">
-                <controls:AndroidPlainTextEditor x:Name="Editor"
-                                                 FontSize="20"/>
+                <Grid>
+                    <TabControl x:Name="EditorTabControl"
+                                ItemsSource="{Binding EditorTabs}"
+                                SelectedItem="{Binding SelectedEditorTab, Mode=TwoWay}">
+                      <TabControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:EditorTab">
+                          <TextBlock Text="{Binding Header}" FontSize="18"/>
+                        </DataTemplate>
+                      </TabControl.ItemTemplate>
+                      <TabControl.ContentTemplate>
+                        <DataTemplate x:DataType="vm:EditorTab">
+                          <Border/>
+                        </DataTemplate>
+                      </TabControl.ContentTemplate>
+                    </TabControl>
+
+                    <controls:AndroidPlainTextEditor x:Name="Editor"
+                                                     IsVisible="False"
+                                                     Margin="0,36,0,0"
+                                                     FontSize="20"/>
+                    <ScrollViewer x:Name="MarkdownViewer"
+                                  IsVisible="False"
+                                  Margin="0,36,0,0">
+                      <SelectableTextBlock x:Name="MarkdownText"
+                                           TextWrapping="Wrap"
+                                           FontSize="20"
+                                           Margin="8"/>
+                    </ScrollViewer>
+                </Grid>
             </Border>
         </Grid>
     </Grid>

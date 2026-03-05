@@ -156,6 +156,7 @@
       <!-- Editor panel (always visible) -->
       <Border x:Name="EditorPanel" Grid.Column="2" Classes="phone-card" Padding="4">
         <Grid RowDefinitions="Auto,*">
+          <!-- Toolbar (applies to primary editor tab) -->
           <Border Grid.Row="0" Classes="phone-toolbar-card" Padding="6" Margin="0,0,0,6">
           <StackPanel Orientation="Horizontal" Spacing="2">
             <Button Command="{Binding SaveEditorCommand}" Padding="6" ToolTip.Tip="Save to MCP" Width="30">
@@ -185,16 +186,48 @@
             <Button Command="{Binding OpenAiChatCommand}" Padding="6" ToolTip.Tip="Send to AI Chat" Width="30">
               <PathIcon Data="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12.5,7H11V13L16.75,16.15L17.5,14.92L12.5,12.25V7Z" Width="14" Height="14"/>
             </Button>
-            <Border Width="1" Background="{DynamicResource DividerBrush}" Margin="4,2"/>
-            <SelectableTextBlock Text="{Binding EditorTitle}" VerticalAlignment="Center"
-                       FontWeight="SemiBold" Margin="4,0,0,0"/>
           </StackPanel>
           </Border>
-          <avedit:TextEditor x:Name="Editor" Grid.Row="1"
-                             FontFamily="Cascadia Code,Consolas,Menlo,monospace"
-                             FontSize="13"
-                             ShowLineNumbers="True"
-                             WordWrap="True"/>
+
+          <!-- Tabbed editor area -->
+          <Grid Grid.Row="1">
+            <!-- Tab strip -->
+            <TabControl x:Name="EditorTabControl"
+                        ItemsSource="{Binding EditorTabs}"
+                        SelectedItem="{Binding SelectedEditorTab, Mode=TwoWay}">
+              <TabControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:EditorTab">
+                  <TextBlock Text="{Binding Header}"/>
+                </DataTemplate>
+              </TabControl.ItemTemplate>
+              <TabControl.ContentTemplate>
+                <DataTemplate x:DataType="vm:EditorTab">
+                  <!-- Placeholder: actual content is managed below -->
+                  <Border/>
+                </DataTemplate>
+              </TabControl.ContentTemplate>
+            </TabControl>
+
+            <!-- Primary editor (visible when non-markdown tab selected) -->
+            <avedit:TextEditor x:Name="Editor"
+                               IsVisible="False"
+                               Margin="0,32,0,0"
+                               FontFamily="Cascadia Code,Consolas,Menlo,monospace"
+                               FontSize="13"
+                               ShowLineNumbers="True"
+                               WordWrap="True"/>
+
+            <!-- Markdown/text viewer (visible when markdown tab selected) -->
+            <ScrollViewer x:Name="MarkdownViewer"
+                          IsVisible="False"
+                          Margin="0,32,0,0">
+              <SelectableTextBlock x:Name="MarkdownText"
+                                   TextWrapping="Wrap"
+                                   FontFamily="Cascadia Code,Consolas,Menlo,monospace"
+                                   FontSize="13"
+                                   Margin="8"/>
+            </ScrollViewer>
+          </Grid>
         </Grid>
       </Border>
 

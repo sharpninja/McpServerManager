@@ -242,7 +242,7 @@ public sealed class AndroidWakeWordService : IAndroidWakeWordService
         _settingsStore.Save(_settings);
 
         if (IsMonitoring)
-            await _wakeWordEngine.ConfigureAsync(_settings, cancellationToken).ConfigureAwait(false);
+            await _wakeWordEngine.ConfigureAsync(_settings, cancellationToken);
 
         return true;
     }
@@ -255,7 +255,7 @@ public sealed class AndroidWakeWordService : IAndroidWakeWordService
 
         var started = await _foregroundServiceController
             .StartAsync($"Wake phrase '{_settings.SelectedWakePhrase}' monitoring is active (scaffold).", cancellationToken)
-            .ConfigureAwait(false);
+            ;
 
         if (!started)
         {
@@ -265,13 +265,13 @@ public sealed class AndroidWakeWordService : IAndroidWakeWordService
 
         try
         {
-            await _wakeWordEngine.ConfigureAsync(_settings, cancellationToken).ConfigureAwait(false);
-            await _wakeWordEngine.StartAsync(cancellationToken).ConfigureAwait(false);
+            await _wakeWordEngine.ConfigureAsync(_settings, cancellationToken);
+            await _wakeWordEngine.StartAsync(cancellationToken);
             IsMonitoring = true;
         }
         catch
         {
-            await _foregroundServiceController.StopAsync(cancellationToken).ConfigureAwait(false);
+            await _foregroundServiceController.StopAsync(cancellationToken);
             IsMonitoring = false;
             throw;
         }
@@ -284,14 +284,14 @@ public sealed class AndroidWakeWordService : IAndroidWakeWordService
 
         try
         {
-            await _wakeWordEngine.StopAsync(cancellationToken).ConfigureAwait(false);
+            await _wakeWordEngine.StopAsync(cancellationToken);
         }
         catch
         {
             // Best effort; still stop foreground service.
         }
 
-        await _foregroundServiceController.StopAsync(cancellationToken).ConfigureAwait(false);
+        await _foregroundServiceController.StopAsync(cancellationToken);
         IsMonitoring = false;
     }
 
@@ -400,7 +400,7 @@ public sealed class AndroidVoiceForegroundServiceController : IAndroidVoiceForeg
         {
             var notificationPermission = await AndroidActivityHost
                 .RequestPostNotificationsPermissionAsync(activity, cancellationToken)
-                .ConfigureAwait(false);
+                ;
 
             if (!notificationPermission)
             {

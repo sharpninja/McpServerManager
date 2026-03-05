@@ -24,7 +24,7 @@ internal static class ConnectionProbeHelper
         using var probeHandler = new HttpClientHandler { AllowAutoRedirect = false };
         using var probe = new HttpClient(probeHandler) { Timeout = TimeSpan.FromSeconds(5) };
 
-        using var healthResponse = await probe.GetAsync($"{url}/health", ct).ConfigureAwait(false);
+        using var healthResponse = await probe.GetAsync($"{url}/health", ct);
         if ((int)healthResponse.StatusCode is >= 301 and <= 308
             && healthResponse.Headers.Location is { } redirectLocation)
         {

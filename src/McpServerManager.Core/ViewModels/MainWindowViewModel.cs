@@ -25,6 +25,7 @@ using McpServerManager.Core.Models;
 using McpServerManager.Core.Models.Json;
 using McpServerManager.Core.Services;
 using McpServerManager.Core.Commands;
+using StatusViewModel = McpServer.UI.Core.ViewModels.StatusViewModel;
 
 namespace McpServerManager.Core.ViewModels;
 
@@ -704,16 +705,16 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             {
                 await foreach (var changeEvent in _agentEventStreamService
                                    .StreamEventsAsync(cancellationToken: cancellationToken)
-                                   .ConfigureAwait(false))
+                                   )
                 {
                     if (!IsActionableAgentEvent(changeEvent))
                         continue;
 
                     var message = BuildActionableAgentEventMessage(changeEvent);
-                    await DispatchToUiAsync(() => StatusMessage = message).ConfigureAwait(false);
+                    await DispatchToUiAsync(() => StatusMessage = message);
                     await _systemNotificationService
                         .NotifyAgentEventAsync(changeEvent, message, cancellationToken)
-                        .ConfigureAwait(false);
+                        ;
                 }
 
                 hasReportedFailure = false;
@@ -721,7 +722,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 if (!cancellationToken.IsCancellationRequested)
                 {
                     _logger.LogInformation("[Agent Events] Stream ended; reconnecting.");
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -733,13 +734,13 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 _logger.LogWarning(ex, "[Agent Events] Listener failed; reconnecting.");
                 if (!hasReportedFailure)
                 {
-                    await DispatchToUiAsync(() => StatusMessage = $"Agent event listener unavailable: {ex.Message}").ConfigureAwait(false);
+                    await DispatchToUiAsync(() => StatusMessage = $"Agent event listener unavailable: {ex.Message}");
                     hasReportedFailure = true;
                 }
 
                 try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -1042,11 +1043,11 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         {
             try
             {
-                await Task.Delay(150).ConfigureAwait(false);
+                await Task.Delay(150);
                 if (version != Volatile.Read(ref _agentsReadmeReloadVersion))
                     return;
 
-                await LoadAgentsReadmeFileAsync(filePath).ConfigureAwait(false);
+                await LoadAgentsReadmeFileAsync(filePath);
             }
             catch (Exception ex)
             {
@@ -1070,7 +1071,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             }
             else
             {
-                content = await ReadTextFileWithEncodingAsync(filePath).ConfigureAwait(false);
+                content = await ReadTextFileWithEncodingAsync(filePath);
                 var lastWriteUtc = _fs.GetLastWriteTimeUtc(filePath);
                 if (lastWriteUtc != DateTime.MinValue)
                     fileTimestampText = lastWriteUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");

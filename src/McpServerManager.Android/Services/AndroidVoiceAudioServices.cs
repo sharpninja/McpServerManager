@@ -188,7 +188,7 @@ public sealed class AndroidSpeechRecognitionService : IAndroidSpeechRecognitionS
             ?? throw new InvalidOperationException("Android activity is not available.");
 
         var permissionGranted = await AndroidActivityHost.RequestRecordAudioPermissionAsync(activity, cancellationToken)
-            .ConfigureAwait(false);
+            ;
         if (!permissionGranted)
             throw new InvalidOperationException("Microphone permission was denied.");
 
@@ -226,7 +226,7 @@ public sealed class AndroidSpeechRecognitionService : IAndroidSpeechRecognitionS
                     try { audioMgr?.AdjustStreamVolume(Stream.Notification, Adjust.Unmute, 0); }
                     catch { /* best effort */ }
                 });
-            }).ConfigureAwait(false);
+            });
 
             using var _ = cancellationToken.Register(() =>
             {
@@ -240,7 +240,7 @@ public sealed class AndroidSpeechRecognitionService : IAndroidSpeechRecognitionS
                 }
             });
 
-            return await tcs.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return await tcs.Task.WaitAsync(cancellationToken);
         }
         catch
         {
@@ -480,7 +480,7 @@ public sealed class AndroidTextToSpeechService : IAndroidTextToSpeechService
         var activity = AndroidActivityHost.TryGetCurrentActivity()
             ?? throw new InvalidOperationException("Android activity is not available.");
 
-        var initialized = await EnsureInitializedAsync(activity, cancellationToken).ConfigureAwait(false);
+        var initialized = await EnsureInitializedAsync(activity, cancellationToken);
         if (!initialized)
             throw new InvalidOperationException("Android text-to-speech initialization failed.");
 
@@ -513,7 +513,7 @@ public sealed class AndroidTextToSpeechService : IAndroidTextToSpeechService
             }
 
             tts.Speak(text, QueueMode.Flush, null, utteranceId);
-        }).ConfigureAwait(false);
+        });
 
         using var reg = cancellationToken.Register(() =>
         {
@@ -528,7 +528,7 @@ public sealed class AndroidTextToSpeechService : IAndroidTextToSpeechService
             }
         });
 
-        await tcs.Task.ConfigureAwait(false);
+        await tcs.Task;
     }
 
     public void Stop()

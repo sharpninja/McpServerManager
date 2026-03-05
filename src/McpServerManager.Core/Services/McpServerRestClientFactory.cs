@@ -58,11 +58,11 @@ internal static class McpServerRestClientFactory
 
                 try
                 {
-                    return await client.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                    return await client.InitializeAsync(cancellationToken);
                 }
                 catch (McpServerException ex) when (ex.StatusCode == 503 && DateTime.UtcNow < retryDeadlineUtc)
                 {
-                    await Task.Delay(retryDelay, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(retryDelay, cancellationToken);
                     var nextDelayMs = Math.Min(retryDelay.TotalMilliseconds * 2d, 1500d);
                     retryDelay = TimeSpan.FromMilliseconds(nextDelayMs);
                 }

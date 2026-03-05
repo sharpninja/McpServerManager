@@ -117,7 +117,7 @@ public sealed class McpVoiceConversationService
             bool hasNext;
             try
             {
-                hasNext = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                hasNext = await enumerator.MoveNextAsync();
             }
             catch (Exception ex) when (ShouldFallbackToNonStreamingTurn(ex, cancellationToken, yieldedAnyEvents))
             {
@@ -140,7 +140,7 @@ public sealed class McpVoiceConversationService
         if (fallbackStream is null)
             yield break;
 
-        await foreach (var evt in fallbackStream.ConfigureAwait(false))
+        await foreach (var evt in fallbackStream)
             yield return evt;
     }
 
@@ -305,7 +305,7 @@ public sealed class McpVoiceConversationService
         McpVoiceTurnRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var client = await CreateAuthorizedClientAsync(TimeSpan.FromMinutes(5), cancellationToken).ConfigureAwait(false);
+        var client = await CreateAuthorizedClientAsync(TimeSpan.FromMinutes(5), cancellationToken);
         HttpResponseMessage? response = null;
         try
         {
@@ -324,16 +324,16 @@ public sealed class McpVoiceConversationService
             response = await client.SendAsync(
                 httpRequest,
                 HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken).ConfigureAwait(false);
-            await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+                cancellationToken);
+            await EnsureSuccessAsync(response, cancellationToken);
 
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var reader = new StreamReader(stream);
 
             while (!reader.EndOfStream)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+                var line = await reader.ReadLineAsync(cancellationToken);
                 if (line is null)
                     yield break;
 
@@ -378,7 +378,7 @@ public sealed class McpVoiceConversationService
         McpVoiceTurnRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var response = await SubmitTurnAsync(sessionId, request, cancellationToken).ConfigureAwait(false);
+        var response = await SubmitTurnAsync(sessionId, request, cancellationToken);
         var displayText = SanitizeStreamText(response.AssistantDisplayText ?? string.Empty);
 
         if (!string.IsNullOrWhiteSpace(displayText))

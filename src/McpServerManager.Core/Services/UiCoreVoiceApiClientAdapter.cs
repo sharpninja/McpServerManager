@@ -30,7 +30,7 @@ internal sealed class UiCoreVoiceApiClientAdapter : IVoiceApiClient
     {
         ArgumentNullException.ThrowIfNull(command);
         var request = UiCoreMessageMapper.ToVoiceSessionCreateRequest(command);
-        var result = await _service.CreateSessionAsync(request, cancellationToken).ConfigureAwait(false);
+        var result = await _service.CreateSessionAsync(request, cancellationToken);
         return UiCoreMessageMapper.ToVoiceSessionInfo(result);
     }
 
@@ -38,14 +38,14 @@ internal sealed class UiCoreVoiceApiClientAdapter : IVoiceApiClient
     {
         ArgumentNullException.ThrowIfNull(command);
         var request = UiCoreMessageMapper.ToVoiceTurnRequest(command);
-        var result = await _service.SubmitTurnAsync(command.SessionId, request, cancellationToken).ConfigureAwait(false);
+        var result = await _service.SubmitTurnAsync(command.SessionId, request, cancellationToken);
         return UiCoreMessageMapper.ToVoiceTurnInfo(result);
     }
 
     public async Task<VoiceInterruptInfo> InterruptAsync(InterruptVoiceCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var result = await _service.InterruptAsync(command.SessionId, cancellationToken).ConfigureAwait(false);
+        var result = await _service.InterruptAsync(command.SessionId, cancellationToken);
         return UiCoreMessageMapper.ToVoiceInterruptInfo(result);
     }
 
@@ -53,7 +53,7 @@ internal sealed class UiCoreVoiceApiClientAdapter : IVoiceApiClient
     {
         try
         {
-            var result = await _service.GetStatusAsync(sessionId, cancellationToken).ConfigureAwait(false);
+            var result = await _service.GetStatusAsync(sessionId, cancellationToken);
             return UiCoreMessageMapper.ToVoiceSessionStatusInfo(result);
         }
         catch (Exception ex)
@@ -67,7 +67,7 @@ internal sealed class UiCoreVoiceApiClientAdapter : IVoiceApiClient
     {
         try
         {
-            var result = await _service.GetTranscriptAsync(sessionId, cancellationToken).ConfigureAwait(false);
+            var result = await _service.GetTranscriptAsync(sessionId, cancellationToken);
             return UiCoreMessageMapper.ToVoiceTranscriptInfo(result);
         }
         catch (Exception ex)
@@ -81,7 +81,7 @@ internal sealed class UiCoreVoiceApiClientAdapter : IVoiceApiClient
     {
         try
         {
-            await _service.DeleteSessionAsync(sessionId, cancellationToken).ConfigureAwait(false);
+            await _service.DeleteSessionAsync(sessionId, cancellationToken);
             return true;
         }
         catch (Exception ex)

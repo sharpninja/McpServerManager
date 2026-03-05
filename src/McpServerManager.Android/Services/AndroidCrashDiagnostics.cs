@@ -13,6 +13,7 @@ using Android.Runtime;
 using Microsoft.Extensions.Logging;
 using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
+using McpServer.UI.Core.ViewModels;
 using JThread = Java.Lang.Thread;
 using SysEnvironment = System.Environment;
 using Throwable = Java.Lang.Throwable;
@@ -129,7 +130,7 @@ public static class AndroidCrashDiagnostics
 
         try
         {
-            await action().ConfigureAwait(false);
+            await action();
         }
         catch (Exception ex)
         {

@@ -38,9 +38,9 @@ public sealed class ProcessLauncherService : IProcessLauncherService
 
         process.Start();
 
-        var stdout = await process.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
-        var stderr = await process.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
-        await process.WaitForExitAsync(ct).ConfigureAwait(false);
+        var stdout = await process.StandardOutput.ReadToEndAsync(ct);
+        var stderr = await process.StandardError.ReadToEndAsync(ct);
+        await process.WaitForExitAsync(ct);
 
         return new ProcessResult(process.ExitCode, stdout, stderr);
     }

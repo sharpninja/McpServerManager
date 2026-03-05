@@ -217,6 +217,20 @@ Architecture:
       done: true
     - task: Verify GAP-001/002/010/011 closures after runtime consolidation (commit 5e68ad5)
       done: true
+  - id: ARCH-AUDIT-001
+    title: Audit workspace for ViewModels not migrated to McpServer.UI.Core
+    done: false
+    description:
+    - StatusViewModel was found still in McpServerManager.Core instead of UI.Core.
+    - Other ViewModels may also exist that should have been migrated during the consolidation.
+    - Audit all VMs in src/McpServerManager.Core/ViewModels/ and identify any that belong in the shared UI.Core library.
+    implementation-tasks:
+    - task: List all ViewModels in McpServerManager.Core/ViewModels/
+      done: false
+    - task: Cross-reference with McpServer.UI.Core/ViewModels/ for duplicates or missing migrations
+      done: false
+    - task: Migrate any VMs that should be shared across Desktop and Android
+      done: false
 Features:
   high-priority:
   - id: settings-tab-speech-filter-words

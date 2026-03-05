@@ -50,7 +50,7 @@ public sealed class AndroidVoskWakeWordEngine : IAndroidWakeWordEngine
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
-        await _lifecycleLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _lifecycleLock.WaitAsync(cancellationToken);
         try
         {
             if (IsRunning)
@@ -59,9 +59,9 @@ public sealed class AndroidVoskWakeWordEngine : IAndroidWakeWordEngine
             var context = Application.Context
                 ?? throw new InvalidOperationException("Android application context is unavailable.");
 
-            await EnsureRecordAudioPermissionAsync(cancellationToken).ConfigureAwait(false);
+            await EnsureRecordAudioPermissionAsync(cancellationToken);
 
-            var modelPath = await MaterializeModelAsync(context, cancellationToken).ConfigureAwait(false);
+            var modelPath = await MaterializeModelAsync(context, cancellationToken);
 
             Logger.LogInformation("Loading Vosk model from {Path}...", modelPath);
             Vosk.Vosk.SetLogLevel(-1); // suppress native Vosk logs
@@ -115,7 +115,7 @@ public sealed class AndroidVoskWakeWordEngine : IAndroidWakeWordEngine
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
-        await _lifecycleLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _lifecycleLock.WaitAsync(cancellationToken);
         try
         {
             if (!IsRunning)
@@ -130,7 +130,7 @@ public sealed class AndroidVoskWakeWordEngine : IAndroidWakeWordEngine
             _loopTask = null;
             if (loopTask != null)
             {
-                try { await loopTask.WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false); }
+                try { await loopTask.WaitAsync(TimeSpan.FromSeconds(3)); }
                 catch { }
             }
 
@@ -181,7 +181,7 @@ public sealed class AndroidVoskWakeWordEngine : IAndroidWakeWordEngine
                     if (consecutiveErrors >= 8)
                         throw;
 
-                    try { await Task.Delay(20, ct).ConfigureAwait(false); }
+                    try { await Task.Delay(20, ct); }
                     catch (System.OperationCanceledException) { return; }
                     continue;
                 }
@@ -192,7 +192,7 @@ public sealed class AndroidVoskWakeWordEngine : IAndroidWakeWordEngine
                     if (consecutiveErrors >= 8)
                         break;
 
-                    try { await Task.Delay(20, ct).ConfigureAwait(false); }
+                    try { await Task.Delay(20, ct); }
                     catch (System.OperationCanceledException) { return; }
                     continue;
                 }
@@ -337,10 +337,10 @@ public sealed class AndroidVoskWakeWordEngine : IAndroidWakeWordEngine
         var assetManager = context.Assets
             ?? throw new InvalidOperationException("Android AssetManager is unavailable.");
 
-        await CopyAssetFolderAsync(assetManager, ModelAssetFolder, modelDir, ct).ConfigureAwait(false);
+        await CopyAssetFolderAsync(assetManager, ModelAssetFolder, modelDir, ct);
 
         // Write marker
-        await File.WriteAllTextAsync(markerFile, DateTimeOffset.UtcNow.ToString("O"), ct).ConfigureAwait(false);
+        await File.WriteAllTextAsync(markerFile, DateTimeOffset.UtcNow.ToString("O"), ct);
         Logger.LogInformation("Vosk model materialized successfully.");
         return modelDir;
     }
@@ -366,14 +366,14 @@ public sealed class AndroidVoskWakeWordEngine : IAndroidWakeWordEngine
             if (subEntries != null && subEntries.Length > 0)
             {
                 // It's a subdirectory
-                await CopyAssetFolderAsync(assets, srcPath, dstPath, ct).ConfigureAwait(false);
+                await CopyAssetFolderAsync(assets, srcPath, dstPath, ct);
             }
             else
             {
                 // It's a file
                 using var input = assets.Open(srcPath);
                 using var output = File.Create(dstPath);
-                await input.CopyToAsync(output, ct).ConfigureAwait(false);
+                await input.CopyToAsync(output, ct);
             }
         }
     }
@@ -384,7 +384,7 @@ public sealed class AndroidVoskWakeWordEngine : IAndroidWakeWordEngine
         if (activity == null)
             return;
 
-        var granted = await AndroidActivityHost.RequestRecordAudioPermissionAsync(activity, ct).ConfigureAwait(false);
+        var granted = await AndroidActivityHost.RequestRecordAudioPermissionAsync(activity, ct);
         if (!granted)
             throw new InvalidOperationException("Microphone permission is required for wake-word monitoring.");
     }
