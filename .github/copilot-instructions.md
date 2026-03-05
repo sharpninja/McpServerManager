@@ -2,6 +2,8 @@
 
 See `AGENTS-README-FIRST.yaml` in the workspace root for MCP server connection details, session logging procedures, and agent conduct guidelines.
 
+**Agent Identity:** When posting to the MCP session log, use `sourceType: copilotcli`.
+
 ## Auth Architecture
 
 - **JWT and API key are mutually exclusive.** Once a Bearer token is set on `McpClientBase`,
