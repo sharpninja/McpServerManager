@@ -71,7 +71,8 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     private UiCoreAppRuntime _uiCoreRuntime = null!;
     private bool _suppressWorkspaceSelectionChanged;
     private bool _hasCompletedInitialSwitch;
-    internal readonly Mediator _mediator = new();
+    internal readonly Mediator _mediator;
+    private readonly McpServiceFactory _serviceFactory = new();
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
 
     /// <summary>Raised when the active workspace path changes. Child VMs subscribe to refresh reactively.</summary>
@@ -377,8 +378,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         _clipboardService = clipboardService;
         _systemNotificationService = systemNotificationService ?? NoOpSystemNotificationService.Instance;
         _activeBearerToken = string.IsNullOrWhiteSpace(bearerToken) ? null : bearerToken.Trim();
+        _mediator = AppMediatorFactory.CreateAndRegisterAllHandlers(
+            busy => DispatchToUi(() => IsBusy = _mediator.IsBusy));
         InitializeMcpEndpoint(mcpBaseUrl, mcpApiKey);
-        RegisterCqrsHandlers();
     }
 
     private void InitializeMcpEndpoint(string mcpBaseUrl, string? initialApiKey = null)
@@ -403,23 +405,21 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             apiKey: _activeMcpApiKey,
             bearerToken: _activeBearerToken);
 
-        // Create services once — they share the pre-authenticated clients.
-        McpSessionService = new McpSessionLogService(_mcpClient);
-        _mcpTodoService = new McpTodoService(_mcpClient, _mcpPromptClient);
-        _mcpWorkspaceService = new McpWorkspaceService(_mcpClient, _defaultMcpBaseUri);
-        _mcpVoiceService = new McpVoiceConversationService(
+        // Create services once via factory — they share the pre-authenticated clients.
+        McpSessionService = _serviceFactory.CreateSessionLogService(_mcpClient);
+        _mcpTodoService = _serviceFactory.CreateTodoService(_mcpClient, _mcpPromptClient);
+        _mcpWorkspaceService = _serviceFactory.CreateWorkspaceService(_mcpClient, _defaultMcpBaseUri);
+        _mcpVoiceService = _serviceFactory.CreateVoiceService(
             _defaultMcpBaseUrl,
             apiKey: _activeMcpApiKey,
-            bearerToken: _activeBearerToken)
-        {
-            ResolveBaseUrl = () => _activeMcpBaseUrl,
-            ResolveBearerToken = () => _activeBearerToken,
-            ResolveApiKey = () => _activeMcpApiKey,
-            ResolveWorkspacePath = () => SelectedWorkspaceConnection?.WorkspaceRootPath
-                ?? _mcpClient.WorkspacePath
-        };
+            bearerToken: _activeBearerToken,
+            resolveBaseUrl: () => _activeMcpBaseUrl,
+            resolveBearerToken: () => _activeBearerToken,
+            resolveApiKey: () => _activeMcpApiKey,
+            resolveWorkspacePath: () => SelectedWorkspaceConnection?.WorkspaceRootPath
+                ?? _mcpClient.WorkspacePath);
         _activeMcpBaseUrl = _defaultMcpBaseUrl;
-        _agentEventStreamService = AgentEventStreamFactory.Create(
+        _agentEventStreamService = _serviceFactory.CreateEventStreamService(
             _activeMcpBaseUrl,
             apiKey: _activeMcpApiKey,
             bearerToken: _activeBearerToken,
@@ -543,59 +543,6 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
         _logger.LogDebug("[Workspace Switch] No API key resolved for {BaseUrl}; proceeding without explicit key", normalizedTargetBaseUrl);
         return null;
-    }
-
-    private void RegisterCqrsHandlers()
-    {
-        _mediator.IsBusyChanged += _ => DispatchToUi(() => IsBusy = _mediator.IsBusy);
-        // Async operations (data loading)
-        _mediator.Register(new Commands.InitializeFromMcpHandler());
-        _mediator.Register(new Commands.RefreshAndLoadAllJsonHandler());
-        _mediator.Register(new Commands.RefreshAndLoadAgentJsonHandler());
-        _mediator.Register(new Commands.RefreshAndLoadSessionHandler());
-        _mediator.Register(new Commands.LoadJsonFileHandler());
-        _mediator.Register(new Commands.NavigateToNodeHandler());
-        _mediator.Register(new Commands.LoadMarkdownFileHandler());
-        _mediator.Register(new Commands.LoadSourceFileHandler());
-
-        // Navigation
-        _mediator.Register(new Commands.NavigateBackHandler());
-        _mediator.Register(new Commands.NavigateForwardHandler());
-        _mediator.Register(new Commands.RefreshViewHandler());
-        _mediator.Register(new Commands.PhoneNavigateSectionHandler());
-        _mediator.Register(new Commands.TreeItemTappedHandler());
-
-        // Request details
-        _mediator.Register(new Commands.ShowRequestDetailsHandler());
-        _mediator.Register(new Commands.CloseRequestDetailsHandler());
-        _mediator.Register(new Commands.NavigateToPreviousRequestHandler());
-        _mediator.Register(new Commands.NavigateToNextRequestHandler());
-
-        // Selection & interaction
-        _mediator.Register(new Commands.SelectSearchEntryHandler());
-        _mediator.Register(new Commands.JsonNodeDoubleTappedHandler());
-        _mediator.Register(new Commands.SearchRowTappedHandler());
-        _mediator.Register(new Commands.SearchRowDoubleTappedHandler());
-
-        // Clipboard
-        _mediator.Register(new Commands.CopyTextHandler());
-        _mediator.Register(new Commands.CopyOriginalJsonHandler());
-
-        // Preview/Markdown
-        _mediator.Register(new Commands.OpenPreviewInBrowserHandler());
-        _mediator.Register(new Commands.ToggleShowRawMarkdownHandler());
-
-        // Archive
-        _mediator.Register(new Commands.ArchiveCurrentHandler());
-        _mediator.Register(new Commands.ArchiveTreeItemHandler());
-
-        // Tree & config
-        _mediator.Register(new Commands.OpenTreeItemHandler());
-        _mediator.Register(new Commands.OpenAgentConfigHandler());
-        _mediator.Register(new Commands.OpenPromptTemplatesHandler());
-
-        // Refresh
-        _mediator.Register(new Commands.RefreshHandler());
     }
 
     /// <summary>Command for tree item tap (handles directory expand/collapse and MCP node refresh).</summary>
