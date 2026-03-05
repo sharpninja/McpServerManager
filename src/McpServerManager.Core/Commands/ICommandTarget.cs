@@ -13,6 +13,7 @@ public interface ICommandTarget
       ISessionDataTarget,
       IClipboardTarget,
       IConfigTarget,
-      IUiDispatchTarget
+      IUiDispatchTarget,
+      ITodoCopilotTarget
 {
 }

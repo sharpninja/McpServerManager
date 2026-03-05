@@ -102,6 +102,12 @@ public partial class PhoneTodoView : UserControl
 
     private void SyncTabContent(TodoListViewModel vm)
     {
+        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => SyncTabContent(vm));
+            return;
+        }
+
         var tab = vm.SelectedEditorTab;
         if (tab is null)
         {
@@ -128,7 +134,12 @@ public partial class PhoneTodoView : UserControl
     private void OnTabContentChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(EditorTab.Content) && sender is EditorTab tab && tab.IsMarkdown)
-            MarkdownText.Text = tab.Content;
+        {
+            if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+                MarkdownText.Text = tab.Content;
+            else
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => MarkdownText.Text = tab.Content);
+        }
     }
 
     private void SyncEditorFromViewModel(TodoListViewModel vm)

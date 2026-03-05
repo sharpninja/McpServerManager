@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using McpServer.Cqrs;
+using McpServer.Cqrs.Mvvm;
 using McpServer.UI.Core.Messages;
 using McpServer.UI.Core.ViewModels;
 using McpServerManager.Core.Models;
@@ -24,6 +26,7 @@ public partial class TodoListViewModel : ViewModelBase
 
     private readonly IClipboardService _clipboardService;
     private readonly UiCoreAppRuntime _runtime;
+    private readonly Dispatcher _dispatcher;
     private readonly UiCoreTodoListViewModel _listVm;
     private readonly UiCoreTodoDetailViewModel _detailVm;
     private List<TodoListEntry> _allEntries = new();
@@ -51,6 +54,10 @@ public partial class TodoListViewModel : ViewModelBase
     [ObservableProperty] private ObservableCollection<EditorTab> _editorTabs = new();
     [ObservableProperty] private EditorTab? _selectedEditorTab;
 
+    public CqrsRelayCommand<bool> CopilotStatusCommand { get; }
+    public CqrsRelayCommand<bool> CopilotPlanCommand { get; }
+    public CqrsRelayCommand<bool> CopilotImplementCommand { get; }
+
     public Func<string>? GetEditorText { get; set; }
 
     public event Action<string>? GlobalStatusChanged;
@@ -65,9 +72,14 @@ public partial class TodoListViewModel : ViewModelBase
     {
         _clipboardService = clipboardService;
         _runtime = runtime;
+        _dispatcher = runtime.GetRequiredService<Dispatcher>();
         _listVm = runtime.GetRequiredService<UiCoreTodoListViewModel>();
         _listVm.Done = false; // default to open items only
         _detailVm = runtime.GetRequiredService<UiCoreTodoDetailViewModel>();
+
+        CopilotStatusCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.CopilotStatusCommand());
+        CopilotPlanCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.CopilotPlanCommand());
+        CopilotImplementCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.CopilotImplementCommand());
     }
 
     public void ApplyWorkspacePath(string? workspacePath)
@@ -376,8 +388,7 @@ public partial class TodoListViewModel : ViewModelBase
     [RelayCommand]
     private void OpenAiChat() => OpenAiChatRequested?.Invoke(this, EventArgs.Empty);
 
-    [RelayCommand]
-    private async Task CopilotStatusAsync()
+    public async Task CopilotStatusAsync()
     {
         if (SelectedEntry?.Item is not { } item)
             return;
@@ -386,8 +397,7 @@ public partial class TodoListViewModel : ViewModelBase
             static (vm, ct) => vm.GenerateStatusPromptAsync(ct));
     }
 
-    [RelayCommand]
-    private async Task CopilotPlanAsync()
+    public async Task CopilotPlanAsync()
     {
         if (SelectedEntry?.Item is not { } item)
             return;
@@ -396,8 +406,7 @@ public partial class TodoListViewModel : ViewModelBase
             static (vm, ct) => vm.GeneratePlanPromptAsync(ct));
     }
 
-    [RelayCommand]
-    private async Task CopilotImplementAsync()
+    public async Task CopilotImplementAsync()
     {
         if (SelectedEntry?.Item is not { } item)
             return;

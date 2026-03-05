@@ -4043,6 +4043,12 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     Dictionary<string, UnifiedSessionLog> ISessionDataTarget.BuildSessionsByPathDict(IReadOnlyList<UnifiedSessionLog> sessions) => BuildSessionsByPathDict(sessions);
     List<UnifiedSessionLog> ISessionDataTarget.OrderAndDeduplicateSessions(Dictionary<string, UnifiedSessionLog> byPath) => OrderAndDeduplicateSessions(byPath);
     void ISessionDataTarget.SetMcpSessionState(List<UnifiedSessionLog> sessions, Dictionary<string, UnifiedSessionLog> byPath) => SetMcpSessionState(sessions, byPath);
+
+    // --- ITodoCopilotTarget ---
+
+    public Task CopilotStatusAsync() => TodoViewModel.CopilotStatusAsync();
+    public Task CopilotPlanAsync() => TodoViewModel.CopilotPlanAsync();
+    public Task CopilotImplementAsync() => TodoViewModel.CopilotImplementAsync();
 }
 
 public sealed class WorkspaceConnectionOption
