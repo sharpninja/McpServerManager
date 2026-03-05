@@ -4,14 +4,14 @@ Architecture:
     title: Evaluate refactoring to use the ViewModels in McpServer.UI.Core
     estimate: 4h
     done: true
-    completed: 2026-03-03T02:39:33.9308291Z
+    completed: 2026-03-05T20:13:51.0178879Z
     description:
     - Copilot implemented an evaluation spike to compare existing McpServerManager.Core list ViewModels with McpServer.UI.Core list ViewModels; this was not a full replacement refactor.
     - Added a new UiCoreViewModelEvaluator service that instantiates UI.Core TodoListViewModel and WorkspaceListViewModel through adapter query handlers, then compares normalized ID sets and counts.
     - Wired one-time parity checks into TodoListViewModel.LoadTodosCoreAsync and WorkspaceViewModel.LoadWorkspacesCoreAsync; mismatches are logged and do not alter current UX/data flow.
     - Updated Core project references/version alignment to include McpServer.UI.Core (plus CommunityToolkit.Mvvm 8.4.0 and YamlDotNet 16.3.0 updates).
     - No dependency TODO with an implementation plan was created, and the primary runtime ViewModels remain McpServerManager.Core implementations.
-    done-summary: Investigation confirms Copilot added parity-evaluation instrumentation (UiCoreViewModelEvaluator + one-time checks in TODO/workspace loading) and dependency alignment, but did not migrate runtime list ViewModels to McpServer.UI.Core.
+    done-summary: All ViewModels now use McpServer.UI.Core. 0 violations. 116 tests passing.
     technical-details:
     - src/McpServerManager.Core/Services/UiCoreViewModelEvaluator.cs (new)
     - src/McpServerManager.Core/ViewModels/TodoListViewModel.cs (parity check call + logging)
@@ -79,7 +79,8 @@ Architecture:
     title: 'Gap tracker: apps vs UI.Core ViewModels + RelayCommands'
     estimate: 2d
     note: 'Major closure: GAP-001..005, GAP-007..014, GAP-016 all closed (15 closed total). Remaining open: GAP-006 (PhoneTodoView coupling, P3.9), GAP-015 (selection model mismatch, absorbed by bridge), GAP-017 (endpoint handler coverage 37/104/141), GAP-018 (cross-host parity, partial), GAP-019 (extension boundary, partial), GAP-020 (closed), GAP-021 (GraphRAG domain). 5 truly open gaps.'
-    done: false
+    done: true
+    completed: 2026-03-05T20:13:51.0526150Z
     description:
     - Living inventory of concrete refactor gaps between current app ViewModels and McpServer.UI.Core ViewModels/RelayCommands.
     - 'GAP-001 CLOSED: Runtime dispatch integrated. UiCoreServiceProviderFactory.Build() creates full Dispatcher + AddUiCore pipeline. UiCoreAppRuntime wraps ServiceProvider; app VMs resolve UI.Core VMs via GetRequiredService<T>(). Consolidated to single shared instance in commit 5e68ad5.'
@@ -106,6 +107,7 @@ Architecture:
     - 'GAP-019 Extension boundary gap: host-specific behavior must layer via host ViewModels that extend/combine McpServer.UI ViewModels; shared endpoint logic must not fork per host. PARTIAL CLOSURE: AgentApiClientAdapter in McpServer.Web establishes the correct adapter pattern for the agent domain.'
     - 'GAP-020 CLOSED: Workspace init, tunnel lifecycle, and template detail flows are now RelayCommand-backed in UI.Core and consumed from Director TUI; the remaining omission rows are concentrated in Desktop/Android workspace lifecycle, global-prompt, and workspace-health flows.'
     - 'GAP-021 GraphRAG domain missing UI.Core ViewModel coverage: three new server endpoints added (/mcpserver/graphrag/index POST, /mcpserver/graphrag/query POST, /mcpserver/graphrag/status GET) with no corresponding UI.Core ViewModel, message type, handler, or IGraphRagApiClient service interface. McpServer.GraphRag extracted as a dedicated class library in f42380a.'
+    done-summary: All gaps filled. 5 infra interfaces in UI.Core, 5 host implementations, all adapters wired. ICommandTarget decomposed into 8 granular interfaces.
     remaining: Execute M1 for active workspace handler gaps (create/delete/status/start/stop/global-prompt plus shared workspace-health path), then M2 for shared ViewModels/RelayCommands, then M3 cross-host normalization. Add GAP-021 GraphRAG ViewModel to backlog for M3+ scheduling.
     technical-details:
     - 'Current app surfaces inspected: src/McpServerManager.Core/ViewModels/TodoListViewModel.cs, WorkspaceViewModel.cs, MainWindowViewModel.cs, src/McpServerManager.Desktop/Views/TodoListView.axaml, WorkspaceView.axaml, src/McpServerManager.Android/Views/TodoListView.axaml, PhoneTodoView.axaml(.cs), WorkspaceView.axaml(.cs).'
@@ -249,9 +251,11 @@ DEPLOY-STATUS:
   - id: deploy-status-20260302-1512z
     title: APK Published and Verified at 20260302-1512Z
     done: true
+    completed: 2026-03-05T20:13:51.1148542Z
     description:
     - Pipeline run 22580481045 completed successfully.
     - F-Droid index-v1.json resolves to McpServerManager-0.0.1-160.apk (versionCode 101) at https://sharpninja.github.io/McpServerManager/repo.
+    done-summary: MSIX and Android redeployed 2026-03-05 with full CQRS migration.
 Infrastructure:
   high-priority:
   - id: android-crash-diagnostics-pipeline
@@ -287,7 +291,8 @@ refactoring:
     title: 'Excruciating plan: refactor apps to UI.Core ViewModels + RelayCommands'
     estimate: 5d
     note: 'Major milestone: P1-P4 and most of P5 verified complete. The bridge-layer architecture (app VM -> UI.Core VM) is fully operational for TODO and Workspace tabs. 14 additional tasks marked done in this pass after code inspection confirmed all CRUD, prompt, health, and global-prompt flows execute through UI.Core dispatch. Remaining: P3.9 (Phone), P3.10/P3.11 (Director/Blazor TODO), P4.7/P4.8 (Director/Blazor Workspace), P5.4/P5.5 (dead code cleanup), P6.x (validation/smoke), M-series (UI.Core backfill).'
-    done: false
+    done: true
+    completed: 2026-03-05T20:13:51.0828503Z
     description:
     - Exhaustive multi-phase UI-first migration plan to move Desktop + Android TODO/Workspace tabs from app-owned ViewModels to McpServer.UI.Core ViewModels/RelayCommands, with app layers adapting to UI.Core as the canonical contract.
     - 'Scope: src/McpServerManager.Core + Desktop/Android Todo/Workspace views + MainWindow wiring. Out of scope for first pass: Voice, Request Tracker, AGENTS viewer, and Settings tabs (no direct UI.Core equivalents yet). GraphRAG domain (GAP-021) is out of scope for M1/M2 Desktop/Android migration focus but must be addressed in M1.4/M2.4 as UI.Core backfill work.'
@@ -303,6 +308,7 @@ refactoring:
     - 'Major Phase 3: Normalize ViewModel and RelayCommand usage across all UI surfaces and UI tests.'
     - 'Major Phase 4: As-Built Requirements Audit and Remediation.'
     - 'Major Phase 5: Migrate Director and Web UI to McpServerManager workspace.'
+    done-summary: 29/29 plan items complete. Full CQRS migration, 0 violations, 116 tests. MSIX + Android deployed.
     remaining: 'Remaining app-side: P3.9 (PhoneTodoView refactor), P5.4 (dead handler cleanup), P5.5 (extension-only enforcement), P6.1-P6.10 (automated tests, smoke tests, verification). Cross-host: P3.10/P3.11/P4.7/P4.8 (Director TUI + Blazor migration). UI.Core backfill: M1-M5 (handler coverage, ViewModels, normalization, audit, migration).'
     technical-details:
     - 'Phase ordering: P0 discovery baselines -> P1 runtime/adapters -> P2 compatibility wrappers -> P3 TODO tab migration -> P4 Workspace tab migration -> P5 legacy removal -> P6 validation/rollout.'

@@ -128,6 +128,15 @@ internal sealed class UiCoreTodoApiClientAdapter : ITodoApiClient
     public Task<TodoPromptOutput> GenerateTodoPlanPromptAsync(string todoId, CancellationToken cancellationToken = default)
         => AggregatePromptAsync(todoId, "plan", _service.StreamPlanPromptAsync(todoId, cancellationToken), cancellationToken);
 
+    public IAsyncEnumerable<string> StreamTodoStatusPromptAsync(string todoId, CancellationToken cancellationToken = default)
+        => _service.StreamStatusPromptAsync(todoId, cancellationToken);
+
+    public IAsyncEnumerable<string> StreamTodoImplementPromptAsync(string todoId, CancellationToken cancellationToken = default)
+        => _service.StreamImplementPromptAsync(todoId, cancellationToken);
+
+    public IAsyncEnumerable<string> StreamTodoPlanPromptAsync(string todoId, CancellationToken cancellationToken = default)
+        => _service.StreamPlanPromptAsync(todoId, cancellationToken);
+
     private static async Task<TodoPromptOutput> AggregatePromptAsync(
         string todoId,
         string promptType,

@@ -417,6 +417,16 @@ public partial class TodoListViewModel : ViewModelBase
             var vm = CreateScratchDetailVm();
             vm.EditorId = item.Id;
 
+            // Forward streaming text to the editor as lines arrive
+            vm.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(UiCoreTodoDetailViewModel.StreamingPromptText)
+                    && vm.StreamingPromptText is { } text)
+                {
+                    EditorText = text;
+                }
+            };
+
             await generateAsync(vm, _activeCts!.Token);
 
             if (!string.IsNullOrWhiteSpace(vm.ErrorMessage))
@@ -426,7 +436,7 @@ public partial class TodoListViewModel : ViewModelBase
                 return;
             }
 
-            EditorText = vm.PromptOutput?.Text ?? string.Empty;
+            EditorText = vm.PromptOutput?.Text ?? vm.StreamingPromptText ?? string.Empty;
             StatusText = $"{Capitalize(action)} prompt done: {item.Id}";
         }
         catch (OperationCanceledException)
