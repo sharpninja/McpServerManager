@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using McpServerManager.Core.Cqrs;
+using McpServer.Cqrs;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Services;
 
@@ -25,153 +24,102 @@ internal static class ChatPromptTemplateFormatter
 
 // --- Chat: Open Agent Config ---
 
-public sealed class ChatOpenAgentConfigCommand : ICommand<ChatFileOpenResult>
-{
-}
+public sealed record ChatOpenAgentConfigCommand() : McpServer.Cqrs.ICommand<ChatFileOpenResult>;
 
-public sealed class ChatOpenAgentConfigHandler : ICommandHandler<ChatOpenAgentConfigCommand, ChatFileOpenResult>
+public sealed class ChatOpenAgentConfigHandler(IChatConfigFilesService filesService) : McpServer.Cqrs.ICommandHandler<ChatOpenAgentConfigCommand, ChatFileOpenResult>
 {
-    private readonly IChatConfigFilesService _filesService;
-    public ChatOpenAgentConfigHandler(IChatConfigFilesService filesService) => _filesService = filesService;
-
-    public Task<ChatFileOpenResult> ExecuteAsync(ChatOpenAgentConfigCommand command, CancellationToken cancellationToken = default)
-        => Task.FromResult(_filesService.OpenAgentConfigInEditor());
+    public Task<Result<ChatFileOpenResult>> HandleAsync(ChatOpenAgentConfigCommand command, CallContext context)
+        => Task.FromResult(Result<ChatFileOpenResult>.Success(filesService.OpenAgentConfigInEditor()));
 }
 
 // --- Chat: Open Prompt Templates File ---
 
-public sealed class ChatOpenPromptTemplatesCommand : ICommand<ChatFileOpenResult>
-{
-}
+public sealed record ChatOpenPromptTemplatesCommand() : McpServer.Cqrs.ICommand<ChatFileOpenResult>;
 
-public sealed class ChatOpenPromptTemplatesHandler : ICommandHandler<ChatOpenPromptTemplatesCommand, ChatFileOpenResult>
+public sealed class ChatOpenPromptTemplatesHandler(IChatConfigFilesService filesService) : McpServer.Cqrs.ICommandHandler<ChatOpenPromptTemplatesCommand, ChatFileOpenResult>
 {
-    private readonly IChatConfigFilesService _filesService;
-    public ChatOpenPromptTemplatesHandler(IChatConfigFilesService filesService) => _filesService = filesService;
-
-    public Task<ChatFileOpenResult> ExecuteAsync(ChatOpenPromptTemplatesCommand command, CancellationToken cancellationToken = default)
-        => Task.FromResult(_filesService.OpenPromptTemplatesInEditor());
+    public Task<Result<ChatFileOpenResult>> HandleAsync(ChatOpenPromptTemplatesCommand command, CallContext context)
+        => Task.FromResult(Result<ChatFileOpenResult>.Success(filesService.OpenPromptTemplatesInEditor()));
 }
 
 // --- Chat: Load Prompt Templates ---
 
-public sealed class ChatLoadPromptsCommand : ICommand<IReadOnlyList<PromptTemplate>>
-{
-}
+public sealed record ChatLoadPromptsCommand() : McpServer.Cqrs.ICommand<IReadOnlyList<PromptTemplate>>;
 
-public sealed class ChatLoadPromptsHandler : ICommandHandler<ChatLoadPromptsCommand, IReadOnlyList<PromptTemplate>>
+public sealed class ChatLoadPromptsHandler(IChatPromptTemplateService promptTemplateService) : McpServer.Cqrs.ICommandHandler<ChatLoadPromptsCommand, IReadOnlyList<PromptTemplate>>
 {
-    private readonly IChatPromptTemplateService _promptTemplateService;
-    public ChatLoadPromptsHandler(IChatPromptTemplateService promptTemplateService) => _promptTemplateService = promptTemplateService;
-
-    public Task<IReadOnlyList<PromptTemplate>> ExecuteAsync(ChatLoadPromptsCommand command, CancellationToken cancellationToken = default)
-        => Task.FromResult(_promptTemplateService.GetPromptTemplates());
+    public Task<Result<IReadOnlyList<PromptTemplate>>> HandleAsync(ChatLoadPromptsCommand command, CallContext context)
+        => Task.FromResult(Result<IReadOnlyList<PromptTemplate>>.Success(promptTemplateService.GetPromptTemplates()));
 }
 
 // --- Chat: Submit Prompt Template ---
 
-public sealed class ChatSubmitPromptCommand : ICommand<ChatPreparedPromptResult>
-{
-    public PromptTemplate? Prompt { get; }
+public sealed record ChatSubmitPromptCommand(PromptTemplate? Prompt) : McpServer.Cqrs.ICommand<ChatPreparedPromptResult>;
 
-    public ChatSubmitPromptCommand(PromptTemplate? prompt)
-    {
-        Prompt = prompt;
-    }
-}
-
-public sealed class ChatSubmitPromptHandler : ICommandHandler<ChatSubmitPromptCommand, ChatPreparedPromptResult>
+public sealed class ChatSubmitPromptHandler : McpServer.Cqrs.ICommandHandler<ChatSubmitPromptCommand, ChatPreparedPromptResult>
 {
-    public Task<ChatPreparedPromptResult> ExecuteAsync(ChatSubmitPromptCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<ChatPreparedPromptResult>> HandleAsync(ChatSubmitPromptCommand command, CallContext context)
     {
         var text = ChatPromptTemplateFormatter.GetPromptText(command.Prompt);
         var shouldSend = !string.IsNullOrWhiteSpace(text);
-        return Task.FromResult(new ChatPreparedPromptResult(shouldSend, text));
+        return Task.FromResult(Result<ChatPreparedPromptResult>.Success(new ChatPreparedPromptResult(shouldSend, text)));
     }
 }
 
 // --- Chat: Populate Prompt ---
 
-public sealed class ChatPopulatePromptCommand : ICommand<string>
-{
-    public PromptTemplate? Prompt { get; }
-    public ChatPopulatePromptCommand(PromptTemplate? prompt) => Prompt = prompt;
-}
+public sealed record ChatPopulatePromptCommand(PromptTemplate? Prompt) : McpServer.Cqrs.ICommand<string>;
 
-public sealed class ChatPopulatePromptHandler : ICommandHandler<ChatPopulatePromptCommand, string>
+public sealed class ChatPopulatePromptHandler : McpServer.Cqrs.ICommandHandler<ChatPopulatePromptCommand, string>
 {
-    public Task<string> ExecuteAsync(ChatPopulatePromptCommand command, CancellationToken cancellationToken = default)
-        => Task.FromResult(ChatPromptTemplateFormatter.GetPromptText(command.Prompt));
+    public Task<Result<string>> HandleAsync(ChatPopulatePromptCommand command, CallContext context)
+        => Task.FromResult(Result<string>.Success(ChatPromptTemplateFormatter.GetPromptText(command.Prompt)));
 }
 
 // --- Chat: Load Models (query) ---
 
-public sealed class ChatLoadModelsQuery : IQuery<ChatLoadModelsResult>
+public sealed record ChatLoadModelsQuery(string? InitialPreferredModel) : McpServer.Cqrs.IQuery<ChatLoadModelsResult>;
+
+public sealed class ChatLoadModelsHandler(IChatModelDiscoveryService modelDiscoveryService) : McpServer.Cqrs.IQueryHandler<ChatLoadModelsQuery, ChatLoadModelsResult>
 {
-    public string? InitialPreferredModel { get; }
-    public ChatLoadModelsQuery(string? initialPreferredModel) => InitialPreferredModel = initialPreferredModel;
-}
-
-public sealed class ChatLoadModelsHandler : IQueryHandler<ChatLoadModelsQuery, ChatLoadModelsResult>
-{
-    private readonly IChatModelDiscoveryService _modelDiscoveryService;
-
-    public ChatLoadModelsHandler(IChatModelDiscoveryService modelDiscoveryService)
-        => _modelDiscoveryService = modelDiscoveryService;
-
-    public async Task<ChatLoadModelsResult> ExecuteAsync(ChatLoadModelsQuery query, CancellationToken cancellationToken = default)
+    public async Task<Result<ChatLoadModelsResult>> HandleAsync(ChatLoadModelsQuery query, CallContext context)
     {
         try
         {
-            var models = await _modelDiscoveryService.GetAvailableModelsAsync(cancellationToken).ConfigureAwait(true);
+            var models = await modelDiscoveryService.GetAvailableModelsAsync(context.CancellationToken).ConfigureAwait(true);
             var selected = !string.IsNullOrWhiteSpace(query.InitialPreferredModel) && models.Contains(query.InitialPreferredModel!)
                 ? query.InitialPreferredModel
                 : models.FirstOrDefault();
 
-            return new ChatLoadModelsResult(true, models, selected);
+            return Result<ChatLoadModelsResult>.Success(new ChatLoadModelsResult(true, models, selected));
         }
         catch
         {
-            return new ChatLoadModelsResult(false, Array.Empty<string>(), null);
+            return Result<ChatLoadModelsResult>.Success(new ChatLoadModelsResult(false, Array.Empty<string>(), null));
         }
     }
 }
 
 // --- Chat: Send Message ---
 
-public sealed class ChatSendMessageCommand : ICommand<ChatSendMessageResult>
+public sealed record ChatSendMessageCommand(ChatSendRequest Request, IProgress<string>? ContentProgress = null) : McpServer.Cqrs.ICommand<ChatSendMessageResult>;
+
+public sealed class ChatSendMessageHandler(IChatSendOrchestrationService chatSendService) : McpServer.Cqrs.ICommandHandler<ChatSendMessageCommand, ChatSendMessageResult>
 {
-    public ChatSendRequest Request { get; }
-    public IProgress<string>? ContentProgress { get; }
-
-    public ChatSendMessageCommand(ChatSendRequest request, IProgress<string>? contentProgress = null)
-    {
-        Request = request;
-        ContentProgress = contentProgress;
-    }
-}
-
-public sealed class ChatSendMessageHandler : ICommandHandler<ChatSendMessageCommand, ChatSendMessageResult>
-{
-    private readonly IChatSendOrchestrationService _chatSendService;
-
-    public ChatSendMessageHandler(IChatSendOrchestrationService chatSendService)
-        => _chatSendService = chatSendService;
-
-    public async Task<ChatSendMessageResult> ExecuteAsync(ChatSendMessageCommand command, CancellationToken cancellationToken = default)
+    public async Task<Result<ChatSendMessageResult>> HandleAsync(ChatSendMessageCommand command, CallContext context)
     {
         try
         {
-            var reply = await _chatSendService.SendMessageAsync(command.Request, command.ContentProgress, cancellationToken).ConfigureAwait(true);
-            return new ChatSendMessageResult(true, reply ?? "", false, null);
+            var reply = await chatSendService.SendMessageAsync(command.Request, command.ContentProgress, context.CancellationToken).ConfigureAwait(true);
+            return Result<ChatSendMessageResult>.Success(new ChatSendMessageResult(true, reply ?? "", false, null));
         }
         catch (OperationCanceledException)
         {
-            return new ChatSendMessageResult(false, "[Cancelled]", true, null);
+            return Result<ChatSendMessageResult>.Success(new ChatSendMessageResult(false, "[Cancelled]", true, null));
         }
         catch (Exception ex)
         {
-            return new ChatSendMessageResult(false, "", false, ex.Message);
+            return Result<ChatSendMessageResult>.Failure(ex);
         }
     }
 }

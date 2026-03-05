@@ -1,415 +1,274 @@
-using System.Threading;
 using System.Threading.Tasks;
-using McpServerManager.Core.Cqrs;
+using McpServer.Cqrs;
 
 namespace McpServerManager.Core.Commands;
 
 // --- Navigation Commands ---
 
-public sealed class NavigateBackCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public NavigateBackCommand(ICommandTarget target) => Target = target;
-}
+public sealed record NavigateBackCommand() : ICommand<bool>;
 
-public sealed class NavigateBackHandler : ICommandHandler<NavigateBackCommand>
+public sealed class NavigateBackHandler(ICommandTarget target) : ICommandHandler<NavigateBackCommand, bool>
 {
-    public Task ExecuteAsync(NavigateBackCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(NavigateBackCommand command, CallContext context)
     {
-        command.Target.NavigateBack();
-        return Task.CompletedTask;
+        target.NavigateBack();
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
-public sealed class NavigateForwardCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public NavigateForwardCommand(ICommandTarget target) => Target = target;
-}
+public sealed record NavigateForwardCommand() : ICommand<bool>;
 
-public sealed class NavigateForwardHandler : ICommandHandler<NavigateForwardCommand>
+public sealed class NavigateForwardHandler(ICommandTarget target) : ICommandHandler<NavigateForwardCommand, bool>
 {
-    public Task ExecuteAsync(NavigateForwardCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(NavigateForwardCommand command, CallContext context)
     {
-        command.Target.NavigateForward();
-        return Task.CompletedTask;
+        target.NavigateForward();
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Refresh ---
 
-public sealed class RefreshViewCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public RefreshViewCommand(ICommandTarget target) => Target = target;
-}
+public sealed record RefreshViewCommand() : ICommand<bool>;
 
-public sealed class RefreshViewHandler : ICommandHandler<RefreshViewCommand>
+public sealed class RefreshViewHandler(ICommandTarget target) : ICommandHandler<RefreshViewCommand, bool>
 {
-    public async Task ExecuteAsync(RefreshViewCommand command, CancellationToken cancellationToken = default)
+    public async Task<Result<bool>> HandleAsync(RefreshViewCommand command, CallContext context)
     {
-        await command.Target.RefreshAsync();
+        await target.RefreshAsync();
+        return Result<bool>.Success(true);
     }
 }
 
 // --- Request Details ---
 
-public sealed class ShowRequestDetailsCommand : ICommand
+public sealed record ShowRequestDetailsCommand(Models.Json.SearchableEntry Entry) : ICommand<bool>;
+
+public sealed class ShowRequestDetailsHandler(ICommandTarget target) : ICommandHandler<ShowRequestDetailsCommand, bool>
 {
-    public ICommandTarget Target { get; }
-    public Models.Json.SearchableEntry Entry { get; }
-    public ShowRequestDetailsCommand(ICommandTarget target, Models.Json.SearchableEntry entry)
+    public Task<Result<bool>> HandleAsync(ShowRequestDetailsCommand command, CallContext context)
     {
-        Target = target;
-        Entry = entry;
+        target.ShowRequestDetails(command.Entry);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
-public sealed class ShowRequestDetailsHandler : ICommandHandler<ShowRequestDetailsCommand>
+public sealed record CloseRequestDetailsCommand() : ICommand<bool>;
+
+public sealed class CloseRequestDetailsHandler(ICommandTarget target) : ICommandHandler<CloseRequestDetailsCommand, bool>
 {
-    public Task ExecuteAsync(ShowRequestDetailsCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(CloseRequestDetailsCommand command, CallContext context)
     {
-        command.Target.ShowRequestDetails(command.Entry);
-        return Task.CompletedTask;
+        target.CloseRequestDetails();
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
-public sealed class CloseRequestDetailsCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public CloseRequestDetailsCommand(ICommandTarget target) => Target = target;
-}
+public sealed record NavigateToPreviousRequestCommand() : ICommand<bool>;
 
-public sealed class CloseRequestDetailsHandler : ICommandHandler<CloseRequestDetailsCommand>
+public sealed class NavigateToPreviousRequestHandler(ICommandTarget target) : ICommandHandler<NavigateToPreviousRequestCommand, bool>
 {
-    public Task ExecuteAsync(CloseRequestDetailsCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(NavigateToPreviousRequestCommand command, CallContext context)
     {
-        command.Target.CloseRequestDetails();
-        return Task.CompletedTask;
+        target.NavigateToPreviousRequest();
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
-public sealed class NavigateToPreviousRequestCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public NavigateToPreviousRequestCommand(ICommandTarget target) => Target = target;
-}
+public sealed record NavigateToNextRequestCommand() : ICommand<bool>;
 
-public sealed class NavigateToPreviousRequestHandler : ICommandHandler<NavigateToPreviousRequestCommand>
+public sealed class NavigateToNextRequestHandler(ICommandTarget target) : ICommandHandler<NavigateToNextRequestCommand, bool>
 {
-    public Task ExecuteAsync(NavigateToPreviousRequestCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(NavigateToNextRequestCommand command, CallContext context)
     {
-        command.Target.NavigateToPreviousRequest();
-        return Task.CompletedTask;
-    }
-}
-
-public sealed class NavigateToNextRequestCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public NavigateToNextRequestCommand(ICommandTarget target) => Target = target;
-}
-
-public sealed class NavigateToNextRequestHandler : ICommandHandler<NavigateToNextRequestCommand>
-{
-    public Task ExecuteAsync(NavigateToNextRequestCommand command, CancellationToken cancellationToken = default)
-    {
-        command.Target.NavigateToNextRequest();
-        return Task.CompletedTask;
+        target.NavigateToNextRequest();
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Selection ---
 
-public sealed class SelectSearchEntryCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public Models.Json.SearchableEntry Entry { get; }
-    public SelectSearchEntryCommand(ICommandTarget target, Models.Json.SearchableEntry entry)
-    {
-        Target = target;
-        Entry = entry;
-    }
-}
+public sealed record SelectSearchEntryCommand(Models.Json.SearchableEntry Entry) : ICommand<bool>;
 
-public sealed class SelectSearchEntryHandler : ICommandHandler<SelectSearchEntryCommand>
+public sealed class SelectSearchEntryHandler(ICommandTarget target) : ICommandHandler<SelectSearchEntryCommand, bool>
 {
-    public Task ExecuteAsync(SelectSearchEntryCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(SelectSearchEntryCommand command, CallContext context)
     {
-        command.Target.SelectSearchEntry(command.Entry);
-        return Task.CompletedTask;
+        target.SelectSearchEntry(command.Entry);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Clipboard ---
 
-public sealed class CopyTextCommand : ICommand
+public sealed record CopyTextCommand(string Text) : ICommand<bool>;
+
+public sealed class CopyTextHandler(ICommandTarget target) : ICommandHandler<CopyTextCommand, bool>
 {
-    public ICommandTarget Target { get; }
-    public string Text { get; }
-    public CopyTextCommand(ICommandTarget target, string text)
+    public async Task<Result<bool>> HandleAsync(CopyTextCommand command, CallContext context)
     {
-        Target = target;
-        Text = text;
+        await target.CopyText(command.Text);
+        return Result<bool>.Success(true);
     }
 }
 
-public sealed class CopyTextHandler : ICommandHandler<CopyTextCommand>
-{
-    public async Task ExecuteAsync(CopyTextCommand command, CancellationToken cancellationToken = default)
-    {
-        await command.Target.CopyText(command.Text);
-    }
-}
+public sealed record CopyOriginalJsonCommand(Models.Json.UnifiedRequestEntry? Entry) : ICommand<bool>;
 
-public sealed class CopyOriginalJsonCommand : ICommand
+public sealed class CopyOriginalJsonHandler(ICommandTarget target) : ICommandHandler<CopyOriginalJsonCommand, bool>
 {
-    public ICommandTarget Target { get; }
-    public Models.Json.UnifiedRequestEntry? Entry { get; }
-    public CopyOriginalJsonCommand(ICommandTarget target, Models.Json.UnifiedRequestEntry? entry)
+    public async Task<Result<bool>> HandleAsync(CopyOriginalJsonCommand command, CallContext context)
     {
-        Target = target;
-        Entry = entry;
-    }
-}
-
-public sealed class CopyOriginalJsonHandler : ICommandHandler<CopyOriginalJsonCommand>
-{
-    public async Task ExecuteAsync(CopyOriginalJsonCommand command, CancellationToken cancellationToken = default)
-    {
-        await command.Target.CopyOriginalJson(command.Entry);
+        await target.CopyOriginalJson(command.Entry);
+        return Result<bool>.Success(true);
     }
 }
 
 // --- Preview/Markdown ---
 
-public sealed class OpenPreviewInBrowserCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public OpenPreviewInBrowserCommand(ICommandTarget target) => Target = target;
-}
+public sealed record OpenPreviewInBrowserCommand() : ICommand<bool>;
 
-public sealed class OpenPreviewInBrowserHandler : ICommandHandler<OpenPreviewInBrowserCommand>
+public sealed class OpenPreviewInBrowserHandler(ICommandTarget target) : ICommandHandler<OpenPreviewInBrowserCommand, bool>
 {
-    public Task ExecuteAsync(OpenPreviewInBrowserCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(OpenPreviewInBrowserCommand command, CallContext context)
     {
-        command.Target.OpenPreviewInBrowser();
-        return Task.CompletedTask;
+        target.OpenPreviewInBrowser();
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
-public sealed class ToggleShowRawMarkdownCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public ToggleShowRawMarkdownCommand(ICommandTarget target) => Target = target;
-}
+public sealed record ToggleShowRawMarkdownCommand() : ICommand<bool>;
 
-public sealed class ToggleShowRawMarkdownHandler : ICommandHandler<ToggleShowRawMarkdownCommand>
+public sealed class ToggleShowRawMarkdownHandler(ICommandTarget target) : ICommandHandler<ToggleShowRawMarkdownCommand, bool>
 {
-    public Task ExecuteAsync(ToggleShowRawMarkdownCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(ToggleShowRawMarkdownCommand command, CallContext context)
     {
-        command.Target.ToggleShowRawMarkdown();
-        return Task.CompletedTask;
+        target.ToggleShowRawMarkdown();
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Archive ---
 
-public sealed class ArchiveCurrentCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public ArchiveCurrentCommand(ICommandTarget target) => Target = target;
-}
+public sealed record ArchiveCurrentCommand() : ICommand<bool>;
 
-public sealed class ArchiveCurrentHandler : ICommandHandler<ArchiveCurrentCommand>
+public sealed class ArchiveCurrentHandler(ICommandTarget target) : ICommandHandler<ArchiveCurrentCommand, bool>
 {
-    public Task ExecuteAsync(ArchiveCurrentCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(ArchiveCurrentCommand command, CallContext context)
     {
-        command.Target.Archive();
-        return Task.CompletedTask;
+        target.Archive();
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
-public sealed class ArchiveTreeItemCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public Models.FileNode? Node { get; }
-    public ArchiveTreeItemCommand(ICommandTarget target, Models.FileNode? node)
-    {
-        Target = target;
-        Node = node;
-    }
-}
+public sealed record ArchiveTreeItemCommand(Models.FileNode? Node) : ICommand<bool>;
 
-public sealed class ArchiveTreeItemHandler : ICommandHandler<ArchiveTreeItemCommand>
+public sealed class ArchiveTreeItemHandler(ICommandTarget target) : ICommandHandler<ArchiveTreeItemCommand, bool>
 {
-    public Task ExecuteAsync(ArchiveTreeItemCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(ArchiveTreeItemCommand command, CallContext context)
     {
-        command.Target.ArchiveTreeItem(command.Node);
-        return Task.CompletedTask;
+        target.ArchiveTreeItem(command.Node);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Tree Operations ---
 
-public sealed class OpenTreeItemCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public Models.FileNode? Node { get; }
-    public OpenTreeItemCommand(ICommandTarget target, Models.FileNode? node)
-    {
-        Target = target;
-        Node = node;
-    }
-}
+public sealed record OpenTreeItemCommand(Models.FileNode? Node) : ICommand<bool>;
 
-public sealed class OpenTreeItemHandler : ICommandHandler<OpenTreeItemCommand>
+public sealed class OpenTreeItemHandler(ICommandTarget target) : ICommandHandler<OpenTreeItemCommand, bool>
 {
-    public Task ExecuteAsync(OpenTreeItemCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(OpenTreeItemCommand command, CallContext context)
     {
-        command.Target.OpenTreeItem(command.Node);
-        return Task.CompletedTask;
+        target.OpenTreeItem(command.Node);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Config ---
 
-public sealed class OpenAgentConfigCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public OpenAgentConfigCommand(ICommandTarget target) => Target = target;
-}
+public sealed record OpenAgentConfigCommand() : ICommand<bool>;
 
-public sealed class OpenAgentConfigHandler : ICommandHandler<OpenAgentConfigCommand>
+public sealed class OpenAgentConfigHandler(ICommandTarget target) : ICommandHandler<OpenAgentConfigCommand, bool>
 {
-    public Task ExecuteAsync(OpenAgentConfigCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(OpenAgentConfigCommand command, CallContext context)
     {
-        command.Target.OpenAgentConfig();
-        return Task.CompletedTask;
+        target.OpenAgentConfig();
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
-public sealed class OpenPromptTemplatesCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public OpenPromptTemplatesCommand(ICommandTarget target) => Target = target;
-}
+public sealed record OpenPromptTemplatesCommand() : ICommand<bool>;
 
-public sealed class OpenPromptTemplatesHandler : ICommandHandler<OpenPromptTemplatesCommand>
+public sealed class OpenPromptTemplatesHandler(ICommandTarget target) : ICommandHandler<OpenPromptTemplatesCommand, bool>
 {
-    public Task ExecuteAsync(OpenPromptTemplatesCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(OpenPromptTemplatesCommand command, CallContext context)
     {
-        command.Target.OpenPromptTemplates();
-        return Task.CompletedTask;
+        target.OpenPromptTemplates();
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Phone Navigation ---
 
-public sealed class PhoneNavigateSectionCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public string? SectionKey { get; }
-    public PhoneNavigateSectionCommand(ICommandTarget target, string? sectionKey)
-    {
-        Target = target;
-        SectionKey = sectionKey;
-    }
-}
+public sealed record PhoneNavigateSectionCommand(string? SectionKey) : ICommand<bool>;
 
-public sealed class PhoneNavigateSectionHandler : ICommandHandler<PhoneNavigateSectionCommand>
+public sealed class PhoneNavigateSectionHandler(ICommandTarget target) : ICommandHandler<PhoneNavigateSectionCommand, bool>
 {
-    public Task ExecuteAsync(PhoneNavigateSectionCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(PhoneNavigateSectionCommand command, CallContext context)
     {
-        command.Target.PhoneNavigateSection(command.SectionKey);
-        return Task.CompletedTask;
+        target.PhoneNavigateSection(command.SectionKey);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Tree Item Tap ---
 
-public sealed class TreeItemTappedCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public Models.FileNode? Node { get; }
-    public TreeItemTappedCommand(ICommandTarget target, Models.FileNode? node)
-    {
-        Target = target;
-        Node = node;
-    }
-}
+public sealed record TreeItemTappedCommand(Models.FileNode? Node) : ICommand<bool>;
 
-public sealed class TreeItemTappedHandler : ICommandHandler<TreeItemTappedCommand>
+public sealed class TreeItemTappedHandler(ICommandTarget target) : ICommandHandler<TreeItemTappedCommand, bool>
 {
-    public Task ExecuteAsync(TreeItemTappedCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(TreeItemTappedCommand command, CallContext context)
     {
-        command.Target.TreeItemTapped(command.Node);
-        return Task.CompletedTask;
+        target.TreeItemTapped(command.Node);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- JSON Node Double-Tap ---
 
-public sealed class JsonNodeDoubleTappedCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public Models.Json.JsonTreeNode? Node { get; }
-    public JsonNodeDoubleTappedCommand(ICommandTarget target, Models.Json.JsonTreeNode? node)
-    {
-        Target = target;
-        Node = node;
-    }
-}
+public sealed record JsonNodeDoubleTappedCommand(Models.Json.JsonTreeNode? Node) : ICommand<bool>;
 
-public sealed class JsonNodeDoubleTappedHandler : ICommandHandler<JsonNodeDoubleTappedCommand>
+public sealed class JsonNodeDoubleTappedHandler(ICommandTarget target) : ICommandHandler<JsonNodeDoubleTappedCommand, bool>
 {
-    public Task ExecuteAsync(JsonNodeDoubleTappedCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(JsonNodeDoubleTappedCommand command, CallContext context)
     {
-        command.Target.JsonNodeDoubleTapped(command.Node);
-        return Task.CompletedTask;
+        target.JsonNodeDoubleTapped(command.Node);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Search Row Tap ---
 
-public sealed class SearchRowTappedCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public Models.Json.SearchableEntry? Entry { get; }
-    public SearchRowTappedCommand(ICommandTarget target, Models.Json.SearchableEntry? entry)
-    {
-        Target = target;
-        Entry = entry;
-    }
-}
+public sealed record SearchRowTappedCommand(Models.Json.SearchableEntry? Entry) : ICommand<bool>;
 
-public sealed class SearchRowTappedHandler : ICommandHandler<SearchRowTappedCommand>
+public sealed class SearchRowTappedHandler(ICommandTarget target) : ICommandHandler<SearchRowTappedCommand, bool>
 {
-    public Task ExecuteAsync(SearchRowTappedCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(SearchRowTappedCommand command, CallContext context)
     {
-        command.Target.SearchRowTapped(command.Entry);
-        return Task.CompletedTask;
+        target.SearchRowTapped(command.Entry);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Search Row Double-Tap ---
 
-public sealed class SearchRowDoubleTappedCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public Models.Json.SearchableEntry? Entry { get; }
-    public SearchRowDoubleTappedCommand(ICommandTarget target, Models.Json.SearchableEntry? entry)
-    {
-        Target = target;
-        Entry = entry;
-    }
-}
+public sealed record SearchRowDoubleTappedCommand(Models.Json.SearchableEntry? Entry) : ICommand<bool>;
 
-public sealed class SearchRowDoubleTappedHandler : ICommandHandler<SearchRowDoubleTappedCommand>
+public sealed class SearchRowDoubleTappedHandler(ICommandTarget target) : ICommandHandler<SearchRowDoubleTappedCommand, bool>
 {
-    public Task ExecuteAsync(SearchRowDoubleTappedCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(SearchRowDoubleTappedCommand command, CallContext context)
     {
-        command.Target.SearchRowDoubleTapped(command.Entry);
-        return Task.CompletedTask;
+        target.SearchRowDoubleTapped(command.Entry);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }

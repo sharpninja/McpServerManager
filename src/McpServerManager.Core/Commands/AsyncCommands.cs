@@ -7,8 +7,8 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using McpServer.Cqrs;
 using Microsoft.Extensions.Logging;
-using McpServerManager.Core.Cqrs;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Models.Json;
 using McpServerManager.Core.Services;
@@ -23,19 +23,14 @@ internal static class CommandLogger
 
 // --- Initialize from MCP (full tree build + first load) ---
 
-public sealed class InitializeFromMcpCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public InitializeFromMcpCommand(ICommandTarget target) => Target = target;
-}
+public sealed record InitializeFromMcpCommand() : ICommand<bool>;
 
-public sealed class InitializeFromMcpHandler : ICommandHandler<InitializeFromMcpCommand>
+public sealed class InitializeFromMcpHandler(ICommandTarget target) : ICommandHandler<InitializeFromMcpCommand, bool>
 {
-    public Task ExecuteAsync(InitializeFromMcpCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(InitializeFromMcpCommand command, CallContext context)
     {
-        var t = command.Target;
-        t.DispatchToUi(() => t.StatusMessage = "Loading sessions from MCP...");
-        t.TrackBackgroundWork(Task.Run(async () =>
+        target.DispatchToUi(() => target.StatusMessage = "Loading sessions from MCP...");
+        target.TrackBackgroundWork(Task.Run(async () =>
         {
             try
             {
@@ -45,40 +40,32 @@ public sealed class InitializeFromMcpHandler : ICommandHandler<InitializeFromMcp
                 {
                     Services.OllamaLogAgentService.TryStartOllamaIfNeeded();
                 }
-                await t.ReloadFromMcpAsync().ConfigureAwait(true);
+                await target.ReloadFromMcpAsync().ConfigureAwait(true);
             }
             catch (Exception ex)
             {
                 CommandLogger.Logger.LogError(ex, "InitializeFromMcp failed");
-                t.DispatchToUi(() => t.StatusMessage = $"Failed to load tree: {ex.Message}");
+                target.DispatchToUi(() => target.StatusMessage = $"Failed to load tree: {ex.Message}");
             }
         }));
-        return Task.CompletedTask;
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Refresh and Load All JSON (aggregated view) ---
 
-public sealed class RefreshAndLoadAllJsonCommand : ICommand
+public sealed record RefreshAndLoadAllJsonCommand(string? PreselectedAgent = null) : ICommand<bool>
 {
-    public ICommandTarget Target { get; }
-    public string? PreselectedAgent { get; }
     /// <summary>Pre-fetched sessions to avoid a redundant MCP round-trip (e.g. on startup).</summary>
     public IReadOnlyList<UnifiedSessionLog>? CachedSessions { get; init; }
-    public RefreshAndLoadAllJsonCommand(ICommandTarget target, string? preselectedAgent = null)
-    {
-        Target = target;
-        PreselectedAgent = preselectedAgent;
-    }
 }
 
-public sealed class RefreshAndLoadAllJsonHandler : ICommandHandler<RefreshAndLoadAllJsonCommand>
+public sealed class RefreshAndLoadAllJsonHandler(ICommandTarget target) : ICommandHandler<RefreshAndLoadAllJsonCommand, bool>
 {
-    public Task ExecuteAsync(RefreshAndLoadAllJsonCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(RefreshAndLoadAllJsonCommand command, CallContext context)
     {
-        var t = command.Target;
-        t.DispatchToUi(() => t.StatusMessage = "Refreshing from MCP...");
-        t.TrackBackgroundWork(Task.Run(async () =>
+        target.DispatchToUi(() => target.StatusMessage = "Refreshing from MCP...");
+        target.TrackBackgroundWork(Task.Run(async () =>
         {
             try
             {
@@ -91,13 +78,13 @@ public sealed class RefreshAndLoadAllJsonHandler : ICommandHandler<RefreshAndLoa
                     // Reuse sessions already fetched by ReloadFromMcpAsync to
                     // avoid a redundant MCP round-trip on startup / tree rebuild.
                     uniqueSessions = command.CachedSessions.ToList();
-                    byPath = t.BuildSessionsByPathDict(uniqueSessions);
+                    byPath = target.BuildSessionsByPathDict(uniqueSessions);
                 }
                 else
                 {
-                    sessions = await t.McpSessionService.GetAllSessionsAsync(cancellationToken).ConfigureAwait(true);
-                    byPath = t.BuildSessionsByPathDict(sessions);
-                    uniqueSessions = t.OrderAndDeduplicateSessions(byPath);
+                    sessions = await target.McpSessionService.GetAllSessionsAsync(context.CancellationToken).ConfigureAwait(true);
+                    byPath = target.BuildSessionsByPathDict(sessions);
+                    uniqueSessions = target.OrderAndDeduplicateSessions(byPath);
                 }
 
                 // Stamp agent on entries
@@ -129,7 +116,7 @@ public sealed class RefreshAndLoadAllJsonHandler : ICommandHandler<RefreshAndLoa
                 };
 
                 var summary = new JsonLogSummary();
-                t.BuildUnifiedSummaryAndIndex(masterLog, summary);
+                target.BuildUnifiedSummaryAndIndex(masterLog, summary);
                 summary.SummaryLines.Clear();
                 summary.SummaryLines.Add($"Type: {masterLog.SourceType}");
                 summary.SummaryLines.Add($"Total Entries: {masterLog.EntryCount}");
@@ -150,97 +137,78 @@ public sealed class RefreshAndLoadAllJsonHandler : ICommandHandler<RefreshAndLoa
                 var sessionCount = uniqueSessions.Count;
                 var preselectedAgent = command.PreselectedAgent;
 
-                t.DispatchToUi(() =>
+                target.DispatchToUi(() =>
                 {
                     try
                     {
-                        t.SetMcpSessionState(uniqueSessions, byPath);
-                        t.JsonLogSummary = summary;
-                        t.JsonTree.Clear();
-                        t.JsonTree.Add(root);
-                        t.UpdateFilteredSearchEntries();
-                        t.AgentFilter = string.IsNullOrWhiteSpace(preselectedAgent) ? "" : preselectedAgent.Trim();
-                        t.StatusMessage = string.IsNullOrWhiteSpace(preselectedAgent)
+                        target.SetMcpSessionState(uniqueSessions, byPath);
+                        target.JsonLogSummary = summary;
+                        target.JsonTree.Clear();
+                        target.JsonTree.Add(root);
+                        target.UpdateFilteredSearchEntries();
+                        target.AgentFilter = string.IsNullOrWhiteSpace(preselectedAgent) ? "" : preselectedAgent.Trim();
+                        target.StatusMessage = string.IsNullOrWhiteSpace(preselectedAgent)
                             ? $"Loaded {reqCount} requests from {sessionCount} sessions."
-                            : $"Loaded {reqCount} requests from {sessionCount} sessions. Filtered by agent: {t.AgentFilter}.";
+                            : $"Loaded {reqCount} requests from {sessionCount} sessions. Filtered by agent: {target.AgentFilter}.";
                     }
                     catch (Exception ex)
                     {
-                        t.StatusMessage = $"Error building UI: {ex.Message}";
+                        target.StatusMessage = $"Error building UI: {ex.Message}";
                         CommandLogger.Logger.LogError(ex, "UI Build Error");
                     }
                 });
             }
             catch (Exception ex)
             {
-                t.DispatchToUi(() => t.StatusMessage = $"Error aggregating MCP sessions: {ex.Message}");
+                target.DispatchToUi(() => target.StatusMessage = $"Error aggregating MCP sessions: {ex.Message}");
                 CommandLogger.Logger.LogError(ex, "Aggregation Error");
             }
         }));
-        return Task.CompletedTask;
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Refresh and Load Agent JSON (filtered by agent) ---
 
-public sealed class RefreshAndLoadAgentJsonCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public string AgentName { get; }
-    public RefreshAndLoadAgentJsonCommand(ICommandTarget target, string agentName)
-    {
-        Target = target;
-        AgentName = agentName;
-    }
-}
+public sealed record RefreshAndLoadAgentJsonCommand(string AgentName) : ICommand<bool>;
 
-public sealed class RefreshAndLoadAgentJsonHandler : ICommandHandler<RefreshAndLoadAgentJsonCommand>
+public sealed class RefreshAndLoadAgentJsonHandler(ICommandTarget target) : ICommandHandler<RefreshAndLoadAgentJsonCommand, bool>
 {
-    public Task ExecuteAsync(RefreshAndLoadAgentJsonCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(RefreshAndLoadAgentJsonCommand command, CallContext context)
     {
         // Reuse the AllJson handler with a preselected agent filter
-        var inner = new RefreshAndLoadAllJsonCommand(command.Target, command.AgentName);
-        return new RefreshAndLoadAllJsonHandler().ExecuteAsync(inner, cancellationToken);
+        var inner = new RefreshAndLoadAllJsonCommand(command.AgentName);
+        return new RefreshAndLoadAllJsonHandler(target).HandleAsync(inner, context);
     }
 }
 
 // --- Refresh and Load Single Session ---
 
-public sealed class RefreshAndLoadSessionCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public string VirtualPath { get; }
-    public RefreshAndLoadSessionCommand(ICommandTarget target, string virtualPath)
-    {
-        Target = target;
-        VirtualPath = virtualPath;
-    }
-}
+public sealed record RefreshAndLoadSessionCommand(string VirtualPath) : ICommand<bool>;
 
-public sealed class RefreshAndLoadSessionHandler : ICommandHandler<RefreshAndLoadSessionCommand>
+public sealed class RefreshAndLoadSessionHandler(ICommandTarget target) : ICommandHandler<RefreshAndLoadSessionCommand, bool>
 {
-    public Task ExecuteAsync(RefreshAndLoadSessionCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(RefreshAndLoadSessionCommand command, CallContext context)
     {
-        var t = command.Target;
-        t.DispatchToUi(() => t.StatusMessage = "Refreshing from MCP...");
-        t.TrackBackgroundWork(Task.Run(async () =>
+        target.DispatchToUi(() => target.StatusMessage = "Refreshing from MCP...");
+        target.TrackBackgroundWork(Task.Run(async () =>
         {
             try
             {
-                var sessions = await t.McpSessionService.GetAllSessionsAsync(cancellationToken).ConfigureAwait(true);
-                var byPath = t.BuildSessionsByPathDict(sessions);
-                var uniqueSessions = t.OrderAndDeduplicateSessions(byPath);
+                var sessions = await target.McpSessionService.GetAllSessionsAsync(context.CancellationToken).ConfigureAwait(true);
+                var byPath = target.BuildSessionsByPathDict(sessions);
+                var uniqueSessions = target.OrderAndDeduplicateSessions(byPath);
 
                 if (!byPath.TryGetValue(command.VirtualPath, out var session))
                 {
-                    t.DispatchToUi(() => t.StatusMessage = "Session not found. Click Refresh.");
+                    target.DispatchToUi(() => target.StatusMessage = "Session not found. Click Refresh.");
                     return;
                 }
 
-                t.DispatchToUi(() => t.StatusMessage = $"Loading {session.SourceType}/{session.SessionId}...");
+                target.DispatchToUi(() => target.StatusMessage = $"Loading {session.SourceType}/{session.SessionId}...");
 
                 var summary = new JsonLogSummary();
-                t.BuildUnifiedSummaryAndIndex(session, summary);
+                target.BuildUnifiedSummaryAndIndex(session, summary);
                 summary.SummaryLines.Clear();
                 summary.SummaryLines.Add($"Type: {session.SourceType}");
                 summary.SummaryLines.Add($"Session: {session.SessionId}");
@@ -253,146 +221,102 @@ public sealed class RefreshAndLoadSessionHandler : ICommandHandler<RefreshAndLoa
                 var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = false };
                 var unifiedNode = JsonSerializer.SerializeToNode(session, options);
                 var root = new JsonTreeNode("Root", $"{session.SourceType} (Unified)", "Object") { IsExpanded = true };
-                t.BuildJsonTree(unifiedNode, root, null);
+                target.BuildJsonTree(unifiedNode, root, null);
 
-                t.DispatchToUi(() =>
+                target.DispatchToUi(() =>
                 {
-                    t.SetMcpSessionState(uniqueSessions, byPath);
-                    t.JsonTree.Clear();
-                    t.JsonLogSummary = summary;
-                    t.JsonTree.Add(root);
-                    t.UpdateFilteredSearchEntries();
-                    t.StatusMessage = $"Loaded {session.SourceType}/{session.SessionId}";
+                    target.SetMcpSessionState(uniqueSessions, byPath);
+                    target.JsonTree.Clear();
+                    target.JsonLogSummary = summary;
+                    target.JsonTree.Add(root);
+                    target.UpdateFilteredSearchEntries();
+                    target.StatusMessage = $"Loaded {session.SourceType}/{session.SessionId}";
                 });
             }
             catch (Exception ex)
             {
-                t.DispatchToUi(() => t.StatusMessage = $"Error loading session: {ex.Message}");
+                target.DispatchToUi(() => target.StatusMessage = $"Error loading session: {ex.Message}");
             }
         }));
-        return Task.CompletedTask;
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Load JSON File (local file) ---
 
-public sealed class LoadJsonFileCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public string FilePath { get; }
-    public LoadJsonFileCommand(ICommandTarget target, string filePath)
-    {
-        Target = target;
-        FilePath = filePath;
-    }
-}
+public sealed record LoadJsonFileCommand(string FilePath) : ICommand<bool>;
 
-public sealed class LoadJsonFileHandler : ICommandHandler<LoadJsonFileCommand>
+public sealed class LoadJsonFileHandler(ICommandTarget target) : ICommandHandler<LoadJsonFileCommand, bool>
 {
-    public Task ExecuteAsync(LoadJsonFileCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(LoadJsonFileCommand command, CallContext context)
     {
-        var t = command.Target;
-        t.DispatchToUi(() => t.StatusMessage = "Loading JSON...");
-        t.LoadJson(command.FilePath);
-        return Task.CompletedTask;
+        target.DispatchToUi(() => target.StatusMessage = "Loading JSON...");
+        target.LoadJson(command.FilePath);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Navigate to Node (GenerateAndNavigate) ---
 
-public sealed class NavigateToNodeCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public FileNode? Node { get; }
-    public NavigateToNodeCommand(ICommandTarget target, FileNode? node)
-    {
-        Target = target;
-        Node = node;
-    }
-}
+public sealed record NavigateToNodeCommand(FileNode? Node) : ICommand<bool>;
 
-public sealed class NavigateToNodeHandler : ICommandHandler<NavigateToNodeCommand>
+public sealed class NavigateToNodeHandler(ICommandTarget target) : ICommandHandler<NavigateToNodeCommand, bool>
 {
-    public Task ExecuteAsync(NavigateToNodeCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(NavigateToNodeCommand command, CallContext context)
     {
-        command.Target.GenerateAndNavigate(command.Node);
-        return Task.CompletedTask;
+        target.GenerateAndNavigate(command.Node);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Archive Current File ---
 
-public sealed class ArchiveCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public ArchiveCommand(ICommandTarget target) => Target = target;
-}
+public sealed record ArchiveCommand() : ICommand<bool>;
 
-public sealed class ArchiveHandler : ICommandHandler<ArchiveCommand>
+public sealed class ArchiveHandler(ICommandTarget target) : ICommandHandler<ArchiveCommand, bool>
 {
-    public Task ExecuteAsync(ArchiveCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(ArchiveCommand command, CallContext context)
     {
-        command.Target.Archive();
-        return Task.CompletedTask;
+        target.Archive();
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Refresh View ---
 
-public sealed class RefreshCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public RefreshCommand(ICommandTarget target) => Target = target;
-}
+public sealed record RefreshCommand() : ICommand<bool>;
 
-public sealed class RefreshHandler : ICommandHandler<RefreshCommand>
+public sealed class RefreshHandler(ICommandTarget target) : ICommandHandler<RefreshCommand, bool>
 {
-    public async Task ExecuteAsync(RefreshCommand command, CancellationToken cancellationToken = default)
+    public async Task<Result<bool>> HandleAsync(RefreshCommand command, CallContext context)
     {
-        await command.Target.RefreshAsync();
+        await target.RefreshAsync();
+        return Result<bool>.Success(true);
     }
 }
 
 // --- Load Markdown File ---
 
-public sealed class LoadMarkdownFileCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public FileNode Node { get; }
-    public LoadMarkdownFileCommand(ICommandTarget target, FileNode node)
-    {
-        Target = target;
-        Node = node;
-    }
-}
+public sealed record LoadMarkdownFileCommand(FileNode Node) : ICommand<bool>;
 
-public sealed class LoadMarkdownFileHandler : ICommandHandler<LoadMarkdownFileCommand>
+public sealed class LoadMarkdownFileHandler(ICommandTarget target) : ICommandHandler<LoadMarkdownFileCommand, bool>
 {
-    public Task ExecuteAsync(LoadMarkdownFileCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(LoadMarkdownFileCommand command, CallContext context)
     {
-        command.Target.LoadMarkdownFile(command.Node);
-        return Task.CompletedTask;
+        target.LoadMarkdownFile(command.Node);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }
 
 // --- Load Source File ---
 
-public sealed class LoadSourceFileCommand : ICommand
-{
-    public ICommandTarget Target { get; }
-    public FileNode Node { get; }
-    public LoadSourceFileCommand(ICommandTarget target, FileNode node)
-    {
-        Target = target;
-        Node = node;
-    }
-}
+public sealed record LoadSourceFileCommand(FileNode Node) : ICommand<bool>;
 
-public sealed class LoadSourceFileHandler : ICommandHandler<LoadSourceFileCommand>
+public sealed class LoadSourceFileHandler(ICommandTarget target) : ICommandHandler<LoadSourceFileCommand, bool>
 {
-    public Task ExecuteAsync(LoadSourceFileCommand command, CancellationToken cancellationToken = default)
+    public Task<Result<bool>> HandleAsync(LoadSourceFileCommand command, CallContext context)
     {
-        command.Target.LoadSourceFile(command.Node);
-        return Task.CompletedTask;
+        target.LoadSourceFile(command.Node);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }

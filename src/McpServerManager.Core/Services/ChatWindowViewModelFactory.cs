@@ -1,8 +1,9 @@
 using System;
+using McpServer.Cqrs;
 using McpServerManager.Core.Commands;
-using McpServerManager.Core.Cqrs;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace McpServerManager.Core.Services;
 
@@ -11,7 +12,7 @@ public interface IChatWindowViewModelFactory
     ChatWindowViewModel Create(Func<string> getContext);
 }
 
-/// <summary>Compliant composition factory for chat ViewModels. Owns handler registration and config-model integration.</summary>
+/// <summary>Compliant composition factory for chat ViewModels. Builds a DI container with chat handlers and Dispatcher.</summary>
 public sealed class ChatWindowViewModelFactory : IChatWindowViewModelFactory
 {
     private readonly Func<ILogAgentService> _agentServiceFactory;
@@ -31,34 +32,33 @@ public sealed class ChatWindowViewModelFactory : IChatWindowViewModelFactory
     public ChatWindowViewModel Create(Func<string> getContext)
     {
         var agentService = _agentServiceFactory();
-        var mediator = CreateMediator(agentService);
+        var dispatcher = CreateDispatcher(agentService);
         return new ChatWindowViewModel(
-            mediator,
+            dispatcher,
             getContext,
             _readSelectedModel(),
             _writeSelectedModel);
     }
 
-    public static Mediator CreateMediator(ILogAgentService agentService)
+    public static McpServer.Cqrs.Dispatcher CreateDispatcher(ILogAgentService agentService)
     {
         if (agentService == null) throw new ArgumentNullException(nameof(agentService));
 
-        var mediator = new Mediator();
+        var services = new ServiceCollection();
+        services.AddSingleton(AppLogService.Instance);
+        services.AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(sp => sp.GetRequiredService<AppLogService>());
+        services.AddSingleton(typeof(Microsoft.Extensions.Logging.ILogger<>), typeof(AppLogger<>));
 
-        var promptTemplateService = new LocalChatPromptTemplateService();
-        var configFilesService = new LocalChatConfigFilesService();
-        var modelDiscoveryService = new OllamaChatModelDiscoveryService();
-        var sendService = new LogAgentChatSendOrchestrationService(agentService);
+        // Register chat-specific services for handler DI
+        services.AddSingleton<IChatPromptTemplateService>(new LocalChatPromptTemplateService());
+        services.AddSingleton<IChatConfigFilesService>(new LocalChatConfigFilesService());
+        services.AddSingleton<IChatModelDiscoveryService>(new OllamaChatModelDiscoveryService());
+        services.AddSingleton<IChatSendOrchestrationService>(new LogAgentChatSendOrchestrationService(agentService));
 
-        mediator.Register<ChatOpenAgentConfigCommand, ChatFileOpenResult>(new ChatOpenAgentConfigHandler(configFilesService));
-        mediator.Register<ChatOpenPromptTemplatesCommand, ChatFileOpenResult>(new ChatOpenPromptTemplatesHandler(configFilesService));
-        mediator.Register<ChatLoadPromptsCommand, System.Collections.Generic.IReadOnlyList<PromptTemplate>>(
-            new ChatLoadPromptsHandler(promptTemplateService));
-        mediator.Register<ChatPopulatePromptCommand, string>(new ChatPopulatePromptHandler());
-        mediator.Register<ChatSubmitPromptCommand, ChatPreparedPromptResult>(new ChatSubmitPromptHandler());
-        mediator.RegisterQuery(new ChatLoadModelsHandler(modelDiscoveryService));
-        mediator.Register<ChatSendMessageCommand, ChatSendMessageResult>(new ChatSendMessageHandler(sendService));
+        services.AddCqrsDispatcher();
+        services.AddCqrsHandlers(typeof(ChatOpenAgentConfigCommand).Assembly);
 
-        return mediator;
+        var provider = services.BuildServiceProvider();
+        return provider.GetRequiredService<McpServer.Cqrs.Dispatcher>();
     }
 }

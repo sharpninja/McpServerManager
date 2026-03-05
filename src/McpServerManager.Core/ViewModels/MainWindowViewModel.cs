@@ -23,7 +23,6 @@ using McpServerManager.Core.Converters;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Models.Json;
 using McpServerManager.Core.Services;
-using McpServerManager.Core.Cqrs;
 using McpServerManager.Core.Commands;
 
 namespace McpServerManager.Core.ViewModels;
@@ -71,7 +70,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     private UiCoreAppRuntime _uiCoreRuntime = null!;
     private bool _suppressWorkspaceSelectionChanged;
     private bool _hasCompletedInitialSwitch;
-    internal readonly Mediator _mediator;
+    internal McpServer.Cqrs.Dispatcher _dispatcher = null!;
     private readonly McpServiceFactory _serviceFactory = new();
     private readonly McpServer.UI.Core.Services.IFileSystemService _fs = new Services.Infrastructure.FileSystemService();
     private readonly McpServer.UI.Core.Services.IProcessLauncherService _processLauncher = new Services.Infrastructure.ProcessLauncherService();
@@ -192,7 +191,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     [RelayCommand]
     private void PhoneNavigateSection(string? sectionKey)
-        => _mediator.SendAsync(new Commands.PhoneNavigateSectionCommand(this, sectionKey));
+        => _ = _dispatcher.SendAsync(new Commands.PhoneNavigateSectionCommand(sectionKey));
 
     internal void PhoneNavigateSectionInternal(string? sectionKey)
     {
@@ -310,7 +309,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     partial void OnIsBusyChanged(bool value)
     {
-        _logger.LogDebug($"[ViewModel] IsBusy changed to {value}, mediator.IsBusy={_mediator.IsBusy}");
+        _logger.LogDebug($"[ViewModel] IsBusy changed to {value}");
     }
 
     /// <summary>True when markdown preview was opened in the system browser.</summary>
@@ -382,8 +381,6 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         _clipboardService = clipboardService;
         _systemNotificationService = systemNotificationService ?? NoOpSystemNotificationService.Instance;
         _activeBearerToken = string.IsNullOrWhiteSpace(bearerToken) ? null : bearerToken.Trim();
-        _mediator = AppMediatorFactory.CreateAndRegisterAllHandlers(
-            busy => DispatchToUi(() => IsBusy = _mediator.IsBusy));
         InitializeMcpEndpoint(mcpBaseUrl, mcpApiKey);
     }
 
@@ -434,6 +431,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 ?? _mcpClient.WorkspacePath);
 
         _uiCoreRuntime = new UiCoreAppRuntime(
+            commandTarget: this,
             todoService: _mcpTodoService,
             workspaceService: _mcpWorkspaceService,
             voiceService: _mcpVoiceService,
@@ -443,6 +441,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             {
                 ActiveWorkspacePath = _mcpClient.WorkspacePath ?? string.Empty
             });
+        _dispatcher = _uiCoreRuntime.GetRequiredService<McpServer.Cqrs.Dispatcher>();
 
         // Pre-populate the workspace picker with a placeholder.
         // No switch is triggered here — the real switch happens in LoadWorkspaceConnectionsAsync
@@ -552,7 +551,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     /// <summary>Command for tree item tap (handles directory expand/collapse and MCP node refresh).</summary>
     [RelayCommand]
     private void TreeItemTapped(FileNode? node)
-        => _mediator.SendAsync(new Commands.TreeItemTappedCommand(this, node));
+        => _ = _dispatcher.SendAsync(new Commands.TreeItemTappedCommand(node));
 
     internal void TreeItemTappedInternal(FileNode? node)
     {
@@ -597,7 +596,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     /// <summary>Command for JSON tree node double-tap (navigate to details or copy text).</summary>
     [RelayCommand]
     private void JsonNodeDoubleTapped(JsonTreeNode? node)
-        => _mediator.SendAsync(new Commands.JsonNodeDoubleTappedCommand(this, node));
+        => _ = _dispatcher.SendAsync(new Commands.JsonNodeDoubleTappedCommand(node));
 
     internal void JsonNodeDoubleTappedInternal(JsonTreeNode? node)
     {
@@ -609,7 +608,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     /// <summary>Command for search row single-tap (select entry).</summary>
     [RelayCommand]
     private void SearchRowTapped(SearchableEntry? entry)
-        => _mediator.SendAsync(new Commands.SearchRowTappedCommand(this, entry));
+        => _ = _dispatcher.SendAsync(new Commands.SearchRowTappedCommand(entry));
 
     internal void SearchRowTappedInternal(SearchableEntry? entry)
     {
@@ -620,7 +619,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     /// <summary>Command for search row double-tap (open request details).</summary>
     [RelayCommand]
     private void SearchRowDoubleTapped(SearchableEntry? entry)
-        => _mediator.SendAsync(new Commands.SearchRowDoubleTappedCommand(this, entry));
+        => _ = _dispatcher.SendAsync(new Commands.SearchRowDoubleTappedCommand(entry));
 
     internal void SearchRowDoubleTappedInternal(SearchableEntry? entry)
     {
@@ -649,7 +648,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     /// <summary>Called by MainWindow when it has opened. Builds the file tree off the UI thread and applies on UI; starts the watcher.</summary>
     public void InitializeAfterWindowShown()
     {
-        _ = _mediator.SendAsync(new Commands.InitializeFromMcpCommand(this));
+        _ = _dispatcher.SendAsync(new Commands.InitializeFromMcpCommand());
         _ = LoadWorkspaceConnectionsAsync();
         StartAgentEventListener();
     }
@@ -1491,7 +1490,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     [RelayCommand(CanExecute = nameof(CanNavigateBack))]
-    private void NavigateBack() => _mediator.SendAsync(new Commands.NavigateBackCommand(this));
+    private void NavigateBack() => _ = _dispatcher.SendAsync(new Commands.NavigateBackCommand());
 
     public void NavigateBackInternal()
     {
@@ -1510,7 +1509,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     private bool CanNavigateBack() => _backStack.Count > 0;
 
     [RelayCommand(CanExecute = nameof(CanNavigateForward))]
-    private void NavigateForward() => _mediator.SendAsync(new Commands.NavigateForwardCommand(this));
+    private void NavigateForward() => _ = _dispatcher.SendAsync(new Commands.NavigateForwardCommand());
 
     public void NavigateForwardInternal()
     {
@@ -1535,7 +1534,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         RefreshCommand.NotifyCanExecuteChanged();
         try
         {
-            await _mediator.SendAsync(new Commands.RefreshViewCommand(this));
+            await _dispatcher.SendAsync(new Commands.RefreshViewCommand());
         }
         finally
         {
@@ -1604,7 +1603,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     [RelayCommand]
-    private void ShowRequestDetails(SearchableEntry entry) => _mediator.SendAsync(new Commands.ShowRequestDetailsCommand(this, entry));
+    private void ShowRequestDetails(SearchableEntry entry) => _ = _dispatcher.SendAsync(new Commands.ShowRequestDetailsCommand(entry));
 
     public void ShowRequestDetailsInternal(SearchableEntry entry)
     {
@@ -1898,7 +1897,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     [RelayCommand]
-    private void SelectSearchEntry(SearchableEntry entry) => _mediator.SendAsync(new Commands.SelectSearchEntryCommand(this, entry));
+    private void SelectSearchEntry(SearchableEntry entry) => _ = _dispatcher.SendAsync(new Commands.SelectSearchEntryCommand(entry));
 
     public void SelectSearchEntryInternal(SearchableEntry entry)
     {
@@ -1907,7 +1906,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     [RelayCommand]
-    private void CloseRequestDetails() => _mediator.SendAsync(new Commands.CloseRequestDetailsCommand(this));
+    private void CloseRequestDetails() => _ = _dispatcher.SendAsync(new Commands.CloseRequestDetailsCommand());
 
     public void CloseRequestDetailsInternal()
     {
@@ -1946,7 +1945,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     [RelayCommand(CanExecute = nameof(CanNavigateToPreviousRequest))]
-    private void NavigateToPreviousRequest() => _mediator.SendAsync(new Commands.NavigateToPreviousRequestCommand(this));
+    private void NavigateToPreviousRequest() => _ = _dispatcher.SendAsync(new Commands.NavigateToPreviousRequestCommand());
 
     public void NavigateToPreviousRequestInternal()
     {
@@ -1961,7 +1960,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     [RelayCommand(CanExecute = nameof(CanNavigateToNextRequest))]
-    private void NavigateToNextRequest() => _mediator.SendAsync(new Commands.NavigateToNextRequestCommand(this));
+    private void NavigateToNextRequest() => _ = _dispatcher.SendAsync(new Commands.NavigateToNextRequestCommand());
 
     public void NavigateToNextRequestInternal()
     {
@@ -2016,7 +2015,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     [RelayCommand]
-    private async Task CopyText(string text) => await _mediator.SendAsync(new Commands.CopyTextCommand(this, text));
+    private async Task CopyText(string text) => await _dispatcher.SendAsync(new Commands.CopyTextCommand(text));
 
     public async Task CopyTextInternal(string text)
     {
@@ -2028,7 +2027,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     [RelayCommand]
-    private async Task CopyOriginalJson(UnifiedRequestEntry? entry) => await _mediator.SendAsync(new Commands.CopyOriginalJsonCommand(this, entry));
+    private async Task CopyOriginalJson(UnifiedRequestEntry? entry) => await _dispatcher.SendAsync(new Commands.CopyOriginalJsonCommand(entry));
 
     public async Task CopyOriginalJsonInternal(UnifiedRequestEntry? entry)
     {
@@ -2494,7 +2493,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
              ArchiveCommand.NotifyCanExecuteChanged();
              var cached = _cachedSessionsForAutoLoad;
              _cachedSessionsForAutoLoad = null;
-             _ = _mediator.SendAsync(new Commands.RefreshAndLoadAllJsonCommand(this) { CachedSessions = cached });
+             _ = _dispatcher.SendAsync(new Commands.RefreshAndLoadAllJsonCommand() { CachedSessions = cached });
              return;
          }
 
@@ -2504,7 +2503,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
              if (!preserveDetailsView) IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
              var agentName = GetAgentNameFromVirtualPath(node.Path);
-             _ = _mediator.SendAsync(new Commands.RefreshAndLoadAgentJsonCommand(this, agentName));
+             _ = _dispatcher.SendAsync(new Commands.RefreshAndLoadAgentJsonCommand(agentName));
              return;
          }
 
@@ -2514,7 +2513,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
              if (!preserveDetailsView) IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
              var virtualPath = node.Path;
-             _ = _mediator.SendAsync(new Commands.RefreshAndLoadSessionCommand(this, virtualPath));
+             _ = _dispatcher.SendAsync(new Commands.RefreshAndLoadSessionCommand(virtualPath));
              return;
          }
 
@@ -2525,13 +2524,13 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
              IsMarkdownVisible = false;
              if (!preserveDetailsView) IsJsonVisible = true;
              ArchiveCommand.NotifyCanExecuteChanged();
-             _ = _mediator.SendAsync(new Commands.LoadJsonFileCommand(this, node.Path));
+             _ = _dispatcher.SendAsync(new Commands.LoadJsonFileCommand(node.Path));
              return;
          }
 
          if (node.Path.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
          {
-             _ = _mediator.SendAsync(new Commands.LoadMarkdownFileCommand(this, node));
+             _ = _dispatcher.SendAsync(new Commands.LoadMarkdownFileCommand(node));
              return;
          }
 
@@ -2541,7 +2540,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
              var ext = Path.GetExtension(node.Path);
              if (!string.IsNullOrEmpty(ext) && IsCodeFile(ext))
              {
-                 _ = _mediator.SendAsync(new Commands.LoadSourceFileCommand(this, node));
+                 _ = _dispatcher.SendAsync(new Commands.LoadSourceFileCommand(node));
                  return;
              }
          }
@@ -2685,7 +2684,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     [RelayCommand]
-    private void OpenPreviewInBrowser() => _mediator.SendAsync(new Commands.OpenPreviewInBrowserCommand(this));
+    private void OpenPreviewInBrowser() => _ = _dispatcher.SendAsync(new Commands.OpenPreviewInBrowserCommand());
 
     public void OpenPreviewInBrowserInternal()
     {
@@ -2698,7 +2697,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     [RelayCommand]
-    private void ToggleShowRawMarkdown() => _mediator.SendAsync(new Commands.ToggleShowRawMarkdownCommand(this));
+    private void ToggleShowRawMarkdown() => _ = _dispatcher.SendAsync(new Commands.ToggleShowRawMarkdownCommand());
 
     public void ToggleShowRawMarkdownInternal()
     {
@@ -2706,7 +2705,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     [RelayCommand]
-    private void OpenAgentConfig() => _mediator.SendAsync(new Commands.OpenAgentConfigCommand(this));
+    private void OpenAgentConfig() => _ = _dispatcher.SendAsync(new Commands.OpenAgentConfigCommand());
 
     public void OpenAgentConfigInternal()
     {
@@ -2715,7 +2714,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     [RelayCommand]
-    private void OpenPromptTemplates() => _mediator.SendAsync(new Commands.OpenPromptTemplatesCommand(this));
+    private void OpenPromptTemplates() => _ = _dispatcher.SendAsync(new Commands.OpenPromptTemplatesCommand());
 
     public void OpenPromptTemplatesInternal()
     {
@@ -2750,7 +2749,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         !IsArchivedName(Path.GetFileName(_currentMarkdownPath));
 
     [RelayCommand(CanExecute = nameof(CanArchive))]
-    private void Archive() => _mediator.SendAsync(new Commands.ArchiveCurrentCommand(this));
+    private void Archive() => _ = _dispatcher.SendAsync(new Commands.ArchiveCurrentCommand());
 
     public void ArchiveInternal()
     {
@@ -2787,7 +2786,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     /// <summary>Opens (navigates to) the tree node. Used by tree context menu.</summary>
     [RelayCommand]
-    private void OpenTreeItem(FileNode? node) => _mediator.SendAsync(new Commands.OpenTreeItemCommand(this, node));
+    private void OpenTreeItem(FileNode? node) => _ = _dispatcher.SendAsync(new Commands.OpenTreeItemCommand(node));
 
     public void OpenTreeItemInternal(FileNode? node)
     {
@@ -2798,7 +2797,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     /// <summary>Archives the file represented by the tree node by renaming to archive-&lt;name&gt;. Used by tree context menu. Not available for All JSON or directories.</summary>
     [RelayCommand(CanExecute = nameof(CanArchiveTreeItem))]
-    private void ArchiveTreeItem(FileNode? node) => _mediator.SendAsync(new Commands.ArchiveTreeItemCommand(this, node));
+    private void ArchiveTreeItem(FileNode? node) => _ = _dispatcher.SendAsync(new Commands.ArchiveTreeItemCommand(node));
 
     public void ArchiveTreeItemInternal(FileNode? node)
     {
@@ -3982,7 +3981,31 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     void ICommandTarget.LoadSourceFile(FileNode node) => LoadSourceFileInternal(node);
     void ICommandTarget.UpdateFilteredSearchEntries() => UpdateFilteredSearchEntriesInternal();
     void ICommandTarget.GenerateAndNavigate(FileNode? node) => GenerateAndNavigateInternal(node);
-    void ICommandTarget.TrackBackgroundWork(Task task) => _mediator.TrackBackgroundWork(task);
+    private readonly object _busyLock = new();
+    private readonly List<Task> _outstandingTasks = new();
+
+    void ICommandTarget.TrackBackgroundWork(Task task)
+    {
+        if (task == null || task.IsCompleted) return;
+        bool wasBusy;
+        lock (_busyLock)
+        {
+            wasBusy = _outstandingTasks.Count > 0;
+            _outstandingTasks.Add(task);
+        }
+        if (!wasBusy) DispatchToUi(() => IsBusy = true);
+
+        task.ContinueWith(t =>
+        {
+            bool nowIdle;
+            lock (_busyLock)
+            {
+                _outstandingTasks.Remove(task);
+                nowIdle = _outstandingTasks.Count == 0;
+            }
+            if (nowIdle) DispatchToUi(() => IsBusy = false);
+        }, TaskScheduler.Default);
+    }
     void ICommandTarget.DispatchToUi(Action action) => DispatchToUi(action);
 
     string ICommandTarget.StatusMessage

@@ -11,6 +11,7 @@ namespace McpServerManager.Core.Services;
 internal static class UiCoreServiceProviderFactory
 {
     public static ServiceProvider Build(
+        Commands.ICommandTarget commandTarget,
         McpTodoService? todoService = null,
         McpWorkspaceService? workspaceService = null,
         McpVoiceConversationService? voiceService = null,
@@ -53,7 +54,12 @@ internal static class UiCoreServiceProviderFactory
         services.AddSingleton(jsonParsingService ?? new JsonParsingService());
         services.AddSingleton(fileSystemWatcherService ?? new FileSystemWatcherService());
 
+        // Register ICommandTarget for CQRS handler DI
+        services.AddSingleton<Commands.ICommandTarget>(commandTarget);
+
         services.AddCqrsDispatcher();
+        // Scan app command handlers for DI-based handler discovery
+        services.AddCqrsHandlers(typeof(Commands.NavigateBackCommand).Assembly);
         services.AddUiCore();
         if (workspaceContext is not null)
             services.AddSingleton(workspaceContext);

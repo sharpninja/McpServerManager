@@ -215,6 +215,74 @@ Architecture:
       done: true
     - task: Verify GAP-001/002/010/011 closures after runtime consolidation (commit 5e68ad5)
       done: true
+Features:
+  high-priority:
+  - id: settings-tab-speech-filter-words
+    title: Add settings tab with configurable speech filter word list
+    estimate: 4h
+    note: User-configurable word list; match is case-insensitive substring match per line
+    done: true
+    completed: 2026-03-01T07:05:34.5814169Z
+    description:
+    - Add a Settings tab to the app UI that allows the user to configure a list of filter words.
+    - When streaming output from MCP tool calls, any line containing one or more of these filter words
+    - should be excluded from text-to-speech (TTS) synthesis.
+    - This allows users to suppress noisy or irrelevant lines from being read aloud.
+    done-summary: Settings tab with configurable speech filter word list implemented and committed in 5e42d8f. SpeechFilterService, SettingsViewModel, SettingsView.axaml all created and integrated. Build verified.
+    implementation-tasks:
+    - task: Create SpeechFilterService in Core with persistence and ShouldFilter method
+      done: true
+    - task: Create SettingsViewModel in Core with filter word list binding
+      done: true
+    - task: Create SettingsView.axaml and code-behind in Desktop
+      done: true
+    - task: Add Settings tab to MainWindow.axaml
+      done: true
+    - task: Wire SettingsViewModel in MainWindowViewModel
+      done: true
+    - task: Integrate SpeechFilterService into Android SimplifiedVoiceView TTS flow
+      done: true
+    - task: Build and verify no compilation errors
+      done: true
+DEPLOY-STATUS:
+  high-priority:
+  - id: deploy-status-20260302-1512z
+    title: APK Published and Verified at 20260302-1512Z
+    done: true
+    description:
+    - Pipeline run 22580481045 completed successfully.
+    - F-Droid index-v1.json resolves to McpServerManager-0.0.1-160.apk (versionCode 101) at https://sharpninja.github.io/McpServerManager/repo.
+Infrastructure:
+  high-priority:
+  - id: android-crash-diagnostics-pipeline
+    title: Android crash diagnostics pipeline and repro workflow
+    estimate: 6h
+    done: true
+    completed: 2026-03-03T00:00:00Z
+    description:
+    - Implement early Android/global crash capture with persistent artifacts for phone crash diagnosis.
+    - Add device-side Motorola repro workflow artifacts for logcat, tombstone, and process-exit-reason capture.
+    done-summary: Implemented shared Android crash diagnostics with early application hookup, persistent fatal/exit/boundary artifacts, adb collection workflow script/docs, and verified the Android Debug build succeeds.
+    technical-details:
+    - Install Java uncaught-exception handling in MainApplication before Avalonia App initialization.
+    - Persist fatal crash reports and native-boundary breadcrumbs under app files directory for recovery on next launch.
+    - Add repository script/documentation for adb-based capture workflow.
+    functional-requirements:
+    - FR-RTUI-117
+    technical-requirements:
+    - TR-RTUI-127
+    - TR-RTUI-128
+    implementation-tasks:
+    - task: Add Android crash diagnostics service and early MainApplication hookup
+      done: true
+    - task: Persist and replay fatal crash reports plus active native-operation breadcrumbs
+      done: true
+    - task: Add adb collection script and workflow documentation
+      done: true
+    - task: Validate Android project builds after diagnostics changes
+      done: true
+refactoring:
+  high-priority:
   - id: uicore-vm-relay-plan
     title: 'Excruciating plan: refactor apps to UI.Core ViewModels + RelayCommands'
     estimate: 5d
@@ -478,69 +546,3 @@ Architecture:
       done: false
     - task: 'M5.3 Verify and complete AgentApiClientAdapter coverage in McpServer.Web (GAP-018/019 partial): confirm agent-pool queue/job/stream/notifications adapter operations are wired or document remaining Web adapter gaps'
       done: false
-Features:
-  high-priority:
-  - id: settings-tab-speech-filter-words
-    title: Add settings tab with configurable speech filter word list
-    estimate: 4h
-    note: User-configurable word list; match is case-insensitive substring match per line
-    done: true
-    completed: 2026-03-01T07:05:34.5814169Z
-    description:
-    - Add a Settings tab to the app UI that allows the user to configure a list of filter words.
-    - When streaming output from MCP tool calls, any line containing one or more of these filter words
-    - should be excluded from text-to-speech (TTS) synthesis.
-    - This allows users to suppress noisy or irrelevant lines from being read aloud.
-    done-summary: Settings tab with configurable speech filter word list implemented and committed in 5e42d8f. SpeechFilterService, SettingsViewModel, SettingsView.axaml all created and integrated. Build verified.
-    implementation-tasks:
-    - task: Create SpeechFilterService in Core with persistence and ShouldFilter method
-      done: true
-    - task: Create SettingsViewModel in Core with filter word list binding
-      done: true
-    - task: Create SettingsView.axaml and code-behind in Desktop
-      done: true
-    - task: Add Settings tab to MainWindow.axaml
-      done: true
-    - task: Wire SettingsViewModel in MainWindowViewModel
-      done: true
-    - task: Integrate SpeechFilterService into Android SimplifiedVoiceView TTS flow
-      done: true
-    - task: Build and verify no compilation errors
-      done: true
-DEPLOY-STATUS:
-  high-priority:
-  - id: deploy-status-20260302-1512z
-    title: APK Published and Verified at 20260302-1512Z
-    done: true
-    description:
-    - Pipeline run 22580481045 completed successfully.
-    - F-Droid index-v1.json resolves to McpServerManager-0.0.1-160.apk (versionCode 101) at https://sharpninja.github.io/McpServerManager/repo.
-Infrastructure:
-  high-priority:
-  - id: android-crash-diagnostics-pipeline
-    title: Android crash diagnostics pipeline and repro workflow
-    estimate: 6h
-    done: true
-    completed: 2026-03-03T00:00:00Z
-    description:
-    - Implement early Android/global crash capture with persistent artifacts for phone crash diagnosis.
-    - Add device-side Motorola repro workflow artifacts for logcat, tombstone, and process-exit-reason capture.
-    done-summary: Implemented shared Android crash diagnostics with early application hookup, persistent fatal/exit/boundary artifacts, adb collection workflow script/docs, and verified the Android Debug build succeeds.
-    technical-details:
-    - Install Java uncaught-exception handling in MainApplication before Avalonia App initialization.
-    - Persist fatal crash reports and native-boundary breadcrumbs under app files directory for recovery on next launch.
-    - Add repository script/documentation for adb-based capture workflow.
-    functional-requirements:
-    - FR-RTUI-117
-    technical-requirements:
-    - TR-RTUI-127
-    - TR-RTUI-128
-    implementation-tasks:
-    - task: Add Android crash diagnostics service and early MainApplication hookup
-      done: true
-    - task: Persist and replay fatal crash reports plus active native-operation breadcrumbs
-      done: true
-    - task: Add adb collection script and workflow documentation
-      done: true
-    - task: Validate Android project builds after diagnostics changes
-      done: true

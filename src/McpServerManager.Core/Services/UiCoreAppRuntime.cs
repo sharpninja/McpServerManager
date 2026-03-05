@@ -8,6 +8,7 @@ namespace McpServerManager.Core.Services;
 internal sealed class UiCoreAppRuntime : IDisposable
 {
     public UiCoreAppRuntime(
+        McpServerManager.Core.Commands.ICommandTarget commandTarget,
         McpTodoService? todoService = null,
         McpWorkspaceService? workspaceService = null,
         McpVoiceConversationService? voiceService = null,
@@ -22,6 +23,7 @@ internal sealed class UiCoreAppRuntime : IDisposable
     {
         WorkspaceContext = workspaceContext ?? new WorkspaceContextViewModel();
         Services = UiCoreServiceProviderFactory.Build(
+            commandTarget,
             todoService, workspaceService, voiceService,
             sessionLogService, eventStreamService,
             fileSystemService, processLauncherService,

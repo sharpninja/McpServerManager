@@ -2,10 +2,9 @@ using System;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using McpServerManager.Core.Cqrs;
+using McpServer.Cqrs;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Services;
@@ -15,7 +14,7 @@ namespace McpServerManager.Core.ViewModels;
 
 public partial class ChatWindowViewModel : ViewModelBase
 {
-    private readonly IMediator _mediator;
+    private readonly McpServer.Cqrs.Dispatcher _dispatcher;
     private readonly Func<string> _getContext;
     private readonly Action<string?>? _onModelChanged;
     private readonly string? _initialModelFromConfig;
@@ -40,30 +39,30 @@ public partial class ChatWindowViewModel : ViewModelBase
     private ObservableCollection<PromptTemplate> _promptTemplates = new();
 
     public ChatWindowViewModel(
-        IMediator mediator,
+        McpServer.Cqrs.Dispatcher dispatcher,
         Func<string> getContext,
         string? initialModelFromConfig = null,
         Action<string?>? onModelChanged = null)
     {
-        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _getContext = getContext ?? (() => "");
         _initialModelFromConfig = initialModelFromConfig;
         _onModelChanged = onModelChanged;
     }
 
     /// <summary>Parameterless constructor for design-time only.</summary>
-    public ChatWindowViewModel() : this(new Mediator(), () => "", null, null) { }
+    public ChatWindowViewModel() : this(null!, () => "", null, null) { }
 
     [RelayCommand]
     private async Task OpenAgentConfig()
     {
-        _ = await _mediator.SendAsync<ChatOpenAgentConfigCommand, ChatFileOpenResult>(new ChatOpenAgentConfigCommand()).ConfigureAwait(true);
+        _ = await _dispatcher.SendAsync(new ChatOpenAgentConfigCommand()).ConfigureAwait(true);
     }
 
     [RelayCommand]
     private async Task OpenPromptTemplates()
     {
-        _ = await _mediator.SendAsync<ChatOpenPromptTemplatesCommand, ChatFileOpenResult>(new ChatOpenPromptTemplatesCommand()).ConfigureAwait(true);
+        _ = await _dispatcher.SendAsync(new ChatOpenPromptTemplatesCommand()).ConfigureAwait(true);
     }
 
     /// <summary>Loads prompt templates from agent config. Call when the chat window is opened.</summary>
@@ -71,8 +70,10 @@ public partial class ChatWindowViewModel : ViewModelBase
 
     public async Task LoadPromptsAsync()
     {
-        var prompts = await _mediator.SendAsync<ChatLoadPromptsCommand, System.Collections.Generic.IReadOnlyList<PromptTemplate>>(
-            new ChatLoadPromptsCommand()).ConfigureAwait(true);
+        var result = await _dispatcher.SendAsync(new ChatLoadPromptsCommand()).ConfigureAwait(true);
+
+        if (!result.IsSuccess) return;
+        var prompts = result.Value;
 
         DispatchToUi(() =>
         {
@@ -85,7 +86,9 @@ public partial class ChatWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task PopulatePrompt(PromptTemplate? prompt)
     {
-        var promptText = await _mediator.SendAsync<ChatPopulatePromptCommand, string>(new ChatPopulatePromptCommand(prompt)).ConfigureAwait(true);
+        var result = await _dispatcher.SendAsync(new ChatPopulatePromptCommand(prompt)).ConfigureAwait(true);
+        if (!result.IsSuccess) return;
+        var promptText = result.Value;
         if (string.IsNullOrEmpty(promptText)) return;
         CurrentInput = promptText;
     }
@@ -93,7 +96,9 @@ public partial class ChatWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task SubmitPromptAsync(PromptTemplate? prompt)
     {
-        var prepared = await _mediator.SendAsync<ChatSubmitPromptCommand, ChatPreparedPromptResult>(new ChatSubmitPromptCommand(prompt)).ConfigureAwait(true);
+        var result = await _dispatcher.SendAsync(new ChatSubmitPromptCommand(prompt)).ConfigureAwait(true);
+        if (!result.IsSuccess) return;
+        var prepared = result.Value;
         if (!prepared.ShouldSend) return;
         CurrentInput = prepared.PromptText;
         await SendCurrentInputAsync().ConfigureAwait(true);
@@ -107,8 +112,11 @@ public partial class ChatWindowViewModel : ViewModelBase
     /// <summary>Loads available Ollama models and sets SelectedModel to the first or default. Call when the chat window is opened.</summary>
     public async Task LoadModelsAsync()
     {
-        var result = await _mediator.QueryAsync<ChatLoadModelsQuery, ChatLoadModelsResult>(
+        var queryResult = await _dispatcher.QueryAsync(
             new ChatLoadModelsQuery(_initialModelFromConfig)).ConfigureAwait(true);
+
+        if (!queryResult.IsSuccess) return;
+        var result = queryResult.Value;
 
         DispatchToUi(() =>
         {
@@ -170,9 +178,12 @@ public partial class ChatWindowViewModel : ViewModelBase
         {
             var model = SelectedModel;
             var request = new ChatSendRequest(text, context, model);
-            var result = await _mediator.SendAsync<ChatSendMessageCommand, ChatSendMessageResult>(
+            var dispatchResult = await _dispatcher.SendAsync(
                 new ChatSendMessageCommand(request, progress),
                 token).ConfigureAwait(true);
+
+            var result = dispatchResult.IsSuccess ? dispatchResult.Value
+                : new ChatSendMessageResult(false, "", false, dispatchResult.Error ?? "Dispatch failed");
 
             if (token.IsCancellationRequested && !result.WasCancelled) return;
 
@@ -203,10 +214,10 @@ public partial class ChatWindowViewModel : ViewModelBase
 
     private static void DispatchToUi(Action action)
     {
-        if (Dispatcher.UIThread.CheckAccess())
+        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
             action();
         else
-            Dispatcher.UIThread.Post(() => action());
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => action());
     }
 
     /// <summary>Cancels any in-flight send (e.g. when closing the window).</summary>
