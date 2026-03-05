@@ -3,6 +3,7 @@ using McpServer.Cqrs;
 using McpServer.UI.Core;
 using McpServer.UI.Core.Services;
 using McpServer.UI.Core.ViewModels;
+using McpServerManager.Core.Services.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace McpServerManager.Core.Services;
@@ -15,6 +16,11 @@ internal static class UiCoreServiceProviderFactory
         McpVoiceConversationService? voiceService = null,
         McpSessionLogService? sessionLogService = null,
         McpAgentEventStreamService? eventStreamService = null,
+        IFileSystemService? fileSystemService = null,
+        IProcessLauncherService? processLauncherService = null,
+        ITimerService? timerService = null,
+        IJsonParsingService? jsonParsingService = null,
+        IFileSystemWatcherService? fileSystemWatcherService = null,
         WorkspaceContextViewModel? workspaceContext = null)
     {
         if (todoService is null && workspaceService is null)
@@ -39,6 +45,13 @@ internal static class UiCoreServiceProviderFactory
 
         if (eventStreamService is not null)
             services.AddSingleton<IEventStreamApiClient>(_ => new UiCoreEventStreamApiClientAdapter(eventStreamService));
+
+        // Infrastructure services — use host-provided or default implementations
+        services.AddSingleton(fileSystemService ?? new FileSystemService());
+        services.AddSingleton(processLauncherService ?? new ProcessLauncherService());
+        services.AddSingleton(timerService ?? new TimerService());
+        services.AddSingleton(jsonParsingService ?? new JsonParsingService());
+        services.AddSingleton(fileSystemWatcherService ?? new FileSystemWatcherService());
 
         services.AddCqrsDispatcher();
         services.AddUiCore();
