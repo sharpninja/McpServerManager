@@ -489,9 +489,6 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         _mcpPromptClient.WorkspacePath = resolvedPath;
         _uiCoreRuntime.WorkspaceContext.ActiveWorkspacePath = resolvedPath;
 
-        if (_hasRegisteredCqrsHandlers)
-            RegisterMcpServiceHandlers();
-
         // Notify child VMs reactively — they self-refresh without imperative ordering.
         WorkspacePathChanged?.Invoke(resolvedPath);
 
@@ -599,32 +596,6 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         _mediator.Register(new Commands.RefreshHandler());
 
         _hasRegisteredCqrsHandlers = true;
-        RegisterMcpServiceHandlers();
-    }
-
-    private void RegisterMcpServiceHandlers()
-    {
-        // Todo CQRS
-        var todoService = _mcpTodoService;
-        _mediator.RegisterQuery(new Commands.QueryTodosHandler(todoService));
-        _mediator.RegisterQuery(new Commands.GetTodoByIdHandler(todoService));
-        _mediator.Register<Commands.CreateTodoCommand, McpTodoMutationResult>(new Commands.CreateTodoHandler(todoService));
-        _mediator.Register<Commands.UpdateTodoCommand, McpTodoMutationResult>(new Commands.UpdateTodoHandler(todoService));
-        _mediator.Register<Commands.DeleteTodoCommand, McpTodoMutationResult>(new Commands.DeleteTodoHandler(todoService));
-        _mediator.Register<Commands.AnalyzeTodoRequirementsCommand, McpRequirementsAnalysisResult>(new Commands.AnalyzeTodoRequirementsHandler(todoService));
-
-        // Workspace CQRS
-        var workspaceService = _mcpWorkspaceService;
-        _mediator.RegisterQuery(new Commands.QueryWorkspacesHandler(workspaceService));
-        _mediator.RegisterQuery(new Commands.GetWorkspaceByIdHandler(workspaceService));
-        _mediator.RegisterQuery(new Commands.GetWorkspaceStatusHandler(workspaceService));
-        _mediator.RegisterQuery(new Commands.GetWorkspaceHealthHandler(workspaceService));
-        _mediator.Register<Commands.CreateWorkspaceCommand, McpWorkspaceMutationResult>(new Commands.CreateWorkspaceHandler(workspaceService));
-        _mediator.Register<Commands.UpdateWorkspaceCommand, McpWorkspaceMutationResult>(new Commands.UpdateWorkspaceHandler(workspaceService));
-        _mediator.Register<Commands.DeleteWorkspaceCommand, McpWorkspaceMutationResult>(new Commands.DeleteWorkspaceHandler(workspaceService));
-        _mediator.Register<Commands.InitWorkspaceCommand, McpWorkspaceInitResult>(new Commands.InitWorkspaceHandler(workspaceService));
-        _mediator.Register<Commands.StartWorkspaceCommand, McpWorkspaceProcessStatus>(new Commands.StartWorkspaceHandler(workspaceService));
-        _mediator.Register<Commands.StopWorkspaceCommand, McpWorkspaceProcessStatus>(new Commands.StopWorkspaceHandler(workspaceService));
     }
 
     /// <summary>Command for tree item tap (handles directory expand/collapse and MCP node refresh).</summary>
