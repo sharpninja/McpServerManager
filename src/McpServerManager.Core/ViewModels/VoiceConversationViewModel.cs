@@ -67,13 +67,6 @@ public partial class VoiceConversationViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Design-time/parameterless constructor.
-    /// </summary>
-    public VoiceConversationViewModel() : this(new McpVoiceConversationService(AppSettings.ResolveMcpBaseUrl()))
-    {
-    }
-
-    /// <summary>
     /// Refreshes for a connection change by clearing the prior remote session state.
     /// </summary>
     public Task RefreshForConnectionChangeAsync()
