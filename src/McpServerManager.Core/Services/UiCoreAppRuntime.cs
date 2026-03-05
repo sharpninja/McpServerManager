@@ -9,10 +9,11 @@ internal sealed class UiCoreAppRuntime : IDisposable
     public UiCoreAppRuntime(
         McpTodoService? todoService = null,
         McpWorkspaceService? workspaceService = null,
+        McpVoiceConversationService? voiceService = null,
         WorkspaceContextViewModel? workspaceContext = null)
     {
         WorkspaceContext = workspaceContext ?? new WorkspaceContextViewModel();
-        Services = UiCoreServiceProviderFactory.Build(todoService, workspaceService, WorkspaceContext);
+        Services = UiCoreServiceProviderFactory.Build(todoService, workspaceService, voiceService, WorkspaceContext);
     }
 
     public WorkspaceContextViewModel WorkspaceContext { get; }

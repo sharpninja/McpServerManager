@@ -67,10 +67,10 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     internal McpSessionLogService McpSessionService = null!;
     private McpTodoService _mcpTodoService = null!;
     private McpWorkspaceService _mcpWorkspaceService = null!;
+    private McpVoiceConversationService _mcpVoiceService = null!;
     private UiCoreAppRuntime _uiCoreRuntime = null!;
     private bool _suppressWorkspaceSelectionChanged;
     private bool _hasCompletedInitialSwitch;
-    private bool _hasRegisteredCqrsHandlers;
     internal readonly Mediator _mediator = new();
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
 
@@ -124,19 +124,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     private VoiceConversationViewModel CreateVoiceConversationViewModel()
     {
-        var voiceService = new McpVoiceConversationService(
-            _activeMcpBaseUrl,
-            apiKey: _activeMcpApiKey,
-            bearerToken: _activeBearerToken)
-        {
-            // Pull from source of truth at request time — never stale
-            ResolveBaseUrl = () => _activeMcpBaseUrl,
-            ResolveBearerToken = () => _activeBearerToken,
-            ResolveApiKey = () => _activeMcpApiKey,
-            ResolveWorkspacePath = () => SelectedWorkspaceConnection?.WorkspaceRootPath
-                ?? _mcpClient.WorkspacePath
-        };
-        var vm = new VoiceConversationViewModel(voiceService)
+        var vm = new VoiceConversationViewModel(_mcpVoiceService)
         {
             // VM also reads from source of truth — no stale cached copy
             ResolveWorkspacePath = () => SelectedWorkspaceConnection?.WorkspaceRootPath
@@ -419,9 +407,21 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         McpSessionService = new McpSessionLogService(_mcpClient);
         _mcpTodoService = new McpTodoService(_mcpClient, _mcpPromptClient);
         _mcpWorkspaceService = new McpWorkspaceService(_mcpClient, _defaultMcpBaseUri);
+        _mcpVoiceService = new McpVoiceConversationService(
+            _defaultMcpBaseUrl,
+            apiKey: _activeMcpApiKey,
+            bearerToken: _activeBearerToken)
+        {
+            ResolveBaseUrl = () => _activeMcpBaseUrl,
+            ResolveBearerToken = () => _activeBearerToken,
+            ResolveApiKey = () => _activeMcpApiKey,
+            ResolveWorkspacePath = () => SelectedWorkspaceConnection?.WorkspaceRootPath
+                ?? _mcpClient.WorkspacePath
+        };
         _uiCoreRuntime = new UiCoreAppRuntime(
             todoService: _mcpTodoService,
             workspaceService: _mcpWorkspaceService,
+            voiceService: _mcpVoiceService,
             workspaceContext: new McpServer.UI.Core.ViewModels.WorkspaceContextViewModel
             {
                 ActiveWorkspacePath = _mcpClient.WorkspacePath ?? string.Empty
@@ -594,8 +594,6 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
         // Refresh
         _mediator.Register(new Commands.RefreshHandler());
-
-        _hasRegisteredCqrsHandlers = true;
     }
 
     /// <summary>Command for tree item tap (handles directory expand/collapse and MCP node refresh).</summary>

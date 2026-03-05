@@ -281,4 +281,99 @@ internal static class UiCoreMessageMapper
 
     private static McpTodoFlatTask ToMcpTodoFlatTask(TodoTaskDetail task)
         => new() { Task = task.Task, Done = task.Done };
+
+    // ── Voice mapping ───────────────────────────────────────────────────────
+
+    public static McpVoiceSessionCreateRequest ToVoiceSessionCreateRequest(CreateVoiceSessionCommand command)
+        => new()
+        {
+            Language = command.Language,
+            DeviceId = command.DeviceId,
+            ClientName = command.ClientName,
+        };
+
+    public static McpVoiceTurnRequest ToVoiceTurnRequest(SubmitVoiceTurnCommand command)
+        => new()
+        {
+            UserTranscriptText = command.UserTranscriptText,
+            Language = command.Language,
+            ClientTimestampUtc = command.ClientTimestampUtc,
+        };
+
+    public static VoiceSessionInfo ToVoiceSessionInfo(McpVoiceSessionCreateResponse response)
+        => new(
+            response.SessionId,
+            response.Status,
+            response.Language,
+            response.ModelRequested,
+            response.ModelResolved);
+
+    public static VoiceTurnInfo ToVoiceTurnInfo(McpVoiceTurnResponse response)
+        => new(
+            response.SessionId,
+            response.TurnId,
+            response.Status,
+            response.AssistantDisplayText,
+            response.AssistantSpeakText,
+            response.ToolCalls?.Select(ToVoiceToolCallInfo).ToList() ?? [],
+            response.Error,
+            response.LatencyMs,
+            response.ModelRequested,
+            response.ModelResolved);
+
+    public static VoiceToolCallInfo ToVoiceToolCallInfo(McpVoiceToolCallRecord record)
+        => new(
+            record.TurnId,
+            record.ToolName,
+            record.Step,
+            record.ArgumentsJson,
+            record.Status,
+            record.IsMutation,
+            record.ResultSummary,
+            record.Error);
+
+    public static VoiceInterruptInfo ToVoiceInterruptInfo(McpVoiceInterruptResponse response)
+        => new(response.SessionId, response.Interrupted, response.Status);
+
+    public static VoiceSessionStatusInfo ToVoiceSessionStatusInfo(McpVoiceSessionStatus status)
+        => new(
+            status.SessionId,
+            status.Status,
+            status.Language,
+            status.CreatedUtc,
+            status.LastUpdatedUtc,
+            status.IsTurnActive,
+            status.LastError,
+            status.LastTurnId,
+            status.TurnCounter,
+            status.TranscriptCount);
+
+    public static VoiceTranscriptInfo ToVoiceTranscriptInfo(McpVoiceTranscriptResponse response)
+        => new(response.SessionId, response.Items.Select(ToVoiceTranscriptEntryInfo).ToList());
+
+    public static VoiceTranscriptEntryInfo ToVoiceTranscriptEntryInfo(McpVoiceTranscriptEntry entry)
+        => new(entry.TimestampUtc, entry.TurnId, entry.Role, entry.Category, entry.Text);
+
+    public static McpVoiceToolCallRecord ToMcpVoiceToolCallRecord(VoiceToolCallInfo info)
+        => new()
+        {
+            TurnId = info.TurnId,
+            ToolName = info.ToolName,
+            Step = info.Step,
+            ArgumentsJson = info.ArgumentsJson,
+            Status = info.Status,
+            IsMutation = info.IsMutation,
+            ResultSummary = info.ResultSummary,
+            Error = info.Error,
+        };
+
+    public static McpVoiceTranscriptEntry ToMcpVoiceTranscriptEntry(VoiceTranscriptEntryInfo info)
+        => new()
+        {
+            TimestampUtc = info.TimestampUtc,
+            TurnId = info.TurnId,
+            Role = info.Role,
+            Category = info.Category,
+            Text = info.Text,
+        };
 }
