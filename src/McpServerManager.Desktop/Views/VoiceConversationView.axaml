@@ -36,7 +36,14 @@
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
                              Watermark="Type a message to submit..."/>
-                    <WrapPanel Orientation="Horizontal" ItemHeight="32" ItemWidth="130">
+                    <WrapPanel Orientation="Horizontal" ItemWidth="148">
+                        <WrapPanel.Styles>
+                            <Style Selector="Button">
+                                <Setter Property="MinHeight" Value="36"/>
+                                <Setter Property="Padding" Value="12,6"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            </Style>
+                        </WrapPanel.Styles>
                         <Button Content="Submit Turn" Command="{Binding SubmitTurnCommand}" Margin="0,0,6,6"/>
                         <Button Content="Clear Input" Command="{Binding ClearTurnInputCommand}" Margin="0,0,6,6"/>
                         <Button Content="Interrupt" Command="{Binding InterruptCommand}" Margin="0,0,6,6"/>

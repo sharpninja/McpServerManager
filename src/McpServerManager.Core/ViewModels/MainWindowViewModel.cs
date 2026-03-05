@@ -52,6 +52,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     private readonly ISystemNotificationService _systemNotificationService;
     private string _defaultMcpBaseUrl = "";
     private string? _defaultMcpApiKey;
+    private string? _activeMcpApiKey;
     private Uri _defaultMcpBaseUri = new("http://localhost");
     private string _activeMcpBaseUrl = "";
     private string? _activeBearerToken;
@@ -126,13 +127,13 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     {
         var voiceService = new McpVoiceConversationService(
             _activeMcpBaseUrl,
-            apiKey: _defaultMcpApiKey,
+            apiKey: _activeMcpApiKey,
             bearerToken: _activeBearerToken)
         {
             // Pull from source of truth at request time — never stale
             ResolveBaseUrl = () => _activeMcpBaseUrl,
             ResolveBearerToken = () => _activeBearerToken,
-            ResolveApiKey = () => _defaultMcpApiKey,
+            ResolveApiKey = () => _activeMcpApiKey,
             ResolveWorkspacePath = () => SelectedWorkspaceConnection?.WorkspaceRootPath
                 ?? _mcpClient.WorkspacePath
         };
@@ -152,6 +153,10 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     internal Dictionary<string, UnifiedSessionLog> _mcpSessionsByPath = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>Cached sessions from ReloadFromMcpAsyncInternal, consumed once by the auto-triggered ALL_JSON load.</summary>
     private IReadOnlyList<UnifiedSessionLog>? _cachedSessionsForAutoLoad;
+    private bool _isRestoringTreeSelection;
+    private bool _restoreRequestDetailsAfterRefresh;
+    private string? _pendingDetailRequestId;
+    private string? _pendingDetailSourcePath;
     private Timer? _mcpAutoRefreshTimer;
     private bool _isRefreshing;
     private Timer? _workspaceHealthTimer;
@@ -395,19 +400,20 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         _defaultMcpApiKey = string.IsNullOrWhiteSpace(initialApiKey)
             ? McpServerRestClientFactory.TryResolveApiKey(_defaultMcpBaseUrl)
             : initialApiKey.Trim();
+        _activeMcpApiKey = _defaultMcpApiKey;
         _defaultMcpBaseUri = new Uri(_defaultMcpBaseUrl, UriKind.Absolute);
 
         // Create shared pre-authenticated clients — used by ALL services for the session lifetime.
         _mcpClient = McpServerRestClientFactory.Create(
             _defaultMcpBaseUrl,
             timeout: TimeSpan.FromSeconds(30),
-            apiKey: _defaultMcpApiKey,
+            apiKey: _activeMcpApiKey,
             bearerToken: _activeBearerToken);
 
         _mcpPromptClient = McpServerRestClientFactory.Create(
             _defaultMcpBaseUrl,
             timeout: TimeSpan.FromMinutes(15),
-            apiKey: _defaultMcpApiKey,
+            apiKey: _activeMcpApiKey,
             bearerToken: _activeBearerToken);
 
         // Create services once — they share the pre-authenticated clients.
@@ -427,11 +433,11 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         _activeMcpBaseUrl = _defaultMcpBaseUrl;
         _agentEventStreamService = AgentEventStreamFactory.Create(
             _activeMcpBaseUrl,
-            apiKey: _defaultMcpApiKey,
+            apiKey: _activeMcpApiKey,
             bearerToken: _activeBearerToken,
             resolveBaseUrl: () => _activeMcpBaseUrl,
             resolveBearerToken: () => _activeBearerToken,
-            resolveApiKey: () => _defaultMcpApiKey,
+            resolveApiKey: () => _activeMcpApiKey,
             resolveWorkspacePath: () => SelectedWorkspaceConnection?.WorkspaceRootPath
                 ?? _mcpClient.WorkspacePath);
 
@@ -466,14 +472,21 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     private void ApplyActiveMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? workspaceRootPath = null)
     {
         _activeMcpBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
+        _activeMcpApiKey = string.IsNullOrWhiteSpace(mcpApiKey) ? null : mcpApiKey.Trim();
 
         _logger.LogInformation(
-            "[Workspace Switch] ApplyActiveMcpBaseUrl: BaseUrl={BaseUrl}, Bearer={BearerPresent}, WorkspacePath={WorkspacePath}",
+            "[Workspace Switch] ApplyActiveMcpBaseUrl: BaseUrl={BaseUrl}, Bearer={BearerPresent}, ApiKey={ApiKeyPresent}, WorkspacePath={WorkspacePath}",
             _activeMcpBaseUrl,
             !string.IsNullOrWhiteSpace(_activeBearerToken) ? "set" : "null",
+            !string.IsNullOrWhiteSpace(_activeMcpApiKey) ? "set" : "null",
             workspaceRootPath ?? "(none)");
 
-        // Update workspace routing on the shared clients — no service recreation needed.
+        // Update auth/workspace routing on the shared clients — no service recreation needed.
+        _mcpClient.BearerToken = _activeBearerToken ?? string.Empty;
+        _mcpPromptClient.BearerToken = _activeBearerToken ?? string.Empty;
+        _mcpClient.ApiKey = _activeMcpApiKey ?? string.Empty;
+        _mcpPromptClient.ApiKey = _activeMcpApiKey ?? string.Empty;
+
         var resolvedPath = workspaceRootPath ?? string.Empty;
         _mcpClient.WorkspacePath = resolvedPath;
         _mcpPromptClient.WorkspacePath = resolvedPath;
@@ -508,18 +521,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             return option.ApiKey;
         }
 
-        // Fetch current default key from /api-key for the selected connection.
-        var fetchedDefaultKey = await McpServerRestClientFactory
-            .TryFetchDefaultApiKeyAsync(normalizedTargetBaseUrl)
-            .ConfigureAwait(true);
-
-        if (!string.IsNullOrWhiteSpace(fetchedDefaultKey))
-        {
-            _logger.LogDebug("[Workspace Switch] Fetched API key from /api-key for {BaseUrl}", normalizedTargetBaseUrl);
-            return fetchedDefaultKey;
-        }
-
-        // Fall back to marker file (Desktop/dev scenarios).
+        // Prefer marker file full-access token before /api-key default token.
+        // /api-key tokens are workspace-default and can 401 when paired with
+        // explicit X-Workspace-Path headers on workspace-scoped endpoints.
         if (!string.IsNullOrWhiteSpace(option.WorkspaceRootPath))
         {
             var markerKey = McpServerRestClientFactory.TryResolveApiKeyForWorkspaceRoot(option.WorkspaceRootPath, normalizedTargetBaseUrl);
@@ -528,6 +532,17 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 _logger.LogDebug("[Workspace Switch] Using marker file API key for {BaseUrl}", normalizedTargetBaseUrl);
                 return markerKey;
             }
+        }
+
+        // Last resort: fetch current default key from /api-key.
+        var fetchedDefaultKey = await McpServerRestClientFactory
+            .TryFetchDefaultApiKeyAsync(normalizedTargetBaseUrl)
+            .ConfigureAwait(true);
+
+        if (!string.IsNullOrWhiteSpace(fetchedDefaultKey))
+        {
+            _logger.LogDebug("[Workspace Switch] Using /api-key default token for {BaseUrl}", normalizedTargetBaseUrl);
+            return fetchedDefaultKey;
         }
 
         _logger.LogDebug("[Workspace Switch] No API key resolved for {BaseUrl}; proceeding without explicit key", normalizedTargetBaseUrl);
@@ -1357,6 +1372,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     {
         _logger.LogInformation($"[Workspace Switch] Switching to '{option.DisplayName}' (BaseUrl={option.BaseUrl})");
         var previousBaseUrl = _activeMcpBaseUrl;
+        var previousApiKey = _activeMcpApiKey;
         var previousWorkspacePath = _mcpClient.WorkspacePath;
         var previousSelection = FindWorkspaceConnectionOption(
             WorkspaceConnections.FirstOrDefault(c =>
@@ -1380,7 +1396,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 option.DisplayName, selectedBaseUrl,
                 !string.IsNullOrWhiteSpace(_activeBearerToken) ? "set" : "null",
                 option.WorkspaceRootPath ?? "(none)");
-            ApplyActiveMcpBaseUrl(selectedBaseUrl, selectedApiKey, option.WorkspaceRootPath);
+            ApplyActiveMcpBaseUrl(selectedBaseUrl, selectedApiKey ?? string.Empty, option.WorkspaceRootPath);
             await RefreshAllViewsForConnectionChangeAsync().ConfigureAwait(true);
             _hasCompletedInitialSwitch = true;
             _logger.LogInformation($"[Workspace Switch] Successfully connected to '{option.DisplayName}'");
@@ -1389,7 +1405,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         catch (Exception ex)
         {
             _logger.LogError(ex, $"[Workspace Switch] Failed switching to '{option.DisplayName}'");
-            ApplyActiveMcpBaseUrl(previousBaseUrl, workspaceRootPath: previousWorkspacePath);
+            ApplyActiveMcpBaseUrl(previousBaseUrl, previousApiKey ?? string.Empty, previousWorkspacePath);
             var revertedDisplayName = previousSelection?.DisplayName ?? previousBaseUrl;
             await DispatchToUiAsync(() =>
             {
@@ -1508,6 +1524,17 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     internal void UpdateFilteredSearchEntriesInternal()
     {
+        var shouldRestoreDetailView = IsRequestDetailsVisible || _restoreRequestDetailsAfterRefresh;
+        var detailRequestId = _pendingDetailRequestId ?? SelectedUnifiedRequest?.RequestId;
+        var detailSourcePath = _pendingDetailSourcePath ?? SelectedSearchEntry?.SourcePath;
+
+        if (string.IsNullOrWhiteSpace(detailSourcePath) && !string.IsNullOrWhiteSpace(detailRequestId))
+        {
+            detailSourcePath = SearchableEntries
+                .FirstOrDefault(e => string.Equals(e.RequestId, detailRequestId, StringComparison.OrdinalIgnoreCase))
+                ?.SourcePath;
+        }
+
         var q = (SearchQuery ?? "").Trim();
         var rid = (RequestIdFilter ?? "").Trim().ToLowerInvariant();
         var disp = (DisplayFilter ?? "").Trim().ToLowerInvariant();
@@ -1542,18 +1569,50 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         var sorted = filtered.OrderByDescending(e => e.SortableTimestamp ?? DateTime.MinValue).ToList();
         FilteredSearchEntries = new ObservableCollection<SearchableEntry>(sorted);
 
-        if (IsRequestDetailsVisible)
+        if (shouldRestoreDetailView)
         {
-            // Re-bind SelectedUnifiedRequest to the matching entry in the new list so
-            // the details view shows fresh data and nav buttons work after refresh.
-            int idx = GetCurrentRequestIndexInFilteredList();
-            if (idx >= 0)
-                SelectedUnifiedRequest = FilteredSearchEntries[idx].UnifiedEntry;
+            var restoredEntry = FindDetailEntryForRestore(FilteredSearchEntries, detailSourcePath, detailRequestId);
+            if (restoredEntry?.UnifiedEntry != null)
+            {
+                SelectedSearchEntry = restoredEntry;
+                ShowRequestDetailsInternal(restoredEntry);
+            }
+
             NavigateToPreviousRequestCommand.NotifyCanExecuteChanged();
             NavigateToNextRequestCommand.NotifyCanExecuteChanged();
+
+            _restoreRequestDetailsAfterRefresh = false;
+            _pendingDetailRequestId = null;
+            _pendingDetailSourcePath = null;
         }
 
         NotifyContextConsumer();
+    }
+
+    private static SearchableEntry? FindDetailEntryForRestore(
+        IEnumerable<SearchableEntry> entries,
+        string? sourcePath,
+        string? requestId)
+    {
+        if (!string.IsNullOrWhiteSpace(sourcePath))
+        {
+            var bySourcePath = entries.FirstOrDefault(e =>
+                !string.IsNullOrWhiteSpace(e.SourcePath) &&
+                string.Equals(e.SourcePath, sourcePath, StringComparison.OrdinalIgnoreCase));
+            if (bySourcePath != null)
+                return bySourcePath;
+        }
+
+        if (!string.IsNullOrWhiteSpace(requestId))
+        {
+            var byRequestId = entries.FirstOrDefault(e =>
+                !string.IsNullOrWhiteSpace(e.RequestId) &&
+                string.Equals(e.RequestId, requestId, StringComparison.OrdinalIgnoreCase));
+            if (byRequestId != null)
+                return byRequestId;
+        }
+
+        return null;
     }
 
     [RelayCommand(CanExecute = nameof(CanNavigateBack))]
@@ -2058,6 +2117,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     {
         _logger.LogInformation($"Selected Node Changed: {value?.Path}");
 
+        if (_isRestoringTreeSelection && value == null)
+            return;
+
         // Start or stop the auto-refresh timer based on whether an MCP node is selected.
         if (value != null && IsMcpVirtualNode(value))
             StartMcpAutoRefresh();
@@ -2333,6 +2395,13 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     internal async Task ReloadFromMcpAsyncInternal()
     {
         var isInitialMcpLoad = _mcpSessions.Count == 0;
+        if (IsRequestDetailsVisible)
+        {
+            _restoreRequestDetailsAfterRefresh = true;
+            _pendingDetailRequestId = SelectedUnifiedRequest?.RequestId;
+            _pendingDetailSourcePath = SelectedSearchEntry?.SourcePath;
+        }
+
         var sessions = await McpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(true);
         var byPath = new Dictionary<string, UnifiedSessionLog>(StringComparer.OrdinalIgnoreCase);
         foreach (var s in sessions)
@@ -2352,33 +2421,41 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             _mcpSessionsByPath = byPath;
 
             var previousPath = SelectedNode?.Path;
-            Nodes.Clear();
-            Nodes.Add(allJsonNode);
-            if (documentsDto != null)
+            _isRestoringTreeSelection = true;
+            try
             {
-                var documentsNode = ApplyTreeDtoToNodes(documentsDto);
-                documentsNode.Name = "Documents";
-                Nodes.Add(documentsNode);
-            }
-            if (sourceDto != null)
-            {
-                var sourceNode = ApplyTreeDtoToNodes(sourceDto);
-                sourceNode.Name = "Source";
-                Nodes.Add(sourceNode);
-            }
+                Nodes.Clear();
+                Nodes.Add(allJsonNode);
+                if (documentsDto != null)
+                {
+                    var documentsNode = ApplyTreeDtoToNodes(documentsDto);
+                    documentsNode.Name = "Documents";
+                    Nodes.Add(documentsNode);
+                }
+                if (sourceDto != null)
+                {
+                    var sourceNode = ApplyTreeDtoToNodes(sourceDto);
+                    sourceNode.Name = "Source";
+                    Nodes.Add(sourceNode);
+                }
 
-            // Cache sessions so the auto-triggered ALL_JSON load doesn't re-fetch from MCP.
-            _cachedSessionsForAutoLoad = uniqueSessions;
-            if (OperatingSystem.IsAndroid() && isInitialMcpLoad &&
-                (string.IsNullOrEmpty(previousPath) ||
-                 string.Equals(previousPath, "ALL_JSON_VIRTUAL_NODE", StringComparison.OrdinalIgnoreCase)))
-            {
-                // Avoid startup ANR by deferring the heavy ALL_JSON load until explicit user selection.
-                SelectedNode = null;
+                // Cache sessions so the auto-triggered ALL_JSON load doesn't re-fetch from MCP.
+                _cachedSessionsForAutoLoad = uniqueSessions;
+                if (OperatingSystem.IsAndroid() && isInitialMcpLoad &&
+                    (string.IsNullOrEmpty(previousPath) ||
+                     string.Equals(previousPath, "ALL_JSON_VIRTUAL_NODE", StringComparison.OrdinalIgnoreCase)))
+                {
+                    // Avoid startup ANR by deferring the heavy ALL_JSON load until explicit user selection.
+                    SelectedNode = null;
+                }
+                else
+                {
+                    RestoreTreeSelection(previousPath, allJsonNode);
+                }
             }
-            else
+            finally
             {
-                RestoreTreeSelection(previousPath, allJsonNode);
+                _isRestoringTreeSelection = false;
             }
             StatusMessage = $"Loaded {_mcpSessions.Count} session(s) from MCP.";
         });
@@ -3995,30 +4072,38 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                     try
                     {
                         var previousPath = SelectedNode?.Path;
-                        Nodes.Clear();
-                        Nodes.Add(allJsonNode);
-                        if (documentsDto != null)
+                        _isRestoringTreeSelection = true;
+                        try
                         {
-                            var documentsNode = ApplyTreeDtoToNodes(documentsDto);
-                            documentsNode.Name = "Documents";
-                            Nodes.Add(documentsNode);
+                            Nodes.Clear();
+                            Nodes.Add(allJsonNode);
+                            if (documentsDto != null)
+                            {
+                                var documentsNode = ApplyTreeDtoToNodes(documentsDto);
+                                documentsNode.Name = "Documents";
+                                Nodes.Add(documentsNode);
+                            }
+                            if (sourceDto != null)
+                            {
+                                var sourceNode = ApplyTreeDtoToNodes(sourceDto);
+                                sourceNode.Name = "Source";
+                                Nodes.Add(sourceNode);
+                            }
+                            if (rootDto != null)
+                            {
+                                var root = ApplyTreeDtoToNodes(rootDto);
+                                Nodes.Add(root);
+                            }
+                            else
+                            {
+                                Nodes.Add(new FileNode(resolvedPath, true) { Name = "Directory not found" });
+                            }
+                            RestoreTreeSelection(previousPath, allJsonNode);
                         }
-                        if (sourceDto != null)
+                        finally
                         {
-                            var sourceNode = ApplyTreeDtoToNodes(sourceDto);
-                            sourceNode.Name = "Source";
-                            Nodes.Add(sourceNode);
+                            _isRestoringTreeSelection = false;
                         }
-                        if (rootDto != null)
-                        {
-                            var root = ApplyTreeDtoToNodes(rootDto);
-                            Nodes.Add(root);
-                        }
-                        else
-                        {
-                            Nodes.Add(new FileNode(resolvedPath, true) { Name = "Directory not found" });
-                        }
-                        RestoreTreeSelection(previousPath, allJsonNode);
                     }
                     catch (Exception ex)
                     {

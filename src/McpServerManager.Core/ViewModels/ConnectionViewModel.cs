@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -52,6 +53,7 @@ public partial class ConnectionViewModel : ViewModelBase
     private string? _lastMcpBaseUrl;
     private string? _lastOidcClientId;
     private CancellationTokenSource? _connectCts;
+    private static readonly TimeSpan CachedJwtExpirySkew = TimeSpan.FromMinutes(1);
 
     [ObservableProperty]
     private bool _canScanQrCode;
@@ -319,6 +321,18 @@ public partial class ConnectionViewModel : ViewModelBase
         }
 
         var cachedOidcToken = TryReadCachedOidcToken();
+        if (!string.IsNullOrWhiteSpace(cachedOidcToken) &&
+            IsJwtExpiredOrNearExpiry(cachedOidcToken, CachedJwtExpirySkew, out var expiresAtUtc))
+        {
+            OidcStatusMessage = "Session expired. Sign in again.";
+            _logger.LogWarning(
+                "Cached OIDC token is expired/near expiry (expUtc={ExpiresAtUtc}); clearing cache and requiring sign-in",
+                expiresAtUtc?.ToString("O") ?? "<unknown>");
+            ClearCachedOidcToken();
+            cachedOidcToken = null;
+            _oidcBearerToken = null;
+        }
+
         if (!string.IsNullOrWhiteSpace(cachedOidcToken))
         {
             OidcStatusMessage = "Reusing previous sign-in…";
@@ -510,5 +524,66 @@ public partial class ConnectionViewModel : ViewModelBase
         {
             _logger.LogWarning(ex, "Failed requesting app foreground after OIDC token acquisition");
         }
+    }
+
+    private static bool IsJwtExpiredOrNearExpiry(
+        string jwtToken,
+        TimeSpan skew,
+        out DateTimeOffset? expiresAtUtc)
+    {
+        expiresAtUtc = null;
+        if (string.IsNullOrWhiteSpace(jwtToken))
+            return true;
+
+        try
+        {
+            var parts = jwtToken.Split('.');
+            if (parts.Length < 2)
+                return false;
+
+            var payloadBytes = DecodeJwtBase64Url(parts[1]);
+            using var payload = JsonDocument.Parse(payloadBytes);
+            if (!payload.RootElement.TryGetProperty("exp", out var expElement))
+                return false;
+
+            long expUnixSeconds;
+            if (expElement.ValueKind == JsonValueKind.Number)
+            {
+                if (!expElement.TryGetInt64(out expUnixSeconds))
+                    return false;
+            }
+            else if (expElement.ValueKind == JsonValueKind.String &&
+                     long.TryParse(expElement.GetString(), out var parsed))
+            {
+                expUnixSeconds = parsed;
+            }
+            else
+            {
+                return false;
+            }
+
+            if (expUnixSeconds <= 0)
+                return false;
+
+            expiresAtUtc = DateTimeOffset.FromUnixTimeSeconds(expUnixSeconds);
+            return expiresAtUtc.Value <= DateTimeOffset.UtcNow.Add(skew);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static byte[] DecodeJwtBase64Url(string value)
+    {
+        var normalized = value.Replace('-', '+').Replace('_', '/');
+        normalized = (normalized.Length % 4) switch
+        {
+            2 => normalized + "==",
+            3 => normalized + "=",
+            _ => normalized
+        };
+
+        return Convert.FromBase64String(normalized);
     }
 }

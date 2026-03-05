@@ -71,6 +71,13 @@
 
                 <!-- Action buttons: 4-column grid -->
                 <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="4" RowSpacing="4">
+                    <Grid.Styles>
+                        <Style Selector="Button">
+                            <Setter Property="MinHeight" Value="36"/>
+                            <Setter Property="Padding" Value="8,6"/>
+                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                        </Style>
+                    </Grid.Styles>
                     <Button Grid.Row="0" Grid.Column="0" Content="Listen" Click="OnListenFillInputClick" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="4,6"/>
                     <Button Grid.Row="0" Grid.Column="1" Content="Lstn+Send" Click="OnListenAndSendClick" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="4,6"/>
                     <Button Grid.Row="0" Grid.Column="2" Content="Send Turn" Command="{Binding SubmitTurnCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="4,6"/>

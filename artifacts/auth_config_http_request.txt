@@ -1,4 +1,0 @@
-GET /auth/config HTTP/1.0
-Host: 10.0.2.2
-
-
