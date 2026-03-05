@@ -67,8 +67,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     internal McpSessionLogService McpSessionService = null!;
     private McpTodoService _mcpTodoService = null!;
     private McpWorkspaceService _mcpWorkspaceService = null!;
-    private UiCoreAppRuntime _uiCoreTodoRuntime = null!;
-    private UiCoreAppRuntime _uiCoreWorkspaceRuntime = null!;
+    private UiCoreAppRuntime _uiCoreRuntime = null!;
     private bool _suppressWorkspaceSelectionChanged;
     private bool _hasCompletedInitialSwitch;
     private bool _hasRegisteredCqrsHandlers;
@@ -84,7 +83,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     private TodoListViewModel CreateTodoViewModel()
     {
-        var vm = new TodoListViewModel(_clipboardService, _uiCoreTodoRuntime);
+        var vm = new TodoListViewModel(_clipboardService, _uiCoreRuntime);
         vm.ApplyWorkspacePath(_mcpClient.WorkspacePath);
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
         WorkspacePathChanged += path => DispatchToUi(() =>
@@ -101,7 +100,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     private WorkspaceViewModel CreateWorkspaceViewModel()
     {
-        var vm = new WorkspaceViewModel(_clipboardService, _uiCoreWorkspaceRuntime);
+        var vm = new WorkspaceViewModel(_clipboardService, _uiCoreRuntime);
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
         vm.WorkspaceCatalogChanged += change => _ = RefreshWorkspacePickerAfterCatalogChangeAsync(change);
         WorkspacePathChanged += path => DispatchToUi(() => _ = vm.RefreshForConnectionChangeAsync());
@@ -420,15 +419,13 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         McpSessionService = new McpSessionLogService(_mcpClient);
         _mcpTodoService = new McpTodoService(_mcpClient, _mcpPromptClient);
         _mcpWorkspaceService = new McpWorkspaceService(_mcpClient, _defaultMcpBaseUri);
-        _uiCoreTodoRuntime = new UiCoreAppRuntime(
+        _uiCoreRuntime = new UiCoreAppRuntime(
             todoService: _mcpTodoService,
+            workspaceService: _mcpWorkspaceService,
             workspaceContext: new McpServer.UI.Core.ViewModels.WorkspaceContextViewModel
             {
                 ActiveWorkspacePath = _mcpClient.WorkspacePath ?? string.Empty
             });
-        _uiCoreWorkspaceRuntime = new UiCoreAppRuntime(
-            workspaceService: _mcpWorkspaceService,
-            workspaceContext: new McpServer.UI.Core.ViewModels.WorkspaceContextViewModel());
 
         _activeMcpBaseUrl = _defaultMcpBaseUrl;
         _agentEventStreamService = AgentEventStreamFactory.Create(
@@ -490,7 +487,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         var resolvedPath = workspaceRootPath ?? string.Empty;
         _mcpClient.WorkspacePath = resolvedPath;
         _mcpPromptClient.WorkspacePath = resolvedPath;
-        _uiCoreTodoRuntime.WorkspaceContext.ActiveWorkspacePath = resolvedPath;
+        _uiCoreRuntime.WorkspaceContext.ActiveWorkspacePath = resolvedPath;
 
         if (_hasRegisteredCqrsHandlers)
             RegisterMcpServiceHandlers();
