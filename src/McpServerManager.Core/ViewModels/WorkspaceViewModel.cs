@@ -32,7 +32,7 @@ public partial class WorkspaceViewModel : ViewModelBase
     private readonly UiCoreWorkspaceHealthProbeViewModel _healthVm;
     private readonly List<WorkspaceListEntry> _allEntries = [];
     private string? _editingWorkspaceKey;
-    private Timer? _healthTimer;
+    private McpServer.UI.Core.Services.ITimerHandle? _healthTimer;
     private bool _isHealthCheckRunning;
     private bool _hasLoadedGlobalPrompt;
     private long _selectionDetailsLoadSequence;
@@ -824,10 +824,12 @@ public partial class WorkspaceViewModel : ViewModelBase
     private void StartHealthTimer()
     {
         StopHealthTimer();
-        _healthTimer = new Timer(_ =>
+        var timerSvc = new Services.Infrastructure.TimerService();
+        _healthTimer = timerSvc.CreateRecurring(TimeSpan.FromMinutes(1), ct =>
         {
             Dispatcher.UIThread.Post(() => _ = CheckWorkspaceHealthForSelectionAsync(updateStatusText: false));
-        }, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            return Task.CompletedTask;
+        });
     }
 
     private void StopHealthTimer()

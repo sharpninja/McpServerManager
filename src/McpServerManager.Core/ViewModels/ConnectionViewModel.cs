@@ -1,6 +1,4 @@
 using System;
-using System.Net.Http;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -229,25 +227,10 @@ public partial class ConnectionViewModel : ViewModelBase
 
         try
         {
-            // Verify the server is reachable. Use a non-redirecting probe so we can
-            // detect HTTP→HTTPS upgrades (e.g. ngrok free tier) and use the final
-            // scheme. .NET HttpClient strips the Authorization header on scheme-change
-            // redirects, which breaks Bearer auth if we keep using the HTTP URL.
-            using var probeHandler = new HttpClientHandler { AllowAutoRedirect = false };
-            using var probe = new HttpClient(probeHandler) { Timeout = TimeSpan.FromSeconds(5) };
+            // Verify the server is reachable and resolve any HTTP→HTTPS redirects.
             try
             {
-                using var healthResponse = await probe.GetAsync($"{url}/health", ct).ConfigureAwait(true);
-                if ((int)healthResponse.StatusCode is >= 301 and <= 308
-                    && healthResponse.Headers.Location is { } redirectLocation)
-                {
-                    var redirected = redirectLocation.IsAbsoluteUri ? redirectLocation : new Uri(new Uri(url), redirectLocation);
-                    var upgradedUrl = $"{redirected.Scheme}://{redirected.Host}:{redirected.Port}";
-                    _logger.LogInformation(
-                        "ConnectAsync: health probe redirected {OriginalUrl} → {UpgradedUrl}; adopting upgraded scheme",
-                        url, upgradedUrl);
-                    url = upgradedUrl;
-                }
+                url = await Services.ConnectionProbeHelper.ProbeHealthAndResolveUrlAsync(url, ct).ConfigureAwait(true);
             }
             catch (Exception probeEx)
             {
@@ -535,43 +518,7 @@ public partial class ConnectionViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(jwtToken))
             return true;
 
-        try
-        {
-            var parts = jwtToken.Split('.');
-            if (parts.Length < 2)
-                return false;
-
-            var payloadBytes = DecodeJwtBase64Url(parts[1]);
-            using var payload = JsonDocument.Parse(payloadBytes);
-            if (!payload.RootElement.TryGetProperty("exp", out var expElement))
-                return false;
-
-            long expUnixSeconds;
-            if (expElement.ValueKind == JsonValueKind.Number)
-            {
-                if (!expElement.TryGetInt64(out expUnixSeconds))
-                    return false;
-            }
-            else if (expElement.ValueKind == JsonValueKind.String &&
-                     long.TryParse(expElement.GetString(), out var parsed))
-            {
-                expUnixSeconds = parsed;
-            }
-            else
-            {
-                return false;
-            }
-
-            if (expUnixSeconds <= 0)
-                return false;
-
-            expiresAtUtc = DateTimeOffset.FromUnixTimeSeconds(expUnixSeconds);
-            return expiresAtUtc.Value <= DateTimeOffset.UtcNow.Add(skew);
-        }
-        catch
-        {
-            return false;
-        }
+        return Services.ConnectionProbeHelper.IsJwtExpiredOrNearExpiry(jwtToken, skew, DecodeJwtBase64Url, out expiresAtUtc);
     }
 
     private static byte[] DecodeJwtBase64Url(string value)

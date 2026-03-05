@@ -139,4 +139,34 @@ public sealed class SpeechFilterService
             .Where(l => l.Length > 0)
             .ToList();
     }
+
+    /// <summary>Parses a JSON string containing a phrase list (array or single-property object with array).</summary>
+    public static List<string> ParseJsonPhraseList(string content)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(content);
+        var root = doc.RootElement;
+
+        if (root.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            return root.EnumerateArray()
+                .Where(e => e.ValueKind == System.Text.Json.JsonValueKind.String)
+                .Select(e => e.GetString()!.Trim())
+                .Where(s => s.Length > 0)
+                .ToList();
+        }
+
+        foreach (var prop in root.EnumerateObject())
+        {
+            if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                return prop.Value.EnumerateArray()
+                    .Where(e => e.ValueKind == System.Text.Json.JsonValueKind.String)
+                    .Select(e => e.GetString()!.Trim())
+                    .Where(s => s.Length > 0)
+                    .ToList();
+            }
+        }
+
+        throw new InvalidOperationException("JSON must contain a string array.");
+    }
 }

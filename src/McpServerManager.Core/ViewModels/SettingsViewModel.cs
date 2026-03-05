@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using McpServerManager.Core.Services;
@@ -73,7 +72,7 @@ public partial class SettingsViewModel : ViewModelBase
 
         if (phrases.Count == 0)
         {
-            StatusMessage = "No phrases found in file.";
+            StatusMessage = "No phrases found in the imported data.";
             return;
         }
 
@@ -97,32 +96,7 @@ public partial class SettingsViewModel : ViewModelBase
 
     private static List<string> ParseJsonPhrases(string content)
     {
-        var doc = JsonDocument.Parse(content);
-        var root = doc.RootElement;
-
-        if (root.ValueKind == JsonValueKind.Array)
-        {
-            return root.EnumerateArray()
-                .Where(e => e.ValueKind == JsonValueKind.String)
-                .Select(e => e.GetString()!.Trim())
-                .Where(s => s.Length > 0)
-                .ToList();
-        }
-
-        // Try object with a single array property
-        foreach (var prop in root.EnumerateObject())
-        {
-            if (prop.Value.ValueKind == JsonValueKind.Array)
-            {
-                return prop.Value.EnumerateArray()
-                    .Where(e => e.ValueKind == JsonValueKind.String)
-                    .Select(e => e.GetString()!.Trim())
-                    .Where(s => s.Length > 0)
-                    .ToList();
-            }
-        }
-
-        throw new InvalidOperationException("JSON must contain a string array.");
+        return SpeechFilterService.ParseJsonPhraseList(content);
     }
 
     private static List<string> ParseYamlPhrases(string content)
