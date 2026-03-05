@@ -19,6 +19,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using McpServer.Client;
+using McpServer.Cqrs.Mvvm;
 using McpServerManager.Core.Converters;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Models.Json;
@@ -80,6 +81,13 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     /// <summary>Raised when the active workspace path changes. Child VMs subscribe to refresh reactively.</summary>
     public event Action<string>? WorkspacePathChanged;
+
+    // ── CqrsRelayCommand properties (parameterless CQRS dispatches) ──
+    public CqrsRelayCommand<bool> CloseRequestDetailsCommand { get; private set; } = null!;
+    public CqrsRelayCommand<bool> OpenPreviewInBrowserCommand { get; private set; } = null!;
+    public CqrsRelayCommand<bool> ToggleShowRawMarkdownCommand { get; private set; } = null!;
+    public CqrsRelayCommand<bool> OpenAgentConfigCommand { get; private set; } = null!;
+    public CqrsRelayCommand<bool> OpenPromptTemplatesCommand { get; private set; } = null!;
 
     /// <summary>ViewModel for the Todo tab. Created lazily on first access.</summary>
     public TodoListViewModel TodoViewModel => _todoViewModel ??= CreateTodoViewModel();
@@ -442,6 +450,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 ActiveWorkspacePath = _mcpClient.WorkspacePath ?? string.Empty
             });
         _dispatcher = _uiCoreRuntime.GetRequiredService<McpServer.Cqrs.Dispatcher>();
+        InitializeCqrsCommands();
 
         // Pre-populate the workspace picker with a placeholder.
         // No switch is triggered here — the real switch happens in LoadWorkspaceConnectionsAsync
@@ -469,6 +478,15 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             throw new InvalidOperationException("MCP base URL must be an absolute URI.");
 
         return uri.ToString().TrimEnd('/');
+    }
+
+    private void InitializeCqrsCommands()
+    {
+        CloseRequestDetailsCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.CloseRequestDetailsCommand());
+        OpenPreviewInBrowserCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.OpenPreviewInBrowserCommand());
+        ToggleShowRawMarkdownCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.ToggleShowRawMarkdownCommand());
+        OpenAgentConfigCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.OpenAgentConfigCommand());
+        OpenPromptTemplatesCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.OpenPromptTemplatesCommand());
     }
 
     private void ApplyActiveMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? workspaceRootPath = null)
@@ -1905,8 +1923,6 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             SelectedSearchEntry = entry;
     }
 
-    [RelayCommand]
-    private void CloseRequestDetails() => _ = _dispatcher.SendAsync(new Commands.CloseRequestDetailsCommand());
 
     public void CloseRequestDetailsInternal()
     {
@@ -2683,8 +2699,6 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         }
     }
 
-    [RelayCommand]
-    private void OpenPreviewInBrowser() => _ = _dispatcher.SendAsync(new Commands.OpenPreviewInBrowserCommand());
 
     public void OpenPreviewInBrowserInternal()
     {
@@ -2696,16 +2710,12 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         SetStatus("HTML preview is disabled.");
     }
 
-    [RelayCommand]
-    private void ToggleShowRawMarkdown() => _ = _dispatcher.SendAsync(new Commands.ToggleShowRawMarkdownCommand());
 
     public void ToggleShowRawMarkdownInternal()
     {
         ShowMarkdownAsRawText = !ShowMarkdownAsRawText;
     }
 
-    [RelayCommand]
-    private void OpenAgentConfig() => _ = _dispatcher.SendAsync(new Commands.OpenAgentConfigCommand());
 
     public void OpenAgentConfigInternal()
     {
@@ -2713,8 +2723,6 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         OpenFileInDefaultEditor(AgentConfigIo.GetFilePath(), "config");
     }
 
-    [RelayCommand]
-    private void OpenPromptTemplates() => _ = _dispatcher.SendAsync(new Commands.OpenPromptTemplatesCommand());
 
     public void OpenPromptTemplatesInternal()
     {

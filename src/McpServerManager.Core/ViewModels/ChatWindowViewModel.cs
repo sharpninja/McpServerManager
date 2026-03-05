@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using McpServer.Cqrs;
+using McpServer.Cqrs.Mvvm;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Services;
@@ -38,6 +39,9 @@ public partial class ChatWindowViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<PromptTemplate> _promptTemplates = new();
 
+    public CqrsRelayCommand<ChatFileOpenResult> OpenAgentConfigCommand { get; }
+    public CqrsRelayCommand<ChatFileOpenResult> OpenPromptTemplatesCommand { get; }
+
     public ChatWindowViewModel(
         McpServer.Cqrs.Dispatcher dispatcher,
         Func<string> getContext,
@@ -48,22 +52,13 @@ public partial class ChatWindowViewModel : ViewModelBase
         _getContext = getContext ?? (() => "");
         _initialModelFromConfig = initialModelFromConfig;
         _onModelChanged = onModelChanged;
+
+        OpenAgentConfigCommand = new CqrsRelayCommand<ChatFileOpenResult>(_dispatcher, () => new ChatOpenAgentConfigCommand());
+        OpenPromptTemplatesCommand = new CqrsRelayCommand<ChatFileOpenResult>(_dispatcher, () => new ChatOpenPromptTemplatesCommand());
     }
 
     /// <summary>Parameterless constructor for design-time only.</summary>
     public ChatWindowViewModel() : this(null!, () => "", null, null) { }
-
-    [RelayCommand]
-    private async Task OpenAgentConfig()
-    {
-        _ = await _dispatcher.SendAsync(new ChatOpenAgentConfigCommand()).ConfigureAwait(true);
-    }
-
-    [RelayCommand]
-    private async Task OpenPromptTemplates()
-    {
-        _ = await _dispatcher.SendAsync(new ChatOpenPromptTemplatesCommand()).ConfigureAwait(true);
-    }
 
     /// <summary>Loads prompt templates from agent config. Call when the chat window is opened.</summary>
     public void LoadPrompts() => _ = LoadPromptsAsync();
