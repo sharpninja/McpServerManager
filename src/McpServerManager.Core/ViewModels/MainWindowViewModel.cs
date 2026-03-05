@@ -73,6 +73,10 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     private bool _hasCompletedInitialSwitch;
     internal readonly Mediator _mediator;
     private readonly McpServiceFactory _serviceFactory = new();
+    private readonly McpServer.UI.Core.Services.IFileSystemService _fs = new Services.Infrastructure.FileSystemService();
+    private readonly McpServer.UI.Core.Services.IProcessLauncherService _processLauncher = new Services.Infrastructure.ProcessLauncherService();
+    private readonly McpServer.UI.Core.Services.ITimerService _timerService = new Services.Infrastructure.TimerService();
+    private readonly McpServer.UI.Core.Services.IJsonParsingService _jsonParser = new Services.Infrastructure.JsonParsingService();
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
 
     /// <summary>Raised when the active workspace path changes. Child VMs subscribe to refresh reactively.</summary>
@@ -145,12 +149,12 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     private bool _restoreRequestDetailsAfterRefresh;
     private string? _pendingDetailRequestId;
     private string? _pendingDetailSourcePath;
-    private Timer? _mcpAutoRefreshTimer;
+    private McpServer.UI.Core.Services.ITimerHandle? _mcpAutoRefreshTimer;
     private bool _isRefreshing;
-    private Timer? _workspaceHealthTimer;
+    private McpServer.UI.Core.Services.ITimerHandle? _workspaceHealthTimer;
     private bool _isWorkspaceHealthCheckRunning;
     private bool _pendingWorkspaceHealthRefresh;
-    private FileSystemWatcher? _agentsReadmeWatcher;
+    private McpServer.UI.Core.Services.IWatcherHandle? _agentsReadmeWatcher;
     private string? _agentsReadmeWatchedFilePath;
     private int _agentsReadmeReloadVersion;
 
@@ -916,10 +920,11 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     {
         StopWorkspaceHealthRefresh();
         var interval = TimeSpan.FromMinutes(1);
-        _workspaceHealthTimer = new Timer(_ =>
+        _workspaceHealthTimer = _timerService.CreateRecurring(interval, async ct =>
         {
             DispatchToUi(() => _ = RefreshSelectedWorkspaceHealthAsync());
-        }, null, interval, interval);
+            await Task.CompletedTask;
+        });
     }
 
     private void StopWorkspaceHealthRefresh()
@@ -958,7 +963,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             return;
         }
 
-        var filePath = Path.Combine(workspaceRootPath.Trim(), AgentsReadmeFileName);
+        var filePath = _fs.CombinePath(workspaceRootPath.Trim(), AgentsReadmeFileName);
         ReplaceAgentsReadmeWatcher(filePath);
         DispatchToUi(() => AgentsReadmeFilePath = filePath);
         QueueAgentsReadmeReload(filePath);
@@ -973,12 +978,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         {
             try
             {
-                _agentsReadmeWatcher.EnableRaisingEvents = false;
-                _agentsReadmeWatcher.Changed -= OnAgentsReadmeFileChanged;
-                _agentsReadmeWatcher.Created -= OnAgentsReadmeFileChanged;
-                _agentsReadmeWatcher.Deleted -= OnAgentsReadmeFileChanged;
-                _agentsReadmeWatcher.Renamed -= OnAgentsReadmeFileRenamed;
-                _agentsReadmeWatcher.Error -= OnAgentsReadmeWatcherError;
+                _agentsReadmeWatcher.Stop();
                 _agentsReadmeWatcher.Dispose();
             }
             catch (Exception ex)
@@ -997,65 +997,25 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         if (string.IsNullOrWhiteSpace(filePath))
             return;
 
-        var directory = Path.GetDirectoryName(filePath);
+        var directory = _fs.GetDirectoryName(filePath);
         var filter = Path.GetFileName(filePath);
-        if (string.IsNullOrWhiteSpace(directory) || string.IsNullOrWhiteSpace(filter) || !Directory.Exists(directory))
+        if (string.IsNullOrWhiteSpace(directory) || string.IsNullOrWhiteSpace(filter) || !_fs.DirectoryExists(directory))
             return;
 
         try
         {
-            _agentsReadmeWatcher = new FileSystemWatcher(directory, filter)
+            _agentsReadmeWatcher = _serviceFactory.WatchFileSystem(directory, filter, changedPath =>
             {
-                IncludeSubdirectories = false,
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.CreationTime | NotifyFilters.Size
-            };
-            _agentsReadmeWatcher.Changed += OnAgentsReadmeFileChanged;
-            _agentsReadmeWatcher.Created += OnAgentsReadmeFileChanged;
-            _agentsReadmeWatcher.Deleted += OnAgentsReadmeFileChanged;
-            _agentsReadmeWatcher.Renamed += OnAgentsReadmeFileRenamed;
-            _agentsReadmeWatcher.Error += OnAgentsReadmeWatcherError;
-            _agentsReadmeWatcher.EnableRaisingEvents = true;
+                var watched = _agentsReadmeWatchedFilePath;
+                if (!string.IsNullOrWhiteSpace(watched))
+                    QueueAgentsReadmeReload(watched);
+            });
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to start AGENTS file watcher for {FilePath}", filePath);
             DispatchToUi(() => AgentsReadmeStatusText = $"AGENTS watcher failed: {ex.Message}");
         }
-    }
-
-    private void OnAgentsReadmeFileChanged(object sender, FileSystemEventArgs e)
-    {
-        var watched = _agentsReadmeWatchedFilePath;
-        if (string.IsNullOrWhiteSpace(watched))
-            return;
-
-        if (!string.Equals(e.FullPath, watched, StringComparison.OrdinalIgnoreCase))
-            return;
-
-        QueueAgentsReadmeReload(watched);
-    }
-
-    private void OnAgentsReadmeFileRenamed(object sender, RenamedEventArgs e)
-    {
-        var watched = _agentsReadmeWatchedFilePath;
-        if (string.IsNullOrWhiteSpace(watched))
-            return;
-
-        if (!string.Equals(e.FullPath, watched, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(e.OldFullPath, watched, StringComparison.OrdinalIgnoreCase))
-            return;
-
-        QueueAgentsReadmeReload(watched);
-    }
-
-    private void OnAgentsReadmeWatcherError(object sender, ErrorEventArgs e)
-    {
-        var ex = e.GetException();
-        _logger.LogWarning(ex, "AGENTS file watcher error");
-        DispatchToUi(() =>
-        {
-            AgentsReadmeStatusText = $"AGENTS watcher error: {ex?.Message ?? "Unknown error"}";
-        });
     }
 
     private void QueueAgentsReadmeReload(string filePath)
@@ -1087,14 +1047,14 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
         try
         {
-            if (!File.Exists(filePath))
+            if (!_fs.FileExists(filePath))
             {
                 status = $"AGENTS file not found: {filePath}";
             }
             else
             {
                 content = await ReadTextFileWithEncodingAsync(filePath).ConfigureAwait(false);
-                var lastWriteUtc = File.GetLastWriteTimeUtc(filePath);
+                var lastWriteUtc = _fs.GetLastWriteTimeUtc(filePath);
                 if (lastWriteUtc != DateTime.MinValue)
                     fileTimestampText = lastWriteUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");
 
@@ -1602,9 +1562,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
              string hash = SelectedNode.Path.GetHashCode().ToString("X");
              string tempFileName = $"{Path.GetFileNameWithoutExtension(SelectedNode.Path)}_{hash}.html";
              string tempDir = GetHtmlCacheDir();
-             string tempPath = Path.Combine(tempDir, tempFileName);
+             string tempPath = _fs.CombinePath(tempDir, tempFileName);
 
-             if (File.Exists(tempPath)) File.Delete(tempPath);
+             if (_fs.FileExists(tempPath)) _fs.DeleteFile(tempPath);
 
              GenerateAndNavigateInternal(SelectedNode);
         }
@@ -1797,14 +1757,14 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     private const int MaxSourceContextChars = 16_000;
     private const int MaxSourceFileLines = 400;
 
-    private static void AppendDocsContext(StringBuilder sb, string resolvedPath)
+    private void AppendDocsContext(StringBuilder sb, string resolvedPath)
     {
-        string? docsPath = Path.GetDirectoryName(resolvedPath);
-        if (string.IsNullOrEmpty(docsPath) || !Directory.Exists(docsPath))
+        string? docsPath = _fs.GetDirectoryName(resolvedPath);
+        if (string.IsNullOrEmpty(docsPath) || !_fs.DirectoryExists(docsPath))
             return;
         try
         {
-            var files = new DirectoryInfo(docsPath).GetFiles("*.md")
+            var files = _fs.EnumerateFiles(docsPath, "*.md", false)
                 .Where(f => !IsArchivedName(f.Name))
                 .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -1812,20 +1772,20 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 return;
             sb.AppendLine("--- Documents (from docs folder) ---");
             int remaining = MaxDocsContextChars;
-            foreach (var file in files)
+            foreach (var entry in files)
             {
                 if (remaining <= 0) break;
                 string content;
                 try
                 {
-                    content = File.ReadAllText(file.FullName);
+                    content = _fs.ReadAllText(entry.FullName);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogDebug(ex, "[CodeFiles] Could not read {FileName}", file.Name);
-                    content = $"(could not read {file.Name})";
+                    _logger.LogDebug(ex, "[CodeFiles] Could not read {FileName}", entry.Name);
+                    content = $"(could not read {entry.Name})";
                 }
-                string block = $"\n### {file.Name}\n{content}\n";
+                string block = $"\n### {entry.Name}\n{content}\n";
                 if (block.Length > remaining)
                     block = block.AsSpan(0, remaining).ToString() + "\n...(truncated)";
                 sb.Append(block);
@@ -1842,10 +1802,10 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         }
     }
 
-    private static void AppendSourceContext(StringBuilder sb, string resolvedPath)
+    private void AppendSourceContext(StringBuilder sb, string resolvedPath)
     {
         string? sourcePath = GetSourcePath(resolvedPath);
-        if (string.IsNullOrEmpty(sourcePath) || !Directory.Exists(sourcePath))
+        if (string.IsNullOrEmpty(sourcePath) || !_fs.DirectoryExists(sourcePath))
             return;
         try
         {
@@ -1862,7 +1822,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 string content;
                 try
                 {
-                    var lines = File.ReadAllLines(path);
+                    var lines = _fs.ReadAllLines(path);
                     if (lines.Length > MaxSourceFileLines)
                         lines = lines.Take(MaxSourceFileLines).ToArray();
                     content = string.Join(Environment.NewLine, lines);
@@ -1890,12 +1850,11 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         }
     }
 
-    private static void CollectCodeFiles(string dirPath, List<string> filePaths, string sessionsPathToIgnore)
+    private void CollectCodeFiles(string dirPath, List<string> filePaths, string sessionsPathToIgnore)
     {
         try
         {
-            var dirInfo = new DirectoryInfo(dirPath);
-            foreach (var dir in dirInfo.GetDirectories())
+            foreach (var dir in _fs.EnumerateDirectories(dirPath, "*", false))
             {
                 if (SourceDirectoriesToSkip.Contains(dir.Name))
                     continue;
@@ -1904,10 +1863,10 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                     continue;
                 CollectCodeFiles(dir.FullName, filePaths, sessionsPathToIgnore);
             }
-            foreach (var file in dirInfo.GetFiles())
+            foreach (var entry in _fs.EnumerateFiles(dirPath, "*", false))
             {
-                if (IsCodeFile(file.Extension))
-                    filePaths.Add(file.FullName);
+                if (IsCodeFile(entry.Extension))
+                    filePaths.Add(entry.FullName);
             }
         }
         catch (Exception ex) { _logger.LogDebug(ex, "[CodeFiles] Error traversing directory"); }
@@ -2102,14 +2061,14 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         // If the browser resolved it to the temp dir, we just want the relative part.
         // But extracting the relative part from the temp path is hard if we don't know the temp root.
 
-        // Simple approach: Take the filename and look in the current markdown's directory.
+        // Simple approach: Take the filename and look in the current markdown's folder
         // Better approach: If the path contains "McpServerManager_Cache", strip it and the prefix.
 
         // Actually, pandoc generates relative links.
         // If I am at "doc.html" in "temp/", and link is "sub/next.md", browser goes to "temp/sub/next.md".
         // I want "original_dir/sub/next.md".
 
-        string? currentDir = Path.GetDirectoryName(_currentMarkdownPath);
+        string? currentDir = _fs.GetDirectoryName(_currentMarkdownPath);
         if (currentDir == null) return;
 
         // Try to handle navigation relative to the current markdown file's directory
@@ -2139,14 +2098,14 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
              // But wait, if pandoc generates relative links, and the browser resolves them against the base URL (the temp html file),
              // then "copilot/session.md" becomes "temp/copilot/session.md".
 
-             // If we assume the link was relative to the markdown file, we should combine it with the markdown's directory.
+             // If we assume the link was relative to the markdown file, we should combine it with the markdown's folder
 
-             string targetPath = Path.Combine(currentDir, relativePath);
+             string targetPath = _fs.CombinePath(currentDir, relativePath);
 
              // Normalize path
-             targetPath = Path.GetFullPath(targetPath);
+             targetPath = _fs.GetFullPath(targetPath);
 
-             if (File.Exists(targetPath))
+             if (_fs.FileExists(targetPath))
              {
                  SelectNodeByPath(targetPath);
                  return;
@@ -2154,8 +2113,8 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         }
 
         // Fallback: Try just the filename in current dir
-        string targetPathSimple = Path.Combine(currentDir, fileName);
-        if (File.Exists(targetPathSimple))
+        string targetPathSimple = _fs.CombinePath(currentDir, fileName);
+        if (_fs.FileExists(targetPathSimple))
         {
             SelectNodeByPath(targetPathSimple);
         }
@@ -2251,14 +2210,15 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     {
         StopMcpAutoRefresh();
         var interval = TimeSpan.FromMinutes(1);
-        _mcpAutoRefreshTimer = new Timer(_ =>
+        _mcpAutoRefreshTimer = _timerService.CreateRecurring(interval, async ct =>
         {
             DispatchToUi(() =>
             {
                 if (!_isRefreshing && SelectedNode != null && IsMcpVirtualNode(SelectedNode))
                     _ = RefreshAsync();
             });
-        }, null, interval, interval);
+            await Task.CompletedTask;
+        });
     }
 
     private void StopMcpAutoRefresh()
@@ -2376,7 +2336,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         });
     }
 
-    private static (FileNode allJsonNode, TreeDto? documentsDto, TreeDto? sourceDto) BuildMcpTreeOffThread(IReadOnlyList<UnifiedSessionLog> sessions)
+    private (FileNode allJsonNode, TreeDto? documentsDto, TreeDto? sourceDto) BuildMcpTreeOffThread(IReadOnlyList<UnifiedSessionLog> sessions)
     {
         var allJsonNode = new FileNode("ALL_JSON_VIRTUAL_NODE", true) { Name = "All JSON", IsExpanded = true };
         var byAgent = sessions
@@ -2480,10 +2440,10 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     /// <summary>Reads a text file with encoding detection (BOM) and strips BOM so Markdown.Avalonia displays correctly.</summary>
-    private static async Task<string> ReadTextFileWithEncodingAsync(string filePath)
+    private async Task<string> ReadTextFileWithEncodingAsync(string filePath)
     {
-        var fullPath = Path.GetFullPath(filePath);
-        if (!File.Exists(fullPath))
+        var fullPath = _fs.GetFullPath(filePath);
+        if (!_fs.FileExists(fullPath))
             throw new FileNotFoundException("File not found.", fullPath);
         using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true);
         using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
@@ -2597,7 +2557,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
          ArchiveCommand.NotifyCanExecuteChanged();
          NotifyContextConsumer();
 
-         string pathForThisPreview = Path.GetFullPath(node.Path);
+         string pathForThisPreview = _fs.GetFullPath(node.Path);
 
          _markdownPreviewCts?.Dispose();
          _markdownPreviewCts = new CancellationTokenSource();
@@ -2657,7 +2617,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
              string content;
              try
              {
-                 content = await File.ReadAllTextAsync(pathForThisPreview);
+                 content = await _fs.ReadAllTextAsync(pathForThisPreview);
              }
              catch (Exception ex)
              {
@@ -2710,32 +2670,13 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     /// <summary>Opens an HTML file in the system default browser.</summary>
-    private static void OpenHtmlInDefaultBrowser(string htmlFilePath)
+    private void OpenHtmlInDefaultBrowser(string htmlFilePath)
     {
-        if (!File.Exists(htmlFilePath)) return;
+        if (!_fs.FileExists(htmlFilePath)) return;
         try
         {
-            var path = Path.GetFullPath(htmlFilePath);
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = path,
-                    UseShellExecute = true
-                };
-                Process.Start(psi);
-            }
-            else
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "xdg-open",
-                    Arguments = path,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                Process.Start(psi);
-            }
+            var path = _fs.GetFullPath(htmlFilePath);
+            _processLauncher.OpenWithDefaultApp(path);
         }
         catch (Exception ex)
         {
@@ -2784,36 +2725,15 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     private void OpenFileInDefaultEditor(string path, string label)
     {
-        if (!File.Exists(path))
+        if (!_fs.FileExists(path))
         {
             SetStatus($"Could not open {label}: file not found.");
             return;
         }
         try
         {
-            var fullPath = Path.GetFullPath(path);
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                // Use cmd /c start so the file reliably opens with the default app (Process.Start with
-                // the file path can succeed without opening when launched from IDE or certain contexts).
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = $"/c start \"\" \"{fullPath}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                });
-            }
-            else
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "xdg-open",
-                    Arguments = fullPath,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                });
-            }
+            var fullPath = _fs.GetFullPath(path);
+            _processLauncher.OpenWithDefaultApp(fullPath);
             SetStatus($"Opened {label}: {path}");
         }
         catch (Exception ex)
@@ -2824,7 +2744,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     private bool CanArchive() =>
         _currentMarkdownPath != null &&
-        File.Exists(_currentMarkdownPath) &&
+        _fs.FileExists(_currentMarkdownPath) &&
         IsMarkdownVisible &&
         !_currentMarkdownPath.StartsWith(McpSessionPrefix, StringComparison.OrdinalIgnoreCase) &&
         !IsArchivedName(Path.GetFileName(_currentMarkdownPath));
@@ -2835,17 +2755,17 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     public void ArchiveInternal()
     {
         string? path = _currentMarkdownPath;
-        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
-        string? dir = Path.GetDirectoryName(path);
+        if (string.IsNullOrEmpty(path) || !_fs.FileExists(path)) return;
+        string? dir = _fs.GetDirectoryName(path);
         if (string.IsNullOrEmpty(dir)) return;
         string name = Path.GetFileName(path);
         string newName = "Archived-" + name;
-        string newPath = Path.Combine(dir, newName);
+        string newPath = _fs.CombinePath(dir, newName);
         Task.Run(() =>
         {
             try
             {
-                File.Move(path, newPath);
+                _fs.MoveFile(path, newPath);
                 DispatchToUi(() =>
                 {
                     _currentMarkdownPath = null;
@@ -2884,18 +2804,18 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     {
         if (node == null || node.Path == "ALL_JSON_VIRTUAL_NODE" || node.IsDirectory || node.Path.StartsWith(McpSessionPrefix, StringComparison.OrdinalIgnoreCase)) return;
         string path = node.Path;
-        if (!File.Exists(path)) return;
-        string? dir = Path.GetDirectoryName(path);
+        if (!_fs.FileExists(path)) return;
+        string? dir = _fs.GetDirectoryName(path);
         if (string.IsNullOrEmpty(dir)) return;
         string name = Path.GetFileName(path);
         if (IsArchivedName(name)) return;
         string newName = "archive-" + name;
-        string newPath = Path.Combine(dir, newName);
+        string newPath = _fs.CombinePath(dir, newName);
         Task.Run(() =>
         {
             try
             {
-                File.Move(path, newPath);
+                _fs.MoveFile(path, newPath);
                 DispatchToUi(() =>
                 {
                     if (SelectedNode == node)
@@ -2924,41 +2844,31 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         _ = ReloadFromMcpAsyncInternal();
     }
 
-    private static string? ResolveCssPath()
+    private string? ResolveCssPath()
     {
         string? configuredPath = AppSettings.ResolveCssFallbackPath();
         if (!string.IsNullOrWhiteSpace(configuredPath))
         {
-            if (File.Exists(configuredPath)) return configuredPath;
+            if (_fs.FileExists(configuredPath)) return configuredPath;
             _logger.LogWarning($"Configured CSS path not found: {configuredPath}");
         }
 
-        string cssPath = Path.Combine(AppContext.BaseDirectory, "Assets", "styles.css");
-        if (File.Exists(cssPath)) return cssPath;
-        string sourceCss = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "McpServerManager", "Assets", "styles.css");
-        if (File.Exists(sourceCss)) return Path.GetFullPath(sourceCss);
+        string cssPath = _fs.CombinePath(AppContext.BaseDirectory, "Assets", "styles.css");
+        if (_fs.FileExists(cssPath)) return cssPath;
+        string sourceCss = _fs.CombinePath(AppContext.BaseDirectory, "..", "..", "..", "McpServerManager", "Assets", "styles.css");
+        if (_fs.FileExists(sourceCss)) return _fs.GetFullPath(sourceCss);
         return null;
     }
 
     private static bool? _isPandocAvailable;
 
-    private static bool IsPandocAvailable()
+    private async Task<bool> IsPandocAvailableAsync()
     {
         if (_isPandocAvailable.HasValue) return _isPandocAvailable.Value;
         try
         {
-            var psi = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = "pandoc",
-                Arguments = "--version",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-            using var p = System.Diagnostics.Process.Start(psi);
-            p?.WaitForExit(5000);
-            _isPandocAvailable = p is { ExitCode: 0 };
+            var result = await _processLauncher.RunAsync("pandoc", "--version");
+            _isPandocAvailable = result.ExitCode == 0;
         }
         catch
         {
@@ -2969,34 +2879,24 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         return _isPandocAvailable.Value;
     }
 
-    private bool ConvertMarkdownToHtml(string srcPath, string destPath)
+    private async Task<bool> ConvertMarkdownToHtmlViaPandocAsync(string srcPath, string destPath)
     {
         try
         {
-            if (!IsPandocAvailable()) return false;
+            if (!await IsPandocAvailableAsync()) return false;
             string? cssPath = ResolveCssPath();
             if (cssPath == null) return false;
 
-            var process = new System.Diagnostics.Process();
-            process.StartInfo.FileName = "pandoc";
-            process.StartInfo.Arguments = $"\"{srcPath}\" -f markdown -t html -s --css \"{cssPath}\" --metadata title=\"Request Tracker\"";
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.RedirectStandardError = true;
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.CreateNoWindow = true;
-            process.Start();
+            var result = await _processLauncher.RunAsync(
+                "pandoc",
+                $"\"{srcPath}\" -f markdown -t html -s --css \"{cssPath}\" --metadata title=\"Request Tracker\"");
 
-            // Read before WaitForExit to avoid deadlock when pipe buffer fills
-            string htmlContent = process.StandardOutput.ReadToEnd();
-            string stderr = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-
-            if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(htmlContent))
+            if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(result.StandardOutput))
             {
-                _logger.LogError("Pandoc failed: ExitCode={ExitCode}. stderr: {Stderr}", process.ExitCode, stderr);
+                _logger.LogError("Pandoc failed: ExitCode={ExitCode}. stderr: {Stderr}", result.ExitCode, result.StandardError);
                 return false;
             }
-            File.WriteAllText(destPath, htmlContent);
+            _fs.WriteAllText(destPath, result.StandardOutput);
             return true;
         }
         catch (Exception ex)
@@ -3006,11 +2906,11 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         }
     }
 
-    private static async Task<bool> ConvertMarkdownToHtmlAsync(string srcPath, string destPath)
+    private async Task<bool> ConvertMarkdownToHtmlAsync(string srcPath, string destPath)
     {
         try
         {
-            if (!IsPandocAvailable()) return false;
+            if (!await IsPandocAvailableAsync()) return false;
             string? cssPath = ResolveCssPath();
             if (cssPath == null)
             {
@@ -3018,35 +2918,22 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 return false;
             }
 
-            var process = new System.Diagnostics.Process();
-            process.StartInfo.FileName = "pandoc";
-            process.StartInfo.Arguments = $"\"{srcPath}\" -f markdown -t html -s --css \"{cssPath}\" --metadata title=\"Request Tracker\"";
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.RedirectStandardError = true;
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.CreateNoWindow = true;
-            process.Start();
+            var result = await _processLauncher.RunAsync(
+                "pandoc",
+                $"\"{srcPath}\" -f markdown -t html -s --css \"{cssPath}\" --metadata title=\"Request Tracker\"");
 
-            // Read output before waiting for exit to avoid deadlock (full pipe blocks process)
-            Task<string> outTask = process.StandardOutput.ReadToEndAsync();
-            Task<string> errTask = process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            string htmlContent = await outTask;
-            string stderr = await errTask;
-
-            if (process.ExitCode != 0)
+            if (result.ExitCode != 0)
             {
-                _logger.LogError("Pandoc failed: ExitCode={ExitCode}. stderr: {Stderr}", process.ExitCode, stderr);
+                _logger.LogError("Pandoc failed: ExitCode={ExitCode}. stderr: {Stderr}", result.ExitCode, result.StandardError);
                 return false;
             }
-            if (string.IsNullOrWhiteSpace(htmlContent))
+            if (string.IsNullOrWhiteSpace(result.StandardOutput))
             {
-                _logger.LogError("Pandoc produced no output. stderr: {Stderr}", stderr);
+                _logger.LogError("Pandoc produced no output. stderr: {Stderr}", result.StandardError);
                 return false;
             }
-            await File.WriteAllTextAsync(destPath, htmlContent);
-            _logger.LogInformation("Pandoc completed: wrote {Length} chars to {DestPath}", htmlContent.Length, destPath);
+            await _fs.WriteAllTextAsync(destPath, result.StandardOutput);
+            _logger.LogInformation("Pandoc completed: wrote {Length} chars to {DestPath}", result.StandardOutput.Length, destPath);
             return true;
         }
         catch (Exception ex)
@@ -3070,8 +2957,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         {
             try
             {
-                string jsonContent = File.ReadAllText(path);
-                var jsonNode = JsonNode.Parse(jsonContent);
+                string jsonContent = _fs.ReadAllText(path);
+                var treeResult = _jsonParser.ParseToTree(jsonContent);
+                var jsonNode = treeResult.RootNode as JsonNode;
                 string schemaType = "Unknown";
                 var summary = new JsonLogSummary();
                 UnifiedSessionLog? unifiedLog = null;
@@ -3200,22 +3088,33 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     /// Fills Actions on unified entries from raw JSON when the deserialized Cursor entry didn't have them
     /// (e.g. "Actions" vs "actions" or different structure). Ensures req-001-logging-system and others show actions.
     /// </summary>
-    private static void FillActionsFromRawJson(string jsonContent, UnifiedSessionLog unifiedLog)
+    private void FillActionsFromRawJson(string jsonContent, UnifiedSessionLog unifiedLog)
     {
         if (unifiedLog?.Entries == null || unifiedLog.Entries.Count == 0) return;
         try
         {
-            using var doc = JsonDocument.Parse(jsonContent);
-            var root = doc.RootElement;
-            if (!TryGetPropertyCI(root, "entries", out var entriesProp) || entriesProp.ValueKind != JsonValueKind.Array)
-                return;
+            var treeResult = _jsonParser.ParseToTree(jsonContent);
+            if (treeResult.RootNode is not JsonObject rootObj) return;
+
+            JsonArray? entriesArray = null;
+            foreach (var kvp in rootObj)
+            {
+                if (string.Equals(kvp.Key, "entries", StringComparison.OrdinalIgnoreCase) && kvp.Value is JsonArray arr)
+                {
+                    entriesArray = arr;
+                    break;
+                }
+            }
+            if (entriesArray == null) return;
+
             int i = 0;
-            foreach (var entryEl in entriesProp.EnumerateArray())
+            foreach (var entryNode in entriesArray)
             {
                 if (i >= unifiedLog.Entries.Count) break;
-                if (unifiedLog.Entries[i].Actions.Count == 0)
+                if (unifiedLog.Entries[i].Actions.Count == 0 && entryNode != null)
                 {
-                    var actions = UnifiedLogFactory.ParseActionsFromEntryElement(entryEl);
+                    var entryElement = entryNode.Deserialize<JsonElement>();
+                    var actions = UnifiedLogFactory.ParseActionsFromEntryElement(entryElement);
                     if (actions.Count > 0)
                         unifiedLog.Entries[i].Actions = new ObservableCollection<UnifiedAction>(actions);
                 }
@@ -3262,12 +3161,12 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
 
     /// <summary>Parses a JSON file into a unified log using key-based format detection (matches single-file logic).
     /// Returns (unifiedLog, entryCount) or (null, -1) if not recognized.</summary>
-    private static (UnifiedSessionLog? log, int entryCount) TryParseFileToUnifiedLog(string text)
+    private (UnifiedSessionLog? log, int entryCount) TryParseFileToUnifiedLog(string text)
     {
         try
         {
-            var node = JsonNode.Parse(text);
-            if (node is not JsonObject obj) return (null, -1);
+            var treeResult = _jsonParser.ParseToTree(text);
+            if (treeResult.RootNode is not JsonObject obj) return (null, -1);
 
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
@@ -3340,15 +3239,19 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         }
     }
 
-    private static void FillActionsFromSingleEntryJson(string jsonContent, UnifiedSessionLog unifiedLog)
+    private void FillActionsFromSingleEntryJson(string jsonContent, UnifiedSessionLog unifiedLog)
     {
         if (unifiedLog?.Entries == null || unifiedLog.Entries.Count == 0) return;
         try
         {
-            using var doc = JsonDocument.Parse(jsonContent);
-            var actions = UnifiedLogFactory.ParseActionsFromEntryElement(doc.RootElement);
-            if (actions.Count > 0)
-                unifiedLog.Entries[0].Actions = new ObservableCollection<UnifiedAction>(actions);
+            var treeResult = _jsonParser.ParseToTree(jsonContent);
+            if (treeResult.RootNode is JsonNode rootNode)
+            {
+                var rootElement = rootNode.Deserialize<JsonElement>();
+                var actions = UnifiedLogFactory.ParseActionsFromEntryElement(rootElement);
+                if (actions.Count > 0)
+                    unifiedLog.Entries[0].Actions = new ObservableCollection<UnifiedAction>(actions);
+            }
         }
         catch (Exception ex) { _logger.LogDebug(ex, "[Actions] Failed to parse actions from JSON entry"); }
     }
@@ -3653,11 +3556,11 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     /// <summary>Builds the file tree on a background thread; returns allJson node, root DTO, Documents DTO, and Source DTO (code files from ../../src).</summary>
-    private static (FileNode allJsonNode, TreeDto? rootDto, TreeDto? documentsDto, TreeDto? sourceDto) BuildTreeOffThread(string resolvedPath)
+    private (FileNode allJsonNode, TreeDto? rootDto, TreeDto? documentsDto, TreeDto? sourceDto) BuildTreeOffThread(string resolvedPath)
     {
         var allJsonNode = new FileNode("ALL_JSON_VIRTUAL_NODE", false) { Name = "All JSON" };
         TreeDto? rootDto = null;
-        if (Directory.Exists(resolvedPath))
+        if (_fs.DirectoryExists(resolvedPath))
         {
             rootDto = new TreeDto { Path = resolvedPath, IsDirectory = true };
             LoadChildrenDto(rootDto);
@@ -3668,7 +3571,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     /// <summary>Builds a Source tree DTO: ../../src with code files only, recursing into subdirs but ignoring session log folders.</summary>
-    private static TreeDto? BuildSourceDto(string resolvedPath)
+    private TreeDto? BuildSourceDto(string resolvedPath)
     {
         string? sourcePath = GetSourcePath(resolvedPath);
         if (string.IsNullOrEmpty(sourcePath))
@@ -3686,10 +3589,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     /// <summary>Recursively adds code files and subdirs to the node, skipping session log folder(s).</summary>
-    private static void LoadSourceChildrenDto(TreeDto node, string sessionsPathToIgnore)
+    private void LoadSourceChildrenDto(TreeDto node, string sessionsPathToIgnore)
     {
-        var dirInfo = new DirectoryInfo(node.Path);
-        foreach (var dir in dirInfo.GetDirectories())
+        foreach (var dir in _fs.EnumerateDirectories(node.Path, "*", false))
         {
             if (SourceDirectoriesToSkip.Contains(dir.Name))
                 continue;
@@ -3701,18 +3603,18 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             if (child.Children.Count > 0)
                 node.Children.Add(child);
         }
-        foreach (var file in dirInfo.GetFiles())
+        foreach (var entry in _fs.EnumerateFiles(node.Path, "*", false))
         {
-            if (IsCodeFile(file.Extension))
-                node.Children.Add(new TreeDto { Path = file.FullName, IsDirectory = false });
+            if (IsCodeFile(entry.Extension))
+                node.Children.Add(new TreeDto { Path = entry.FullName, IsDirectory = false });
         }
     }
 
     /// <summary>Builds a Documents tree DTO: parent of resolvedPath with .md files, recursing into subfolders (ignoring session log subfolders).</summary>
-    private static TreeDto? BuildDocumentsDto(string resolvedPath)
+    private TreeDto? BuildDocumentsDto(string resolvedPath)
     {
-        string? parentPath = Path.GetDirectoryName(resolvedPath);
-        if (string.IsNullOrEmpty(parentPath) || !Directory.Exists(parentPath))
+        string? parentPath = _fs.GetDirectoryName(resolvedPath);
+        if (string.IsNullOrEmpty(parentPath) || !_fs.DirectoryExists(parentPath))
             return null;
         var documentsDto = new TreeDto { Path = parentPath, IsDirectory = true };
         try
@@ -3727,10 +3629,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         return documentsDto;
     }
 
-    private static void LoadDocumentsChildrenDto(TreeDto node, string sessionsPathToIgnore)
+    private void LoadDocumentsChildrenDto(TreeDto node, string sessionsPathToIgnore)
     {
-        var dirInfo = new DirectoryInfo(node.Path);
-        foreach (var dir in dirInfo.GetDirectories())
+        foreach (var dir in _fs.EnumerateDirectories(node.Path, "*", false))
         {
             var childFull = dir.FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             if (string.Equals(childFull, sessionsPathToIgnore, StringComparison.OrdinalIgnoreCase))
@@ -3740,11 +3641,11 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             if (child.Children.Count > 0)
                 node.Children.Add(child);
         }
-        foreach (var file in dirInfo.GetFiles("*.md"))
+        foreach (var entry in _fs.EnumerateFiles(node.Path, "*.md", false))
         {
-            if (IsArchivedName(file.Name))
+            if (IsArchivedName(entry.Name))
                 continue;
-            node.Children.Add(new TreeDto { Path = file.FullName, IsDirectory = false });
+            node.Children.Add(new TreeDto { Path = entry.FullName, IsDirectory = false });
         }
     }
 
@@ -3768,12 +3669,12 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         !string.IsNullOrEmpty(extension) && CodeFileExtensions.Contains(extension);
 
     /// <summary>Resolves ../../src relative to the sessions path.</summary>
-    private static string? GetSourcePath(string resolvedPath)
+    private string? GetSourcePath(string resolvedPath)
     {
         try
         {
-            var full = Path.GetFullPath(Path.Combine(resolvedPath, "..", "..", "src"));
-            return Directory.Exists(full) ? full : null;
+            var full = _fs.GetFullPath(_fs.CombinePath(resolvedPath, "..", "..", "src"));
+            return _fs.DirectoryExists(full) ? full : null;
         }
         catch
         {
@@ -3781,24 +3682,23 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         }
     }
 
-    private static void LoadChildrenDto(TreeDto node)
+    private void LoadChildrenDto(TreeDto node)
     {
         try
         {
-            var dirInfo = new DirectoryInfo(node.Path);
-            foreach (var dir in dirInfo.GetDirectories())
+            foreach (var dir in _fs.EnumerateDirectories(node.Path, "*", false))
             {
                 var child = new TreeDto { Path = dir.FullName, IsDirectory = true };
                 LoadChildrenDto(child);
                 node.Children.Add(child);
             }
-            foreach (var file in dirInfo.GetFiles())
+            foreach (var entry in _fs.EnumerateFiles(node.Path, "*", false))
             {
-                if (IsArchivedName(file.Name))
+                if (IsArchivedName(entry.Name))
                     continue;
-                if (file.Extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
-                    file.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase))
-                    node.Children.Add(new TreeDto { Path = file.FullName, IsDirectory = false });
+                if (entry.Extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
+                    entry.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase))
+                    node.Children.Add(new TreeDto { Path = entry.FullName, IsDirectory = false });
             }
         }
         catch (Exception ex)
@@ -3837,7 +3737,7 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
                 sourceNode.Name = "Source";
                 Nodes.Add(sourceNode);
             }
-            if (!Directory.Exists(resolvedPath))
+            if (!_fs.DirectoryExists(resolvedPath))
             {
                 SetStatus($"Directory not found: {resolvedPath}");
                 Nodes.Add(new FileNode(resolvedPath, true) { Name = "Directory not found" });
@@ -3853,10 +3753,10 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     }
 
     /// <summary>Builds the Documents FileNode (md files from parent of resolvedPath, recursing into subfolders). Call on UI thread.</summary>
-    private static FileNode? BuildDocumentsNode(string resolvedPath)
+    private FileNode? BuildDocumentsNode(string resolvedPath)
     {
-        string? parentPath = Path.GetDirectoryName(resolvedPath);
-        if (string.IsNullOrEmpty(parentPath) || !Directory.Exists(parentPath))
+        string? parentPath = _fs.GetDirectoryName(resolvedPath);
+        if (string.IsNullOrEmpty(parentPath) || !_fs.DirectoryExists(parentPath))
             return null;
         var documentsNode = new FileNode(parentPath, true);
         try
@@ -3871,10 +3771,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         return documentsNode;
     }
 
-    private static void LoadDocumentsChildren(FileNode node, string sessionsPathToIgnore)
+    private void LoadDocumentsChildren(FileNode node, string sessionsPathToIgnore)
     {
-        var dirInfo = new DirectoryInfo(node.Path);
-        foreach (var dir in dirInfo.GetDirectories())
+        foreach (var dir in _fs.EnumerateDirectories(node.Path, "*", false))
         {
             var childFull = dir.FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             if (string.Equals(childFull, sessionsPathToIgnore, StringComparison.OrdinalIgnoreCase))
@@ -3884,16 +3783,16 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             if (childNode.Children.Count > 0)
                 node.Children.Add(childNode);
         }
-        foreach (var file in dirInfo.GetFiles("*.md"))
+        foreach (var entry in _fs.EnumerateFiles(node.Path, "*.md", false))
         {
-            if (IsArchivedName(file.Name))
+            if (IsArchivedName(entry.Name))
                 continue;
-            node.Children.Add(new FileNode(file.FullName, false));
+            node.Children.Add(new FileNode(entry.FullName, false));
         }
     }
 
     /// <summary>Builds the Source FileNode (code files from ../../src, recursing; skipping session log folders). Call on UI thread.</summary>
-    private static FileNode? BuildSourceNode(string resolvedPath)
+    private FileNode? BuildSourceNode(string resolvedPath)
     {
         string? sourcePath = GetSourcePath(resolvedPath);
         if (string.IsNullOrEmpty(sourcePath))
@@ -3910,10 +3809,9 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
         return sourceNode;
     }
 
-    private static void LoadSourceChildren(FileNode node, string sessionsPathToIgnore)
+    private void LoadSourceChildren(FileNode node, string sessionsPathToIgnore)
     {
-        var dirInfo = new DirectoryInfo(node.Path);
-        foreach (var dir in dirInfo.GetDirectories())
+        foreach (var dir in _fs.EnumerateDirectories(node.Path, "*", false))
         {
             if (SourceDirectoriesToSkip.Contains(dir.Name))
                 continue;
@@ -3925,10 +3823,10 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
             if (childNode.Children.Count > 0)
                 node.Children.Add(childNode);
         }
-        foreach (var file in dirInfo.GetFiles())
+        foreach (var entry in _fs.EnumerateFiles(node.Path, "*", false))
         {
-            if (IsCodeFile(file.Extension))
-                node.Children.Add(new FileNode(file.FullName, false));
+            if (IsCodeFile(entry.Extension))
+                node.Children.Add(new FileNode(entry.FullName, false));
         }
     }
 
@@ -3936,23 +3834,21 @@ public partial class MainWindowViewModel : ViewModelBase, Commands.ICommandTarge
     {
         try
         {
-            var dirInfo = new DirectoryInfo(node.Path);
-
-            foreach (var dir in dirInfo.GetDirectories())
+            foreach (var dir in _fs.EnumerateDirectories(node.Path, "*", false))
             {
                 var childNode = new FileNode(dir.FullName, true);
                 LoadChildren(childNode);
                 node.Children.Add(childNode);
             }
 
-            foreach (var file in dirInfo.GetFiles())
+            foreach (var entry in _fs.EnumerateFiles(node.Path, "*", false))
             {
-                if (IsArchivedName(file.Name))
+                if (IsArchivedName(entry.Name))
                     continue;
-                if (file.Extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
-                    file.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase))
+                if (entry.Extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
+                    entry.Extension.Equals(".json", StringComparison.OrdinalIgnoreCase))
                 {
-                    node.Children.Add(new FileNode(file.FullName, false));
+                    node.Children.Add(new FileNode(entry.FullName, false));
                 }
             }
         }

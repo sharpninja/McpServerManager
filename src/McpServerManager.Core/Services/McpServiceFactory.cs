@@ -1,5 +1,6 @@
 using System;
 using McpServer.Client;
+using McpServer.UI.Core.Services;
 
 namespace McpServerManager.Core.Services;
 
@@ -72,4 +73,10 @@ public sealed class McpServiceFactory
             resolveApiKey: resolveApiKey,
             resolveWorkspacePath: resolveWorkspacePath);
     }
+
+    /// <summary>
+    /// Watches a directory for file changes matching the given filter.
+    /// </summary>
+    public IWatcherHandle WatchFileSystem(string directory, string filter, Action<string> onChanged)
+        => new Infrastructure.FileSystemWatcherService().Watch(directory, filter, onChanged);
 }
