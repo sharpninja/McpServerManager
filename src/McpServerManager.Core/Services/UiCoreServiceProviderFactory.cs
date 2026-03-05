@@ -13,6 +13,8 @@ internal static class UiCoreServiceProviderFactory
         McpTodoService? todoService = null,
         McpWorkspaceService? workspaceService = null,
         McpVoiceConversationService? voiceService = null,
+        McpSessionLogService? sessionLogService = null,
+        McpAgentEventStreamService? eventStreamService = null,
         WorkspaceContextViewModel? workspaceContext = null)
     {
         if (todoService is null && workspaceService is null)
@@ -31,6 +33,12 @@ internal static class UiCoreServiceProviderFactory
 
         if (voiceService is not null)
             services.AddSingleton<IVoiceApiClient>(_ => new UiCoreVoiceApiClientAdapter(voiceService));
+
+        if (sessionLogService is not null)
+            services.AddSingleton<ISessionLogApiClient>(_ => new UiCoreSessionLogApiClientAdapter(sessionLogService));
+
+        if (eventStreamService is not null)
+            services.AddSingleton<IEventStreamApiClient>(_ => new UiCoreEventStreamApiClientAdapter(eventStreamService));
 
         services.AddCqrsDispatcher();
         services.AddUiCore();

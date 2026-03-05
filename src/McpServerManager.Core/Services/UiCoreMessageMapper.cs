@@ -376,4 +376,73 @@ internal static class UiCoreMessageMapper
             Category = info.Category,
             Text = info.Text,
         };
+
+    // ── Session log mapping ─────────────────────────────────────────────────
+
+    public static SessionLogSummary ToSessionLogSummary(Models.Json.UnifiedSessionLog log)
+        => new(
+            log.SessionId ?? string.Empty,
+            log.SourceType ?? string.Empty,
+            log.Title ?? string.Empty,
+            log.Status ?? string.Empty,
+            log.Model,
+            log.Started?.ToString("o"),
+            log.LastUpdated?.ToString("o"),
+            log.EntryCount);
+
+    public static SessionLogDetail ToSessionLogDetail(Models.Json.UnifiedSessionLog log)
+        => new(
+            log.SessionId ?? string.Empty,
+            log.SourceType ?? string.Empty,
+            log.Title ?? string.Empty,
+            log.Status ?? string.Empty,
+            log.Model,
+            log.Started?.ToString("o"),
+            log.LastUpdated?.ToString("o"),
+            log.EntryCount,
+            log.TotalTokens > 0 ? log.TotalTokens : null,
+            log.CursorSessionLabel,
+            log.Workspace is null ? null : new SessionLogWorkspaceInfo(
+                log.Workspace.Project,
+                log.Workspace.TargetFramework,
+                log.Workspace.Repository,
+                log.Workspace.Branch),
+            log.CopilotStatistics is null ? null : new SessionLogCopilotStatistics(
+                log.CopilotStatistics.AverageSuccessScore,
+                (int?)log.CopilotStatistics.TotalNetTokens,
+                (int?)log.CopilotStatistics.TotalNetPremiumRequests,
+                log.CopilotStatistics.CompletedCount,
+                log.CopilotStatistics.InProgressCount),
+            log.Entries.Select(ToSessionLogEntryDetail).ToList());
+
+    public static SessionLogEntryDetail ToSessionLogEntryDetail(Models.Json.UnifiedRequestEntry entry)
+        => new(
+            entry.RequestId ?? string.Empty,
+            entry.Timestamp?.ToString("o"),
+            entry.QueryTitle,
+            entry.QueryText,
+            entry.Response,
+            entry.Interpretation,
+            entry.Status,
+            entry.Model,
+            entry.ModelProvider,
+            entry.TokenCount > 0 ? entry.TokenCount : null,
+            string.IsNullOrWhiteSpace(entry.FailureNote) ? null : entry.FailureNote,
+            entry.Score,
+            entry.IsPremium,
+            entry.Tags?.ToList() ?? [],
+            entry.ContextList?.ToList() ?? [],
+            [], // DesignDecisions — not in unified model
+            [], // RequirementsDiscovered — not in unified model
+            [], // FilesModified — not in unified model
+            [], // Blockers — not in unified model
+            entry.Actions?.Select(ToSessionLogActionDetail).ToList() ?? [],
+            entry.ProcessingDialog?.Select(ToSessionLogDialogDetail).ToList() ?? [],
+            []); // Commits — not in unified model
+
+    public static SessionLogActionDetail ToSessionLogActionDetail(Models.Json.UnifiedAction action)
+        => new(action.Order, action.Description, action.Type, action.Status, action.FilePath);
+
+    public static SessionLogDialogDetail ToSessionLogDialogDetail(Models.Json.UnifiedProcessingDialogItem dialog)
+        => new(dialog.Timestamp, dialog.Role, dialog.Category, dialog.Content);
 }

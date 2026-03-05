@@ -10,10 +10,14 @@ internal sealed class UiCoreAppRuntime : IDisposable
         McpTodoService? todoService = null,
         McpWorkspaceService? workspaceService = null,
         McpVoiceConversationService? voiceService = null,
+        McpSessionLogService? sessionLogService = null,
+        McpAgentEventStreamService? eventStreamService = null,
         WorkspaceContextViewModel? workspaceContext = null)
     {
         WorkspaceContext = workspaceContext ?? new WorkspaceContextViewModel();
-        Services = UiCoreServiceProviderFactory.Build(todoService, workspaceService, voiceService, WorkspaceContext);
+        Services = UiCoreServiceProviderFactory.Build(
+            todoService, workspaceService, voiceService,
+            sessionLogService, eventStreamService, WorkspaceContext);
     }
 
     public WorkspaceContextViewModel WorkspaceContext { get; }
