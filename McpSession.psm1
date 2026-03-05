@@ -95,7 +95,11 @@ function New-McpSessionLog {
     Assert-Initialized
 
     if (-not $SessionId) {
-        $SessionId = "$SourceType-$(New-Guid)"
+        $ts = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
+        $slug = ($Title -replace '[^a-zA-Z0-9]+', '-' -replace '^-|-$', '').ToLower()
+        if ($slug.Length -gt 30) { $slug = $slug.Substring(0, 30) -replace '-$', '' }
+        if (-not $slug) { $slug = 'session' }
+        $SessionId = "$SourceType-$ts-$slug"
     }
 
     $now = (Get-Date).ToUniversalTime().ToString("o")
@@ -184,7 +188,11 @@ function Add-McpSessionEntry {
         [switch]$NoPush
     )
 
-    if (-not $RequestId) { $RequestId = "req-$('{0:D3}' -f ($Session.entries.Count + 1))" }
+    if (-not $RequestId) {
+        $ts = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
+        $ord = '{0:D3}' -f ($Session.entries.Count + 1)
+        $RequestId = "req-$ts-$ord"
+    }
     if (-not $Model) { $Model = $Session.model }
 
     $entry = [PSCustomObject]@{
