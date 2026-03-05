@@ -63,14 +63,14 @@ public partial class TodoListView : UserControl
         var tab = vm.SelectedEditorTab;
         if (tab is null)
         {
-            Editor.IsVisible = false;
+            EditorContent.IsVisible = false;
             MarkdownViewer.IsVisible = false;
             return;
         }
 
         if (tab.IsMarkdown)
         {
-            Editor.IsVisible = false;
+            EditorContent.IsVisible = false;
             MarkdownText.Text = tab.Content;
             MarkdownViewer.IsVisible = true;
             tab.PropertyChanged -= OnTabContentChanged;
@@ -79,7 +79,7 @@ public partial class TodoListView : UserControl
         else
         {
             MarkdownViewer.IsVisible = false;
-            Editor.IsVisible = true;
+            EditorContent.IsVisible = true;
         }
     }
 

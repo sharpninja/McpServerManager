@@ -223,7 +223,7 @@
         </Grid>
 
         <!-- Markdown edit screen -->
-        <Grid x:Name="EditScreen" RowDefinitions="Auto,Auto,*" IsVisible="False">
+        <Grid x:Name="EditScreen" RowDefinitions="Auto,Auto,Auto,*" IsVisible="False">
             <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="6" Margin="6,6,6,4">
                 <Button Grid.Column="0" Content="← Back" Click="OnEditBackClick" Padding="10,6"/>
                 <SelectableTextBlock Grid.Column="1"
@@ -243,30 +243,30 @@
                                  Foreground="{DynamicResource SubtleForeground}"
                                  TextTrimming="CharacterEllipsis"/>
 
-            <Border Grid.Row="2" Margin="6,0,6,6" CornerRadius="6" Background="{DynamicResource SystemAltHighColor}">
-                <Grid>
-                    <TabControl x:Name="EditorTabControl"
-                                ItemsSource="{Binding EditorTabs}"
-                                SelectedItem="{Binding SelectedEditorTab, Mode=TwoWay}">
-                      <TabControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:EditorTab">
-                          <TextBlock Text="{Binding Header}" FontSize="18"/>
-                        </DataTemplate>
-                      </TabControl.ItemTemplate>
-                      <TabControl.ContentTemplate>
-                        <DataTemplate x:DataType="vm:EditorTab">
-                          <Border/>
-                        </DataTemplate>
-                      </TabControl.ContentTemplate>
-                    </TabControl>
+            <!-- Tab strip -->
+            <TabControl Grid.Row="2" x:Name="EditorTabControl"
+                        ItemsSource="{Binding EditorTabs}"
+                        SelectedItem="{Binding SelectedEditorTab, Mode=TwoWay}"
+                        Padding="0" Margin="6,0,6,2">
+              <TabControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:EditorTab">
+                  <TextBlock Text="{Binding Header}" FontSize="18"/>
+                </DataTemplate>
+              </TabControl.ItemTemplate>
+              <TabControl.ContentTemplate>
+                <DataTemplate x:DataType="vm:EditorTab">
+                  <Border/>
+                </DataTemplate>
+              </TabControl.ContentTemplate>
+            </TabControl>
 
+            <!-- Content area below tabs -->
+            <Border Grid.Row="3" Margin="6,0,6,6" CornerRadius="6" Background="{DynamicResource SystemAltHighColor}">
+                <Grid>
                     <controls:AndroidPlainTextEditor x:Name="Editor"
                                                      IsVisible="False"
-                                                     Margin="0,36,0,0"
                                                      FontSize="20"/>
-                    <ScrollViewer x:Name="MarkdownViewer"
-                                  IsVisible="False"
-                                  Margin="0,36,0,0">
+                    <ScrollViewer x:Name="MarkdownViewer" IsVisible="False">
                       <SelectableTextBlock x:Name="MarkdownText"
                                            TextWrapping="Wrap"
                                            FontSize="20"
