@@ -26,10 +26,7 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.0.0" />
-    <PackageReference Include="GitVersion.MsBuild" Version="6.6.0">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
+
   </ItemGroup>
 
   <ItemGroup>

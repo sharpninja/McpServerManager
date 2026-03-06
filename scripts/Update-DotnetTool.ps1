@@ -94,7 +94,7 @@ if (-not $PackageVersion) {
     Write-Step "2/7  Computing package version ..."
     Push-Location $RepoRoot
     try {
-        $gitVersionJson = dotnet gitversion /output json 2>&1
+        $gitVersionJson = dotnet tool run dotnet-gitversion /output json 2>&1
         if ($LASTEXITCODE -ne 0) { Write-Error "dotnet gitversion failed: $gitVersionJson" }
         $versionInfo = $gitVersionJson | ConvertFrom-Json
         $PackageVersion = $versionInfo.SemVer

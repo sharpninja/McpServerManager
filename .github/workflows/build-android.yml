@@ -107,6 +107,10 @@ jobs:
             SIGNING_ARGS="/p:AndroidSigningKeyStore=${{ github.workspace }}/release.keystore /p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }} /p:AndroidSigningStorePass=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} /p:AndroidSigningKeyPass=${{ secrets.ANDROID_KEY_PASSWORD }}"
           fi
           dotnet publish src/McpServerManager.Android/McpServerManager.Android.csproj \
+              /p:Version=${{ needs.version.outputs.semver }} \
+              /p:AssemblyVersion=${{ needs.version.outputs.major }}.${{ needs.version.outputs.minor }}.${{ needs.version.outputs.patch }} \
+              /p:FileVersion=${{ needs.version.outputs.major }}.${{ needs.version.outputs.minor }}.${{ needs.version.outputs.patch }} \
+              /p:InformationalVersion=${{ needs.version.outputs.semver }} \
             -c Release -f net9.0-android \
             /p:ApplicationVersion=${{ needs.version.outputs.version-code }} \
             /p:ApplicationDisplayVersion=${{ needs.version.outputs.semver }} \
@@ -287,6 +291,9 @@ jobs:
       - name: Publish
         run: |
           dotnet publish src/McpServer.Web/McpServer.Web.csproj \
+              /p:AssemblyVersion=${{ needs.version.outputs.major }}.${{ needs.version.outputs.minor }}.${{ needs.version.outputs.patch }} \
+              /p:FileVersion=${{ needs.version.outputs.major }}.${{ needs.version.outputs.minor }}.${{ needs.version.outputs.patch }} \
+              /p:InformationalVersion=${{ needs.version.outputs.semver }} \
             -c Release \
             -p:Version=${{ needs.version.outputs.semver }} \
             -o artifacts/web

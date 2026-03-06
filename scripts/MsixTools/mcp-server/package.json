@@ -1,0 +1,27 @@
+{
+  "name": "@sharpninja/msixtools-mcp-server",
+  "version": "1.0.0",
+  "description": "stdio MCP server exposing MsixTools PowerShell module to AI agents",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "msixtools-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["mcp", "msix", "dotnet", "windows", "packaging"],
+  "license": "MIT"
+}
