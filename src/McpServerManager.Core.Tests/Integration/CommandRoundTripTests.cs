@@ -25,7 +25,9 @@ public sealed class CommandRoundTripTests : IDisposable
 
         _provider = UiCoreServiceProviderFactory.Build(
             _target.Object,
-            todoService: todoService);
+            todoService: todoService,
+            mcpClient: client,
+            mcpBaseUrl: options.BaseUrl);
 
         _dispatcher = _provider.GetRequiredService<Dispatcher>();
     }

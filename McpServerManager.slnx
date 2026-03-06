@@ -1,13 +1,25 @@
 <Solution>
+  <Folder Name="/lib/" />
+  <Folder Name="/lib/McpServer/" />
+  <Folder Name="/lib/McpServer/src/">
+    <Project Path="lib/McpServer/src/McpServer.Client/McpServer.Client.csproj" />
+    <Project Path="lib/McpServer/src/McpServer.Cqrs.Mvvm/McpServer.Cqrs.Mvvm.csproj" />
+    <Project Path="lib/McpServer/src/McpServer.Cqrs/McpServer.Cqrs.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/McpServerManager/McpServerManager.csproj" />
     <Project Path="src/McpServerManager.Core/McpServerManager.Core.csproj" />
     <Project Path="src/McpServerManager.Desktop/McpServerManager.Desktop.csproj" />
     <Project Path="src/McpServerManager.Android/McpServerManager.Android.csproj" />
     <Project Path="src/McpServer.Director/McpServer.Director.csproj" />
+    <Project Path="src/McpServer.UI.Core/McpServer.UI.Core.csproj" />
     <Project Path="src/McpServer.Web/McpServer.Web.csproj" />
+    <Project Path="src/McpServer.VsExtension.McpTodo.Vsix/McpServer.VsExtension.McpTodo.Vsix.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="src/McpServer.Director.Tests/McpServer.Director.Tests.csproj" />
+    <Project Path="src/McpServer.UI.Core.Tests/McpServer.UI.Core.Tests.csproj" />
+    <Project Path="src/McpServer.Web.Tests/McpServer.Web.Tests.csproj" />
     <Project Path="src/McpServerManager.Core.Tests/McpServerManager.Core.Tests.csproj" />
   </Folder>
 </Solution>

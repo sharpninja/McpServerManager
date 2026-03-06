@@ -23,7 +23,17 @@ public sealed class DiContainerTests : IDisposable
 
         _provider = UiCoreServiceProviderFactory.Build(
             _target.Object,
-            todoService: todoService);
+            todoService: todoService,
+            mcpClient: client,
+            mcpBaseUrl: options.BaseUrl);
+    }
+
+    [Fact]
+    public void ServiceProvider_Resolves_HealthApiClient()
+    {
+        var healthClient = _provider.GetService<McpServer.UI.Core.Services.IHealthApiClient>();
+        healthClient.Should().NotBeNull();
+        healthClient.Should().BeOfType<UiCoreHealthApiClientAdapter>();
     }
 
     [Fact]

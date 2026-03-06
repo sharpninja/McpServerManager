@@ -420,14 +420,14 @@ Architecture:
       done: true
   - id: ARCH-MIGRATE-002
     title: Migrate McpServer.Director and McpServer.Web projects to this workspace
-    done: true
+    done: false
     completed: 2026-03-06T12:51:56.5636092Z
     description:
     - Migrate McpServer.Director and McpServer.Web projects from McpServer Workspace to this workspace (RequestTracker).
     - Include solution file updates and CI/CD adjustments.
     - Include all Related Tests
     - Include all related Scripts such as Update-DotnetTool.ps1
-    done-summary: Completed full migration of McpServer.Director and McpServer.Web to src/ folder, integrated into solution, verified build, and updated CI pipeline.
+    done-summary: ''
   - id: ARCH-MIGRATE-003
     title: Copy Director and Web projects to src
     done: true

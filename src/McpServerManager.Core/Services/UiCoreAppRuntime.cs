@@ -19,7 +19,9 @@ internal sealed class UiCoreAppRuntime : IDisposable
         ITimerService? timerService = null,
         IJsonParsingService? jsonParsingService = null,
         IFileSystemWatcherService? fileSystemWatcherService = null,
-        WorkspaceContextViewModel? workspaceContext = null)
+        WorkspaceContextViewModel? workspaceContext = null,
+        McpServer.Client.McpServerClient? mcpClient = null,
+        Uri? mcpBaseUrl = null)
     {
         WorkspaceContext = workspaceContext ?? new WorkspaceContextViewModel();
         Services = UiCoreServiceProviderFactory.Build(
@@ -28,7 +30,7 @@ internal sealed class UiCoreAppRuntime : IDisposable
             sessionLogService, eventStreamService,
             fileSystemService, processLauncherService,
             timerService, jsonParsingService, fileSystemWatcherService,
-            WorkspaceContext);
+            WorkspaceContext, mcpClient, mcpBaseUrl);
     }
 
     public WorkspaceContextViewModel WorkspaceContext { get; }

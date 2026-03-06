@@ -9,7 +9,25 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.IdentityModel.Tokens;
 
-var builder = WebApplication.CreateBuilder(args);
+// When running as a dotnet global tool, wwwroot is next to the assembly, not in CWD.
+var assemblyDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
+var toolWebRoot = Path.Combine(assemblyDir, "wwwroot");
+var defaultWebRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+
+var options = new WebApplicationOptions { Args = args };
+if (Directory.Exists(toolWebRoot) && !Directory.Exists(defaultWebRoot))
+{
+    options = new WebApplicationOptions { Args = args, WebRootPath = toolWebRoot };
+}
+
+var builder = WebApplication.CreateBuilder(options);
+
+// Enable RCL static web assets in all environments (needed for BlazorMonaco, etc.).
+if (!builder.Environment.IsDevelopment())
+{
+    builder.WebHost.UseStaticWebAssets();
+}
+
 builder.Configuration.AddYamlFile("appsettings.yaml", optional: true, reloadOnChange: true);
 builder.Configuration.AddYamlFile($"appsettings.{builder.Environment.EnvironmentName}.yaml", optional: true, reloadOnChange: true);
 var startupStopwatch = Stopwatch.StartNew();
@@ -46,13 +64,25 @@ if (discoverOidcAuthorityFromMcpAuthConfig)
     if (discoveredOidcConfig is not null)
     {
         oidcAuthority = discoveredOidcConfig.Authority;
+        if (IsPlaceholderOrEmpty(oidcClientId) && !string.IsNullOrWhiteSpace(discoveredOidcConfig.ClientId))
+        {
+            oidcClientId = discoveredOidcConfig.ClientId;
+        }
+
         bootstrapLogger.LogInformation(
-            "Resolved OIDC authority from MCP /auth/config discovery: {Authority}",
-            oidcAuthority);
+            "Resolved OIDC auth settings from MCP /auth/config discovery. Authority={Authority}, ClientId={ClientId}",
+            oidcAuthority,
+            oidcClientId ?? "(null)");
     }
 }
 
-var oidcEnabled = IsOidcConfigurationUsable(oidcAuthority);
+var oidcEnabled = IsOidcConfigurationUsable(oidcAuthority, oidcClientId);
+var requireHttpsMetadataOverride = oidcSection.GetValue<bool?>("RequireHttpsMetadata");
+var oidcAuthorityUsesHttps = Uri.TryCreate(oidcAuthority, UriKind.Absolute, out var parsedOidcAuthorityUri)
+                             && parsedOidcAuthorityUri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+var requireHttpsMetadata = requireHttpsMetadataOverride ?? oidcAuthorityUsesHttps;
+var enableHttpsRedirection = builder.Configuration.GetValue<bool?>("Web:EnableHttpsRedirection")
+                            ?? ShouldEnableHttpsRedirection(builder.Configuration);
 
 builder.Services.AddCascadingAuthenticationState();
 bootstrapLogger.LogInformation("Authentication state cascading configured.");
@@ -82,6 +112,7 @@ if (oidcEnabled)
     {
         options.Authority = oidcAuthority!;
         options.ClientId = oidcClientId!;
+        options.RequireHttpsMetadata = requireHttpsMetadata;
         if (!string.IsNullOrWhiteSpace(oidcClientSecret))
         {
             options.ClientSecret = oidcClientSecret;
@@ -112,6 +143,13 @@ if (oidcEnabled)
             }
         }
     });
+
+    if (!requireHttpsMetadata)
+    {
+        bootstrapLogger.LogWarning(
+            "OpenID Connect RequireHttpsMetadata is disabled for authority {Authority}. This is intended for local/dev non-HTTPS authorities only.",
+            oidcAuthority);
+    }
 }
 else
 {
@@ -157,7 +195,14 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+if (enableHttpsRedirection)
+{
+    app.UseHttpsRedirection();
+}
+else
+{
+    app.Logger.LogInformation("HTTPS redirection middleware is disabled because no HTTPS endpoint/port is configured.");
+}
 app.UseStaticFiles();
 app.UseAntiforgery();
 app.UseAuthentication();
@@ -235,7 +280,7 @@ static async Task<OidcDiscoveryConfigResponse?> TryDiscoverOidcConfigFromMcpAsyn
     try
     {
         using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
-        using var response = await httpClient.GetAsync(authConfigUri, cancellationToken).ConfigureAwait(false);
+        using var response = await httpClient.GetAsync(authConfigUri, cancellationToken).ConfigureAwait(true);
         if (!response.IsSuccessStatusCode)
         {
             logger.LogWarning(
@@ -245,11 +290,11 @@ static async Task<OidcDiscoveryConfigResponse?> TryDiscoverOidcConfigFromMcpAsyn
             return null;
         }
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(true);
         var discovered = await JsonSerializer.DeserializeAsync<OidcDiscoveryConfigResponse>(
             stream,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true },
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(true);
         if (discovered is null || !discovered.Enabled || string.IsNullOrWhiteSpace(discovered.Authority))
         {
             return null;
@@ -267,9 +312,9 @@ static async Task<OidcDiscoveryConfigResponse?> TryDiscoverOidcConfigFromMcpAsyn
     }
 }
 
-static bool IsOidcConfigurationUsable(string? authority)
+static bool IsOidcConfigurationUsable(string? authority, string? clientId)
 {
-    if (IsPlaceholderOrEmpty(authority))
+    if (IsPlaceholderOrEmpty(authority) || IsPlaceholderOrEmpty(clientId))
     {
         return false;
     }
@@ -302,9 +347,31 @@ static bool IsPlaceholderOrEmpty(string? value)
            || trimmed.Equals("change-me-in-user-secrets", StringComparison.OrdinalIgnoreCase);
 }
 
+static bool ShouldEnableHttpsRedirection(IConfiguration configuration)
+{
+    if (configuration.GetValue<int?>("HttpsRedirection:HttpsPort").HasValue ||
+        configuration.GetValue<int?>("ASPNETCORE_HTTPS_PORT").HasValue ||
+        configuration.GetValue<int?>("HTTPS_PORT").HasValue)
+    {
+        return true;
+    }
+
+    var urls = configuration["ASPNETCORE_URLS"] ?? configuration["urls"];
+    if (string.IsNullOrWhiteSpace(urls))
+    {
+        return false;
+    }
+
+    return urls
+        .Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+        .Any(url => url.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
+}
+
 file sealed class OidcDiscoveryConfigResponse
 {
     public bool Enabled { get; set; }
 
     public string? Authority { get; set; }
+
+    public string? ClientId { get; set; }
 }

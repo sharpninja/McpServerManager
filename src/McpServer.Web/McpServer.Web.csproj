@@ -8,12 +8,15 @@
     <Platforms>AnyCPU;x64;x86</Platforms>
     <NoWarn>$(NoWarn);CA1515;CA1849;CA1031</NoWarn>
   </PropertyGroup>
-
+  <!-- NOTE: wwwroot static assets for tool packaging are injected post-pack
+       by Update-DotnetTool.ps1 since the dotnet tool pack pipeline ignores
+       TfmSpecificPackageFile items for extra content directories. -->
   <ItemGroup>
+    <PackageReference Include="BlazorMonaco" Version="3.4.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.0" />
     <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
     <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Client\McpServer.Client.csproj" />
-    <ProjectReference Include="..\..\lib\McpServer\src\McpServer.UI.Core\McpServer.UI.Core.csproj" />
+    <ProjectReference Include="..\McpServer.UI.Core\McpServer.UI.Core.csproj" />
     <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Cqrs\McpServer.Cqrs.csproj" />
   </ItemGroup>
 </Project>

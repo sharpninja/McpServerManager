@@ -22,7 +22,9 @@ internal static class UiCoreServiceProviderFactory
         ITimerService? timerService = null,
         IJsonParsingService? jsonParsingService = null,
         IFileSystemWatcherService? fileSystemWatcherService = null,
-        WorkspaceContextViewModel? workspaceContext = null)
+        WorkspaceContextViewModel? workspaceContext = null,
+        McpServer.Client.McpServerClient? mcpClient = null,
+        Uri? mcpBaseUrl = null)
     {
         if (todoService is null && workspaceService is null)
             throw new ArgumentException("At least one MCP service is required to build the UI.Core host provider.");
@@ -46,6 +48,9 @@ internal static class UiCoreServiceProviderFactory
 
         if (eventStreamService is not null)
             services.AddSingleton<IEventStreamApiClient>(_ => new UiCoreEventStreamApiClientAdapter(eventStreamService));
+
+        if (mcpClient is not null)
+            services.AddSingleton<IHealthApiClient>(_ => new UiCoreHealthApiClientAdapter(mcpClient, mcpBaseUrl));
 
         // Infrastructure services — use host-provided or default implementations
         services.AddSingleton<IFileSystemService>(fileSystemService ?? new FileSystemService());
