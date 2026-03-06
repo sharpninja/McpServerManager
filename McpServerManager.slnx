@@ -14,7 +14,7 @@
     <Project Path="src/McpServer.Director/McpServer.Director.csproj" />
     <Project Path="src/McpServer.UI.Core/McpServer.UI.Core.csproj" />
     <Project Path="src/McpServer.Web/McpServer.Web.csproj" />
-    <Project Path="src/McpServer.VsExtension.McpTodo.Vsix/McpServer.VsExtension.McpTodo.Vsix.csproj" />
+    <Project Path="src/McpServer.VsExtension.McpTodo.Vsix/McpServer.VsExtension.McpTodo.Vsix.csproj" Id="a9b8c7d6-e5f4-4a3b-8c2d-1e0f9a8b7c6d" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="src/McpServer.Director.Tests/McpServer.Director.Tests.csproj" />
