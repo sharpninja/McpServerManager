@@ -1,6 +1,0 @@
-- name: Home
-  href: ../README.md
-- name: Todo Backlog
-  href: todo.md
-- name: Exception Evaluation
-  href: EXCEPTION-EVALUATION.md
