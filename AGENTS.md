@@ -8,15 +8,15 @@ Before doing ANY work on ANY user request, you MUST complete these steps in orde
 
 1. **Read `AGENTS-README-FIRST.yaml`** in the repo root for the current API key and endpoints
 2. **GET `/health`** to verify the MCP server is running
-3. **POST `/mcpserver/sessionlog`** with your session entry — do NOT proceed until this succeeds
+3. **POST `/mcpserver/sessionlog`** with your session turn — do NOT proceed until this succeeds
 4. **GET `/mcpserver/sessionlog?limit=5`** to review recent session history for context
 5. **GET `/mcpserver/todo`** to check current tasks
 6. **THEN** begin working on the user's request
 
 On EVERY subsequent user message:
-1. POST an updated session log entry BEFORE starting work
-2. Complete the user's request
-3. POST the final session log with results, actions taken, and files modified
+1. Post a new session log turn (`Add-McpSessionTurn`) before starting work.
+2. Complete the user's request.
+3. Update the turn with results (`Response`) and actions (`Add-McpAction`) when done.
 
 **If you skip any of these steps, STOP and go back and do them before continuing.**
 Session logging is not optional, not deferred, and not secondary to the task.

@@ -1,6 +1,6 @@
 # Copilot Instructions — McpServerManager (RequestTracker)
 
-See `AGENTS-README-FIRST.yaml` in the workspace root for MCP server connection details, session logging procedures, and agent conduct guidelines.
+For specific operational instructions (session bootstrap, session log turn workflow, and helper command sequence), follow `AGENTS-README-FIRST.yaml`.
 
 **Agent Identity:** When posting to the MCP session log, use `sourceType: copilotcli`.
 
@@ -54,3 +54,4 @@ voice interaction.
 **ALWAYS** use `lib\McpServer\scripts\Update-McpService.ps1` via gsudo.
 Never use raw `dotnet publish`. The script archives config/data, publishes,
 and restores preserved files. Verify all 6 workspaces are healthy after deploy.
+
