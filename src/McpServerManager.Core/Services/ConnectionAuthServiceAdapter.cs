@@ -17,7 +17,7 @@ public sealed class ConnectionAuthServiceAdapter : IConnectionAuthService
     /// <inheritdoc />
     public async Task<ConnectionAuthConfig?> TryGetAuthConfigAsync(string mcpBaseUrl, CancellationToken cancellationToken = default)
     {
-        var response = await McpOidcAuthService.TryGetAuthConfigAsync(mcpBaseUrl, cancellationToken).ConfigureAwait(false);
+        var response = await McpOidcAuthService.TryGetAuthConfigAsync(mcpBaseUrl, cancellationToken).ConfigureAwait(true);
         return response == null
             ? null
             : new ConnectionAuthConfig
@@ -54,7 +54,7 @@ public sealed class ConnectionAuthServiceAdapter : IConnectionAuthService
                 ToCoreConfig(authConfig)!,
                 mcpBaseUrl,
                 cancellationToken)
-            .ConfigureAwait(false);
+            .ConfigureAwait(true);
         return new ConnectionDeviceAuthorizationPrompt
         {
             DeviceCode = prompt.DeviceCode,
@@ -88,7 +88,7 @@ public sealed class ConnectionAuthServiceAdapter : IConnectionAuthService
                 mcpBaseUrl,
                 statusCallback,
                 cancellationToken)
-            .ConfigureAwait(false);
+            .ConfigureAwait(true);
         return new ConnectionDeviceTokenResult
         {
             AccessToken = token.AccessToken,
@@ -105,7 +105,7 @@ public sealed class ConnectionAuthServiceAdapter : IConnectionAuthService
     {
         var result = await McpOidcAuthService
             .TryFetchMcpApiKeyAsync(mcpBaseUrl, bearerAccessToken, cancellationToken)
-            .ConfigureAwait(false);
+            .ConfigureAwait(true);
         return new ConnectionApiKeyFetchResult
         {
             ApiKey = result.ApiKey,

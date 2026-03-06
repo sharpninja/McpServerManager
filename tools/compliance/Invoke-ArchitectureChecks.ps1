@@ -28,6 +28,7 @@ $uiCoreSharedOrchestrationScript = Join-Path $PSScriptRoot "Check-UiCoreSharedOr
 $uiCoreCompatibilityShimsScript = Join-Path $PSScriptRoot "Check-UiCoreCompatibilityShims.ps1"
 $uiCoreThreadAffinityScript = Join-Path $PSScriptRoot "Check-UiCoreThreadAffinity.ps1"
 $uiCoreHostIntegrationScript = Join-Path $PSScriptRoot "Check-UiCoreHostIntegration.ps1"
+$uiCoreResidualsScript = Join-Path $PSScriptRoot "Check-UiCoreMigrationResiduals.ps1"
 
 Invoke-Guardrail -Name "CQRS boundary check" -Action {
     & $cqrsScript -RepoRoot $RepoRoot
@@ -72,6 +73,10 @@ Invoke-Guardrail -Name "UI.Core thread-affinity check" -Action {
 
 Invoke-Guardrail -Name "UI.Core host integration check" -Action {
     & $uiCoreHostIntegrationScript -RepoRoot $RepoRoot
+}
+
+Invoke-Guardrail -Name "UI.Core migration residual cleanup check" -Action {
+    & $uiCoreResidualsScript -RepoRoot $RepoRoot
 }
 
 Write-Host "All architecture compliance guardrails passed."

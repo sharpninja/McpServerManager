@@ -238,9 +238,72 @@ jobs:
           name: linux-deb
           path: artifacts/*.deb
 
+  # ── Director (CLI Tool) ───────────────────────────────────────────────────
+  build-director:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore src/McpServer.Director/McpServer.Director.csproj
+
+      - name: Build & Pack
+        run: |
+          dotnet pack src/McpServer.Director/McpServer.Director.csproj \
+            -c Release \
+            -p:PackageVersion=${{ needs.version.outputs.semver }} \
+            -o artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: director-tool
+          path: artifacts/*.nupkg
+
+  # ── Web (ASP.NET Core) ────────────────────────────────────────────────────
+  build-web:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore src/McpServer.Web/McpServer.Web.csproj
+
+      - name: Publish
+        run: |
+          dotnet publish src/McpServer.Web/McpServer.Web.csproj \
+            -c Release \
+            -p:Version=${{ needs.version.outputs.semver }} \
+            -o artifacts/web
+
+      - name: Zip Web Artifacts
+        run: |
+          cd artifacts/web
+          zip -r ../McpServer.Web-${{ needs.version.outputs.semver }}.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-publish
+          path: artifacts/*.zip
+
   # ── GitHub Release ────────────────────────────────────────────────────────
   release:
-    needs: [version, build-android, build-windows, build-linux]
+    needs: [version, build-android, build-windows, build-linux, build-director, build-web]
     runs-on: ubuntu-latest
     outputs:
       apk-url: ${{ steps.urls.outputs.apk-url }}
@@ -267,6 +330,8 @@ jobs:
             | 🤖 Android | `McpServerManager-${{ needs.version.outputs.semver }}.apk` |
             | 🪟 Windows | `McpServerManager-${{ needs.version.outputs.semver }}-win-x64.msix` |
             | 🐧 Linux | `mcpservermanager_${{ needs.version.outputs.semver }}_amd64.deb` |
+            | 💻 Director CLI | `SharpNinja.McpServer.Director.${{ needs.version.outputs.semver }}.nupkg` |
+            | 🌐 Web App | `McpServer.Web-${{ needs.version.outputs.semver }}.zip` |
 
             ### Android APK
             - **Version Code**: ${{ needs.version.outputs.version-code }}
@@ -280,6 +345,11 @@ jobs:
             ### Install on Linux
             ```bash
             sudo dpkg -i mcpservermanager_${{ needs.version.outputs.semver }}_amd64.deb
+            ```
+            
+            ### Install Director CLI
+            ```bash
+            dotnet tool install --global SharpNinja.McpServer.Director --add-source . --version ${{ needs.version.outputs.semver }}
             ```
           draft: false
           prerelease: ${{ contains(needs.version.outputs.semver, '-') }}

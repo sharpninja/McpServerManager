@@ -43,14 +43,14 @@ public sealed class VoiceConversationServiceAdapter : IVoiceConversationService
     public async Task<McpVoiceSessionCreateResponse> CreateSessionAsync(
         McpVoiceSessionCreateRequest request,
         CancellationToken cancellationToken = default)
-        => Map(await _inner.CreateSessionAsync(Map(request), cancellationToken).ConfigureAwait(false));
+        => Map(await _inner.CreateSessionAsync(Map(request), cancellationToken).ConfigureAwait(true));
 
     /// <inheritdoc />
     public async Task<McpVoiceTurnResponse> SubmitTurnAsync(
         string sessionId,
         McpVoiceTurnRequest request,
         CancellationToken cancellationToken = default)
-        => Map(await _inner.SubmitTurnAsync(sessionId, Map(request), cancellationToken).ConfigureAwait(false));
+        => Map(await _inner.SubmitTurnAsync(sessionId, Map(request), cancellationToken).ConfigureAwait(true));
 
     /// <inheritdoc />
     public async IAsyncEnumerable<McpVoiceTurnStreamEvent> SubmitTurnStreamingAsync(
@@ -58,7 +58,7 @@ public sealed class VoiceConversationServiceAdapter : IVoiceConversationService
         McpVoiceTurnRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        await foreach (var evt in _inner.SubmitTurnStreamingAsync(sessionId, Map(request), cancellationToken).ConfigureAwait(false))
+        await foreach (var evt in _inner.SubmitTurnStreamingAsync(sessionId, Map(request), cancellationToken).ConfigureAwait(true))
             yield return Map(evt);
     }
 
@@ -66,7 +66,7 @@ public sealed class VoiceConversationServiceAdapter : IVoiceConversationService
     public async Task<McpVoiceInterruptResponse> InterruptAsync(
         string sessionId,
         CancellationToken cancellationToken = default)
-        => Map(await _inner.InterruptAsync(sessionId, cancellationToken).ConfigureAwait(false));
+        => Map(await _inner.InterruptAsync(sessionId, cancellationToken).ConfigureAwait(true));
 
     /// <inheritdoc />
     public Task<bool> SendEscapeAsync(
@@ -78,20 +78,20 @@ public sealed class VoiceConversationServiceAdapter : IVoiceConversationService
     public async Task<McpVoiceSessionStatus> GetStatusAsync(
         string sessionId,
         CancellationToken cancellationToken = default)
-        => Map(await _inner.GetStatusAsync(sessionId, cancellationToken).ConfigureAwait(false));
+        => Map(await _inner.GetStatusAsync(sessionId, cancellationToken).ConfigureAwait(true));
 
     /// <inheritdoc />
     public async Task<McpVoiceTranscriptResponse> GetTranscriptAsync(
         string sessionId,
         CancellationToken cancellationToken = default)
-        => Map(await _inner.GetTranscriptAsync(sessionId, cancellationToken).ConfigureAwait(false));
+        => Map(await _inner.GetTranscriptAsync(sessionId, cancellationToken).ConfigureAwait(true));
 
     /// <inheritdoc />
     public async Task<McpVoiceSessionStatus?> FindExistingSessionAsync(
         string deviceId,
         CancellationToken cancellationToken = default)
     {
-        var status = await _inner.FindExistingSessionAsync(deviceId, cancellationToken).ConfigureAwait(false);
+        var status = await _inner.FindExistingSessionAsync(deviceId, cancellationToken).ConfigureAwait(true);
         return status is null ? null : Map(status);
     }
 

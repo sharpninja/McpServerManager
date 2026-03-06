@@ -4,6 +4,8 @@
     <Project Path="src/McpServerManager.Core/McpServerManager.Core.csproj" />
     <Project Path="src/McpServerManager.Desktop/McpServerManager.Desktop.csproj" />
     <Project Path="src/McpServerManager.Android/McpServerManager.Android.csproj" />
+    <Project Path="src/McpServer.Director/McpServer.Director.csproj" />
+    <Project Path="src/McpServer.Web/McpServer.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="src/McpServerManager.Core.Tests/McpServerManager.Core.Tests.csproj" />

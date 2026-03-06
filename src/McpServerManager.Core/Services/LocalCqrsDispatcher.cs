@@ -17,7 +17,7 @@ public static class LocalCqrsDispatcher
         services.AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(sp => sp.GetRequiredService<AppLogService>());
         services.AddSingleton(typeof(Microsoft.Extensions.Logging.ILogger<>), typeof(AppLogger<>));
         services.AddCqrsDispatcher();
-        services.AddCqrsHandlers(typeof(Commands.InvokeUiActionCommand).Assembly);
+        services.AddCqrsHandlers(typeof(Commands.NavigateBackCommand).Assembly);
         return services.BuildServiceProvider();
     }
 }

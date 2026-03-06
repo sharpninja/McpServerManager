@@ -99,6 +99,34 @@ guardrails:
   - tools/compliance/Check-UiCoreAdapterContracts.ps1
   - tools/compliance/Check-UiCoreHostIntegration.ps1
   - tools/compliance/Check-UiCoreMigration.ps1
+  - tools/compliance/Check-UiCoreMigrationResiduals.ps1
+
+ownershipAndExtensionPoints:
+  sharedOwnership:
+    owner: McpServer.UI.Core
+    responsibilities:
+      - shared ViewModel orchestration and workflow state transitions
+      - shared CQRS relay and UI action command dispatch paths
+      - shared host-agnostic service abstractions
+  hostOwnership:
+    owners:
+      - McpServerManager.Core (Desktop/Android host wrappers + adapters)
+      - McpServer.Web (scoped web adapters + web role/auth wiring)
+      - McpServer.Director (CLI/TUI adapters + shell command surface)
+    responsibilities:
+      - host runtime integration and lifecycle wiring
+      - workspace/auth/session boundary propagation
+      - shell-specific UX and command entry points
+  extensionPoints:
+    - interface: ITodoApiClient / IWorkspaceApiClient / ISessionLogApiClient
+      location: lib/McpServer/src/McpServer.UI.Core/Services
+      hostImplementationPattern: Adapter class registered in host composition root.
+    - interface: IUiDispatcherService / IConnectionAuthService
+      location: lib/McpServer/src/McpServer.UI.Core/Services
+      hostImplementationPattern: Host runtime service adapter (dispatcher/auth bridge) with UI-thread-safe behavior.
+    - commandSurface: Director CLI command + exec alias expansion
+      location: lib/McpServer/src/McpServer.Director/Commands and Program.cs
+      hostImplementationPattern: Add command registration and map to shared command/query contracts without host-local workflow duplication.
 
 verificationChecklist:
   - Run tools/compliance/Invoke-ArchitectureChecks.ps1.

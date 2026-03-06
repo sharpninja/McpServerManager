@@ -1,0 +1,56 @@
+metadata:
+  id: ARCH-MIGRATE-001-P5-PACKAGE-GUIDANCE
+  title: UI.Core and Director package migration guidance
+  status: active
+  updatedBy: copilotcli
+  lastVerified: 2026-03-06T04:13:30Z
+
+packageArtifacts:
+  verificationScript: tools/compliance/Capture-UiCorePackageVerification.ps1
+  verificationArtifact: C:/Users/kingd/.copilot/session-state/bff566af-f937-4df9-b011-f387bbcf2aca/files/ui-core-package-verification.json
+  notes:
+    - Package verification packs Cqrs, Cqrs.Mvvm, Client, UI.Core, and Director with one aligned prerelease version.
+    - Director tool install is validated using dotnet tool --tool-path against local nupkg output.
+    - Downstream consumption is validated by building a clean class library referencing SharpNinja.McpServer.UI.Core.
+
+packages:
+  uiCore:
+    packageId: SharpNinja.McpServer.UI.Core
+    role: Shared ViewModel/CQRS host logic
+    requiredDependencies:
+      - SharpNinja.McpServer.Client
+      - SharpNinja.McpServer.Cqrs.Mvvm
+    consumerGuidance:
+      - Reference through NuGet package in host shells and avoid copying host-local workflow orchestration.
+      - Keep host-only concerns in adapters and wrapper composition roots.
+  directorTool:
+    packageId: SharpNinja.McpServer.Director
+    role: CLI and TUI host for shared UI.Core workflows
+    installGuidance:
+      - dotnet tool install --tool-path <path> SharpNinja.McpServer.Director --add-source <nupkg-dir> --version <version>
+      - director --help
+      - director list --help
+      - director session-log list --help
+
+breakingChanges:
+  - id: PKG-BC-001
+    change: Host command relay logic now canonicalized in McpServer.UI.Core.Commands.CqrsRelayFactory.
+    impact: Host code should use shared relay factory paths; host-local direct relay construction is disallowed by compliance checks.
+  - id: PKG-BC-002
+    change: Legacy McpServerManager.Core InvokeUiActionCommand shim removed after shared relay migration.
+    impact: Downstream code must rely on shared UI.Core InvokeUiActionCommand handler path.
+  - id: PKG-BC-003
+    change: ConfigureAwait(false) is disallowed in McpServerManager.Core and McpServer.UI.Core migration scope.
+    impact: Async continuations are expected to resume on UI-friendly context for collection/event safety.
+
+migrationGuidance:
+  - Keep AddUiCore registration in host composition roots and bind host adapters for API/auth/environment concerns.
+  - Preserve workspace marker routing semantics and avoid introducing host-local workspace/auth fallback logic.
+  - Use architecture guard scripts as release gates before packaging or distribution updates.
+
+rollbackPlan:
+  trigger: "Package verification or host smoke regression after package update."
+  steps:
+    - Revert to previous package version for SharpNinja.McpServer.UI.Core and SharpNinja.McpServer.Director.
+    - Re-run tools/compliance/Capture-UiCoreFinalValidationMatrix.ps1.
+    - Re-open ARCH-MIGRATE-001 with failed artifact references and restore previously green package version.

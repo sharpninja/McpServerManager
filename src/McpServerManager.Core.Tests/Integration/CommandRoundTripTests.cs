@@ -120,7 +120,8 @@ public sealed class CommandRoundTripTests : IDisposable
     [Fact]
     public async Task InvokeUiActionCommand_WhenActionThrows_ReturnsFailureResult()
     {
-        var result = await _dispatcher.SendAsync(new InvokeUiActionCommand(() => throw new InvalidOperationException("boom")));
+        var result = await _dispatcher.SendAsync(
+            new McpServer.UI.Core.Commands.InvokeUiActionCommand(() => throw new InvalidOperationException("boom")));
 
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Contain("boom");

@@ -1,0 +1,58 @@
+metadata:
+  id: ARCH-MIGRATE-001-CLOSURE
+  title: ARCH-MIGRATE-001 migration closure summary
+  status: completed
+  completedUtc: 2026-03-06T04:14:15Z
+  updatedBy: copilotcli
+
+scopeSummary:
+  completedPhases:
+    - "Phase 0 - Governance and Baseline"
+    - "Phase 1 - Dependency and Contract Alignment"
+    - "Phase 2 - Shared Logic Porting"
+    - "Phase 3 - Web Integration"
+    - "Phase 4 - Director Integration"
+    - "Phase 5 - Package and Distribution Verification"
+    - "Phase 6 - Cleanup and Enforcement"
+  highlights:
+    - Shared relay-command behavior canonicalized in UI.Core with host compatibility delegation.
+    - Host integration guardrails added for Web and Director AddUiCore/adapter wiring.
+    - Legacy host InvokeUiActionCommand shim removed after migration convergence.
+    - Residual checks added for route/symbol drift, direct relay construction, and ConfigureAwait(false) usage.
+    - Final parity and package verification captured through executable artifacts.
+
+validationEvidence:
+  architectureChecks:
+    command: tools/compliance/Invoke-ArchitectureChecks.ps1
+    expectation: pass
+  finalMatrix:
+    command: tools/compliance/Capture-UiCoreFinalValidationMatrix.ps1 -FailOnFailures
+    artifact: C:/Users/kingd/.copilot/session-state/bff566af-f937-4df9-b011-f387bbcf2aca/files/ui-core-migration-final-matrix.json
+  baseline:
+    artifact: C:/Users/kingd/.copilot/session-state/bff566af-f937-4df9-b011-f387bbcf2aca/files/ui-core-migration-baseline.json
+    expectation: FailedStepCount == 0
+  behaviorTranscripts:
+    artifact: C:/Users/kingd/.copilot/session-state/bff566af-f937-4df9-b011-f387bbcf2aca/files/ui-core-migration-behavior-transcripts.json
+    expectation: FailedStepCount == 0
+  hostSmoke:
+    artifact: C:/Users/kingd/.copilot/session-state/bff566af-f937-4df9-b011-f387bbcf2aca/files/ui-core-host-smoke.json
+    expectation: FailedStepCount == 0
+  packageVerification:
+    artifact: C:/Users/kingd/.copilot/session-state/bff566af-f937-4df9-b011-f387bbcf2aca/files/ui-core-package-verification.json
+    expectation: FailedStepCount == 0
+  parityChecklist:
+    artifact: docs/architecture/compliance/MIGRATION-PARITY-CHECKLIST.ARCH-MIGRATE-001.yaml
+    expectation: approval.readyToAdvance == true
+
+residualRisks:
+  - id: RISK-001
+    description: "Package readme warnings remain for some packages (non-blocking warning level)."
+    mitigation: "Track package documentation completeness in routine package-maintenance backlog."
+  - id: RISK-002
+    description: "Director CLI commands are sensitive to workspace-selection context for table-output expectations."
+    mitigation: "Smoke tests now allow explicit no-active-workspace guidance output and verify non-crashing behavior."
+
+followUpItems:
+  - "Keep running Capture-UiCoreFinalValidationMatrix.ps1 in CI/release preflight."
+  - "Promote migration residual checks to hard gate in release workflows if not already enforced."
+  - "Periodically prune compatibility shims once no host call sites depend on them."

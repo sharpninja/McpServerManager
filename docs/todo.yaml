@@ -236,7 +236,8 @@ Architecture:
   - id: ARCH-MIGRATE-001
     title: Migrate Web-UI and Director and UI Packages
     note: 'Slice update: added shared orchestration guardrail (Check-UiCoreSharedOrchestration.ps1) and shared orchestration evidence map, with architecture checks + baseline/behavior artifacts revalidated green.'
-    done: false
+    done: true
+    completed: 2026-03-06T04:14:58.6051030Z
     description:
     - 'Objective: complete migration of Web UI, Director, and shared UI package usage so all UI behavior is driven by McpServer.UI.Core contracts and shared CQRS handlers.'
     - 'Primary deliverable: remove duplicate UI workflow logic outside McpServer.UI.Core except shell-specific composition and rendering concerns.'
@@ -250,7 +251,8 @@ Architecture:
     - 'Risk model: high-risk surfaces include auth transitions, workspace switching, TODO mutation paths, and voice conversation integrations.'
     - 'Rollback policy: preserve reversible commits per phase and keep compatibility adapters until two green validation cycles are complete.'
     - 'Definition of done: all targeted consumers build against aligned McpServer.UI.Core APIs, no duplicate logic remains, and regression suite is green.'
-    remaining: Phase 3 and Phase 4 test-parity tasks remain (P3.02-P3.08, P4.02-P4.07), followed by package/distribution and cleanup phases. Maintain architecture + baseline/behavior evidence refresh after each slice.
+    done-summary: 'Completed ARCH-MIGRATE-001 Phase 0-6 migration: shared UI.Core command/status orchestration alignment, host integration guardrails, web/director smoke parity validation, package/distribution verification, residual cleanup enforcement, final parity sign-off, and closure evidence artifacts.'
+    remaining: None. Migration tasks completed with verification artifacts and sign-off.
     technical-details:
     - 'Phase 0 governance and baseline:'
     - 0.1 Confirm ARCH-AUDIT-001 findings and classify every migration item as parity required, parity optional, or deferred.
@@ -301,7 +303,7 @@ Architecture:
     - ARCH-AUDIT-001
     implementation-tasks:
     - task: Phase 0 - Governance and Baseline
-      done: false
+      done: true
     - task: P0.01 Validate ARCH-AUDIT-001 deliverables and convert findings into migration-ready work items.
       done: true
     - task: P0.02 Create migration decision log template capturing decision, rationale, owner, reviewer, and rollback path.
@@ -319,7 +321,7 @@ Architecture:
     - task: P0.08 Define explicit no-go criteria that stop a phase from progressing.
       done: true
     - task: Phase 1 - Dependency and Contract Alignment
-      done: false
+      done: true
     - task: P1.01 Normalize project and package references for shared UI.Core consumption paths.
       done: true
     - task: P1.02 Confirm version alignment for CommunityToolkit.Mvvm and YamlDotNet across affected projects.
@@ -335,7 +337,7 @@ Architecture:
     - task: P1.07 Add compile-time guard tests for critical shared public APIs.
       done: true
     - task: Phase 2 - Shared Logic Porting
-      done: false
+      done: true
     - task: P2.01 Port duplicated TODO list workflow orchestration into shared UI.Core logic.
       done: true
     - task: P2.02 Port duplicated session log workflow orchestration into shared UI.Core logic.
@@ -353,69 +355,132 @@ Architecture:
     - task: P2.08 Review and document every intentionally retained host-specific behavior.
       done: true
     - task: Phase 3 - Web Integration
-      done: false
+      done: true
     - task: P3.01 Update McpServer.Web composition root to register migrated shared ViewModels and adapters.
       done: true
     - task: P3.02 Replace web-local workflow state handling with shared state transitions.
-      done: false
+      done: true
     - task: P3.03 Align web controllers/endpoints to shared command/query contracts where applicable.
-      done: false
+      done: true
     - task: P3.04 Validate auth and workspace resolution behavior remains unchanged after rewiring.
-      done: false
+      done: true
     - task: P3.05 Add integration tests for web TODO create/update/complete flows.
-      done: false
+      done: true
     - task: P3.06 Add integration tests for web session log create/update/dialog flows.
-      done: false
+      done: true
     - task: P3.07 Add integration tests for web workspace operations and error handling.
-      done: false
+      done: true
     - task: P3.08 Execute manual smoke test script for critical web journeys.
-      done: false
+      done: true
     - task: Phase 4 - Director Integration
-      done: false
+      done: true
     - task: P4.01 Update director DI and command pipeline to resolve migrated shared ViewModels.
       done: true
     - task: P4.02 Map command-line options to shared command/query inputs without behavior drift.
-      done: false
+      done: true
     - task: P4.03 Align TUI tab refresh and lifecycle events to shared state transitions.
-      done: false
+      done: true
     - task: P4.04 Validate director output formatting and exit code behavior across success and failure paths.
-      done: false
+      done: true
     - task: P4.05 Add director tests for TODO and session log command parity.
-      done: false
+      done: true
     - task: P4.06 Add director tests for workspace and auth-sensitive operations.
-      done: false
+      done: true
     - task: P4.07 Run CLI smoke tests for health, list, agents, sync, todo, and session log paths.
-      done: false
+      done: true
     - task: Phase 5 - Package and Distribution Verification
-      done: false
+      done: true
     - task: P5.01 Build and pack McpServer.UI.Core and Director artifacts using repository packaging workflow.
-      done: false
+      done: true
     - task: P5.02 Validate package metadata, dependency graph, and documentation links.
-      done: false
+      done: true
     - task: P5.03 Install director package in a clean environment and run command smoke suite.
-      done: false
+      done: true
     - task: P5.04 Validate package consumption from sample or downstream consumer project.
-      done: false
+      done: true
     - task: P5.05 Record package-level breaking changes and migration guidance.
-      done: false
+      done: true
     - task: Phase 6 - Cleanup and Enforcement
-      done: false
+      done: true
     - task: P6.01 Remove legacy duplicate workflow implementations proven redundant by parity checks.
-      done: false
+      done: true
     - task: P6.02 Remove transitional shims that have met removal criteria.
-      done: false
+      done: true
     - task: P6.03 Add architecture guard checks that detect reintroduction of duplicate logic.
       done: true
     - task: P6.04 Add grep-based verification tasks for key route and symbol migrations.
-      done: false
+      done: true
     - task: P6.05 Update docs for ownership boundaries and extension points.
-      done: false
+      done: true
     - task: P6.06 Run full targeted build and test matrix for all affected projects.
-      done: false
+      done: true
     - task: P6.07 Capture final parity checklist sign-off and rollback artifact references.
-      done: false
+      done: true
     - task: P6.08 Close migration with summary entry linking evidence, risks, and follow-up items.
-      done: false
+      done: true
+  - id: ARCH-MIGRATE-002
+    title: Migrate McpServer.Director and McpServer.Web projects to this workspace
+    done: true
+    completed: 2026-03-06T12:51:56.5636092Z
+    description:
+    - Migrate McpServer.Director and McpServer.Web projects from McpServer Workspace to this workspace (RequestTracker).
+    - Include solution file updates and CI/CD adjustments.
+    - Include all Related Tests
+    - Include all related Scripts such as Update-DotnetTool.ps1
+    done-summary: Completed full migration of McpServer.Director and McpServer.Web to src/ folder, integrated into solution, verified build, and updated CI pipeline.
+  - id: ARCH-MIGRATE-003
+    title: Copy Director and Web projects to src
+    done: true
+    completed: 2026-03-06T12:46:05.9097191Z
+    description:
+    - Copy source code from lib/McpServer/src to src/ folders.
+    - Ensure all files are transferred.
+    done-summary: Copied McpServer.Director and McpServer.Web to src/ excluding bin/obj.
+    remaining: Copying files...
+    depends-on:
+    - ARCH-MIGRATE-002
+  - id: ARCH-MIGRATE-004
+    title: Fix Project References for Director and Web
+    done: true
+    completed: 2026-03-06T12:46:23.4127257Z
+    description:
+    - Update csproj files to point to submodule dependencies via relative paths.
+    - Verify Restore succeeds.
+    done-summary: Updated csproj files to reference lib/McpServer artifacts via ../../lib path.
+    remaining: Updating csproj references...
+    depends-on:
+    - ARCH-MIGRATE-003
+  - id: ARCH-MIGRATE-005
+    title: Add Director and Web to Solution
+    done: true
+    completed: 2026-03-06T12:46:35.2090570Z
+    description:
+    - Add new projects to McpServerManager.slnx.
+    done-summary: Added McpServer.Director and McpServer.Web to McpServerManager.slnx.
+    remaining: Adding projects to solution...
+    depends-on:
+    - ARCH-MIGRATE-004
+  - id: ARCH-MIGRATE-006
+    title: Verify Build and Runtime
+    done: true
+    completed: 2026-03-06T12:51:18.1139402Z
+    description:
+    - Build entire solution.
+    - Run Director and Web locally.
+    done-summary: Verified build of McpServer.Director and McpServer.Web within McpServerManager.slnx.
+    remaining: Running build and runtime check...
+    depends-on:
+    - ARCH-MIGRATE-005
+  - id: ARCH-MIGRATE-007
+    title: Update CI Pipeline
+    done: true
+    completed: 2026-03-06T12:51:56.5066819Z
+    description:
+    - Update GitHub workflow to include new projects.
+    done-summary: Updated build-android.yml to include build-director and build-web jobs and publish their artifacts.
+    remaining: Updating CI pipeline...
+    depends-on:
+    - ARCH-MIGRATE-006
 Features:
   high-priority:
   - id: settings-tab-speech-filter-words

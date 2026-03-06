@@ -1,0 +1,100 @@
+schemaVersion: 1
+purpose: >
+  Final parity sign-off checklist for ARCH-MIGRATE-001 after Phase 0-6 migration completion.
+metadata:
+  checklistId: PARITY-20260306-ARCH-MIGRATE-001
+  generatedUtc: "2026-03-06T04:13:00Z"
+  phase: "Phase 6"
+  owner: "copilotcli"
+  reviewer: "architecture"
+criticalJourneys:
+  - journeyId: TODO-CRUD
+    description: "Create, load, edit, save, complete, and delete todo workflows"
+    hosts:
+      - Desktop
+      - Android
+      - Director
+      - Web
+    expectedOutcome: "All hosts execute the same command/query contract semantics."
+    status: pass
+    evidence:
+      commandsRun:
+        - "tools/compliance/Run-UiCoreHostSmoke.ps1 -FailOnFailures"
+      testCases:
+        - "McpServer.Support.Mcp.IntegrationTests.Controllers.TodoControllerTests"
+        - "McpServer.Director.Tests.TodoCommandTests"
+      logsOrArtifacts:
+        - "C:/Users/kingd/.copilot/session-state/bff566af-f937-4df9-b011-f387bbcf2aca/files/ui-core-host-smoke.json"
+  - journeyId: WORKSPACE-SWITCH
+    description: "Workspace switching preserves context and scoped operations"
+    hosts:
+      - Desktop
+      - Android
+      - Director
+      - Web
+    expectedOutcome: "Selected workspace propagates consistently across host views and API operations."
+    status: pass
+    evidence:
+      commandsRun:
+        - "tools/compliance/Run-UiCoreHostSmoke.ps1 -FailOnFailures"
+      testCases:
+        - "McpServer.Support.Mcp.IntegrationTests.Controllers.WorkspaceControllerTests"
+        - "McpServer.Support.Mcp.Tests.Middleware.WorkspaceResolutionMiddlewareTests"
+      logsOrArtifacts:
+        - "C:/Users/kingd/.copilot/session-state/bff566af-f937-4df9-b011-f387bbcf2aca/files/ui-core-host-smoke.json"
+  - journeyId: SESSION-LOG
+    description: "Session log create/update/dialog append flows"
+    hosts:
+      - Desktop
+      - Android
+      - Director
+      - Web
+    expectedOutcome: "Canonical sessionId/requestId format and consistent update behavior."
+    status: pass
+    evidence:
+      commandsRun:
+        - "tools/compliance/Run-UiCoreHostSmoke.ps1 -FailOnFailures"
+      testCases:
+        - "McpServer.Support.Mcp.IntegrationTests.Controllers.SessionLogControllerTests"
+        - "McpServer.Director.Tests.SessionLogCommandTests"
+      logsOrArtifacts:
+        - "C:/Users/kingd/.copilot/session-state/bff566af-f937-4df9-b011-f387bbcf2aca/files/ui-core-host-smoke.json"
+  - journeyId: AUTH-WORKSPACE-RESOLUTION
+    description: "Auth and workspace resolution behavior remains stable post-migration"
+    hosts:
+      - Desktop
+      - Android
+      - Director
+      - Web
+    expectedOutcome: "No auth fallback regressions; workspace-scoped behavior is preserved."
+    status: pass
+    evidence:
+      commandsRun:
+        - "tools/compliance/Run-UiCoreHostSmoke.ps1 -FailOnFailures"
+      testCases:
+        - "McpServer.Support.Mcp.Tests.Middleware.WorkspaceAuthMiddlewareTests"
+        - "McpServer.Support.Mcp.Tests.Middleware.WorkspaceResolutionMiddlewareTests"
+        - "McpServer.Director.Tests.AuthCommandTests"
+      logsOrArtifacts:
+        - "C:/Users/kingd/.copilot/session-state/bff566af-f937-4df9-b011-f387bbcf2aca/files/ui-core-host-smoke.json"
+noGoCriteria:
+  - criterionId: NOGO-ARCH
+    description: "Architecture compliance checks pass"
+    status: pass
+    evidence: "tools/compliance/Invoke-ArchitectureChecks.ps1"
+  - criterionId: NOGO-BASELINE
+    description: "Baseline build/test matrix captured for impacted projects"
+    status: pass
+    evidence: "C:/Users/kingd/.copilot/session-state/bff566af-f937-4df9-b011-f387bbcf2aca/files/ui-core-migration-baseline.json"
+  - criterionId: NOGO-HOST-ISOLATION
+    description: "No local *ViewModel declarations in Director/Web hosts"
+    status: pass
+    evidence: "tools/compliance/Check-UiCoreMigrationPhaseGate.ps1 + tools/compliance/Check-UiCoreMigrationResiduals.ps1"
+  - criterionId: NOGO-PARITY
+    description: "Critical journeys validated with evidence"
+    status: pass
+    evidence: "C:/Users/kingd/.copilot/session-state/bff566af-f937-4df9-b011-f387bbcf2aca/files/ui-core-host-smoke.json"
+approval:
+  readyToAdvance: true
+  decision: "approved-to-close"
+  approvedUtc: "2026-03-06T04:13:00Z"
