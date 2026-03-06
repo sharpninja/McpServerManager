@@ -1,9 +1,6 @@
-using System.Threading.Tasks;
-
 namespace McpServerManager.Services
 {
-    public interface IClipboardService
+    public interface IClipboardService : McpServerManager.Core.Services.IClipboardService
     {
-        Task SetTextAsync(string text);
     }
 }

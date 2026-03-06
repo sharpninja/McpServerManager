@@ -1,4 +1,4 @@
-using McpServerManager.Core.Models;
+using McpServer.UI.Core.Models;
 
 namespace McpServerManager.Core.Commands;
 
@@ -10,3 +10,4 @@ public interface IArchiveTarget
     void Archive();
     void ArchiveTreeItem(FileNode? node);
 }
+

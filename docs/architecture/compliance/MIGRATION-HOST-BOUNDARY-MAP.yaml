@@ -1,0 +1,106 @@
+metadata:
+  id: ARCH-MIGRATE-001-P1-HOST-BOUNDARY
+  title: UI.Core host boundary and adapter map
+  status: active
+  owners:
+    - architecture
+    - ui-core-migration
+  updatedBy: copilotcli
+  lastVerified: 2026-03-06T00:00:00Z
+
+hostWrapperContracts:
+  sourceOfTruth:
+    test: src/McpServerManager.Core.Tests/Integration/UiCoreHostWrapperInheritanceTests.cs
+  wrappers:
+    - hostWrapper: McpServerManager.Core.ViewModels.MainWindowViewModel
+      uiCoreBase: McpServer.UI.Core.ViewModels.MainWindowViewModel
+    - hostWrapper: McpServerManager.Core.ViewModels.WorkspaceViewModel
+      uiCoreBase: McpServer.UI.Core.ViewModels.WorkspaceViewModel
+    - hostWrapper: McpServerManager.Core.ViewModels.TodoListViewModel
+      uiCoreBase: McpServer.UI.Core.ViewModels.TodoListHostViewModel
+    - hostWrapper: McpServerManager.Core.ViewModels.ConnectionViewModel
+      uiCoreBase: McpServer.UI.Core.ViewModels.ConnectionViewModel
+    - hostWrapper: McpServerManager.Core.ViewModels.SettingsViewModel
+      uiCoreBase: McpServer.UI.Core.ViewModels.SettingsViewModel
+    - hostWrapper: McpServerManager.Core.ViewModels.LogViewModel
+      uiCoreBase: McpServer.UI.Core.ViewModels.LogViewModel
+    - hostWrapper: McpServerManager.Core.ViewModels.VoiceConversationViewModel
+      uiCoreBase: McpServer.UI.Core.ViewModels.VoiceConversationViewModel
+    - hostWrapper: McpServerManager.Core.ViewModels.ChatWindowViewModel
+      uiCoreBase: McpServer.UI.Core.ViewModels.ChatWindowViewModel
+    - hostWrapper: McpServerManager.Core.ViewModels.ViewModelBase
+      uiCoreBase: McpServer.UI.Core.ViewModels.ViewModelBase
+    - hostWrapper: McpServerManager.Core.ViewModels.EditorTab
+      uiCoreBase: McpServer.UI.Core.ViewModels.EditorTab
+
+hostComposition:
+  director:
+    registration: lib/McpServer/src/McpServer.Director/DirectorServiceRegistration.cs
+    uiCoreRegistration:
+      method: AddUiCore
+      lifetimeModel: singleton
+    context:
+      type: DirectorMcpContext
+      controlPlaneClient: McpHttpClient.FromDefaultUrlOrMarker
+      activeWorkspaceClient: McpHttpClient.FromMarkerOnly
+    requiredUiCoreAdapters:
+      - service: ITodoApiClient
+        implementation: TodoApiClientAdapter
+      - service: IWorkspaceApiClient
+        implementation: WorkspaceApiClientAdapter
+      - service: ISessionLogApiClient
+        implementation: SessionLogApiClientAdapter
+      - service: IHealthApiClient
+        implementation: HealthApiClientAdapter
+      - service: IContextApiClient
+        implementation: ContextApiClientAdapter
+      - service: IAuthConfigApiClient
+        implementation: AuthConfigApiClientAdapter
+  web:
+    registration: lib/McpServer/src/McpServer.Web/WebServiceRegistration.cs
+    uiCoreRegistration:
+      method: AddUiCore(typeof(WebServiceRegistration).Assembly)
+      lifetimeModel: scoped
+    context:
+      type: WebMcpContext
+      controlPlaneClient: GetRequiredControlApiClientAsync
+      activeWorkspaceClient: GetRequiredActiveWorkspaceApiClientAsync
+    requiredUiCoreAdapters:
+      - service: ITodoApiClient
+        implementation: TodoApiClientAdapter
+      - service: IWorkspaceApiClient
+        implementation: WorkspaceApiClientAdapter
+      - service: ISessionLogApiClient
+        implementation: SessionLogApiClientAdapter
+      - service: IHealthApiClient
+        implementation: HealthApiClientAdapter
+      - service: IContextApiClient
+        implementation: ContextApiClientAdapter
+      - service: IAuthConfigApiClient
+        implementation: AuthConfigApiClientAdapter
+
+shellAndControlPlaneBoundaries:
+  directorCli:
+    configStorePath: ~/.mcpserver/director.config.json
+    defaultBaseUrlField: defaultBaseUrl
+    commands:
+      - config show
+      - config set-default-url
+      - config clear-default-url
+    boundaryRules:
+      - Workspace marker (AGENTS-README-FIRST.yaml) is authoritative for workspace-scoped operations.
+      - Control-plane connection can use defaultBaseUrl but must not silently infer unrelated workspace paths.
+  webUi:
+    boundaryRules:
+      - Authentication challenge uses OpenIdConnect when authority and client id are configured.
+      - Active workspace forwarding occurs through WebMcpContext and adapter layer, not in UI.Core handlers.
+
+guardrails:
+  - tools/compliance/Check-UiCoreAdapterContracts.ps1
+  - tools/compliance/Check-UiCoreHostIntegration.ps1
+  - tools/compliance/Check-UiCoreMigration.ps1
+
+verificationChecklist:
+  - Run tools/compliance/Invoke-ArchitectureChecks.ps1.
+  - Verify UiCoreHostWrapperInheritanceTests are green.
+  - Verify director and web service registrations still bind all required UI.Core adapter interfaces.

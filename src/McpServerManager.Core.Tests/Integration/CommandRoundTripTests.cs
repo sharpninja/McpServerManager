@@ -5,6 +5,7 @@ using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace McpServerManager.Core.Tests.Integration;
@@ -101,6 +102,28 @@ public sealed class CommandRoundTripTests : IDisposable
 
         _target.Verify(t => t.NavigateBack(), Times.Exactly(2));
         _target.Verify(t => t.NavigateForward(), Times.Once);
+    }
+
+    [Fact]
+    public void CqrsRelayFactory_GenericCanExecutePredicate_UsesCommandParameter()
+    {
+        var command = CqrsRelayFactory.Create<string?>(
+            _dispatcher,
+            _ => Task.CompletedTask,
+            value => !string.IsNullOrWhiteSpace(value));
+
+        command.CanExecute(null).Should().BeFalse();
+        command.CanExecute(string.Empty).Should().BeFalse();
+        command.CanExecute("ready").Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task InvokeUiActionCommand_WhenActionThrows_ReturnsFailureResult()
+    {
+        var result = await _dispatcher.SendAsync(new InvokeUiActionCommand(() => throw new InvalidOperationException("boom")));
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("boom");
     }
 
     public void Dispose() => _provider.Dispose();

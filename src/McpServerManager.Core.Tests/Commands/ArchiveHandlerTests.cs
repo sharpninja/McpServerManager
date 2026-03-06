@@ -1,8 +1,8 @@
 using FluentAssertions;
 using McpServer.Cqrs;
 using McpServerManager.Core.Commands;
-using McpServerManager.Core.Models;
-using McpServerManager.Core.Models.Json;
+using McpServer.UI.Core.Models;
+using McpServer.UI.Core.Models.Json;
 using Moq;
 using Xunit;
 
@@ -76,3 +76,4 @@ public sealed class ArchiveHandlerTests
         _target.Verify(t => t.SelectSearchEntry(entry), Times.Once);
     }
 }
+

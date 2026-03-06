@@ -7,7 +7,6 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using McpServerManager.ViewModels;
 using McpServerManager.Models;
-using McpServerManager.Models.Json;
 using McpServerManager.Core.Services;
 using Microsoft.Extensions.Logging;
 using System;
@@ -15,6 +14,9 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
+using FileNode = McpServer.UI.Core.Models.FileNode;
+using JsonTreeNode = McpServer.UI.Core.Models.Json.JsonTreeNode;
+using SearchableEntry = McpServer.UI.Core.Models.Json.SearchableEntry;
 
 namespace McpServerManager.Views;
 

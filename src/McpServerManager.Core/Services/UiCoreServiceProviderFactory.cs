@@ -48,11 +48,16 @@ internal static class UiCoreServiceProviderFactory
             services.AddSingleton<IEventStreamApiClient>(_ => new UiCoreEventStreamApiClientAdapter(eventStreamService));
 
         // Infrastructure services — use host-provided or default implementations
-        services.AddSingleton(fileSystemService ?? new FileSystemService());
-        services.AddSingleton(processLauncherService ?? new ProcessLauncherService());
-        services.AddSingleton(timerService ?? new TimerService());
-        services.AddSingleton(jsonParsingService ?? new JsonParsingService());
-        services.AddSingleton(fileSystemWatcherService ?? new FileSystemWatcherService());
+        services.AddSingleton<IFileSystemService>(fileSystemService ?? new FileSystemService());
+        services.AddSingleton<IProcessLauncherService>(processLauncherService ?? new ProcessLauncherService());
+        services.AddSingleton<ITimerService>(timerService ?? new TimerService());
+        services.AddSingleton<IJsonParsingService>(jsonParsingService ?? new JsonParsingService());
+        services.AddSingleton<IFileSystemWatcherService>(fileSystemWatcherService ?? new FileSystemWatcherService());
+        services.AddSingleton<McpServer.UI.Core.Services.IClipboardService>(_ => new McpServer.UI.Core.Services.NoOpClipboardService());
+        services.AddSingleton<McpServer.UI.Core.Services.IAppLogService>(_ => AppLogService.Instance);
+        services.AddSingleton<McpServer.UI.Core.Services.ISpeechFilterService>(_ => new SpeechFilterServiceAdapter());
+        services.AddSingleton<McpServer.UI.Core.Services.IUiDispatcherService>(_ => new AvaloniaUiDispatcherService());
+        services.AddSingleton<McpServer.UI.Core.Services.IConnectionAuthService>(_ => new ConnectionAuthServiceAdapter());
 
         // Register ICommandTarget and granular sub-interfaces for CQRS handler DI
         services.AddSingleton<Commands.ICommandTarget>(commandTarget);

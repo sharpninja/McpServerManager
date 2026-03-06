@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using McpServer.Cqrs;
 using Microsoft.Extensions.Logging;
-using McpServerManager.Core.Models;
-using McpServerManager.Core.Models.Json;
-using McpServerManager.Core.Services;
+using McpServer.UI.Core.Models;
+using McpServer.UI.Core.Models.Json;
+using McpServer.UI.Core.Services;
 using McpServerManager.Core.ViewModels;
 
 namespace McpServerManager.Core.Commands;
@@ -320,3 +320,4 @@ public sealed class LoadSourceFileHandler(ISessionDataTarget target) : ICommandH
         return Task.FromResult(Result<bool>.Success(true));
     }
 }
+

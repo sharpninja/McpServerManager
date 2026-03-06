@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:McpServerManager.ViewModels"
-        xmlns:models="using:McpServerManager.Models"
+        xmlns:models="using:McpServer.UI.Core.Models"
         xmlns:conv="using:McpServerManager.Converters"
         xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
         x:Class="McpServerManager.Views.ChatWindow"

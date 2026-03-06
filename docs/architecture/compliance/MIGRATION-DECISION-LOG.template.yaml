@@ -1,0 +1,49 @@
+schemaVersion: 1
+purpose: >
+  Template for ARCH-MIGRATE-001 decisions. Copy this file to a run-specific artifact
+  and append one entry per migration decision slice.
+decisionLog:
+  - decisionId: DEC-YYYYMMDD-001
+    recordedUtc: "YYYY-MM-DDTHH:MM:SSZ"
+    phase: "Phase 0 - Governance and Baseline"
+    taskId: "P0.02"
+    title: "Decision title"
+    decision: "What was decided"
+    rationale:
+      - "Why this is the right call"
+    alternativesConsidered:
+      - option: "Alternative approach"
+        rejectedBecause:
+          - "Tradeoff or risk that led to rejection"
+    scopeImpact:
+      inScopeHosts:
+        - Desktop
+        - Android
+        - Director
+        - Web
+      affectedAreas:
+        - "UI.Core ViewModel ownership"
+        - "CQRS command/query contracts"
+    noGoCriteriaChecked:
+      - criterion: "Architecture compliance checks pass"
+        outcome: pass
+        evidence: "./tools/compliance/Invoke-ArchitectureChecks.ps1"
+      - criterion: "Targeted tests for changed contracts pass"
+        outcome: pass
+        evidence: "dotnet test <project> --filter <tests>"
+    rollbackPlan:
+      trigger: "Condition that should trigger rollback"
+      steps:
+        - "Step 1"
+        - "Step 2"
+    evidence:
+      filesModified:
+        - "path/to/file1"
+      commandsRun:
+        - "command 1"
+      artifacts:
+        - "path/to/artifact-or-log"
+    ownership:
+      owner: "engineer-id"
+      reviewer: "reviewer-id"
+      approvedUtc: "YYYY-MM-DDTHH:MM:SSZ"

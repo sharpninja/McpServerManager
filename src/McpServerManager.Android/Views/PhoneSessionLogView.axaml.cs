@@ -4,7 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using McpServerManager.Android.Services;
-using McpServerManager.Core.Models;
+using McpServer.UI.Core.Models;
 using McpServerManager.Core.ViewModels;
 
 namespace McpServerManager.Android.Views;
@@ -209,3 +209,4 @@ public partial class PhoneSessionLogView : UserControl
         return true;
     }
 }
+

@@ -1,122 +1,18 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using McpServerManager.Core.Services;
+using CqrsDispatcher = McpServer.Cqrs.Dispatcher;
 
 namespace McpServerManager.Core.ViewModels;
 
-/// <summary>ViewModel for the Settings tab. Exposes speech filter phrase configuration.</summary>
-public partial class SettingsViewModel : ViewModelBase
+/// <summary>App wrapper for UI.Core settings ViewModel.</summary>
+public partial class SettingsViewModel : McpServer.UI.Core.ViewModels.SettingsViewModel
 {
-    private readonly SpeechFilterService _speechFilter = SpeechFilterService.Instance;
+    private readonly CqrsDispatcher _dispatcher;
 
-    [ObservableProperty]
-    private string _speechFilterWords = string.Empty;
-
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
-
-    public SettingsViewModel()
+    public SettingsViewModel(
+        CqrsDispatcher? dispatcher = null,
+        McpServer.UI.Core.Services.ISpeechFilterService? speechFilterService = null)
+        : base(speechFilterService ?? new SpeechFilterServiceAdapter())
     {
-        _speechFilterWords = _speechFilter.FilterText;
-    }
-
-    /// <summary>Saves the current filter phrase list to disk.</summary>
-    [RelayCommand]
-    private void SaveFilterWords()
-    {
-        _speechFilter.FilterText = SpeechFilterWords;
-        StatusMessage = $"Saved {_speechFilter.GetFilterWords().Count} filter phrase(s).";
-    }
-
-    /// <summary>Reverts the editor text to the last saved values.</summary>
-    [RelayCommand]
-    private void RevertFilterWords()
-    {
-        SpeechFilterWords = _speechFilter.FilterText;
-        StatusMessage = "Reverted to saved values.";
-    }
-
-    /// <summary>
-    /// Imports phrases from file content. Supports plain text (one per line),
-    /// JSON (string array), and YAML (dash-prefixed list).
-    /// </summary>
-    public void ImportFromFileContent(string content, string fileName)
-    {
-        if (string.IsNullOrWhiteSpace(content))
-        {
-            StatusMessage = "Import file was empty.";
-            return;
-        }
-
-        var ext = Path.GetExtension(fileName).ToLowerInvariant();
-        List<string> phrases;
-
-        try
-        {
-            phrases = ext switch
-            {
-                ".json" => ParseJsonPhrases(content),
-                ".yaml" or ".yml" => ParseYamlPhrases(content),
-                _ => ParsePlainTextPhrases(content)
-            };
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Import failed: {ex.Message}";
-            return;
-        }
-
-        if (phrases.Count == 0)
-        {
-            StatusMessage = "No phrases found in the imported data.";
-            return;
-        }
-
-        // Merge with existing (deduplicate, case-insensitive)
-        var existing = _speechFilter.FilterText
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-            .Select(l => l.Trim())
-            .Where(l => l.Length > 0)
-            .ToList();
-
-        var merged = existing
-            .Concat(phrases)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        var newCount = merged.Count - existing.Count;
-        SpeechFilterWords = string.Join(Environment.NewLine, merged);
-        _speechFilter.FilterText = SpeechFilterWords;
-        StatusMessage = $"Imported {newCount} new phrase(s) ({merged.Count} total). Saved.";
-    }
-
-    private static List<string> ParseJsonPhrases(string content)
-    {
-        return SpeechFilterService.ParseJsonPhraseList(content);
-    }
-
-    private static List<string> ParseYamlPhrases(string content)
-    {
-        // Simple YAML list parser: lines starting with "- "
-        return content
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-            .Select(l => l.Trim())
-            .Where(l => l.StartsWith("- ", StringComparison.Ordinal))
-            .Select(l => l[2..].Trim().Trim('"', '\''))
-            .Where(s => s.Length > 0)
-            .ToList();
-    }
-
-    private static List<string> ParsePlainTextPhrases(string content)
-    {
-        return content
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-            .Select(l => l.Trim())
-            .Where(l => l.Length > 0)
-            .ToList();
+        _dispatcher = dispatcher ?? LocalCqrsDispatcher.Instance;
     }
 }

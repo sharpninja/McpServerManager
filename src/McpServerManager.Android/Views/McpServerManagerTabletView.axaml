@@ -3,8 +3,8 @@
              xmlns:vm="using:McpServerManager.Core.ViewModels"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:models="using:McpServerManager.Core.Models"
-             xmlns:jsonModels="using:McpServerManager.Core.Models.Json"
+             xmlns:models="using:McpServer.UI.Core.Models"
+             xmlns:jsonModels="using:McpServer.UI.Core.Models.Json"
              xmlns:conv="using:McpServerManager.Core.Converters"
              xmlns:beh="using:McpServerManager.Core.Behaviors"
              xmlns:views="using:McpServerManager.Android.Views"
@@ -200,3 +200,4 @@
 
     </Grid>
 </UserControl>
+

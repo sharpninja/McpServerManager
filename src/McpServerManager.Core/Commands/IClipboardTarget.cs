@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using McpServerManager.Core.Models.Json;
+using McpServer.UI.Core.Models.Json;
 
 namespace McpServerManager.Core.Commands;
 
@@ -11,3 +11,4 @@ public interface IClipboardTarget
     Task CopyText(string text);
     Task CopyOriginalJson(UnifiedRequestEntry? entry);
 }
+

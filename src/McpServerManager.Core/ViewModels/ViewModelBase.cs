@@ -1,7 +1,5 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-
 namespace McpServerManager.Core.ViewModels;
 
-public class ViewModelBase : ObservableObject
+public class ViewModelBase : McpServer.UI.Core.ViewModels.ViewModelBase
 {
 }

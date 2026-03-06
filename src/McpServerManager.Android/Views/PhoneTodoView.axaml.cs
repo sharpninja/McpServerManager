@@ -9,8 +9,10 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using McpServerManager.Android.Services;
-using McpServerManager.Core.Models;
 using McpServerManager.Core.ViewModels;
+using UiCoreMcpTodoFlatItem = McpServer.UI.Core.Models.McpTodoFlatItem;
+using UiCoreMcpTodoFlatTask = McpServer.UI.Core.Models.McpTodoFlatTask;
+using UiCoreTodoListEntry = McpServer.UI.Core.ViewModels.TodoListEntry;
 
 namespace McpServerManager.Android.Views;
 
@@ -173,7 +175,7 @@ public partial class PhoneTodoView : UserControl
     private async void OnTodoRowClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TodoListViewModel vm) return;
-        if (sender is not Button button || button.Tag is not TodoListEntry entry) return;
+        if (sender is not Button button || button.Tag is not UiCoreTodoListEntry entry) return;
 
         vm.SelectedEntry = entry;
         if (!vm.OpenSelectedTodoCommand.CanExecute(null))
@@ -331,7 +333,7 @@ public partial class PhoneTodoView : UserControl
         RenderFormattedDetail(item);
     }
 
-    private static string BuildSubtitle(McpTodoFlatItem item)
+    private static string BuildSubtitle(UiCoreMcpTodoFlatItem item)
     {
         var parts = new[]
         {
@@ -344,7 +346,7 @@ public partial class PhoneTodoView : UserControl
         return string.Join(" | ", parts);
     }
 
-    private void RenderFormattedDetail(McpTodoFlatItem item)
+    private void RenderFormattedDetail(UiCoreMcpTodoFlatItem item)
     {
         DetailMetaChipsPanel.Children.Clear();
         DetailFieldCardsPanel.Children.Clear();
@@ -475,7 +477,7 @@ public partial class PhoneTodoView : UserControl
         DetailSectionCardsPanel.Children.Add(CreateCard(title, content));
     }
 
-    private void AddTaskSectionCard(string title, IReadOnlyCollection<McpTodoFlatTask>? tasks)
+    private void AddTaskSectionCard(string title, IReadOnlyCollection<UiCoreMcpTodoFlatTask>? tasks)
     {
         if (tasks == null || tasks.Count == 0)
             return;

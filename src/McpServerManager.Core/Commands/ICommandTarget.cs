@@ -17,3 +17,4 @@ public interface ICommandTarget
       ITodoCopilotTarget
 {
 }
+

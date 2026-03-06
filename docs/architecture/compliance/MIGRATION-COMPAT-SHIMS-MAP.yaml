@@ -1,0 +1,39 @@
+metadata:
+  id: ARCH-MIGRATE-001-P2-COMPAT-SHIMS
+  title: Host-to-UI.Core command compatibility shims
+  status: active
+  owners:
+    - architecture
+    - ui-core-migration
+  updatedBy: copilotcli
+  lastVerified: 2026-03-06T00:00:00Z
+
+commandRelayFactory:
+  sharedCoreFactory:
+    file: lib/McpServer/src/McpServer.UI.Core/Commands/CqrsRelayFactory.cs
+    compatibilityOverloads:
+      - signature: Create<T>(Dispatcher, Action<T?>, Func<T?, bool>?)
+        intent: preserve parameter-aware CanExecute flows used by host wrappers.
+      - signature: Create<T>(Dispatcher, Func<T?, Task>, Func<T?, bool>?)
+        intent: preserve async parameter-aware CanExecute flows.
+  hostShimFactory:
+    file: src/McpServerManager.Core/Commands/CqrsRelayFactory.cs
+    shimRole:
+      - delegates all command creation paths to UI.Core factory methods
+      - prevents host/local divergence in command execution behavior
+
+adoption:
+  archiveTreeItem:
+    file: src/McpServerManager.Core/ViewModels/MainWindowViewModel.Commands.cs
+    before: host-local CqrsRelayCommand construction with inline InvokeUiActionCommand
+    after: CqrsRelayFactory.Create<FileNode?>(_dispatcher, ArchiveTreeItem, CanArchiveTreeItem)
+
+guardrails:
+  - tools/compliance/Check-UiCoreCompatibilityShims.ps1
+  - tools/compliance/Check-UiCoreSharedOrchestration.ps1
+  - tools/compliance/Check-UiCoreMigration.ps1
+
+evidence:
+  architectureChecks:
+    command: tools/compliance/Invoke-ArchitectureChecks.ps1
+    expectation: pass

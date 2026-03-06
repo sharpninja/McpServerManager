@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
+             xmlns:uicorevm="using:McpServer.UI.Core.ViewModels"
              xmlns:conv="using:McpServerManager.Core.Converters"
              xmlns:controls="using:McpServerManager.Android.Controls"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="720"
@@ -83,7 +84,7 @@
                 <ScrollViewer>
                     <ItemsControl ItemsSource="{Binding GroupedItems}">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:TodoListGroup">
+                            <DataTemplate x:DataType="uicorevm:TodoListGroup">
                                 <StackPanel Margin="0,0,0,6">
                                     <Border Background="{DynamicResource SystemAccentColor}"
                                             Padding="8,5" CornerRadius="4" Margin="4,4,4,2">
@@ -92,7 +93,7 @@
 
                                     <ItemsControl ItemsSource="{Binding Items}">
                                         <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:TodoListEntry">
+                                            <DataTemplate x:DataType="uicorevm:TodoListEntry">
                                                 <Button Click="OnTodoRowClick"
                                                         Tag="{Binding}"
                                                         Background="Transparent"

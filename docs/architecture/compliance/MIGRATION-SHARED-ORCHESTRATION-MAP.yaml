@@ -1,0 +1,66 @@
+metadata:
+  id: ARCH-MIGRATE-001-P2-SHARED-ORCHESTRATION
+  title: Shared orchestration migration evidence
+  status: active
+  owners:
+    - architecture
+    - ui-core-migration
+  updatedBy: copilotcli
+  lastVerified: 2026-03-06T00:00:00Z
+
+todoWorkflow:
+  hostWrapper:
+    file: src/McpServerManager.Core/ViewModels/TodoListViewModel.cs
+    inheritance: McpServer.UI.Core.ViewModels.TodoListHostViewModel
+    hostRole:
+      - provides CQRS relay command bindings
+      - provides shell clipboard/runtime wiring
+  sharedCore:
+    file: lib/McpServer/src/McpServer.UI.Core/ViewModels/TodoListHostViewModel.cs
+    responsibilities:
+      - list filtering and refresh orchestration
+      - todo detail load/save/delete orchestration
+      - requirements analysis and editor tab lifecycle
+
+sessionWorkflow:
+  hostWrapper:
+    file: src/McpServerManager.Core/ViewModels/MainWindowViewModel.cs
+    inheritance: McpServer.UI.Core.ViewModels.MainWindowViewModel
+    hostRole:
+      - shell-specific command exposure and dispatcher hooks
+      - child viewmodel construction + workspace event wiring
+  sharedCore:
+    file: lib/McpServer/src/McpServer.UI.Core/ViewModels/MainWindowViewModel.cs
+    responsibilities:
+      - session load/reload orchestration
+      - request tree and search index orchestration
+      - archive/preview/session navigation workflows
+
+workspaceWorkflow:
+  hostWrapper:
+    file: src/McpServerManager.Core/ViewModels/WorkspaceViewModel.cs
+    inheritance: McpServer.UI.Core.ViewModels.WorkspaceViewModel
+    hostRole:
+      - CQRS command binding and shell can-execute notifications
+  sharedCore:
+    file: lib/McpServer/src/McpServer.UI.Core/ViewModels/WorkspaceViewModel.cs
+    responsibilities:
+      - workspace list/detail orchestration
+      - health/status/start/stop/init workflows
+      - global prompt load/save/reset orchestration
+
+guardrails:
+  - tools/compliance/Check-UiCoreSharedOrchestration.ps1
+  - tools/compliance/Check-UiCoreMigration.ps1
+  - tools/compliance/Check-UiCoreAdapterContracts.ps1
+
+evidence:
+  architectureChecks:
+    command: tools/compliance/Invoke-ArchitectureChecks.ps1
+    expectation: pass
+  baselineMatrix:
+    artifact: session-state/files/ui-core-migration-baseline.json
+    expectation: FailedStepCount == 0
+  behaviorTranscripts:
+    artifact: session-state/files/ui-core-migration-behavior-transcripts.json
+    expectation: FailedStepCount == 0

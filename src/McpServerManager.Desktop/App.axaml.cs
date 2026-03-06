@@ -5,7 +5,6 @@ using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.Logging;
 using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
-using McpServer.UI.Core.ViewModels;
 using McpServerManager.Desktop.Services;
 using McpServerManager.Desktop.Views;
 using System;
@@ -14,6 +13,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using StatusViewModel = McpServer.UI.Core.ViewModels.StatusViewModel;
 
 namespace McpServerManager.Desktop;
 

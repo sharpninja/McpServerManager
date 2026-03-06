@@ -8,3 +8,4 @@ public interface IPreviewTarget
     void OpenPreviewInBrowser();
     void ToggleShowRawMarkdown();
 }
+

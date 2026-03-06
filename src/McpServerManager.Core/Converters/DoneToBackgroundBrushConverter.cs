@@ -2,7 +2,8 @@ using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
-using McpServerManager.Core.Models;
+using CoreTodoItem = McpServerManager.Core.Models.McpTodoFlatItem;
+using UiCoreTodoItem = McpServer.UI.Core.Models.McpTodoFlatItem;
 
 namespace McpServerManager.Core.Converters;
 
@@ -15,12 +16,20 @@ public class DoneToBackgroundBrushConverter : IValueConverter
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is McpTodoFlatItem item)
+        if (value is CoreTodoItem item)
         {
             if (IsImplementationPlanId(item.Id))
                 return ImplementationPlanBrush;
 
             return item.Done ? CompletedBrush : Brushes.Transparent;
+        }
+
+        if (value is UiCoreTodoItem uiItem)
+        {
+            if (IsImplementationPlanId(uiItem.Id))
+                return ImplementationPlanBrush;
+
+            return uiItem.Done ? CompletedBrush : Brushes.Transparent;
         }
 
         if (value is bool done)

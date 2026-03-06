@@ -1,14 +1,14 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServerManager.Core.Models;
+using McpServer.UI.Core.Models;
 
 namespace McpServerManager.Core.Services;
 
 /// <summary>
 /// Abstraction for delivering system-level notifications from actionable agent events.
 /// </summary>
-public interface ISystemNotificationService
+public interface ISystemNotificationService : McpServer.UI.Core.Services.ISystemNotificationService
 {
     /// <summary>
     /// Notifies the user about an actionable agent event.
@@ -39,3 +39,4 @@ public sealed class NoOpSystemNotificationService : ISystemNotificationService
         return Task.CompletedTask;
     }
 }
+

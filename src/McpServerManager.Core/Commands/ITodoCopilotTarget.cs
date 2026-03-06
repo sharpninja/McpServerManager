@@ -12,3 +12,4 @@ public interface ITodoCopilotTarget
     Task CopilotPlanAsync();
     Task CopilotImplementAsync();
 }
+

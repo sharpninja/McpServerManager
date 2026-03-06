@@ -41,3 +41,4 @@ public sealed class CopilotImplementHandler(IUiDispatchTarget dispatch, ITodoCop
         return Task.FromResult(Result<bool>.Success(true));
     }
 }
+

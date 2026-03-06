@@ -7,6 +7,8 @@ using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using McpServerManager.Models;
+using ChatMessage = McpServer.UI.Core.Models.ChatMessage;
+using PromptTemplate = McpServer.UI.Core.Models.PromptTemplate;
 
 namespace McpServerManager.Views;
 

@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using Avalonia.Data.Converters;
-using McpServerManager.Core.Models;
+using McpServer.UI.Core.Models;
 
 namespace McpServerManager.Core.Converters;
 
@@ -32,3 +32,4 @@ public class FileNodeToArchiveVisibleConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotImplementedException();
 }
+

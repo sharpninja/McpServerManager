@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.ViewModels;
+using UiCoreTodoListEntry = McpServer.UI.Core.ViewModels.TodoListEntry;
 
 namespace McpServerManager.Android.Views;
 
@@ -111,7 +112,7 @@ public partial class TodoListView : UserControl
                 lb.SelectedItem = null;
         }
 
-        if (DataContext is TodoListViewModel vm && activeListBox.SelectedItem is TodoListEntry entry)
+        if (DataContext is TodoListViewModel vm && activeListBox.SelectedItem is UiCoreTodoListEntry entry)
         {
             vm.SelectedEntry = entry;
             if (vm.OpenSelectedTodoCommand.CanExecute(null))

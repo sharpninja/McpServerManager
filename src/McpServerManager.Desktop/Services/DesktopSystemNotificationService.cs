@@ -4,7 +4,7 @@ using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using McpServerManager.Core.Models;
+using McpServer.UI.Core.Models;
 using McpServerManager.Core.Services;
 
 namespace McpServerManager.Desktop.Services;
@@ -89,3 +89,4 @@ public sealed class DesktopSystemNotificationService : ISystemNotificationServic
             "</binding></visual></toast>";
     }
 }
+

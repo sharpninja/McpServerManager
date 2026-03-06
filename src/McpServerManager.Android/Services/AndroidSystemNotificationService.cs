@@ -6,7 +6,7 @@ using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Microsoft.Extensions.Logging;
-using McpServerManager.Core.Models;
+using McpServer.UI.Core.Models;
 using McpServerManager.Core.Services;
 
 namespace McpServerManager.Android.Services;
@@ -155,3 +155,4 @@ public sealed class AndroidSystemNotificationService : ISystemNotificationServic
         manager.CreateNotificationChannel(channel);
     }
 }
+

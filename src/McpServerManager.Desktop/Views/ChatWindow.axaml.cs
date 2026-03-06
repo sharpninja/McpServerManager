@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.ViewModels;
+using UiChatMessage = McpServer.UI.Core.Models.ChatMessage;
 
 namespace McpServerManager.Desktop.Views;
 
@@ -162,7 +163,7 @@ public partial class ChatWindow : Window
         {
             foreach (var item in e.NewItems)
             {
-                if (item is ChatMessage msg && msg.Role == "assistant")
+                if (item is UiChatMessage msg && msg.Role == "assistant")
                     msg.PropertyChanged += OnAssistantMessagePropertyChanged;
             }
             ScrollToEnd();
@@ -171,7 +172,7 @@ public partial class ChatWindow : Window
 
     private void OnAssistantMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ChatMessage.Text))
+        if (e.PropertyName == nameof(UiChatMessage.Text))
             ScrollToEnd();
     }
 

@@ -1,4 +1,4 @@
-using McpServerManager.Core.Models.Json;
+using McpServer.UI.Core.Models.Json;
 
 namespace McpServerManager.Core.Commands;
 
@@ -15,3 +15,4 @@ public interface IRequestDetailsTarget
     void SearchRowTapped(SearchableEntry? entry);
     void SearchRowDoubleTapped(SearchableEntry? entry);
 }
+

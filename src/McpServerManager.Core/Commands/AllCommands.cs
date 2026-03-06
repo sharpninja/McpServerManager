@@ -42,7 +42,7 @@ public sealed class RefreshViewHandler(INavigationTarget target) : ICommandHandl
 
 // --- Request Details ---
 
-public sealed record ShowRequestDetailsCommand(Models.Json.SearchableEntry Entry) : ICommand<bool>;
+public sealed record ShowRequestDetailsCommand(McpServer.UI.Core.Models.Json.SearchableEntry Entry) : ICommand<bool>;
 
 public sealed class ShowRequestDetailsHandler(IRequestDetailsTarget target) : ICommandHandler<ShowRequestDetailsCommand, bool>
 {
@@ -88,7 +88,7 @@ public sealed class NavigateToNextRequestHandler(IRequestDetailsTarget target) :
 
 // --- Selection ---
 
-public sealed record SelectSearchEntryCommand(Models.Json.SearchableEntry Entry) : ICommand<bool>;
+public sealed record SelectSearchEntryCommand(McpServer.UI.Core.Models.Json.SearchableEntry Entry) : ICommand<bool>;
 
 public sealed class SelectSearchEntryHandler(IRequestDetailsTarget target) : ICommandHandler<SelectSearchEntryCommand, bool>
 {
@@ -112,7 +112,7 @@ public sealed class CopyTextHandler(IClipboardTarget target) : ICommandHandler<C
     }
 }
 
-public sealed record CopyOriginalJsonCommand(Models.Json.UnifiedRequestEntry? Entry) : ICommand<bool>;
+public sealed record CopyOriginalJsonCommand(McpServer.UI.Core.Models.Json.UnifiedRequestEntry? Entry) : ICommand<bool>;
 
 public sealed class CopyOriginalJsonHandler(IClipboardTarget target) : ICommandHandler<CopyOriginalJsonCommand, bool>
 {
@@ -160,7 +160,7 @@ public sealed class ArchiveCurrentHandler(IArchiveTarget target) : ICommandHandl
     }
 }
 
-public sealed record ArchiveTreeItemCommand(Models.FileNode? Node) : ICommand<bool>;
+public sealed record ArchiveTreeItemCommand(McpServer.UI.Core.Models.FileNode? Node) : ICommand<bool>;
 
 public sealed class ArchiveTreeItemHandler(IArchiveTarget target) : ICommandHandler<ArchiveTreeItemCommand, bool>
 {
@@ -173,7 +173,7 @@ public sealed class ArchiveTreeItemHandler(IArchiveTarget target) : ICommandHand
 
 // --- Tree Operations ---
 
-public sealed record OpenTreeItemCommand(Models.FileNode? Node) : ICommand<bool>;
+public sealed record OpenTreeItemCommand(McpServer.UI.Core.Models.FileNode? Node) : ICommand<bool>;
 
 public sealed class OpenTreeItemHandler(INavigationTarget target) : ICommandHandler<OpenTreeItemCommand, bool>
 {
@@ -223,7 +223,7 @@ public sealed class PhoneNavigateSectionHandler(INavigationTarget target) : ICom
 
 // --- Tree Item Tap ---
 
-public sealed record TreeItemTappedCommand(Models.FileNode? Node) : ICommand<bool>;
+public sealed record TreeItemTappedCommand(McpServer.UI.Core.Models.FileNode? Node) : ICommand<bool>;
 
 public sealed class TreeItemTappedHandler(INavigationTarget target) : ICommandHandler<TreeItemTappedCommand, bool>
 {
@@ -236,7 +236,7 @@ public sealed class TreeItemTappedHandler(INavigationTarget target) : ICommandHa
 
 // --- JSON Node Double-Tap ---
 
-public sealed record JsonNodeDoubleTappedCommand(Models.Json.JsonTreeNode? Node) : ICommand<bool>;
+public sealed record JsonNodeDoubleTappedCommand(McpServer.UI.Core.Models.Json.JsonTreeNode? Node) : ICommand<bool>;
 
 public sealed class JsonNodeDoubleTappedHandler(INavigationTarget target) : ICommandHandler<JsonNodeDoubleTappedCommand, bool>
 {
@@ -249,7 +249,7 @@ public sealed class JsonNodeDoubleTappedHandler(INavigationTarget target) : ICom
 
 // --- Search Row Tap ---
 
-public sealed record SearchRowTappedCommand(Models.Json.SearchableEntry? Entry) : ICommand<bool>;
+public sealed record SearchRowTappedCommand(McpServer.UI.Core.Models.Json.SearchableEntry? Entry) : ICommand<bool>;
 
 public sealed class SearchRowTappedHandler(IRequestDetailsTarget target) : ICommandHandler<SearchRowTappedCommand, bool>
 {
@@ -262,7 +262,7 @@ public sealed class SearchRowTappedHandler(IRequestDetailsTarget target) : IComm
 
 // --- Search Row Double-Tap ---
 
-public sealed record SearchRowDoubleTappedCommand(Models.Json.SearchableEntry? Entry) : ICommand<bool>;
+public sealed record SearchRowDoubleTappedCommand(McpServer.UI.Core.Models.Json.SearchableEntry? Entry) : ICommand<bool>;
 
 public sealed class SearchRowDoubleTappedHandler(IRequestDetailsTarget target) : ICommandHandler<SearchRowDoubleTappedCommand, bool>
 {
@@ -272,3 +272,6 @@ public sealed class SearchRowDoubleTappedHandler(IRequestDetailsTarget target) :
         return Task.FromResult(Result<bool>.Success(true));
     }
 }
+
+
+

@@ -9,26 +9,36 @@ namespace McpServerManager.Core.Services;
 /// Implements <see cref="ILoggerFactory"/> and <see cref="ILoggerProvider"/>
 /// so it can be registered as the standard logging infrastructure.
 /// </summary>
-public sealed class AppLogService : ILoggerFactory, ILoggerProvider
+public sealed class AppLogService : ILoggerFactory, ILoggerProvider, McpServer.UI.Core.Services.IAppLogService
 {
     private static readonly Lazy<AppLogService> _instance = new(() => new AppLogService());
     public static AppLogService Instance => _instance.Value;
 
     private readonly List<LogEntry> _entries = new();
     private readonly object _lock = new();
+    private event Action<McpServer.UI.Core.Services.ILogEntry>? _entryAddedBridge;
 
     public event Action<LogEntry>? EntryAdded;
+
+    event Action<McpServer.UI.Core.Services.ILogEntry>? McpServer.UI.Core.Services.IAppLogService.EntryAdded
+    {
+        add => _entryAddedBridge += value;
+        remove => _entryAddedBridge -= value;
+    }
 
     public IReadOnlyList<LogEntry> Entries
     {
         get { lock (_lock) return _entries.ToArray(); }
     }
 
+    IReadOnlyList<McpServer.UI.Core.Services.ILogEntry> McpServer.UI.Core.Services.IAppLogService.Entries => Entries;
+
     public void AddEntry(Microsoft.Extensions.Logging.LogLevel level, string source, string message)
     {
         var entry = new LogEntry(DateTime.Now, level, source, message);
         lock (_lock) _entries.Add(entry);
         EntryAdded?.Invoke(entry);
+        _entryAddedBridge?.Invoke(entry);
     }
 
     public void Clear()
@@ -104,7 +114,7 @@ public sealed class AppLogger<T> : ILogger<T>
         => _inner.Log(logLevel, eventId, state, exception, formatter);
 }
 
-public sealed class LogEntry
+public sealed class LogEntry : McpServer.UI.Core.Services.ILogEntry
 {
     public DateTime Timestamp { get; }
     public Microsoft.Extensions.Logging.LogLevel Level { get; }

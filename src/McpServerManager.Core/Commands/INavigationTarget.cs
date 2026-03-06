@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
-using McpServerManager.Core.Models;
-using McpServerManager.Core.Models.Json;
+using McpServer.UI.Core.Models;
+using McpServer.UI.Core.Models.Json;
 
 namespace McpServerManager.Core.Commands;
 
@@ -18,3 +18,4 @@ public interface INavigationTarget
     void TreeItemTapped(FileNode? node);
     void JsonNodeDoubleTapped(JsonTreeNode? node);
 }
+

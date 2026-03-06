@@ -12,3 +12,4 @@ public interface IUiDispatchTarget
     void TrackBackgroundWork(Task task);
     string StatusMessage { get; set; }
 }
+

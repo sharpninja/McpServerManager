@@ -20,7 +20,7 @@ Architecture:
   - id: RT-REFACTOR
     title: Observable ConnectionState refactor
     estimate: 8h
-    done: false
+    done: true
     description:
     - Full refactor to replace push-based data propagation with observable ConnectionState singleton.
     - 'STEP 1 (001): Create ConnectionState ObservableObject singleton in McpServerManager.Core/Services/ with properties: ActiveMcpBaseUrl, ApiKey, BearerToken, WorkspacePath, WorkspaceKey, WorkspaceDisplayName, IsConnected.'
@@ -219,17 +219,202 @@ Architecture:
       done: true
   - id: ARCH-AUDIT-001
     title: Audit workspace for ViewModels not migrated to McpServer.UI.Core
-    done: false
+    done: true
     description:
     - StatusViewModel was found still in McpServerManager.Core instead of UI.Core.
     - Other ViewModels may also exist that should have been migrated during the consolidation.
     - Audit all VMs in src/McpServerManager.Core/ViewModels/ and identify any that belong in the shared UI.Core library.
+    done-summary: 'Completed audit: enumerated McpServerManager.Core ViewModels, cross-checked shared ownership with McpServer.UI.Core, confirmed no local StatusViewModel, and added automated guardrails to prevent regression.'
+    remaining: ''
     implementation-tasks:
     - task: List all ViewModels in McpServerManager.Core/ViewModels/
-      done: false
+      done: true
     - task: Cross-reference with McpServer.UI.Core/ViewModels/ for duplicates or missing migrations
-      done: false
+      done: true
     - task: Migrate any VMs that should be shared across Desktop and Android
+      done: true
+  - id: ARCH-MIGRATE-001
+    title: Migrate Web-UI and Director and UI Packages
+    note: 'Slice update: added shared orchestration guardrail (Check-UiCoreSharedOrchestration.ps1) and shared orchestration evidence map, with architecture checks + baseline/behavior artifacts revalidated green.'
+    done: false
+    description:
+    - 'Objective: complete migration of Web UI, Director, and shared UI package usage so all UI behavior is driven by McpServer.UI.Core contracts and shared CQRS handlers.'
+    - 'Primary deliverable: remove duplicate UI workflow logic outside McpServer.UI.Core except shell-specific composition and rendering concerns.'
+    - 'Scope in: ViewModel alignment, command/query wiring, DI registration convergence, package reference normalization, and parity verification across Desktop, Web, and Director.'
+    - 'Scope out: unrelated feature work, broad UX redesign, and schema changes that are not required for migration parity.'
+    - 'Dependency gate: ARCH-AUDIT-001 output must be consumed before any irreversible removal of legacy logic.'
+    - 'Quality gate policy: no phase is marked complete until compile, tests, and behavioral parity checks pass for impacted surfaces.'
+    - 'Migration strategy: incremental vertical slices with feature toggles and side-by-side fallback paths where risk is high.'
+    - 'Artifact requirements: migration matrix, gap register, decision log, API surface diff report, and phase completion checklists.'
+    - 'Ownership model: each phase has explicit owner, reviewer, and validation evidence captured in session logs.'
+    - 'Risk model: high-risk surfaces include auth transitions, workspace switching, TODO mutation paths, and voice conversation integrations.'
+    - 'Rollback policy: preserve reversible commits per phase and keep compatibility adapters until two green validation cycles are complete.'
+    - 'Definition of done: all targeted consumers build against aligned McpServer.UI.Core APIs, no duplicate logic remains, and regression suite is green.'
+    remaining: Phase 3 and Phase 4 test-parity tasks remain (P3.02-P3.08, P4.02-P4.07), followed by package/distribution and cleanup phases. Maintain architecture + baseline/behavior evidence refresh after each slice.
+    technical-details:
+    - 'Phase 0 governance and baseline:'
+    - 0.1 Confirm ARCH-AUDIT-001 findings and classify every migration item as parity required, parity optional, or deferred.
+    - '0.2 Capture baseline metrics: build pass/fail, test counts, startup smoke checks, command latency snapshot, and major warning inventory.'
+    - 0.3 Generate API surface map for McpServer.UI.Core public ViewModels, service contracts, command models, and query models.
+    - 0.4 Generate consumer usage map for McpServer.Web, McpServer.Director, McpServerManager.Core, and any package consumers.
+    - 0.5 Create gap register mapping each consumer behavior to current implementation location and target shared location.
+    - '0.6 Record migration invariants: no silent behavior changes, no fallback auth downgrades, and no ConfigureAwait(false) in UI surfaces.'
+    - 'Phase 1 architecture and dependency alignment:'
+    - 1.1 Normalize package and project reference graph so consumers depend on McpServer.UI.Core through explicit project/package references only.
+    - 1.2 Align CommunityToolkit.Mvvm and YamlDotNet versions where required to avoid downgrade conflicts.
+    - '1.3 Define boundary contracts for shell-specific concerns: process launching, filesystem operations, dispatcher usage, and platform persistence.'
+    - 1.4 Introduce or refine adapter interfaces so shell-only concerns remain injectable from each host.
+    - 1.5 Lock naming conventions for commands, query DTOs, and route constants shared across Director and Web.
+    - 'Phase 2 shared ViewModel and workflow migration:'
+    - 2.1 For each audited ViewModel, decide move, inherit, compose, or keep-local with explicit rationale.
+    - 2.2 Port duplicated command orchestration into shared handlers in McpServer.UI.Core where shell-agnostic.
+    - 2.3 Keep shell rendering concerns local while moving state transitions and command triggering rules to shared layer.
+    - 2.4 Add compatibility shims for old method signatures to avoid breaking all consumers at once.
+    - 2.5 Mark obsolete shims with removal criteria tied to completion of integration tests.
+    - 'Phase 3 McpServer.Web migration:'
+    - 3.1 Rebind Web pages/components to migrated shared ViewModels and remove redundant web-local state machines.
+    - 3.2 Align endpoint to command/query wiring with shared contracts, including validation and error propagation behavior.
+    - 3.3 Ensure workspace resolution and auth semantics remain unchanged while shared logic is adopted.
+    - 3.4 Add focused web integration tests for TODO flows, session log flows, workspace switching, and auth-dependent actions.
+    - 'Phase 4 McpServer.Director migration:'
+    - 4.1 Rewire director commands to shared command/query abstractions with consistent option mapping.
+    - 4.2 Align TUI tab state management with shared ViewModel state transitions and refresh semantics.
+    - 4.3 Ensure command output formatting remains stable or intentionally versioned when behavior changes are necessary.
+    - 4.4 Add director tests for command parity, argument validation, and workspace-scoped behavior.
+    - 'Phase 5 package and distribution hardening:'
+    - 5.1 Validate packability and metadata for SharpNinja.McpServer.UI.Core and SharpNinja.McpServer.Director artifacts.
+    - 5.2 Verify NuGet consumers can restore and build without local project-reference assumptions.
+    - 5.3 Validate tool installation and runtime behavior for director using packaged outputs.
+    - 5.4 Update release notes and migration notes for downstream consumers.
+    - 'Phase 6 cleanup and enforcement:'
+    - 6.1 Remove duplicate legacy implementation files after parity validation confirms no regressions.
+    - 6.2 Add architecture/compliance checks that fail builds if forbidden duplicate paths reappear.
+    - 6.3 Keep grep-based verification scripts for critical route/symbol renames and shared contract adoption checks.
+    - 6.4 Finalize documentation of ownership boundaries between UI.Core and host shells.
+    - 'Acceptance criteria:'
+    - A. All impacted projects build cleanly with no new warning classes introduced by migration.
+    - B. Targeted unit/integration tests pass for Web, Director, and shared UI.Core logic.
+    - C. Behavioral parity checklist is signed off for TODO, workspace, session log, and auth workflows.
+    - D. No remaining audited duplicate ViewModel workflow logic exists outside approved shell adapters.
+    - E. Rollback instructions are validated and attached to migration completion record.
+    depends-on:
+    - ARCH-AUDIT-001
+    implementation-tasks:
+    - task: Phase 0 - Governance and Baseline
+      done: false
+    - task: P0.01 Validate ARCH-AUDIT-001 deliverables and convert findings into migration-ready work items.
+      done: true
+    - task: P0.02 Create migration decision log template capturing decision, rationale, owner, reviewer, and rollback path.
+      done: true
+    - task: P0.03 Produce complete inventory of ViewModels and workflow classes in McpServer.Web, McpServer.Director, and McpServerManager.Core.
+      done: true
+    - task: P0.04 Produce complete inventory of command/query handlers used by migrated workflows.
+      done: true
+    - task: P0.05 Capture baseline build and test outcomes for each affected project.
+      done: true
+    - task: P0.06 Capture baseline behavior screenshots or transcripts for critical user journeys.
+      done: true
+    - task: P0.07 Define migration parity checklist covering success, failure, and cancellation paths.
+      done: true
+    - task: P0.08 Define explicit no-go criteria that stop a phase from progressing.
+      done: true
+    - task: Phase 1 - Dependency and Contract Alignment
+      done: false
+    - task: P1.01 Normalize project and package references for shared UI.Core consumption paths.
+      done: true
+    - task: P1.02 Confirm version alignment for CommunityToolkit.Mvvm and YamlDotNet across affected projects.
+      done: true
+    - task: P1.03 Document shell-specific service boundaries and required abstractions.
+      done: true
+    - task: P1.04 Add or refine adapter interfaces for host-only concerns.
+      done: true
+    - task: P1.05 Map existing configuration keys and options consumed by Web and Director flows.
+      done: true
+    - task: P1.06 Define target contracts for error payloads and validation responses.
+      done: true
+    - task: P1.07 Add compile-time guard tests for critical shared public APIs.
+      done: true
+    - task: Phase 2 - Shared Logic Porting
+      done: false
+    - task: P2.01 Port duplicated TODO list workflow orchestration into shared UI.Core logic.
+      done: true
+    - task: P2.02 Port duplicated session log workflow orchestration into shared UI.Core logic.
+      done: true
+    - task: P2.03 Port duplicated workspace selection and refresh orchestration into shared UI.Core logic.
+      done: true
+    - task: P2.04 Port duplicated command execution status transitions into shared UI.Core logic.
+      done: true
+    - task: P2.05 Add compatibility shim methods for old call patterns used by hosts.
+      done: true
+    - task: P2.06 Add unit tests for newly shared orchestration paths including negative paths.
+      done: true
+    - task: P2.07 Validate thread affinity expectations for UI-bound collections and notifications.
+      done: true
+    - task: P2.08 Review and document every intentionally retained host-specific behavior.
+      done: true
+    - task: Phase 3 - Web Integration
+      done: false
+    - task: P3.01 Update McpServer.Web composition root to register migrated shared ViewModels and adapters.
+      done: true
+    - task: P3.02 Replace web-local workflow state handling with shared state transitions.
+      done: false
+    - task: P3.03 Align web controllers/endpoints to shared command/query contracts where applicable.
+      done: false
+    - task: P3.04 Validate auth and workspace resolution behavior remains unchanged after rewiring.
+      done: false
+    - task: P3.05 Add integration tests for web TODO create/update/complete flows.
+      done: false
+    - task: P3.06 Add integration tests for web session log create/update/dialog flows.
+      done: false
+    - task: P3.07 Add integration tests for web workspace operations and error handling.
+      done: false
+    - task: P3.08 Execute manual smoke test script for critical web journeys.
+      done: false
+    - task: Phase 4 - Director Integration
+      done: false
+    - task: P4.01 Update director DI and command pipeline to resolve migrated shared ViewModels.
+      done: true
+    - task: P4.02 Map command-line options to shared command/query inputs without behavior drift.
+      done: false
+    - task: P4.03 Align TUI tab refresh and lifecycle events to shared state transitions.
+      done: false
+    - task: P4.04 Validate director output formatting and exit code behavior across success and failure paths.
+      done: false
+    - task: P4.05 Add director tests for TODO and session log command parity.
+      done: false
+    - task: P4.06 Add director tests for workspace and auth-sensitive operations.
+      done: false
+    - task: P4.07 Run CLI smoke tests for health, list, agents, sync, todo, and session log paths.
+      done: false
+    - task: Phase 5 - Package and Distribution Verification
+      done: false
+    - task: P5.01 Build and pack McpServer.UI.Core and Director artifacts using repository packaging workflow.
+      done: false
+    - task: P5.02 Validate package metadata, dependency graph, and documentation links.
+      done: false
+    - task: P5.03 Install director package in a clean environment and run command smoke suite.
+      done: false
+    - task: P5.04 Validate package consumption from sample or downstream consumer project.
+      done: false
+    - task: P5.05 Record package-level breaking changes and migration guidance.
+      done: false
+    - task: Phase 6 - Cleanup and Enforcement
+      done: false
+    - task: P6.01 Remove legacy duplicate workflow implementations proven redundant by parity checks.
+      done: false
+    - task: P6.02 Remove transitional shims that have met removal criteria.
+      done: false
+    - task: P6.03 Add architecture guard checks that detect reintroduction of duplicate logic.
+      done: true
+    - task: P6.04 Add grep-based verification tasks for key route and symbol migrations.
+      done: false
+    - task: P6.05 Update docs for ownership boundaries and extension points.
+      done: false
+    - task: P6.06 Run full targeted build and test matrix for all affected projects.
+      done: false
+    - task: P6.07 Capture final parity checklist sign-off and rollback artifact references.
+      done: false
+    - task: P6.08 Close migration with summary entry linking evidence, risks, and follow-up items.
       done: false
 Features:
   high-priority:

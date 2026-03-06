@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.ViewModels;
+using UiCoreTodoListEntry = McpServer.UI.Core.ViewModels.TodoListEntry;
 
 namespace McpServerManager.Desktop.Views;
 
@@ -142,7 +143,7 @@ public partial class TodoListView : UserControl
         }
 
         // Propagate selection to ViewModel and auto-open
-        if (DataContext is TodoListViewModel vm && activeListBox.SelectedItem is TodoListEntry entry)
+        if (DataContext is TodoListViewModel vm && activeListBox.SelectedItem is UiCoreTodoListEntry entry)
         {
             vm.SelectedEntry = entry;
             if (vm.OpenSelectedTodoCommand.CanExecute(null))

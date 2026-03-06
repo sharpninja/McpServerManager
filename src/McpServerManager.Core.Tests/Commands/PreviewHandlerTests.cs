@@ -31,3 +31,4 @@ public sealed class PreviewHandlerTests
         _target.Verify(t => t.ToggleShowRawMarkdown(), Times.Once);
     }
 }
+

@@ -223,3 +223,4 @@ public sealed class ChatHandlerTests
         result.IsSuccess.Should().BeFalse();
     }
 }
+

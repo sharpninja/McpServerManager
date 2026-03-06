@@ -8,3 +8,4 @@ public interface IConfigTarget
     void OpenAgentConfig();
     void OpenPromptTemplates();
 }
+

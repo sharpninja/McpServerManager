@@ -1,0 +1,96 @@
+schemaVersion: 1
+purpose: >
+  Phase-0/Phase-1 parity checklist template for ARCH-MIGRATE-001.
+  Copy per migration slice and capture pass/fail evidence for each critical journey.
+metadata:
+  checklistId: PARITY-YYYYMMDD-001
+  generatedUtc: "YYYY-MM-DDTHH:MM:SSZ"
+  phase: "Phase 0"
+  owner: "engineer-id"
+  reviewer: "reviewer-id"
+criticalJourneys:
+  - journeyId: TODO-CRUD
+    description: "Create, load, edit, save, complete, and delete todo workflows"
+    hosts:
+      - Desktop
+      - Android
+      - Director
+      - Web
+    expectedOutcome: "All hosts execute the same command/query contract semantics."
+    status: pending
+    evidence:
+      commandsRun:
+        - ""
+      testCases:
+        - ""
+      logsOrArtifacts:
+        - ""
+  - journeyId: WORKSPACE-SWITCH
+    description: "Workspace switching preserves context and scoped operations"
+    hosts:
+      - Desktop
+      - Android
+      - Director
+      - Web
+    expectedOutcome: "Selected workspace propagates consistently across host views and API operations."
+    status: pending
+    evidence:
+      commandsRun:
+        - ""
+      testCases:
+        - ""
+      logsOrArtifacts:
+        - ""
+  - journeyId: SESSION-LOG
+    description: "Session log create/update/dialog append flows"
+    hosts:
+      - Desktop
+      - Android
+      - Director
+      - Web
+    expectedOutcome: "Canonical sessionId/requestId format and consistent update behavior."
+    status: pending
+    evidence:
+      commandsRun:
+        - ""
+      testCases:
+        - ""
+      logsOrArtifacts:
+        - ""
+  - journeyId: AUTH-WORKSPACE-RESOLUTION
+    description: "Auth and workspace resolution behavior remains stable post-migration"
+    hosts:
+      - Desktop
+      - Android
+      - Director
+      - Web
+    expectedOutcome: "No auth fallback regressions; workspace-scoped behavior is preserved."
+    status: pending
+    evidence:
+      commandsRun:
+        - ""
+      testCases:
+        - ""
+      logsOrArtifacts:
+        - ""
+noGoCriteria:
+  - criterionId: NOGO-ARCH
+    description: "Architecture compliance checks pass"
+    status: pending
+    evidence: ""
+  - criterionId: NOGO-BASELINE
+    description: "Baseline build/test matrix captured for impacted projects"
+    status: pending
+    evidence: ""
+  - criterionId: NOGO-HOST-ISOLATION
+    description: "No local *ViewModel declarations in Director/Web hosts"
+    status: pending
+    evidence: ""
+  - criterionId: NOGO-PARITY
+    description: "Critical journeys validated with evidence"
+    status: pending
+    evidence: ""
+approval:
+  readyToAdvance: false
+  decision: "pending"
+  approvedUtc: ""

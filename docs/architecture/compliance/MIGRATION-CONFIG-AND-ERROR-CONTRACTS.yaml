@@ -1,0 +1,122 @@
+metadata:
+  id: ARCH-MIGRATE-001-P1-CONFIG-ERROR
+  title: UI.Core config, options, and error contract map
+  status: active
+  owners:
+    - architecture
+    - ui-core-migration
+  updatedBy: copilotcli
+  lastVerified: 2026-03-06T00:00:00Z
+
+configurationContracts:
+  director:
+    configFile: ~/.mcpserver/director.config.json
+    source: lib/McpServer/src/McpServer.Director/DirectorCliConfigStore.cs
+    properties:
+      - name: defaultBaseUrl
+        type: string
+        required: false
+        behavior:
+          - Used by control-plane bootstrap via McpHttpClient.FromDefaultUrlOrMarker.
+          - Must be absolute http/https URL (validated by config set-default-url command).
+  desktop:
+    configFile: src/McpServerManager.Desktop/appsettings.config
+    source: src/McpServerManager.Core/AppSettings.cs
+    properties:
+      - name: Paths.SessionsRootPath
+        type: path
+        required: true
+      - name: Paths.HtmlCacheDirectory
+        type: path
+        required: false
+        fallback: "%TEMP%\\McpServerManager_Cache"
+      - name: Paths.CssFallbackPath
+        type: path
+        required: false
+      - name: Mcp.BaseUrl
+        type: absolute-url
+        required: true
+      - name: WorkingDir
+        type: path
+        required: false
+  web:
+    configFile: lib/McpServer/src/McpServer.Web/appsettings.json (+ optional appsettings.yaml overlays)
+    source: lib/McpServer/src/McpServer.Web/Program.cs
+    properties:
+      - name: McpServer.BaseUrl
+        type: absolute-url
+        required: false
+        default: http://localhost:7147
+      - name: Authentication.Schemes.Cookie.*
+        type: object
+        required: false
+      - name: Authentication.Schemes.OpenIdConnect.Authority
+        type: string
+        required: conditional
+      - name: Authentication.Schemes.OpenIdConnect.ClientId
+        type: string
+        required: conditional
+      - name: Authentication.Schemes.OpenIdConnect.ClientSecret
+        type: string
+        required: false
+      - name: Authentication.Authorization.*
+        type: object
+        required: false
+
+errorAndValidationContracts:
+  todoApiClientAdapters:
+    source:
+      - lib/McpServer/src/McpServer.Director/TodoApiClientAdapter.cs
+      - lib/McpServer/src/McpServer.Web/Adapters/TodoApiClientAdapter.cs
+    contracts:
+      - operation: GetTodoAsync
+        condition: McpNotFoundException
+        outcome: returns null
+      - operation: CreateTodoAsync
+        condition: McpConflictException
+        outcome: returns TodoMutationOutcome(success=false, error=exception message)
+      - operation: CreateTodoAsync
+        condition: McpValidationException
+        outcome: returns TodoMutationOutcome(success=false, error=exception message)
+      - operation: UpdateTodoAsync
+        condition: McpNotFoundException
+        outcome: returns TodoMutationOutcome(success=false, error=exception message)
+      - operation: UpdateTodoAsync
+        condition: McpValidationException
+        outcome: returns TodoMutationOutcome(success=false, error=exception message)
+      - operation: DeleteTodoAsync
+        condition: McpNotFoundException
+        outcome: returns TodoMutationOutcome(success=false, error=exception message)
+  workspaceApiClientAdapters:
+    source:
+      - lib/McpServer/src/McpServer.Director/WorkspaceApiClientAdapter.cs
+      - lib/McpServer/src/McpServer.Web/Adapters/WorkspaceApiClientAdapter.cs
+    contracts:
+      - operation: GetWorkspaceAsync
+        condition: McpNotFoundException
+        outcome: returns null
+      - operation: InitWorkspaceAsync
+        condition: workspacePath is null/whitespace
+        outcome: throws ArgumentException
+      - operation: UpdateWorkspacePolicyAsync
+        condition: update call completes
+        outcome: returns bool == mutationResult.Success
+  sessionLogApiClientAdapters:
+    source:
+      - lib/McpServer/src/McpServer.Director/SessionLogApiClientAdapter.cs
+      - lib/McpServer/src/McpServer.Web/Adapters/SessionLogApiClientAdapter.cs
+    contracts:
+      - operation: GetSessionLogAsync
+        condition: sessionId is null/whitespace
+        outcome: throws ArgumentException
+      - operation: SubmitSessionLogAsync
+        condition: command is null
+        outcome: throws ArgumentNullException
+      - operation: AppendSessionLogDialogAsync
+        condition: command is null
+        outcome: throws ArgumentNullException
+
+alignmentRules:
+  - Hosts must keep adapter behavior consistent for null/not-found and validation/conflict pathways.
+  - New UI.Core service interface members must be implemented in both Director and Web adapters in the same migration slice.
+  - Configuration key additions must be mapped in this file before phase-gate closure.

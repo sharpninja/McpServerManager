@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using McpServerManager.Core.Models;
-using McpServerManager.Core.Models.Json;
-using McpServerManager.Core.Services;
+using McpServer.UI.Core.Models;
+using McpServer.UI.Core.Models.Json;
+using McpServer.UI.Core.Services;
 
 namespace McpServerManager.Core.Commands;
 
@@ -28,3 +28,4 @@ public interface ISessionDataTarget
     List<UnifiedSessionLog> OrderAndDeduplicateSessions(Dictionary<string, UnifiedSessionLog> byPath);
     void SetMcpSessionState(List<UnifiedSessionLog> sessions, Dictionary<string, UnifiedSessionLog> byPath);
 }
+
