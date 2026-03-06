@@ -15,9 +15,9 @@ param(
 $ErrorActionPreference = 'Stop'
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $scriptDir
-$extDir = Join-Path $repoRoot "src\McpServer.VsExtension.McpTodo"
-$outDir = Join-Path $extDir "bin\$Configuration\net472"
-$objDir = Join-Path $extDir "obj"
+$extDir = Join-Path $repoRoot "src\McpServer.VsExtension.McpTodo.Vsix"
+$outDir = Join-Path $extDir "bin\$Configuration\net472\win"
+$objDir = Join-Path $extDir "obj\$Configuration\net472\win"
 $stagingDir = Join-Path $objDir "vsixstaging"
 $vsixName = "McpServer.VsExtension.McpTodo.vsix"
 $vsixPath = Join-Path $outDir $vsixName
@@ -48,6 +48,9 @@ New-Item -ItemType Directory -Force -Path $stagingDir | Out-Null
 Remove-Item (Join-Path $stagingDir "*") -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item $dll -Destination $stagingDir
 Copy-Item "$objDir\McpServer.VsExtension.McpTodo.pkgdef" -Destination $stagingDir
+
+# Also copy pkgdef to output directory for Deploy script
+Copy-Item "$objDir\McpServer.VsExtension.McpTodo.pkgdef" -Destination "$outDir\McpServer.VsExtension.McpTodo.pkgdef" -Force
 
 # extension.vsixmanifest: resolve Asset paths, remove ALL design-time (d:) attributes and xmlns:d
 $manifestSource = Join-Path $extDir "source.extension.vsixmanifest"

@@ -27,27 +27,24 @@ $vsixName = "McpServer.VsExtension.McpTodo.vsix"
 $vsixPath = Join-Path $outDir $vsixName
 $csproj = Join-Path $extDir "McpServer.VsExtension.McpTodo.Vsix.csproj"
 
-# Find MSBuild via vswhere (Visual Studio 2022)
-$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-if (-not (Test-Path $vswhere)) {
-    throw "vswhere.exe not found. Install Visual Studio 2022."
-}
-$vsPath = & $vswhere -latest -property installationPath
-if (-not $vsPath) { throw "Visual Studio installation not found." }
-$msbuild = Join-Path $vsPath "MSBuild\Current\Bin\MSBuild.exe"
-if (-not (Test-Path $msbuild)) {
-    throw "MSBuild not found at $msbuild"
-}
-
-Write-Host "Building VSIX project with MSBuild (Configuration=$Configuration)..." -ForegroundColor Cyan
+# Build with dotnet
+Write-Host "Building VSIX project with dotnet (Configuration=$Configuration)..." -ForegroundColor Cyan
 Push-Location $repoRoot
 try {
-    & $msbuild $csproj /t:Restore /t:Build /p:Configuration=$Configuration /p:Platform=AnyCPU /v:minimal
-    if ($LASTEXITCODE -ne 0) { throw "MSBuild failed (exit code $LASTEXITCODE)." }
+    dotnet build $csproj -c $Configuration
+    if ($LASTEXITCODE -ne 0) { throw "dotnet build failed." }
 } finally { Pop-Location }
 
+# Package VSIX manually since SDK build doesn't do it automatically here
+Write-Host "Packaging VSIX..." -ForegroundColor Cyan
+$packageScript = Join-Path $scriptDir "Package-Vsix.ps1"
+& $packageScript -Configuration $Configuration
+
+# Updated VSIX path for SDK-style project
+$vsixPath = Join-Path $outDir "net472\win\$vsixName"
+
 if (-not (Test-Path $vsixPath)) {
-    throw "MSBuild did not produce VSIX at $vsixPath. Build the project in Visual Studio (McpServer.VsExtension.McpTodo.Vsix) to produce the VSIX."
+    throw "VSIX not found at $vsixPath after packaging."
 }
 Write-Host "VSIX created: $vsixPath" -ForegroundColor Green
 
