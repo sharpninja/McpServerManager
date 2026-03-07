@@ -13,7 +13,7 @@ public interface ISystemNotificationService : McpServer.UI.Core.Services.ISystem
     /// <summary>
     /// Notifies the user about an actionable agent event.
     /// </summary>
-    Task NotifyAgentEventAsync(
+    new Task NotifyAgentEventAsync(
         McpIncomingChangeEvent changeEvent,
         string message,
         CancellationToken cancellationToken = default);
@@ -39,4 +39,3 @@ public sealed class NoOpSystemNotificationService : ISystemNotificationService
         return Task.CompletedTask;
     }
 }
-

@@ -19,13 +19,13 @@
         <!-- Chat messages -->
         <Border Grid.Row="1" Margin="8,4" Padding="4">
             <ScrollViewer x:Name="ChatScroller">
-                <ItemsControl x:Name="ChatItems">
+                <ItemsControl x:Name="ChatItems" HorizontalAlignment="Stretch">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:CompileBindings="False">
-                            <Panel>
-                                <!-- User/System: compact right-aligned bubble -->
-                                <Border Padding="10,6" Margin="4,3" CornerRadius="12" MaxWidth="320"
-                                        HorizontalAlignment="{Binding HAlign}"
+                            <Grid HorizontalAlignment="Stretch">
+                                <!-- User/System: full-width bubble -->
+                                <Border Padding="10,6" Margin="4,3" CornerRadius="12"
+                                        HorizontalAlignment="Stretch"
                                         Background="{Binding BubbleBrush}"
                                         IsVisible="{Binding IsNotAssistant}">
                                     <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="22"/>
@@ -51,7 +51,7 @@
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
-                            </Panel>
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

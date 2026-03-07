@@ -102,7 +102,6 @@
                          VerticalAlignment="Center"
                          HorizontalAlignment="Center"
                          ToolTip.Tip="{Binding WorkspaceHealthIndicatorTooltip}"/>
-                <SelectableTextBlock Grid.Row="1" Grid.Column="3" Text="{Binding AppVersionDisplay}" FontSize="18" VerticalAlignment="Center" Foreground="{DynamicResource SubtleForeground}"/>
                 <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4"
                             Orientation="Horizontal" Spacing="6"
                             IsVisible="{Binding StatusViewModel.IsCopilotRunning}">

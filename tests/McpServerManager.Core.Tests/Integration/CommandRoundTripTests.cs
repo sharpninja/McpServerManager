@@ -1,6 +1,7 @@
 using FluentAssertions;
 using McpServer.Cqrs;
 using McpServer.Client;
+using McpServerManager.Core;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,11 +24,16 @@ public sealed class CommandRoundTripTests : IDisposable
         var client = new McpServerClient(http, options);
         var todoService = new McpTodoService(client, client);
 
-        _provider = UiCoreServiceProviderFactory.Build(
+        var services = new ServiceCollection();
+        services.AddMcpServerManagerUiCore(
             _target.Object,
             todoService: todoService,
             mcpClient: client,
             mcpBaseUrl: options.BaseUrl);
+
+        _provider = services.BuildServiceProvider();
+        _provider.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>()
+            .AddProvider(_provider.GetRequiredService<Dispatcher>());
 
         _dispatcher = _provider.GetRequiredService<Dispatcher>();
     }
@@ -93,6 +99,18 @@ public sealed class CommandRoundTripTests : IDisposable
 
         result.IsSuccess.Should().BeTrue();
         _target.Verify(t => t.PhoneNavigateSection("details"), Times.Once);
+    }
+
+    [Fact]
+    public async Task CopilotPlanCommand_DispatchesThroughDispatcher()
+    {
+        var uiCoreTarget = _target.As<McpServer.UI.Core.Commands.ITodoCopilotTarget>();
+        uiCoreTarget.Setup(t => t.CopilotPlanAsync()).Returns(Task.CompletedTask);
+
+        var result = await _dispatcher.SendAsync(new McpServer.UI.Core.Commands.CopilotPlanCommand());
+
+        result.IsSuccess.Should().BeTrue();
+        uiCoreTarget.Verify(t => t.CopilotPlanAsync(), Times.Once);
     }
 
     [Fact]

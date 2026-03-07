@@ -12,9 +12,11 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+#if ANDROID
 using Android.App;
 using AndroidOS = Android.OS;
 using McpServerManager.Android.Services;
+#endif
 using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
 using McpServerManager.Core.Utilities;
@@ -122,9 +124,11 @@ public class ChatMessage : INotifyPropertyChanged
 public partial class SimplifiedVoiceView : UserControl
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("SimplifiedVoiceView");
+#if ANDROID
     private readonly IAndroidSpeechRecognitionService _stt = new AndroidSpeechRecognitionService();
     private readonly IAndroidTextToSpeechService _tts = new AndroidTextToSpeechService();
     private readonly IAndroidAudioFocusService _audioFocus = new AndroidAudioFocusService();
+#endif
     private readonly ObservableCollection<ChatMessage> _messages = new();
     private readonly CancellationTokenSource _viewLifetimeCts = new();
     private readonly object _activeOperationsSync = new();
@@ -223,7 +227,7 @@ public partial class SimplifiedVoiceView : UserControl
                 // End the session
                 _loopCts?.Cancel();
                 _conversationActive = false;
-                _tts.Stop();
+                StopTts();
 
                 var vm = VM;
                 if (vm != null && !string.IsNullOrWhiteSpace(vm.SessionId))
@@ -258,6 +262,17 @@ public partial class SimplifiedVoiceView : UserControl
         ct.ThrowIfCancellationRequested();
         var vm = VM;
         if (vm == null) return;
+
+        if (!vm.IsWorkspaceReady)
+        {
+            var reason = string.IsNullOrWhiteSpace(vm.WorkspacePath)
+                ? "Workspace is not ready yet. Select a workspace and wait for connection to complete."
+                : "Workspace switch is still in progress. Please wait a moment and try Start again.";
+            SetStatus(reason);
+            _messages.Add(new ChatMessage { Role = "system", Text = reason });
+            ScrollToBottom();
+            return;
+        }
 
         if (_chatToggleButton != null)
             _chatToggleButton.IsEnabled = false;
@@ -589,7 +604,7 @@ public partial class SimplifiedVoiceView : UserControl
         var accumulated = new StringBuilder();
         var emptyCount = 0;
 
-        using var focusLease = _audioFocus.Acquire(AndroidVoiceAudioFocusUsage.SpeechRecognition);
+        using var focusLease = AcquireSpeechRecognitionFocus();
 
         while (!ct.IsCancellationRequested)
         {
@@ -598,7 +613,7 @@ public partial class SimplifiedVoiceView : UserControl
             string result;
             try
             {
-                result = await _stt.RecognizeOnceAsync(VM?.Language, ct).ConfigureAwait(true);
+                result = await RecognizeSpeechOnceAsync(ct).ConfigureAwait(true);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
@@ -859,7 +874,7 @@ public partial class SimplifiedVoiceView : UserControl
 
         _ttsStopped = true;
         _isPaused = false;
-        _tts.Stop();
+        StopTts();
         UpdateButtons();
         SetStatus("Playback stopped.");
     }
@@ -1015,7 +1030,7 @@ public partial class SimplifiedVoiceView : UserControl
         _messages.Add(bubble);
 
         var displayed = new StringBuilder();
-        using var focusLease = _audioFocus.Acquire(AndroidVoiceAudioFocusUsage.TextToSpeechPlayback);
+        using var focusLease = AcquireTextToSpeechFocus();
 
         var count = Math.Max(displaySentences.Length, speakSentences.Length);
         for (int i = 0; i < count && !_ttsStopped; i++)
@@ -1090,7 +1105,7 @@ public partial class SimplifiedVoiceView : UserControl
 
     private async Task EndSessionInternalAsync()
     {
-        _tts.Stop();
+        StopTts();
         _isPaused = false;
         _conversationActive = false;
 
@@ -1145,6 +1160,7 @@ public partial class SimplifiedVoiceView : UserControl
 
     private static void PlayChime()
     {
+#if ANDROID
         try
         {
             var toneGen = new global::Android.Media.ToneGenerator(
@@ -1158,6 +1174,7 @@ public partial class SimplifiedVoiceView : UserControl
             });
         }
         catch (Exception ex) { _logger.LogDebug(ex, "PlayChime failed"); }
+#endif
     }
 
     private void ScrollToBottom()
@@ -1190,18 +1207,26 @@ public partial class SimplifiedVoiceView : UserControl
 
         try
         {
-            await _tts.SpeakAsync(text, language, ct).ConfigureAwait(true);
+            await SpeakTextAsync(text, language, ct).ConfigureAwait(true);
             return true;
         }
         catch (OperationCanceledException) when (_ttsStopped || ct.IsCancellationRequested || _viewLifetimeCts.IsCancellationRequested)
         {
             return false;
         }
+#if ANDROID
         catch (ObjectDisposedException ex) when (_isDisposed && string.Equals(ex.ObjectName, nameof(AndroidTextToSpeechService), StringComparison.Ordinal))
         {
             _logger.LogDebug(ex, "Ignoring TTS after voice view teardown");
             return false;
         }
+#else
+        catch (ObjectDisposedException ex) when (_isDisposed)
+        {
+            _logger.LogDebug(ex, "Ignoring TTS after voice view teardown");
+            return false;
+        }
+#endif
         catch (InvalidOperationException ex) when (_isDisposed && ex.Message.Contains("Android activity is not available.", StringComparison.Ordinal))
         {
             _logger.LogDebug(ex, "Ignoring TTS after Android activity teardown");
@@ -1233,9 +1258,7 @@ public partial class SimplifiedVoiceView : UserControl
         {
             StopHeartbeatTimer();
             _loopCts?.Dispose();
-            _tts.Dispose();
-            _stt.Dispose();
-            _audioFocus.Dispose();
+            DisposePlatformAudioServices();
             _viewLifetimeCts.Dispose();
             StopForegroundService();
         }
@@ -1245,6 +1268,7 @@ public partial class SimplifiedVoiceView : UserControl
 
     private void StartForegroundService(string statusText)
     {
+#if ANDROID
         try
         {
             var context = global::Android.App.Application.Context;
@@ -1259,10 +1283,12 @@ public partial class SimplifiedVoiceView : UserControl
         {
             _logger.LogWarning(ex, "Failed to start voice foreground service");
         }
+#endif
     }
 
     private void StopForegroundService()
     {
+#if ANDROID
         if (!_foregroundServiceRunning) return;
         try
         {
@@ -1278,10 +1304,14 @@ public partial class SimplifiedVoiceView : UserControl
         {
             _foregroundServiceRunning = false;
         }
+#else
+        _foregroundServiceRunning = false;
+#endif
     }
 
     private void UpdateForegroundServiceStatus(string statusText)
     {
+    #if ANDROID
         try
         {
             var context = global::Android.App.Application.Context;
@@ -1289,7 +1319,67 @@ public partial class SimplifiedVoiceView : UserControl
             context.StartService(intent);
         }
         catch (Exception ex) { _logger.LogDebug(ex, "Failed to update foreground service status"); }
+    #endif
     }
+
+        private IDisposable AcquireSpeechRecognitionFocus()
+        {
+    #if ANDROID
+        return _audioFocus.Acquire(AndroidVoiceAudioFocusUsage.SpeechRecognition);
+    #else
+        return NoopDisposable.Instance;
+    #endif
+        }
+
+        private IDisposable AcquireTextToSpeechFocus()
+        {
+    #if ANDROID
+        return _audioFocus.Acquire(AndroidVoiceAudioFocusUsage.TextToSpeechPlayback);
+    #else
+        return NoopDisposable.Instance;
+    #endif
+        }
+
+        private async Task<string> RecognizeSpeechOnceAsync(CancellationToken ct)
+        {
+    #if ANDROID
+        return await _stt.RecognizeOnceAsync(VM?.Language, ct).ConfigureAwait(true);
+    #else
+        await Task.Delay(150, ct).ConfigureAwait(true);
+        return string.Empty;
+    #endif
+        }
+
+        private async Task SpeakTextAsync(string text, string? language, CancellationToken ct)
+        {
+    #if ANDROID
+        await _tts.SpeakAsync(text, language, ct).ConfigureAwait(true);
+    #else
+        await Task.CompletedTask;
+    #endif
+        }
+
+        private void StopTts()
+        {
+    #if ANDROID
+        _tts.Stop();
+    #endif
+        }
+
+        private void DisposePlatformAudioServices()
+        {
+    #if ANDROID
+        _tts.Dispose();
+        _stt.Dispose();
+        _audioFocus.Dispose();
+    #endif
+        }
+
+        private sealed class NoopDisposable : IDisposable
+        {
+        public static readonly NoopDisposable Instance = new();
+        public void Dispose() { }
+        }
 
     // ── Cleanup ────────────────────────────────────────────────────────
 
@@ -1302,7 +1392,7 @@ public partial class SimplifiedVoiceView : UserControl
             _autoCheck.IsCheckedChanged -= OnAutoCheckedChanged;
         _viewLifetimeCts.Cancel();
         _loopCts?.Cancel();
-        _tts.Stop();
+        StopTts();
         _ = DisposeServicesAfterOperationsAsync();
     }
 }

@@ -4,6 +4,6 @@ namespace McpServerManager.Core.Services
 {
     public interface IClipboardService : McpServer.UI.Core.Services.IClipboardService
     {
-        Task SetTextAsync(string text);
+        new Task SetTextAsync(string text);
     }
 }

@@ -12,11 +12,20 @@ public sealed class TimerServiceTests
     public async Task CreateRecurring_ShortInterval_FiresCallbackMultipleTimes()
     {
         int count = 0;
+        var firedTwice = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var handle = _sut.CreateRecurring(
             TimeSpan.FromMilliseconds(50),
-            _ => { Interlocked.Increment(ref count); return Task.CompletedTask; });
+            _ =>
+            {
+                if (Interlocked.Increment(ref count) >= 2)
+                {
+                    firedTwice.TrySetResult();
+                }
 
-        await Task.Delay(300);
+                return Task.CompletedTask;
+            });
+
+        await firedTwice.Task.WaitAsync(TimeSpan.FromSeconds(2));
         handle.Dispose();
 
         count.Should().BeGreaterThanOrEqualTo(2);

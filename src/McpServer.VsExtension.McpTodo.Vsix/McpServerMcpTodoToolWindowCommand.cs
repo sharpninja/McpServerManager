@@ -17,10 +17,10 @@ internal static class McpServerMcpTodoToolWindowCommand
     {
         s_package = package;
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
-        var commandService = await package.GetServiceAsync(typeof(IMenuCommandService)).ConfigureAwait(true) as OleMenuCommandService;
+        var commandService = await package.GetServiceAsync(typeof(IMenuCommandService)).ConfigureAwait(true) as IMenuCommandService;
         if (commandService == null)
         {
-            ActivityLog.LogError(LogSource, "OleMenuCommandService is null — command not registered.");
+            ActivityLog.LogError(LogSource, "IMenuCommandService is null — command not registered.");
             return;
         }
 

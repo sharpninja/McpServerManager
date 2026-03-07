@@ -11,9 +11,10 @@ internal static class DesktopConnectionPreferencesService
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("DesktopConnectionPreferences");
     private const string FileName = "connection.json";
+    private const string DefaultWorkspaceKey = "__DEFAULT__";
 
     private sealed record ConnectionPrefs(string Host, string Port, string? OidcJwt = null,
-        string? OidcJwtHost = null, string? OidcJwtPort = null);
+        string? OidcJwtHost = null, string? OidcJwtPort = null, string? WorkspaceKey = null);
 
     public static bool TryLoad(out string host, out string port)
     {
@@ -115,6 +116,46 @@ internal static class DesktopConnectionPreferencesService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to clear OIDC JWT from connection preferences");
+        }
+    }
+
+    public static void SaveWorkspaceKey(string? key)
+    {
+        try
+        {
+            var existing = Read();
+            if (existing is null) return;
+
+            var normalized = string.IsNullOrWhiteSpace(key)
+                ? null
+                : key.Trim();
+            if (string.Equals(normalized, DefaultWorkspaceKey, StringComparison.OrdinalIgnoreCase))
+                normalized = null;
+
+            Write(existing with { WorkspaceKey = normalized });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to save workspace key to connection preferences");
+        }
+    }
+
+    public static string? LoadWorkspaceKey()
+    {
+        try
+        {
+            var prefs = Read();
+            var key = prefs?.WorkspaceKey?.Trim();
+            if (string.IsNullOrWhiteSpace(key) ||
+                string.Equals(key, DefaultWorkspaceKey, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            return key;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load workspace key from connection preferences");
+            return null;
         }
     }
 

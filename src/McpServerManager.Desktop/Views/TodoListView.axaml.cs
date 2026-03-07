@@ -14,7 +14,6 @@ public partial class TodoListView : UserControl
 {
     private bool? _wasPortrait;
     private bool _isUpdatingLayout;
-    private bool _hasAutoLoaded;
     private LayoutSettings _layoutSettings = new();
     private readonly List<ListBox> _groupListBoxes = new();
 
@@ -22,7 +21,6 @@ public partial class TodoListView : UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
-        Loaded += OnLoaded;
         Editor.FontFamily = new Avalonia.Media.FontFamily("Cascadia Code,Consolas,Menlo,monospace");
         Editor.WordWrap = true;
         Editor.Text = "";
@@ -58,12 +56,6 @@ public partial class TodoListView : UserControl
         {
             _isUpdatingLayout = false;
         }
-    }
-
-    private void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        // No auto-load — workspace-change event triggers the initial load.
-        _hasAutoLoaded = true;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

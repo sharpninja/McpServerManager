@@ -24,13 +24,27 @@ internal sealed class UiCoreAppRuntime : IDisposable
         Uri? mcpBaseUrl = null)
     {
         WorkspaceContext = workspaceContext ?? new WorkspaceContextViewModel();
-        Services = UiCoreServiceProviderFactory.Build(
+
+        var services = new ServiceCollection();
+        services.AddMcpServerManagerUiCore(
             commandTarget,
-            todoService, workspaceService, voiceService,
-            sessionLogService, eventStreamService,
-            fileSystemService, processLauncherService,
-            timerService, jsonParsingService, fileSystemWatcherService,
-            WorkspaceContext, mcpClient, mcpBaseUrl);
+            todoService,
+            workspaceService,
+            voiceService,
+            sessionLogService,
+            eventStreamService,
+            fileSystemService,
+            processLauncherService,
+            timerService,
+            jsonParsingService,
+            fileSystemWatcherService,
+            WorkspaceContext,
+            mcpClient,
+            mcpBaseUrl);
+
+        Services = services.BuildServiceProvider();
+        Services.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>()
+            .AddProvider(Services.GetRequiredService<McpServer.Cqrs.Dispatcher>());
     }
 
     public WorkspaceContextViewModel WorkspaceContext { get; }

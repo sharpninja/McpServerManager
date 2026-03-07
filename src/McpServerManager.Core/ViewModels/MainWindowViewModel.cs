@@ -14,7 +14,7 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
 {
     private readonly CqrsDispatcher _dispatcher;
 
-    public static System.Collections.Generic.List<McpServer.UI.Core.Models.Json.UnifiedRequestEntry> DeduplicateUnifiedEntries(
+    public static new System.Collections.Generic.List<McpServer.UI.Core.Models.Json.UnifiedRequestEntry> DeduplicateUnifiedEntries(
         System.Collections.Generic.IEnumerable<McpServer.UI.Core.Models.Json.UnifiedRequestEntry> entries)
         => UiCoreMainWindowViewModel.DeduplicateUnifiedEntries(entries);
 
@@ -73,11 +73,10 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
 
     private VoiceConversationViewModel CreateVoiceConversationViewModel()
     {
-        var vm = new VoiceConversationViewModel(McpVoiceService, _dispatcher)
+        var vm = new VoiceConversationViewModel(McpVoiceService)
         {
-            ResolveWorkspacePath = () => SelectedWorkspaceConnection?.WorkspaceRootPath
-                ?? McpClient.WorkspacePath
-                ?? string.Empty
+            ResolveWorkspacePath = ResolveActiveWorkspacePath,
+            ResolveWorkspaceReady = ResolveWorkspaceReady
         };
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
         WorkspacePathChanged += path => DispatchToUi(() => _ = vm.RefreshForConnectionChangeAsync());
@@ -208,5 +207,3 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
     Task Commands.ITodoCopilotTarget.CopilotPlanAsync() => CopilotPlanAsync();
     Task Commands.ITodoCopilotTarget.CopilotImplementAsync() => CopilotImplementAsync();
 }
-
-

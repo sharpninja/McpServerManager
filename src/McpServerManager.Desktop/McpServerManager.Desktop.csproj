@@ -11,6 +11,8 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+    <AvaloniaXaml Include="..\McpServerManager\Views\SimplifiedVoiceView.axaml" Link="Views\SimplifiedVoiceView.axaml" />
+    <Compile Include="..\McpServerManager\Views\SimplifiedVoiceView.axaml.cs" Link="Views\SimplifiedVoiceView.axaml.cs" />
     <Content Include="appsettings.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -30,6 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\lib\Markdown.Avalonia\Markdown.Avalonia\Markdown.Avalonia.csproj" />
     <ProjectReference Include="..\McpServerManager.Core\McpServerManager.Core.csproj" />
   </ItemGroup>
 </Project>

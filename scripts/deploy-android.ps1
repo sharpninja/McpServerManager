@@ -25,6 +25,24 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $projectPath = Join-Path $repoRoot "src\McpServerManager.Android\McpServerManager.Android.csproj"
 
+# Resolve TargetFramework from the Android project (fallback keeps legacy behavior).
+[xml]$projectXml = Get-Content $projectPath
+$targetFramework = $null
+if ($projectXml.Project -and $projectXml.Project.PropertyGroup) {
+    foreach ($pg in $projectXml.Project.PropertyGroup) {
+        if ($pg.TargetFramework) {
+            $candidate = [string]$pg.TargetFramework
+            if (-not [string]::IsNullOrWhiteSpace($candidate)) {
+                $targetFramework = $candidate.Trim()
+                break
+            }
+        }
+    }
+}
+if ([string]::IsNullOrWhiteSpace($targetFramework)) {
+    $targetFramework = "net9.0-android"
+}
+
 # Ensure adb is available
 $adb = Get-Command adb -ErrorAction SilentlyContinue
 if (-not $adb) {
@@ -39,10 +57,10 @@ if (-not $deviceLines -or $deviceLines.Count -eq 0) {
 Write-Host "Device(s) attached:" -ForegroundColor Cyan
 adb devices -l
 
-Write-Host "`n[1/2] Building and installing ($Configuration) to $DeviceSerial..." -ForegroundColor Yellow
+Write-Host "`n[1/2] Building and installing ($Configuration, $targetFramework) to $DeviceSerial..." -ForegroundColor Yellow
 Push-Location $repoRoot
 try {
-    dotnet build $projectPath -t:Install -f net9.0-android -c $Configuration -p:AdbTarget="-s $DeviceSerial"
+    dotnet build $projectPath -t:Install -f $targetFramework -c $Configuration -p:AdbTarget="-s $DeviceSerial"
     if ($LASTEXITCODE -ne 0) { throw "Build/Install failed" }
 } finally {
     Pop-Location

@@ -10,6 +10,8 @@ namespace McpServer.Director.Screens;
 /// </summary>
 internal sealed class RepoScreen : View
 {
+    private const string ParentDirectoryNodeName = "..";
+
     private readonly Dispatcher _dispatcher;
     private readonly List<RepoEntrySummary> _entries = [];
 
@@ -102,12 +104,12 @@ internal sealed class RepoScreen : View
 
     private async Task ListAsync()
     {
-        var path = string.IsNullOrWhiteSpace(_listPathField.Text?.ToString())
+        var requestedPath = string.IsNullOrWhiteSpace(_listPathField.Text?.ToString())
             ? null
             : _listPathField.Text?.ToString();
 
         SetStatus("Listing repository entries...");
-        var result = await _dispatcher.QueryAsync(new ListRepoEntriesQuery { Path = path }).ConfigureAwait(true);
+        var result = await _dispatcher.QueryAsync(new ListRepoEntriesQuery { Path = requestedPath }).ConfigureAwait(true);
 
         if (result.IsFailure || result.Value is null)
         {
@@ -117,12 +119,18 @@ internal sealed class RepoScreen : View
         }
 
         var payload = result.Value;
+        var currentPath = payload.Path ?? requestedPath;
+        var displayEntries = BuildEntriesForDisplay(currentPath, payload.Entries);
         _entries.Clear();
-        _entries.AddRange(payload.Entries);
+        _entries.AddRange(displayEntries);
 
         var rows = _entries.Select(e => e.IsDirectory ? $"[D] {e.Name}" : $"[F] {e.Name}").ToList();
-        Application.Invoke(() => _entriesList.SetSource(new ObservableCollection<string>(rows)));
-        SetStatus($"Listed {_entries.Count} entries at '{payload.Path ?? "."}'.");
+        Application.Invoke(() =>
+        {
+            _entriesList.SetSource(new ObservableCollection<string>(rows));
+            _listPathField.Text = NormalizeListPath(currentPath);
+        });
+        SetStatus($"Listed {payload.Entries.Count} entries at '{FormatPathForStatus(currentPath)}'.");
     }
 
     private void HandleOpenEntry(int index)
@@ -131,6 +139,16 @@ internal sealed class RepoScreen : View
             return;
 
         var selected = _entries[index];
+        if (IsParentDirectoryNode(selected))
+        {
+            if (!TryGetParentPath(_listPathField.Text?.ToString(), out var parentPath))
+                return;
+
+            _listPathField.Text = parentPath;
+            _ = Task.Run(ListAsync);
+            return;
+        }
+
         var path = CombinePath(_listPathField.Text?.ToString(), selected.Name);
 
         if (selected.IsDirectory)
@@ -199,9 +217,69 @@ internal sealed class RepoScreen : View
 
     private static string CombinePath(string? root, string name)
     {
-        if (string.IsNullOrWhiteSpace(root))
+        var normalizedRoot = NormalizeListPath(root);
+        if (string.IsNullOrWhiteSpace(normalizedRoot))
             return name;
 
-        return $"{root.TrimEnd('/', '\\')}/{name}";
+        return $"{normalizedRoot}/{name}";
+    }
+
+    internal static IReadOnlyList<RepoEntrySummary> BuildEntriesForDisplay(string? currentPath, IReadOnlyList<RepoEntrySummary> entries)
+    {
+        var displayEntries = new List<RepoEntrySummary>(entries.Count + 1);
+        if (TryGetParentPath(currentPath, out _))
+            displayEntries.Add(new RepoEntrySummary(ParentDirectoryNodeName, true));
+
+        foreach (var entry in entries)
+        {
+            if (IsParentDirectoryNode(entry))
+                continue;
+
+            displayEntries.Add(entry);
+        }
+
+        return displayEntries;
+    }
+
+    internal static bool TryGetParentPath(string? currentPath, out string parentPath)
+    {
+        var normalized = NormalizeListPath(currentPath);
+        if (string.IsNullOrEmpty(normalized))
+        {
+            parentPath = string.Empty;
+            return false;
+        }
+
+        var slashIndex = normalized.LastIndexOf('/');
+        if (slashIndex < 0)
+        {
+            parentPath = string.Empty;
+            return true;
+        }
+
+        parentPath = normalized[..slashIndex];
+        return true;
+    }
+
+    internal static string NormalizeListPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return string.Empty;
+
+        var normalized = path.Trim().Replace('\\', '/');
+        while (normalized.StartsWith("./", StringComparison.Ordinal))
+            normalized = normalized[2..];
+
+        normalized = normalized.Trim('/');
+        return string.Equals(normalized, ".", StringComparison.Ordinal) ? string.Empty : normalized;
+    }
+
+    private static bool IsParentDirectoryNode(RepoEntrySummary entry)
+        => string.Equals(entry.Name, ParentDirectoryNodeName, StringComparison.Ordinal);
+
+    private static string FormatPathForStatus(string? path)
+    {
+        var normalized = NormalizeListPath(path);
+        return string.IsNullOrEmpty(normalized) ? "." : normalized;
     }
 }

@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<Services.IChatWindowService, Services.NoOpChatWindowService>();
         services.TryAddSingleton<Services.IVoiceConversationService, Services.NoOpVoiceConversationService>();
         services.TryAddSingleton<Services.ITimerService, Services.NoOpTimerService>();
+        services.TryAddSingleton<Services.IHealthApiClient, Services.NoOpHealthApiClient>();
 
         // Register shared workspace context as singleton so all ViewModels observe the same instance
         services.AddSingleton<WorkspaceContextViewModel>();

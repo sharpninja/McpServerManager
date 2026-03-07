@@ -18,7 +18,8 @@ public class HeartbeatStateToBrushConverter : IValueConverter
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        return value as string switch
+        var state = value as string;
+        return state switch
         {
             "active" => ActiveBrush,
             "receiving" => ReceivingBrush,

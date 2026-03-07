@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using System.Reflection;
 using Xunit;
 
 namespace McpServer.UI.Core.Tests;
@@ -151,6 +152,53 @@ public sealed class TodoViewModelTests
         Assert.Equal("2026-03-03", vm.EditorCompletedDate);
     }
 
+    [Fact]
+    public void TodoListHostViewModel_CreateScratchDetailVm_FallsBackToPrimaryVm_WhenScratchResolutionFails()
+    {
+        var apiClient = Substitute.For<ITodoApiClient>();
+        using var sp = BuildProvider(apiClient);
+
+        var primaryDetailVm = sp.GetRequiredService<TodoDetailViewModel>();
+        var host = new TodoListHostViewModel(
+            sp.GetRequiredService<IClipboardService>(),
+            sp.GetRequiredService<TodoListViewModel>(),
+            primaryDetailVm,
+            sp.GetRequiredService<WorkspaceContextViewModel>(),
+            new NullServiceProvider(),
+            new NoOpTimerService(),
+            sp.GetRequiredService<ILogger<TodoListHostViewModel>>());
+
+        var createScratch = typeof(TodoListHostViewModel)
+            .GetMethod("CreateScratchDetailVm", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        Assert.NotNull(createScratch);
+        var scratch = createScratch!.Invoke(host, null);
+        Assert.Same(primaryDetailVm, scratch);
+    }
+
+    [Fact]
+    public void TodoListHostViewModel_StatusTextError_EmitsWarningLog()
+    {
+        var apiClient = Substitute.For<ITodoApiClient>();
+        using var sp = BuildProvider(apiClient);
+
+        var logger = new RecordingLogger<TodoListHostViewModel>();
+        var host = new TodoListHostViewModel(
+            sp.GetRequiredService<IClipboardService>(),
+            sp.GetRequiredService<TodoListViewModel>(),
+            sp.GetRequiredService<TodoDetailViewModel>(),
+            sp.GetRequiredService<WorkspaceContextViewModel>(),
+            sp,
+            new NoOpTimerService(),
+            logger);
+
+        host.StatusText = "Error: simulated todo failure";
+
+        Assert.Contains(logger.Entries, entry =>
+            entry.Level == LogLevel.Warning &&
+            entry.Message.Contains("Todo status update", StringComparison.Ordinal));
+    }
+
     private static ServiceProvider BuildProvider(ITodoApiClient apiClient)
     {
         var auth = Substitute.For<IAuthorizationPolicyService>();
@@ -169,5 +217,32 @@ public sealed class TodoViewModelTests
         services.AddCqrs(typeof(TodoViewModelTests).Assembly);
         services.AddUiCore();
         return services.BuildServiceProvider();
+    }
+
+    private sealed class NullServiceProvider : IServiceProvider
+    {
+        public object? GetService(Type serviceType) => null;
+    }
+
+    private sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+            => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            var message = formatter(state, exception);
+            Entries.Add((logLevel, message));
+        }
     }
 }

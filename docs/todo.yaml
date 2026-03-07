@@ -420,7 +420,7 @@ Architecture:
       done: true
   - id: ARCH-MIGRATE-002
     title: Migrate McpServer.Director and McpServer.Web projects to this workspace
-    done: false
+    done: true
     completed: 2026-03-06T12:51:56.5636092Z
     description:
     - Migrate McpServer.Director and McpServer.Web projects from McpServer Workspace to this workspace (RequestTracker).
@@ -816,3 +816,16 @@ refactoring:
       done: false
     - task: 'M5.3 Verify and complete AgentApiClientAdapter coverage in McpServer.Web (GAP-018/019 partial): confirm agent-pool queue/job/stream/notifications adapter operations are wired or document remaining Web adapter gaps'
       done: false
+mvp-mcp:
+  high-priority:
+  - id: DEPLOY-ALLSCRIPT-001
+    title: A script to deploy all targets
+    done: false
+    description:
+    - '- Director as Global Dotnet Tool'
+    - '- Web-UI as Global Dotnet Tool'
+    - '- Android to attached Phone'
+    - '- Android to attached Emulator'
+    - '- Desktop as MSIX to Windows'
+    - '- Desktop as DEB to WSL'
+  medium-priority: []

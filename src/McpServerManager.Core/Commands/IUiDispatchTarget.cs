@@ -6,10 +6,9 @@ namespace McpServerManager.Core.Commands;
 /// <summary>
 /// UI thread dispatching and background work tracking.
 /// </summary>
-public interface IUiDispatchTarget
+public interface IUiDispatchTarget : McpServer.UI.Core.Commands.IUiDispatchTarget
 {
-    void DispatchToUi(Action action);
-    void TrackBackgroundWork(Task task);
-    string StatusMessage { get; set; }
+    new void DispatchToUi(Action action);
+    new void TrackBackgroundWork(Task task);
+    new string StatusMessage { get; set; }
 }
-

@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Views\SimplifiedVoiceView.axaml.cs" />
+    <AvaloniaXaml Remove="Views\SimplifiedVoiceView.axaml" />
+    <None Include="Views\SimplifiedVoiceView.axaml" />
+    <None Include="Views\SimplifiedVoiceView.axaml.cs" />
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
     <Content Include="appsettings.config">

@@ -3,4 +3,9 @@
     <!-- Avoid compiling generated sources from ad-hoc build output folders. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;artifacts\**</DefaultItemExcludes>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net461'">
+    <!-- Third-party dependencies are still consumed for net461 compatibility targets. -->
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
+  </PropertyGroup>
 </Project>

@@ -18,6 +18,8 @@ public static class LocalCqrsDispatcher
         services.AddSingleton(typeof(Microsoft.Extensions.Logging.ILogger<>), typeof(AppLogger<>));
         services.AddCqrsDispatcher();
         services.AddCqrsHandlers(typeof(Commands.NavigateBackCommand).Assembly);
+        // Relay commands dispatch InvokeUiActionCommand from UI.Core; register that handler assembly too.
+        services.AddCqrsHandlers(typeof(McpServer.UI.Core.Commands.InvokeUiActionHandler).Assembly);
         return services.BuildServiceProvider();
     }
 }

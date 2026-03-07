@@ -86,6 +86,8 @@ public partial class App : Application
                         var clipboardService = new DesktopClipboardService(desktop);
                         var notificationService = new DesktopSystemNotificationService();
                         var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, notificationService);
+                        vm.SaveWorkspaceKey = DesktopConnectionPreferencesService.SaveWorkspaceKey;
+                        vm.LoadWorkspaceKey = DesktopConnectionPreferencesService.LoadWorkspaceKey;
                         var mainWindow = new MainWindow { DataContext = vm };
 
                         vm.LogoutRequested += (_, _) =>

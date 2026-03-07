@@ -1,31 +1,30 @@
-using McpServer.Cqrs.Mvvm;
-using McpServerManager.Core.Commands;
+using CommunityToolkit.Mvvm.Input;
 
 namespace McpServerManager.Core.ViewModels;
 
 public partial class VoiceConversationViewModel
 {
-    private CqrsRelayCommand<bool>? _createSessionCommand;
-    public CqrsRelayCommand<bool> CreateSessionCommand => _createSessionCommand ??= CqrsRelayFactory.Create(_dispatcher, CreateSessionAsync);
+    private IAsyncRelayCommand? _createSessionCommand;
+    public IAsyncRelayCommand CreateSessionCommand => _createSessionCommand ??= new AsyncRelayCommand(CreateSessionAsync);
 
-    private CqrsRelayCommand<bool>? _submitTurnCommand;
-    public CqrsRelayCommand<bool> SubmitTurnCommand => _submitTurnCommand ??= CqrsRelayFactory.Create(_dispatcher, SubmitTurnAsync);
+    private IAsyncRelayCommand? _submitTurnCommand;
+    public IAsyncRelayCommand SubmitTurnCommand => _submitTurnCommand ??= new AsyncRelayCommand(SubmitTurnAsync);
 
-    private CqrsRelayCommand<bool>? _refreshTranscriptCommand;
-    public CqrsRelayCommand<bool> RefreshTranscriptCommand => _refreshTranscriptCommand ??= CqrsRelayFactory.Create(_dispatcher, RefreshTranscriptAsync);
+    private IAsyncRelayCommand? _refreshTranscriptCommand;
+    public IAsyncRelayCommand RefreshTranscriptCommand => _refreshTranscriptCommand ??= new AsyncRelayCommand(RefreshTranscriptAsync);
 
-    private CqrsRelayCommand<bool>? _refreshStatusCommand;
-    public CqrsRelayCommand<bool> RefreshStatusCommand => _refreshStatusCommand ??= CqrsRelayFactory.Create(_dispatcher, RefreshStatusAsync);
+    private IAsyncRelayCommand? _refreshStatusCommand;
+    public IAsyncRelayCommand RefreshStatusCommand => _refreshStatusCommand ??= new AsyncRelayCommand(RefreshStatusAsync);
 
-    private CqrsRelayCommand<bool>? _interruptCommand;
-    public CqrsRelayCommand<bool> InterruptCommand => _interruptCommand ??= CqrsRelayFactory.Create(_dispatcher, InterruptAsync);
+    private IAsyncRelayCommand? _interruptCommand;
+    public IAsyncRelayCommand InterruptCommand => _interruptCommand ??= new AsyncRelayCommand(InterruptAsync);
 
-    private CqrsRelayCommand<bool>? _sendEscapeCommand;
-    public CqrsRelayCommand<bool> SendEscapeCommand => _sendEscapeCommand ??= CqrsRelayFactory.Create(_dispatcher, SendEscapeAsync);
+    private IAsyncRelayCommand? _sendEscapeCommand;
+    public IAsyncRelayCommand SendEscapeCommand => _sendEscapeCommand ??= new AsyncRelayCommand(SendEscapeAsync);
 
-    private CqrsRelayCommand<bool>? _endSessionCommand;
-    public CqrsRelayCommand<bool> EndSessionCommand => _endSessionCommand ??= CqrsRelayFactory.Create(_dispatcher, EndSessionAsync);
+    private IAsyncRelayCommand? _endSessionCommand;
+    public IAsyncRelayCommand EndSessionCommand => _endSessionCommand ??= new AsyncRelayCommand(EndSessionAsync);
 
-    private CqrsRelayCommand<bool>? _clearTurnInputCommand;
-    public CqrsRelayCommand<bool> ClearTurnInputCommand => _clearTurnInputCommand ??= CqrsRelayFactory.Create(_dispatcher, ClearTurnInput);
+    private IRelayCommand? _clearTurnInputCommand;
+    public IRelayCommand ClearTurnInputCommand => _clearTurnInputCommand ??= new RelayCommand(ClearTurnInput);
 }

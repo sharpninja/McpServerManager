@@ -19,6 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\McpServerManager.Core\McpServerManager.Core.csproj" />
+    <ProjectReference Include="..\..\src\McpServerManager.Core\McpServerManager.Core.csproj" />
   </ItemGroup>
 </Project>

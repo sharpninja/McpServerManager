@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using McpServer.UI.Core.Messages;
 using McpServer.UI.Core.Models;
 using McpServer.UI.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using UiCoreTodoDetailViewModel = McpServer.UI.Core.ViewModels.TodoDetailViewModel;
@@ -98,6 +99,17 @@ public partial class TodoListHostViewModel : ViewModelBase
     partial void OnSelectedScopeIndexChanged(int value) => ApplyFilters();
     partial void OnFilterTextChanged(string value) => ApplyFilters();
     partial void OnIncludeCompletedChanged(bool value) => _ = LoadTodosAsync();
+    partial void OnStatusTextChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+
+        if (value.Contains("error", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("failed", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Todo status update: {StatusText}", value);
+        }
+    }
 
     protected async Task LoadTodosAsync() => await LoadTodosCoreAsync(forceEditorReload: false);
 
@@ -145,6 +157,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to toggle TODO done state for {TodoId}", item.Id);
             StatusText = "Error: " + ex.Message;
         }
     }
@@ -174,6 +187,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to delete TODO {TodoId}", item.Id);
             StatusText = "Error: " + ex.Message;
         }
     }
@@ -207,6 +221,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to analyze requirements for TODO {TodoId}", item.Id);
             StatusText = "Error: " + ex.Message;
         }
     }
@@ -265,6 +280,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to create TODO draft {TodoId}", id);
             StatusText = "Error: " + ex.Message;
         }
     }
@@ -343,6 +359,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to {Operation} TODO {TodoId}", isNew ? "create" : "save", effectiveId);
             StatusText = (isNew ? "Error creating: " : "Error saving: ") + ex.Message;
             GlobalStatusChanged?.Invoke(StatusText);
         }
@@ -647,6 +664,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to load TODO list");
             _allEntries = [];
             ApplyFilters();
             SelectedEntry = null;
@@ -727,6 +745,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to refresh TODO editor for {TodoId}", todoId);
             if (updateStatus)
                 StatusText = "Error refreshing: " + ex.Message;
             return false;
@@ -794,8 +813,19 @@ public partial class TodoListHostViewModel : ViewModelBase
 
     private UiCoreTodoDetailViewModel CreateScratchDetailVm()
     {
-        return _serviceProvider.GetService(typeof(UiCoreTodoDetailViewModel)) as UiCoreTodoDetailViewModel
-            ?? throw new InvalidOperationException("Unable to resolve TodoDetailViewModel for scratch operations.");
+        try
+        {
+            var resolved = _serviceProvider.GetService(typeof(UiCoreTodoDetailViewModel)) as UiCoreTodoDetailViewModel;
+            if (resolved is not null)
+                return resolved;
+
+            return ActivatorUtilities.CreateInstance<UiCoreTodoDetailViewModel>(_serviceProvider);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
+        {
+            _logger.LogWarning(ex, "Falling back to primary TODO detail view model after scratch resolution failure.");
+            return _detailVm;
+        }
     }
 
     private static McpTodoFlatItem ToMcpTodoFlatItem(TodoDetail detail)

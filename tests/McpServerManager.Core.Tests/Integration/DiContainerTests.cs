@@ -1,6 +1,7 @@
 using FluentAssertions;
 using McpServer.Cqrs;
 using McpServer.Client;
+using McpServerManager.Core;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,11 +22,16 @@ public sealed class DiContainerTests : IDisposable
         var client = new McpServerClient(http, options);
         var todoService = new McpTodoService(client, client);
 
-        _provider = UiCoreServiceProviderFactory.Build(
+        var services = new ServiceCollection();
+        services.AddMcpServerManagerUiCore(
             _target.Object,
             todoService: todoService,
             mcpClient: client,
             mcpBaseUrl: options.BaseUrl);
+
+        _provider = services.BuildServiceProvider();
+        _provider.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>()
+            .AddProvider(_provider.GetRequiredService<Dispatcher>());
     }
 
     [Fact]
@@ -47,6 +53,14 @@ public sealed class DiContainerTests : IDisposable
     public void ServiceProvider_Resolves_ICommandTarget()
     {
         var target = _provider.GetService<ICommandTarget>();
+        target.Should().NotBeNull();
+        target.Should().BeSameAs(_target.Object);
+    }
+
+    [Fact]
+    public void ServiceProvider_Resolves_UiCoreTodoCopilotTarget()
+    {
+        var target = _provider.GetService<McpServer.UI.Core.Commands.ITodoCopilotTarget>();
         target.Should().NotBeNull();
         target.Should().BeSameAs(_target.Object);
     }
@@ -109,9 +123,10 @@ public sealed class DiContainerTests : IDisposable
     }
 
     [Fact]
-    public void Build_WithoutAnyService_Throws()
+    public void AddMcpServerManagerUiCore_WithoutAnyService_Throws()
     {
-        var act = () => UiCoreServiceProviderFactory.Build(_target.Object);
+        var services = new ServiceCollection();
+        var act = () => services.AddMcpServerManagerUiCore(_target.Object);
         act.Should().Throw<ArgumentException>();
     }
 

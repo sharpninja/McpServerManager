@@ -38,6 +38,12 @@ public partial class VoiceConversationViewModel : ViewModelBase
     /// <summary>When set, workspace path is resolved from the source of truth at read time.</summary>
     public Func<string?>? ResolveWorkspacePath { get; set; }
 
+    /// <summary>When set, indicates whether workspace state is ready for creating voice sessions.</summary>
+    public Func<bool>? ResolveWorkspaceReady { get; set; }
+
+    /// <summary>True when workspace selection/switch state is ready for voice session start.</summary>
+    public bool IsWorkspaceReady => ResolveWorkspaceReady?.Invoke() ?? !string.IsNullOrWhiteSpace(WorkspacePath);
+
     /// <summary>The active workspace root path (e.g. "E:\github\FunWasHad"). Reads from <see cref="ResolveWorkspacePath"/> when set.</summary>
     public string WorkspacePath
     {
@@ -210,10 +216,9 @@ public partial class VoiceConversationViewModel : ViewModelBase
                 : $"Voice turn {response.Status}: {response.Error ?? "no details"}";
             GlobalStatusChanged?.Invoke(StatusText);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            StatusText = "Voice turn canceled.";
-            GlobalStatusChanged?.Invoke(StatusText);
+            _logger.LogDebug("Voice turn submission canceled.");
         }
         catch (Exception ex)
         {
@@ -282,10 +287,9 @@ public partial class VoiceConversationViewModel : ViewModelBase
                     await channel.Writer.WriteAsync(evt, linkedCts.Token);
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (linkedCts.IsCancellationRequested)
             {
-                StatusText = "Voice turn canceled.";
-                GlobalStatusChanged?.Invoke(StatusText);
+                _logger.LogDebug("Voice turn streaming canceled.");
             }
             catch (Exception ex)
             {

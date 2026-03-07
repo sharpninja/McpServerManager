@@ -41,7 +41,7 @@ public sealed class ChatWindowServiceAdapter : IChatWindowService
     public async Task<UiChatFileOpenResult> OpenAgentConfigAsync(CancellationToken cancellationToken = default)
     {
         var result = await _dispatcher.SendAsync(new ChatOpenAgentConfigCommand(), cancellationToken).ConfigureAwait(true);
-        return result.IsSuccess
+        return result.IsSuccess && result.Value is not null
             ? Map(result.Value)
             : new UiChatFileOpenResult(false, null, result.Error ?? "Failed to open agent config");
     }
@@ -50,7 +50,7 @@ public sealed class ChatWindowServiceAdapter : IChatWindowService
     public async Task<UiChatFileOpenResult> OpenPromptTemplatesAsync(CancellationToken cancellationToken = default)
     {
         var result = await _dispatcher.SendAsync(new ChatOpenPromptTemplatesCommand(), cancellationToken).ConfigureAwait(true);
-        return result.IsSuccess
+        return result.IsSuccess && result.Value is not null
             ? Map(result.Value)
             : new UiChatFileOpenResult(false, null, result.Error ?? "Failed to open prompt templates");
     }
@@ -80,7 +80,7 @@ public sealed class ChatWindowServiceAdapter : IChatWindowService
         var result = await _dispatcher
             .SendAsync(new ChatSubmitPromptCommand(Map(prompt)), cancellationToken)
             .ConfigureAwait(true);
-        return result.IsSuccess
+        return result.IsSuccess && result.Value is not null
             ? Map(result.Value)
             : new UiChatPreparedPromptResult(false, string.Empty);
     }
@@ -91,7 +91,7 @@ public sealed class ChatWindowServiceAdapter : IChatWindowService
         var result = await _dispatcher
             .QueryAsync(new ChatLoadModelsQuery(initialPreferredModel), cancellationToken)
             .ConfigureAwait(true);
-        return result.IsSuccess
+        return result.IsSuccess && result.Value is not null
             ? Map(result.Value)
             : new UiChatLoadModelsResult(false, Array.Empty<string>(), null);
     }
@@ -111,7 +111,7 @@ public sealed class ChatWindowServiceAdapter : IChatWindowService
             .SendAsync(new ChatSendMessageCommand(coreRequest, contentProgress), cancellationToken)
             .ConfigureAwait(true);
 
-        return result.IsSuccess
+        return result.IsSuccess && result.Value is not null
             ? Map(result.Value)
             : new UiChatSendMessageResult(false, string.Empty, false, result.Error ?? "Dispatch failed");
     }

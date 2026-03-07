@@ -12,8 +12,6 @@
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onView:fwhMcpTodo.todoList",
-    "onView:fwhMcpTodo.filters",
     "workspaceContains:FunWasHad.sln"
   ],
   "main": "./out/extension.js",

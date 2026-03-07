@@ -383,8 +383,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
             resolveBaseUrl: () => _activeMcpBaseUrl,
             resolveBearerToken: () => _activeBearerToken,
             resolveApiKey: () => _activeMcpApiKey,
-            resolveWorkspacePath: () => SelectedWorkspaceConnection?.WorkspaceRootPath
-                ?? _mcpClient.WorkspacePath);
+            resolveWorkspacePath: ResolveActiveWorkspacePath);
         _activeMcpBaseUrl = _defaultMcpBaseUrl;
         _agentEventStreamService = _serviceFactory.CreateEventStreamService(
             _activeMcpBaseUrl,
@@ -393,8 +392,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
             resolveBaseUrl: () => _activeMcpBaseUrl,
             resolveBearerToken: () => _activeBearerToken,
             resolveApiKey: () => _activeMcpApiKey,
-            resolveWorkspacePath: () => SelectedWorkspaceConnection?.WorkspaceRootPath
-                ?? _mcpClient.WorkspacePath);
+            resolveWorkspacePath: ResolveActiveWorkspacePath);
 
         _uiCoreRuntime = new UiCoreAppRuntime(
             commandTarget: this,
@@ -436,6 +434,33 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
 
         return uri.ToString().TrimEnd('/');
     }
+
+    /// <summary>
+    /// Resolves the current workspace from a single source of truth used by all features.
+    /// Priority: explicit selection, then runtime workspace context, then client fallback.
+    /// </summary>
+    protected string ResolveActiveWorkspacePath()
+    {
+        var selectedWorkspacePath = SelectedWorkspaceConnection?.WorkspaceRootPath;
+        if (!string.IsNullOrWhiteSpace(selectedWorkspacePath))
+            return selectedWorkspacePath;
+
+        var contextWorkspacePath = _uiCoreRuntime?.WorkspaceContext?.ActiveWorkspacePath;
+        if (!string.IsNullOrWhiteSpace(contextWorkspacePath))
+            return contextWorkspacePath;
+
+        var clientWorkspacePath = _mcpClient?.WorkspacePath;
+        return string.IsNullOrWhiteSpace(clientWorkspacePath) ? string.Empty : clientWorkspacePath;
+    }
+
+    /// <summary>
+    /// Readiness gate for viewmodels/features that require stable workspace routing.
+    /// </summary>
+    protected bool ResolveWorkspaceReady()
+        => !IsSwitchingWorkspace
+            && _hasCompletedInitialSwitch
+            && SelectedWorkspaceConnection != null
+            && !string.IsNullOrWhiteSpace(ResolveActiveWorkspacePath());
 
     private void ApplyActiveMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? workspaceRootPath = null)
     {
@@ -4027,4 +4052,3 @@ public sealed class WorkspaceConnectionOption
         };
     }
 }
-

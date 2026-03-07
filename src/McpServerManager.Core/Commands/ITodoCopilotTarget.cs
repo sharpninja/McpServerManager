@@ -6,10 +6,9 @@ namespace McpServerManager.Core.Commands;
 /// Target interface for TODO Copilot prompt commands.
 /// Implemented by the ViewModel layer to handle streaming prompt generation.
 /// </summary>
-public interface ITodoCopilotTarget
+public interface ITodoCopilotTarget : McpServer.UI.Core.Commands.ITodoCopilotTarget
 {
-    Task CopilotStatusAsync();
-    Task CopilotPlanAsync();
-    Task CopilotImplementAsync();
+    new Task CopilotStatusAsync();
+    new Task CopilotPlanAsync();
+    new Task CopilotImplementAsync();
 }
-
