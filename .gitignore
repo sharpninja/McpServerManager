@@ -11,6 +11,7 @@ docs/EXCEPTION-EVALUATION.md
 .github/scripts/__pycache__/
 publish/
 artifacts/
+**/node_modules/
 
 # PNGs outside of Assets / Resources / docs
 *.png
@@ -21,3 +22,9 @@ artifacts/
 AGENTS-README-FIRST.yaml
 *.nupkg
 *.py
+/.codex/session-log-buffer.backfilled-20260306T184008Z.md
+/.codex/session-log-buffer.md
+/.codex/windows-event-errors-20260306-121859.json
+*.log
+/clip
+/update_log.ps1
