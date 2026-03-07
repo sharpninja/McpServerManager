@@ -1,3 +1,4 @@
 {
-    "dotnet.defaultSolution": "disable"
+    "dotnet.defaultSolution": "McpServerManager.sln",
+    "fusion-360-helper.enabled": false
 }
