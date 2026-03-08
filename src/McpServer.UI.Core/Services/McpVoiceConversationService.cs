@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +24,7 @@ namespace McpServer.UI.Core.Services;
 /// </summary>
 public sealed class McpVoiceConversationService : IVoiceConversationService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     private static readonly ILogger s_logger = AppLogService.Instance.CreateLogger("McpVoiceConversationService");
     private const string NgrokSkipBrowserWarningHeader = "ngrok-skip-browser-warning";
 
@@ -67,7 +68,7 @@ public sealed class McpVoiceConversationService : IVoiceConversationService
         McpVoiceSessionCreateRequest? request = null,
         CancellationToken cancellationToken = default)
     {
-        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(true);
+        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromMinutes(15), cancellationToken).ConfigureAwait(true);
         using var response = await client.PostAsJsonAsync("mcpserver/voice/session", request ?? new McpVoiceSessionCreateRequest(), JsonOptions, cancellationToken).ConfigureAwait(true);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
         return (await response.Content.ReadFromJsonAsync<McpVoiceSessionCreateResponse>(JsonOptions, cancellationToken).ConfigureAwait(true))
@@ -151,7 +152,7 @@ public sealed class McpVoiceConversationService : IVoiceConversationService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
-        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(true);
+        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromMinutes(15), cancellationToken).ConfigureAwait(true);
         using var response = await client.PostAsync($"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}/interrupt", content: null, cancellationToken).ConfigureAwait(true);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
         return (await response.Content.ReadFromJsonAsync<McpVoiceInterruptResponse>(JsonOptions, cancellationToken).ConfigureAwait(true))
@@ -182,7 +183,7 @@ public sealed class McpVoiceConversationService : IVoiceConversationService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
-        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(true);
+        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromMinutes(15), cancellationToken).ConfigureAwait(true);
         using var response = await client.GetAsync($"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}", cancellationToken).ConfigureAwait(true);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
         return (await response.Content.ReadFromJsonAsync<McpVoiceSessionStatus>(JsonOptions, cancellationToken).ConfigureAwait(true))
@@ -196,7 +197,7 @@ public sealed class McpVoiceConversationService : IVoiceConversationService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
-        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(true);
+        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromMinutes(15), cancellationToken).ConfigureAwait(true);
         using var response = await client.GetAsync($"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}/transcript", cancellationToken).ConfigureAwait(true);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
         return (await response.Content.ReadFromJsonAsync<McpVoiceTranscriptResponse>(JsonOptions, cancellationToken).ConfigureAwait(true))
@@ -211,7 +212,7 @@ public sealed class McpVoiceConversationService : IVoiceConversationService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(deviceId);
 
-        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(true);
+        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromMinutes(15), cancellationToken).ConfigureAwait(true);
         using var response = await client.GetAsync($"mcpserver/voice/session?deviceId={Uri.EscapeDataString(deviceId)}", cancellationToken).ConfigureAwait(true);
         if (response.StatusCode == HttpStatusCode.NotFound)
             return null;
@@ -226,7 +227,7 @@ public sealed class McpVoiceConversationService : IVoiceConversationService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
-        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(true);
+        using var client = await CreateAuthorizedClientAsync(TimeSpan.FromMinutes(15), cancellationToken).ConfigureAwait(true);
         using var response = await client.DeleteAsync($"mcpserver/voice/session/{Uri.EscapeDataString(sessionId)}", cancellationToken).ConfigureAwait(true);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(true);
     }
@@ -454,8 +455,8 @@ public sealed class McpVoiceConversationService : IVoiceConversationService
         {
             if (ch == '\x1B')
                 sb.Append("ESC");
-            else if (ch > '\x00FF')
-                sb.Append($"&#x{(int)ch:X4};");
+            //else if (ch > '\x00FF')
+            //    sb.Append($"&#x{(int)ch:X4};");
             else
                 sb.Append(ch);
         }

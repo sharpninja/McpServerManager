@@ -538,7 +538,7 @@ public partial class SimplifiedVoiceView : UserControl
 
         SetStatus("Seeding Copilot with workspace instructions...");
 
-        var seedPrompt = "Read the file .github/copilot_instructions.md and follow those instructions for the remainder of this session.";
+        var seedPrompt = "Read the file .github/copilot-instructions.md and follow those instructions for the remainder of this session.";
 
         _messages.Add(new ChatMessage { Role = "system", Text = seedPrompt });
         ScrollToBottom();

@@ -98,7 +98,7 @@ internal static class CopilotCliHelper
                 {
                     // Stream stdout line-by-line
                     string? line;
-                    while ((line = await process.StandardOutput.ReadLineAsync().ConfigureAwait(false)) != null)
+                    while ((line = await process.StandardOutput.ReadLineAsync().ConfigureAwait(true)) != null)
                     {
                         stdoutBuf.AppendLine(line);
                         onStdoutLine?.Invoke(s_ansiEscapePattern.Replace(line, ""));
@@ -106,7 +106,7 @@ internal static class CopilotCliHelper
                 }
 
                 var exited = process.WaitForExit(timeoutMs);
-                var stderr = await stderrTask.ConfigureAwait(false);
+                var stderr = await stderrTask.ConfigureAwait(true);
                 var stdout = stdoutBuf.ToString();
 
                 if (!exited)

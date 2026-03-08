@@ -362,7 +362,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         // Create shared pre-authenticated clients — used by ALL services for the session lifetime.
         _mcpClient = McpServerRestClientFactory.Create(
             _defaultMcpBaseUrl,
-            timeout: TimeSpan.FromSeconds(30),
+            timeout: TimeSpan.FromSeconds(300),
             apiKey: _activeMcpApiKey,
             bearerToken: _activeBearerToken);
 

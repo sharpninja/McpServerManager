@@ -31,7 +31,7 @@ public partial class ConnectionViewModel : ViewModelBase
     private string _errorMessage = "";
 
     [ObservableProperty]
-    private bool _isConnecting;
+    private bool _isConnecting = false;
 
     [ObservableProperty]
     private bool _isOidcSignInRequired;
@@ -342,7 +342,7 @@ public partial class ConnectionViewModel : ViewModelBase
         {
             _logger.LogInformation("OIDC not enabled/configured for {BaseUrl}; continuing without interactive auth", mcpBaseUrl);
             _oidcBearerToken = null;
-            return await TryFetchDefaultApiKeyFallbackAsync(mcpBaseUrl).ConfigureAwait(true);
+            return await TryFetchDefaultApiKeyFallbackAsync(mcpBaseUrl, cancellationToken).ConfigureAwait(true);
         }
 
         var cachedOidcToken = TryReadCachedOidcToken();
@@ -459,7 +459,7 @@ public partial class ConnectionViewModel : ViewModelBase
         // is not accepted by the server for API key retrieval.
         OidcStatusMessage = "Sign-in complete. Opening MCP…";
         _logger.LogWarning("Bearer-authenticated /api-key fetch failed; trying default key without bearer token");
-        var postOidcDefaultKey = await TryFetchDefaultApiKeyFallbackAsync(mcpBaseUrl).ConfigureAwait(true);
+        var postOidcDefaultKey = await TryFetchDefaultApiKeyFallbackAsync(mcpBaseUrl, cancellationToken).ConfigureAwait(true);
         if (!string.IsNullOrWhiteSpace(postOidcDefaultKey))
             return postOidcDefaultKey;
 
@@ -471,12 +471,12 @@ public partial class ConnectionViewModel : ViewModelBase
     /// Fetches the default (anonymous) API key from the server's unprotected <c>/api-key</c>
     /// endpoint without sending any bearer token. Returns null on failure.
     /// </summary>
-    private async Task<string?> TryFetchDefaultApiKeyFallbackAsync(string mcpBaseUrl)
+    private async Task<string?> TryFetchDefaultApiKeyFallbackAsync(string mcpBaseUrl, CancellationToken cancellationToken = default)
     {
         try
         {
             var result = await _connectionAuthService
-                .TryFetchMcpApiKeyAsync(mcpBaseUrl, bearerAccessToken: null)
+                .TryFetchMcpApiKeyAsync(mcpBaseUrl, bearerAccessToken: null, cancellationToken)
                 .ConfigureAwait(true);
 
             if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.ApiKey))
@@ -484,6 +484,10 @@ public partial class ConnectionViewModel : ViewModelBase
                 _logger.LogInformation("Default API key fetched from /api-key without bearer auth for {BaseUrl}", mcpBaseUrl);
                 return result.ApiKey;
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

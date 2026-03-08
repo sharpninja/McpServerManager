@@ -46,7 +46,7 @@ internal static class DirectorRunner
         using var cts = new CancellationTokenSource(timeoutMs);
         try
         {
-            await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+            await process.WaitForExitAsync(cts.Token).ConfigureAwait(true);
         }
         catch (OperationCanceledException)
         {
@@ -55,8 +55,8 @@ internal static class DirectorRunner
                 $"Director command timed out after {timeoutMs}ms: director {args}");
         }
 
-        var stdout = await stdoutTask.ConfigureAwait(false);
-        var stderr = await stderrTask.ConfigureAwait(false);
+        var stdout = await stdoutTask.ConfigureAwait(true);
+        var stderr = await stderrTask.ConfigureAwait(true);
         return new CliResult(process.ExitCode, stdout, stderr);
     }
 

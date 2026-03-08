@@ -1,3 +1,4 @@
+using McpServer.UI.Core.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,10 +7,10 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServer.UI.Core.Models;
 
 namespace McpServer.UI.Core.Services;
 
@@ -21,7 +22,8 @@ public sealed class McpAgentEventStreamService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
     private const string NgrokSkipBrowserWarningHeader = "ngrok-skip-browser-warning";
 

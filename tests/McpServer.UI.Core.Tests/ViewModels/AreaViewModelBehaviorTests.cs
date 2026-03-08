@@ -168,7 +168,7 @@ public sealed class AreaViewModelBehaviorTests
     private static async Task PrimeDispatcherAsync(IServiceProvider provider)
     {
         var dispatcher = provider.GetRequiredService<Dispatcher>();
-        await dispatcher.QueryAsync(new GetAuthConfigQuery()).ConfigureAwait(false);
+        await dispatcher.QueryAsync(new GetAuthConfigQuery()).ConfigureAwait(true);
     }
 
     private static void PrimeInputProperties(object viewModel)
@@ -265,7 +265,7 @@ public sealed class AreaViewModelBehaviorTests
         if (result is not Task task)
             throw new InvalidOperationException($"Method {viewModel.GetType().Name}.{method.Name} must return Task.");
 
-        await task.ConfigureAwait(false);
+        await task.ConfigureAwait(true);
     }
 
     private static object? CreateArgument(ParameterInfo parameter)

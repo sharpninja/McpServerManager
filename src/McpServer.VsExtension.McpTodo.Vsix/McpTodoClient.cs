@@ -36,7 +36,7 @@ public sealed class McpTodoClient
     /// <returns>True if the server had to be started; false if already running.</returns>
     public async Task<bool> EnsureServerRunningAsync(string? solutionDir = null, CancellationToken cancellationToken = default)
     {
-        if (await IsHealthyAsync(cancellationToken).ConfigureAwait(false))
+        if (await IsHealthyAsync(cancellationToken).ConfigureAwait(true))
             return false;
 
         CopilotOutputPane.Log("MCP server is not running. Attempting to start...");
@@ -71,8 +71,8 @@ public sealed class McpTodoClient
         // Wait for the server to become healthy (up to ~30 seconds)
         for (int i = 0; i < 10; i++)
         {
-            await Task.Delay(3000, cancellationToken).ConfigureAwait(false);
-            if (await IsHealthyAsync(cancellationToken).ConfigureAwait(false))
+            await Task.Delay(3000, cancellationToken).ConfigureAwait(true);
+            if (await IsHealthyAsync(cancellationToken).ConfigureAwait(true))
             {
                 CopilotOutputPane.Log("MCP server started successfully.");
                 return true;
@@ -89,7 +89,7 @@ public sealed class McpTodoClient
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(3));
-            var response = await _http.GetAsync("/health", cts.Token).ConfigureAwait(false);
+            var response = await _http.GetAsync("/health", cts.Token).ConfigureAwait(true);
             return response.IsSuccessStatusCode;
         }
         catch
@@ -114,9 +114,9 @@ public sealed class McpTodoClient
         if (!string.IsNullOrWhiteSpace(priority)) query.Add("priority=" + Uri.EscapeDataString(priority!));
         if (!string.IsNullOrWhiteSpace(keyword)) query.Add("keyword=" + Uri.EscapeDataString(keyword!));
         var path = query.Count > 0 ? "/mcpserver/todo?" + string.Join("&", query) : "/mcpserver/todo";
-        var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(true);
         response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        var json = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
         var result = JsonSerializer.Deserialize<TodoQueryResult>(json, s_jsonOptions);
         return result ?? new TodoQueryResult { Items = new List<TodoFlatItem>(), TotalCount = 0 };
     }
@@ -124,11 +124,11 @@ public sealed class McpTodoClient
     public async Task<TodoFlatItem?> GetTodoByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         var path = "/mcpserver/todo/" + Uri.EscapeDataString(id);
-        var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        var response = await _http.GetAsync(path, cancellationToken).ConfigureAwait(true);
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             return null;
         response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        var json = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
         return JsonSerializer.Deserialize<TodoFlatItem>(json, s_jsonOptions);
     }
 
@@ -136,8 +136,8 @@ public sealed class McpTodoClient
     {
         var path = "/mcpserver/todo/" + Uri.EscapeDataString(id);
         using var content = new StringContent(JsonSerializer.Serialize(body, s_jsonOptions), System.Text.Encoding.UTF8, "application/json");
-        var response = await _http.PutAsync(path, content, cancellationToken).ConfigureAwait(false);
-        var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        var response = await _http.PutAsync(path, content, cancellationToken).ConfigureAwait(true);
+        var json = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
         if (!response.IsSuccessStatusCode)
         {
             var err = JsonSerializer.Deserialize<TodoMutationResult>(json, s_jsonOptions);
