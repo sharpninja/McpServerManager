@@ -1,17 +1,23 @@
-<#
-.SYNOPSIS
-    Bumps the patch level of GitVersion.yml next-version.
+function Get-NextVersionValue {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$RepoRoot
+    )
 
-.DESCRIPTION
-    Reads GitVersion.yml, increments the patch component of next-version
-    (e.g. 0.2.0 -> 0.2.1), and writes the file back. Designed to be
-    dot-sourced by other scripts to avoid duplication (TR-MCP-DRY-001).
+    $gitVersionPath = Join-Path $RepoRoot 'GitVersion.yml'
+    if (-not (Test-Path -LiteralPath $gitVersionPath)) {
+        throw "GitVersion.yml not found at '$gitVersionPath'."
+    }
 
-.EXAMPLE
-    . .\Bump-GitVersionPatch.ps1
-    $result = Bump-GitVersionPatch -RepoRoot 'E:\github\McpServer'
-    # $result.OldVersion = '0.2.0', $result.NewVersion = '0.2.1'
-#>
+    $content = Get-Content -Path $gitVersionPath -Raw
+    $match = [regex]::Match($content, '(?m)^next-version:\s*(\d+)\.(\d+)\.(\d+)')
+    if (-not $match.Success) {
+        throw 'Could not parse next-version from GitVersion.yml.'
+    }
+
+    return '{0}.{1}.{2}' -f $match.Groups[1].Value, $match.Groups[2].Value, $match.Groups[3].Value
+}
 
 function Bump-GitVersionPatch {
     [CmdletBinding()]
@@ -20,29 +26,29 @@ function Bump-GitVersionPatch {
         [string]$RepoRoot
     )
 
-    $gitVersionPath = Join-Path $RepoRoot 'GitVersion.yml'
-    if (-not (Test-Path $gitVersionPath)) {
-        Write-Error "GitVersion.yml not found at $gitVersionPath"
+    Set-StrictMode -Version Latest
+    $ErrorActionPreference = 'Stop'
+    $ProgressPreference = 'SilentlyContinue'
+
+    $buildScript = Join-Path $RepoRoot 'build.ps1'
+    if (-not (Test-Path -LiteralPath $buildScript)) {
+        throw "build.ps1 not found at '$buildScript'."
     }
 
-    $content = Get-Content -Path $gitVersionPath -Raw
-    $match = [regex]::Match($content, '(?m)^next-version:\s*(\d+)\.(\d+)\.(\d+)')
-    if (-not $match.Success) {
-        Write-Error "Could not parse next-version from GitVersion.yml"
+    $oldVersion = Get-NextVersionValue -RepoRoot $RepoRoot
+    & $buildScript --target BumpGitVersionPatch
+    if ($LASTEXITCODE -ne 0) {
+        throw "NUKE target BumpGitVersionPatch failed with exit code $LASTEXITCODE."
     }
 
-    $major = [int]$match.Groups[1].Value
-    $minor = [int]$match.Groups[2].Value
-    $patch = [int]$match.Groups[3].Value
-    $oldVersion = "$major.$minor.$patch"
-    $newVersion = "$major.$minor.$($patch + 1)"
-
-    $newContent = $content -replace '(?m)^(next-version:\s*)\d+\.\d+\.\d+', "`${1}$newVersion"
-    Set-Content -Path $gitVersionPath -Value $newContent -NoNewline
-    git -C $RepoRoot add GitVersion.yml 2>&1 | Out-Null
-
+    $newVersion = Get-NextVersionValue -RepoRoot $RepoRoot
     return [pscustomobject]@{
         OldVersion = $oldVersion
         NewVersion = $newVersion
     }
+}
+
+if ($MyInvocation.InvocationName -ne '.') {
+    $repoRoot = Split-Path -Parent $PSScriptRoot
+    Bump-GitVersionPatch -RepoRoot $repoRoot
 }

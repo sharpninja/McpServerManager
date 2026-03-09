@@ -15,16 +15,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ── Shared version detection ──────────────────────────────────────────────
   version:
     runs-on: ubuntu-latest
     outputs:
-      semver: ${{ steps.gitversion.outputs.semver }}
-      major: ${{ steps.gitversion.outputs.major }}
-      minor: ${{ steps.gitversion.outputs.minor }}
-      patch: ${{ steps.gitversion.outputs.patch }}
-      commits: ${{ steps.gitversion.outputs.commitssinceversionsource }}
-      version-code: ${{ steps.version-code.outputs.code }}
+      semver: ${{ steps.version.outputs.semver }}
+      major: ${{ steps.version.outputs.major }}
+      minor: ${{ steps.version.outputs.minor }}
+      patch: ${{ steps.version.outputs.patch }}
+      commits: ${{ steps.version.outputs.commits }}
+      version-code: ${{ steps.version.outputs.version-code }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,33 +40,29 @@ jobs:
       - name: Restore local tools
         run: dotnet tool restore
 
-      - id: gitversion
-        name: Run GitVersion CLI
+      - name: Run NUKE VersionInfo
+        shell: bash
+        run: bash ./build.sh VersionInfo --json-output-path artifacts/version.json
+
+      - id: version
+        name: Export version outputs
         shell: bash
         run: |
-          dotnet tool run dotnet-gitversion -- /output json > gitversion.json
-          echo "semver=$(jq -r '.SemVer' gitversion.json)" >> "$GITHUB_OUTPUT"
-          echo "major=$(jq -r '.Major' gitversion.json)" >> "$GITHUB_OUTPUT"
-          echo "minor=$(jq -r '.Minor' gitversion.json)" >> "$GITHUB_OUTPUT"
-          echo "patch=$(jq -r '.Patch' gitversion.json)" >> "$GITHUB_OUTPUT"
-          echo "commitssinceversionsource=$(jq -r '.CommitsSinceVersionSource' gitversion.json)" >> "$GITHUB_OUTPUT"
+          echo "semver=$(jq -r '.semver' artifacts/version.json)" >> "$GITHUB_OUTPUT"
+          echo "major=$(jq -r '.major' artifacts/version.json)" >> "$GITHUB_OUTPUT"
+          echo "minor=$(jq -r '.minor' artifacts/version.json)" >> "$GITHUB_OUTPUT"
+          echo "patch=$(jq -r '.patch' artifacts/version.json)" >> "$GITHUB_OUTPUT"
+          echo "commits=$(jq -r '.commits' artifacts/version.json)" >> "$GITHUB_OUTPUT"
+          echo "version-code=$(jq -r '.versionCode' artifacts/version.json)" >> "$GITHUB_OUTPUT"
 
-      - name: Calculate Android version code
-        id: version-code
-        run: |
-          CODE=$(( ${{ steps.gitversion.outputs.major }} * 10000 + ${{ steps.gitversion.outputs.minor }} * 1000 + ${{ steps.gitversion.outputs.patch }} * 100 + ${{ steps.gitversion.outputs.commitssinceversionsource }} ))
-          if [ "$CODE" -lt 1 ]; then CODE=1; fi
-          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+      - run: echo "SemVer=${{ steps.version.outputs.semver }}  VersionCode=${{ steps.version.outputs.version-code }}"
 
-      - run: echo "SemVer=${{ steps.gitversion.outputs.semver }}  VersionCode=${{ steps.version-code.outputs.code }}"
-
-  # ── Android APK ───────────────────────────────────────────────────────────
   build-android:
     needs: version
     runs-on: ubuntu-latest
     outputs:
-      apk-hash: ${{ steps.apk-hash.outputs.sha256 }}
-      apk-size: ${{ steps.apk-hash.outputs.size }}
+      apk-hash: ${{ steps.apk.outputs.sha256 }}
+      apk-size: ${{ steps.apk.outputs.size }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -81,68 +76,29 @@ jobs:
       - name: Restore local tools
         run: dotnet tool restore
 
-      - name: Patch Markdown.Avalonia for Linux
-        run: |
-          # The submodule props only defines PackageTargetFrameworks for Windows_NT.
-          # Add a Linux fallback so NuGet restore can resolve the project graph.
-          sed -i '/<\/Project>/i \
-          <PropertyGroup Condition=" '\''$(OS)'\'' != '\''Windows_NT'\'' ">\
-            <PackageTargetFrameworks>netstandard2.0<\/PackageTargetFrameworks>\
-            <DemoAppTargetFrameworks>netstandard2.0<\/DemoAppTargetFrameworks>\
-            <TestTargetFrameworks>netstandard2.0<\/TestTargetFrameworks>\
-          <\/PropertyGroup>' lib/Markdown.Avalonia/Markdown.Avalonia.props
-
       - run: dotnet workload install android
 
-      - name: Decode keystore
-        if: env.KEYSTORE_BASE64 != ''
+      - name: Build Android APK via NUKE
+        shell: bash
         env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_BASE64" | base64 -d > ${{ github.workspace }}/release.keystore
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: bash ./build.sh BuildAndroidPackage --package-version "${{ needs.version.outputs.semver }}" --json-output-path artifacts/android-apk.json
 
-      - name: Build Android APK
+      - id: apk
+        name: Export APK metadata
+        shell: bash
         run: |
-          SIGNING_ARGS=""
-          if [ -f "${{ github.workspace }}/release.keystore" ]; then
-            SIGNING_ARGS="/p:AndroidSigningKeyStore=${{ github.workspace }}/release.keystore /p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }} /p:AndroidSigningStorePass=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} /p:AndroidSigningKeyPass=${{ secrets.ANDROID_KEY_PASSWORD }}"
-          fi
-          dotnet publish src/McpServerManager.Android/McpServerManager.Android.csproj \
-              /p:Version=${{ needs.version.outputs.semver }} \
-              /p:AssemblyVersion=${{ needs.version.outputs.major }}.${{ needs.version.outputs.minor }}.${{ needs.version.outputs.patch }} \
-              /p:FileVersion=${{ needs.version.outputs.major }}.${{ needs.version.outputs.minor }}.${{ needs.version.outputs.patch }} \
-              /p:InformationalVersion=${{ needs.version.outputs.semver }} \
-            -c Release -f net9.0-android \
-            /p:ApplicationVersion=${{ needs.version.outputs.version-code }} \
-            /p:ApplicationDisplayVersion=${{ needs.version.outputs.semver }} \
-            $SIGNING_ARGS
-
-      - name: Find and rename APK
-        id: find-apk
-        run: |
-          APK=$(find src/McpServerManager.Android/bin/Release -name "*-Signed.apk" | head -1)
-          [ -z "$APK" ] && APK=$(find src/McpServerManager.Android/bin/Release -name "*.apk" | head -1)
-          if [ -z "$APK" ]; then
-            echo "ERROR: No APK found!"; find src/McpServerManager.Android/bin/Release -type f; exit 1
-          fi
-          DEST="artifacts/McpServerManager-${{ needs.version.outputs.semver }}.apk"
-          mkdir -p artifacts
-          cp "$APK" "$DEST"
-          echo "apk-path=$DEST" >> "$GITHUB_OUTPUT"
-
-      - name: Compute APK hash
-        id: apk-hash
-        run: |
-          SHA256=$(sha256sum "${{ steps.find-apk.outputs.apk-path }}" | awk '{print $1}')
-          SIZE=$(stat -c%s "${{ steps.find-apk.outputs.apk-path }}")
-          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
-          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(jq -r '.sha256' artifacts/android-apk.json)" >> "$GITHUB_OUTPUT"
+          echo "size=$(jq -r '.size' artifacts/android-apk.json)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: artifacts/*.apk
 
-  # ── Windows MSIX ──────────────────────────────────────────────────────────
   build-windows:
     needs: version
     runs-on: windows-latest
@@ -159,54 +115,15 @@ jobs:
       - name: Restore local tools
         run: dotnet tool restore
 
-      - name: Build MSIX package
+      - name: Build MSIX package via NUKE
         shell: pwsh
-        run: |
-          Import-Module ./scripts/MsixTools/MsixTools.psd1 -Force
-          $msixOutput = New-MsixPackage `
-            -WorkspaceRoot . `
-            -ConfigPath msix.yml `
-            -Version "${{ needs.version.outputs.semver }}" `
-            -ExcludeService `
-            -Force
-
-          # New-MsixPackage may emit extra text output from child tooling.
-          # Resolve the actual MSIX path from output and fallback to artifacts scan.
-          $msixCandidates = @()
-          if ($null -ne $msixOutput) {
-            $msixCandidates += @($msixOutput) `
-              | ForEach-Object { "$_".Trim() } `
-              | Where-Object { $_ -match '\.msix$' }
-          }
-
-          $msixCandidates += Get-ChildItem artifacts -Filter '*.msix' -File -ErrorAction SilentlyContinue `
-            | ForEach-Object { $_.FullName }
-
-          $msix = $msixCandidates | Select-Object -Unique | Select-Object -First 1
-          if (-not $msix -or -not (Test-Path -LiteralPath $msix)) {
-            throw "MSIX output not found. Candidates: $($msixCandidates -join '; ')"
-          }
-          Write-Host "MSIX path resolved: $msix"
-          # New-MsixPackage can leave LASTEXITCODE from child tooling; clear it so
-          # GitHub's pwsh wrapper does not treat the successful step as failed.
-          $global:LASTEXITCODE = 0
-
-      - name: Rename MSIX
-        shell: pwsh
-        run: |
-          $msix = Get-ChildItem artifacts -Filter '*.msix' | Select-Object -First 1
-          $dest = "artifacts/McpServerManager-${{ needs.version.outputs.semver }}-win-x64.msix"
-          if ($msix.FullName -ne (Resolve-Path $dest -ErrorAction SilentlyContinue)) {
-            Move-Item $msix.FullName $dest -Force
-          }
-          Write-Host "MSIX: $dest"
+        run: .\build.ps1 BuildDesktopMsix --package-version "${{ needs.version.outputs.semver }}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: windows-msix
           path: artifacts/*.msix
 
-  # ── Linux DEB ─────────────────────────────────────────────────────────────
   build-linux:
     needs: version
     runs-on: ubuntu-latest
@@ -223,26 +140,15 @@ jobs:
       - name: Restore local tools
         run: dotnet tool restore
 
-      - name: Patch Markdown.Avalonia for Linux
-        run: |
-          sed -i '/<\/Project>/i \
-          <PropertyGroup Condition=" '\''$(OS)'\'' != '\''Windows_NT'\'' ">\
-            <PackageTargetFrameworks>netstandard2.0<\/PackageTargetFrameworks>\
-            <DemoAppTargetFrameworks>netstandard2.0<\/DemoAppTargetFrameworks>\
-            <TestTargetFrameworks>netstandard2.0<\/TestTargetFrameworks>\
-          <\/PropertyGroup>' lib/Markdown.Avalonia/Markdown.Avalonia.props
-
-      - name: Build DEB package
-        run: |
-          chmod +x scripts/build-deb.sh
-          scripts/build-deb.sh --version "${{ needs.version.outputs.semver }}"
+      - name: Build DEB package via NUKE
+        shell: bash
+        run: bash ./build.sh BuildDesktopDeb --package-version "${{ needs.version.outputs.semver }}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: linux-deb
           path: artifacts/*.deb
 
-  # ── Director (CLI Tool) ───────────────────────────────────────────────────
   build-director:
     needs: version
     runs-on: ubuntu-latest
@@ -256,22 +162,18 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Restore
-        run: dotnet restore src/McpServer.Director/McpServer.Director.csproj
+      - name: Restore local tools
+        run: dotnet tool restore
 
-      - name: Build & Pack
-        run: |
-          dotnet pack src/McpServer.Director/McpServer.Director.csproj \
-            -c Release \
-            -p:PackageVersion=${{ needs.version.outputs.semver }} \
-            -o artifacts
+      - name: Pack Director tool via NUKE
+        shell: bash
+        run: bash ./build.sh PackDirectorTool --package-version "${{ needs.version.outputs.semver }}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: director-tool
           path: artifacts/*.nupkg
 
-  # ── Web (ASP.NET Core) ────────────────────────────────────────────────────
   build-web:
     needs: version
     runs-on: ubuntu-latest
@@ -285,30 +187,18 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Restore
-        run: dotnet restore src/McpServer.Web/McpServer.Web.csproj
+      - name: Restore local tools
+        run: dotnet tool restore
 
-      - name: Publish
-        run: |
-          dotnet publish src/McpServer.Web/McpServer.Web.csproj \
-              /p:AssemblyVersion=${{ needs.version.outputs.major }}.${{ needs.version.outputs.minor }}.${{ needs.version.outputs.patch }} \
-              /p:FileVersion=${{ needs.version.outputs.major }}.${{ needs.version.outputs.minor }}.${{ needs.version.outputs.patch }} \
-              /p:InformationalVersion=${{ needs.version.outputs.semver }} \
-            -c Release \
-            -p:Version=${{ needs.version.outputs.semver }} \
-            -o artifacts/web
-
-      - name: Zip Web Artifacts
-        run: |
-          cd artifacts/web
-          zip -r ../McpServer.Web-${{ needs.version.outputs.semver }}.zip .
+      - name: Publish web zip via NUKE
+        shell: bash
+        run: bash ./build.sh PublishWebZip --package-version "${{ needs.version.outputs.semver }}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: web-publish
           path: artifacts/*.zip
 
-  # ── GitHub Release ────────────────────────────────────────────────────────
   release:
     needs: [version, build-android, build-windows, build-linux, build-director, build-web]
     runs-on: ubuntu-latest
@@ -353,7 +243,7 @@ jobs:
             ```bash
             sudo dpkg -i mcpservermanager_${{ needs.version.outputs.semver }}_amd64.deb
             ```
-            
+
             ### Install Director CLI
             ```bash
             dotnet tool install --global SharpNinja.McpServer.Director --add-source . --version ${{ needs.version.outputs.semver }}
@@ -364,11 +254,11 @@ jobs:
 
       - name: Compute release URLs
         id: urls
+        shell: bash
         run: |
           TAG="v${{ needs.version.outputs.semver }}"
           echo "apk-url=https://github.com/${{ github.repository }}/releases/download/${TAG}/McpServerManager-${{ needs.version.outputs.semver }}.apk" >> "$GITHUB_OUTPUT"
 
-  # ── F-Droid repo deployment ───────────────────────────────────────────────
   deploy-fdroid:
     needs: [version, build-android, release]
     runs-on: ubuntu-latest
@@ -378,10 +268,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore local tools
+        run: dotnet tool restore
+
       - name: Set up Python and F-Droid CLI
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: Install fdroidserver
         run: pip install fdroidserver
 
@@ -389,137 +287,31 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: android-apk
+          path: downloaded-apk
+
+      - name: Stage APK for NUKE
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          find downloaded-apk -name '*.apk' -type f -exec cp {} artifacts/ \;
 
       - name: Restore F-Droid keystore cache
-        id: fdroid-cache
         uses: actions/cache@v4
         with:
           path: fdroid-workspace
           key: fdroid-keystore-v1-${{ runner.os }}
 
-      - name: Prepare F-Droid workspace
-        run: |
-          REPO_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo"
-          mkdir -p fdroid-workspace/repo fdroid-workspace/metadata
-          if [ ! -f fdroid-workspace/keystore.jks ]; then
-            keytool -genkeypair -keystore fdroid-workspace/keystore.jks -alias fdroidrepo \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass android -keypass android \
-              -dname "CN=Request Tracker Repo, OU=CI, O=GitHub"
-          fi
-          cat > fdroid-workspace/config.yml << CONFIG
-          repo_url: "$REPO_URL"
-          repo_name: "Request Tracker"
-          repo_description: "Android app for browsing and analyzing Copilot session logs. Supports phone and tablet layouts."
-          repo_keyalias: fdroidrepo
-          keystore: keystore.jks
-          keystorepass: android
-          keypass: android
-          keydname: "CN=Request Tracker Repo, OU=CI, O=GitHub"
-          CONFIG
-          chmod 600 fdroid-workspace/config.yml
-          mkdir -p fdroid-workspace/repo/icons
-          # Copy logo as repo icon
-          if [ -f docs/fdroid/icon.png ]; then
-            cp docs/fdroid/icon.png fdroid-workspace/repo/icons/icon.png
-          else
-            echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > fdroid-workspace/repo/icons/icon.png
-          fi
-          rm -f fdroid-workspace/repo/*.apk fdroid-workspace/repo/*.xml fdroid-workspace/repo/*.jar 2>/dev/null || true
-          rm -f fdroid-workspace/repo/index.* 2>/dev/null || true
-          APK=$(find . -name "*.apk" -type f | head -1)
-          cp "$APK" fdroid-workspace/repo/
-          cp fdroid/metadata/ninja.thesharp.mcpservermanager.yml fdroid-workspace/metadata/
+      - name: Generate F-Droid repo via NUKE
+        shell: bash
+        run: bash ./build.sh GenerateFdroidRepo --expected-repo-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo"
 
-      - name: Ensure repo icon exists
-        run: |
-          mkdir -p fdroid-workspace/repo/icons
-          [ -f fdroid-workspace/repo/icons/icon.png ] || echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > fdroid-workspace/repo/icons/icon.png
+      - name: Verify F-Droid repo via NUKE
+        shell: bash
+        run: bash ./build.sh VerifyFdroidRepo --expected-version "${{ needs.version.outputs.semver }}" --expected-repo-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo"
 
-      - name: Generate F-Droid repo (fdroid update)
-        run: |
-          cd fdroid-workspace && fdroid update
-
-      - name: Verify F-Droid repo (logo, URL, hash, version)
-        env:
-          EXPECTED_VERSION: ${{ needs.version.outputs.semver }}
-          EXPECTED_REPO_URL: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/repo"
-        run: |
-          set -e
-          REPO=fdroid-workspace/repo
-          ICON="$REPO/icons/icon.png"
-          ERRORS=()
-
-          # 1) Logo: icon.png must exist
-          if [ ! -f "$ICON" ]; then
-            ERRORS+=("F-Droid logo check FAILED: icon file missing at $ICON")
-          elif [ ! -s "$ICON" ]; then
-            ERRORS+=("F-Droid logo check FAILED: repo/icons/icon.png is empty")
-          fi
-
-          # 2) APK must exist
-          APK=$(find "$REPO" -name "*.apk" -type f | head -1)
-          if [ -z "$APK" ]; then
-            ERRORS+=("F-Droid APK check FAILED: no APK found in $REPO")
-          fi
-          export APK
-
-          # 3) Repo URL in config must match expected
-          if [ -f fdroid-workspace/config.yml ]; then
-            CONFIG_URL=$(grep -E '^\s*repo_url:\s*' fdroid-workspace/config.yml | sed -E 's/.*repo_url:\s*["]?([^"]*)["]?.*/\1/' | tr -d '"' | xargs)
-            if [ "$CONFIG_URL" != "$EXPECTED_REPO_URL" ]; then
-              ERRORS+=("F-Droid URL check FAILED: config repo_url is '$CONFIG_URL' but expected '$EXPECTED_REPO_URL'")
-            fi
-          else
-            ERRORS+=("F-Droid URL check FAILED: fdroid-workspace/config.yml not found")
-          fi
-
-          # 4) Index must exist and reference APK with correct hash
-          APKNAME=$(basename "$APK")
-          COMPUTED=$(sha256sum "$APK" | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
-          INDEX_HASH=""
-          SOURCE=""
-
-          if [ -f "$REPO/index-v1.json" ]; then
-            INDEX_HASH=$(jq -r --arg apk "$APKNAME" '
-              .packages // {} |
-              to_entries[] |
-              .value[] |
-              select(.apkName == $apk) |
-              .hash // ""
-            ' "$REPO/index-v1.json" | head -1 | sed 's/sha256://g' | tr -d "[:space:]" | tr "[:upper:]" "[:lower:]")
-            SOURCE="index-v1.json"
-          elif [ -f "$REPO/index.xml" ]; then
-            INDEX_HASH=$(xmllint --xpath "string(//package[@apkName='$APKNAME']/@hash)" "$REPO/index.xml" 2>/dev/null | sed 's/sha256://g' | tr -d "[:space:]" | tr "[:upper:]" "[:lower:]")
-            SOURCE="index.xml"
-          fi
-
-          if [ -z "$INDEX_HASH" ]; then
-            echo "APK $APKNAME not found in repo index" >&2
-            exit 1
-          fi
-
-          if [ "$INDEX_HASH" != "$COMPUTED" ]; then
-            echo "Hash mismatch: $SOURCE has $INDEX_HASH, computed $COMPUTED" >&2
-            exit 1
-          fi
-
-          echo "$SOURCE hash matches."
-
-          if [ ${#ERRORS[@]} -gt 0 ]; then
-            echo "F-Droid verification failed:"
-            printf '%s\n' "${ERRORS[@]}"
-            exit 1
-          fi
-
-      - name: Assemble Pages artifact
-        run: |
-          mkdir -p pages-output/repo
-          cp docs/fdroid/index.html pages-output/
-          [ -f docs/fdroid/.nojekyll ] && cp docs/fdroid/.nojekyll pages-output/
-          touch pages-output/.nojekyll
-          [ -f docs/fdroid/icon.png ] && cp docs/fdroid/icon.png pages-output/
-          cp -r fdroid-workspace/repo/* pages-output/repo/
+      - name: Assemble Pages artifact via NUKE
+        shell: bash
+        run: bash ./build.sh PreparePagesArtifact
 
       - uses: actions/configure-pages@v5
 

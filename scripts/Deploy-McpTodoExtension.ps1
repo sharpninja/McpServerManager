@@ -1,55 +1,24 @@
-# Deploy-McpTodoExtension.ps1
-# Run AFTER closing Visual Studio.
-# Copies the rebuilt DLL+pkgdef, clears caches, and runs /updateconfiguration.
-
+[CmdletBinding(PositionalBinding = $false, SupportsShouldProcess)]
 param(
-    [string]$InstallDir = "C:\Users\kingd\AppData\Local\Microsoft\VisualStudio\18.0_3667cb05\Extensions\5aepmlfh.rpt"
+    [string]$InstallDir = '',
+    [ValidateSet('Debug', 'Release')]
+    [string]$Configuration = 'Debug',
+    [switch]$Force
 )
 
-$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 
-$devenv = Get-Process devenv -ErrorAction SilentlyContinue
-if ($devenv) {
-    Write-Host "Visual Studio is currently running (PID: $($devenv.Id -join ', '))." -ForegroundColor Yellow
-    $choice = Read-Host "Kill Visual Studio and continue? (y/n)"
-    if ($choice -eq 'y' -or $choice -eq 'Y') {
-        foreach ($proc in $devenv) {
-            Write-Host "Stopping devenv PID $($proc.Id)..."
-            Stop-Process -Id $proc.Id -Force
-        }
-        Start-Sleep -Seconds 3
-    } else {
-        Write-Host "Cancelled."
-        exit 1
-    }
+$nukeArgs = [System.Collections.Generic.List[string]]::new()
+$nukeArgs.Add('--configuration')
+$nukeArgs.Add($Configuration)
+if (-not [string]::IsNullOrWhiteSpace($InstallDir)) {
+    $nukeArgs.Add('--install-dir')
+    $nukeArgs.Add($InstallDir)
 }
+if ($Force) { $nukeArgs.Add('--force') }
+if ($WhatIfPreference) { $nukeArgs.Add('--what-if') }
 
-# Source directories
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$repoRoot = Split-Path -Parent $scriptDir
-$srcDir = Join-Path $repoRoot "src\McpServer.VsExtension.McpTodo.Vsix\bin\Debug\net472\win"
-
-Write-Host "Deploying to: $InstallDir"
-
-Write-Host "Copying DLL..."
-Copy-Item "$srcDir\McpServer.VsExtension.McpTodo.dll" "$InstallDir\McpServer.VsExtension.McpTodo.dll" -Force
-
-Write-Host "Copying pkgdef..."
-Copy-Item "$srcDir\McpServer.VsExtension.McpTodo.pkgdef" "$InstallDir\McpServer.VsExtension.McpTodo.pkgdef" -Force
-
-Write-Host "Copying all runtime dependency DLLs..."
-Get-ChildItem "$srcDir\*.dll" | ForEach-Object {
-    Copy-Item $_.FullName "$InstallDir\$($_.Name)" -Force
-}
-Write-Host "  Copied $((Get-ChildItem "$srcDir\*.dll").Count) DLLs"
-
-Write-Host "Clearing ComponentModelCache..."
-$cmc = "C:\Users\kingd\AppData\Local\Microsoft\VisualStudio\18.0_3667cb05\ComponentModelCache"
-if (Test-Path $cmc) { Remove-Item $cmc -Recurse -Force }
-
-Write-Host "Running devenv /updateconfiguration..."
-$proc = Start-Process "G:\VS\VS2026\Common7\IDE\devenv.exe" -ArgumentList "/updateconfiguration" -Wait -PassThru
-Write-Host "Exit: $($proc.ExitCode)"
-
-Write-Host ""
-Write-Host "DONE. Open Visual Studio now."
+& (Join-Path $PSScriptRoot 'Invoke-Nuke.ps1') -Target 'DeployMcpTodoExtension' @nukeArgs
+exit $LASTEXITCODE

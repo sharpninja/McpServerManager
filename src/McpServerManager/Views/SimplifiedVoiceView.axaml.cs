@@ -124,6 +124,9 @@ public class ChatMessage : INotifyPropertyChanged
 public partial class SimplifiedVoiceView : UserControl
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("SimplifiedVoiceView");
+    private const int MaxChatMessages = 200;
+    private static readonly TimeSpan StreamUiUpdateInterval = TimeSpan.FromMilliseconds(100);
+    private const int StreamUiUpdateMinChars = 256;
 #if ANDROID
     private readonly IAndroidSpeechRecognitionService _stt = new AndroidSpeechRecognitionService();
     private readonly IAndroidTextToSpeechService _tts = new AndroidTextToSpeechService();
@@ -152,6 +155,7 @@ public partial class SimplifiedVoiceView : UserControl
     private bool _foregroundServiceRunning;
     private Timer? _heartbeatTimer;
     private int _heartbeatInFlight;
+    private int _scrollPending;
     private TextBox? _textInputBox;
     private Button? _pauseButton;
     private Button? _stopButton;
@@ -269,7 +273,7 @@ public partial class SimplifiedVoiceView : UserControl
                 ? "Workspace is not ready yet. Select a workspace and wait for connection to complete."
                 : "Workspace switch is still in progress. Please wait a moment and try Start again.";
             SetStatus(reason);
-            _messages.Add(new ChatMessage { Role = "system", Text = reason });
+            AddChatMessage(new ChatMessage { Role = "system", Text = reason });
             ScrollToBottom();
             return;
         }
@@ -279,7 +283,7 @@ public partial class SimplifiedVoiceView : UserControl
 
         SetStatus("Creating session...");
 
-        _messages.Add(new ChatMessage { Role = "system", Text = "Creating session..." });
+        AddChatMessage(new ChatMessage { Role = "system", Text = "Creating session..." });
         ScrollToBottom();
 
         await vm.CreateSessionCommand.ExecuteAsync(null).ConfigureAwait(true);
@@ -289,14 +293,14 @@ public partial class SimplifiedVoiceView : UserControl
             var reason = string.IsNullOrWhiteSpace(vm.StatusText) ? "Failed to create session." : vm.StatusText;
             _logger.LogWarning("Voice session creation failed: {Reason}", reason);
             SetStatus(reason);
-            _messages.Add(new ChatMessage { Role = "system", Text = reason });
+            AddChatMessage(new ChatMessage { Role = "system", Text = reason });
             ScrollToBottom();
             if (_chatToggleButton != null)
                 _chatToggleButton.IsEnabled = true;
             return;
         }
 
-        _messages.Add(new ChatMessage { Role = "system", Text = $"Session {vm.SessionId}" });
+        AddChatMessage(new ChatMessage { Role = "system", Text = $"Session {vm.SessionId}" });
         ScrollToBottom();
 
         // Seed session: tell Copilot to read workspace instructions
@@ -377,7 +381,7 @@ public partial class SimplifiedVoiceView : UserControl
 
             // 2. Show user message in chat
             var requestTime = DateTimeOffset.UtcNow;
-            _messages.Add(new ChatMessage { Role = "user", Text = transcript });
+            AddChatMessage(new ChatMessage { Role = "user", Text = transcript });
             ScrollToBottom();
 
             // 3. Submit turn via streaming
@@ -385,7 +389,7 @@ public partial class SimplifiedVoiceView : UserControl
             SetMicState("thinking");
 
             var assistantBubble = new ChatMessage { Role = "assistant", RequestTimestamp = requestTime };
-            _messages.Add(assistantBubble);
+            AddChatMessage(assistantBubble);
             ScrollToBottom();
 
             var accumulated = new StringBuilder();
@@ -394,6 +398,8 @@ public partial class SimplifiedVoiceView : UserControl
             var spokenUpTo = 0;
             var isDone = false;
             var firstChunkReceived = false;
+            var lastUiUpdateAt = DateTimeOffset.UtcNow;
+            var pendingUiChars = 0;
             _isSpeaking = true;
             _ttsStopped = false;
             UpdateButtons();
@@ -410,11 +416,17 @@ public partial class SimplifiedVoiceView : UserControl
                         firstChunkReceived = true;
                         assistantBubble.FirstResponseDuration = elapsed;
                     }
-                    assistantBubble.UpdateTiming(elapsed);
 
                     accumulated.Append(evt.Text);
-                    assistantBubble.Text = accumulated.ToString();
-                    ScrollToBottom();
+                    pendingUiChars += evt.Text.Length;
+                    if (ShouldFlushStreamingUi(evt.Text, lastUiUpdateAt, pendingUiChars))
+                    {
+                        assistantBubble.UpdateTiming(elapsed);
+                        assistantBubble.Text = accumulated.ToString();
+                        ScrollToBottom();
+                        lastUiUpdateAt = DateTimeOffset.UtcNow;
+                        pendingUiChars = 0;
+                    }
 
                     // Skip tool-progress lines for TTS (still displayed in chat)
                     if (IsToolProgressLine(evt.Text))
@@ -477,7 +489,7 @@ public partial class SimplifiedVoiceView : UserControl
             // Convert bare URIs to markdown links in the final accumulated display text.
             if (isDone)
             {
-                assistantBubble.Text = TextTransformations.ConvertBareUrisToMarkdownLinks(assistantBubble.Text ?? "");
+                assistantBubble.Text = TextTransformations.ConvertBareUrisToMarkdownLinks(accumulated.ToString());
                 assistantBubble.SetTimingFromDurations();
                 ScrollToBottom();
             }
@@ -530,7 +542,7 @@ public partial class SimplifiedVoiceView : UserControl
         var workspacePath = vm.WorkspacePath;
         if (string.IsNullOrWhiteSpace(workspacePath))
         {
-            _messages.Add(new ChatMessage { Role = "system", Text = "No workspace path — skipping seed." });
+            AddChatMessage(new ChatMessage { Role = "system", Text = "No workspace path — skipping seed." });
             ScrollToBottom();
             SetStatus("Session ready (no workspace seed).");
             return;
@@ -540,16 +552,18 @@ public partial class SimplifiedVoiceView : UserControl
 
         var seedPrompt = "Read the file .github/copilot-instructions.md and follow those instructions for the remainder of this session.";
 
-        _messages.Add(new ChatMessage { Role = "system", Text = seedPrompt });
+        AddChatMessage(new ChatMessage { Role = "system", Text = seedPrompt });
         ScrollToBottom();
 
         var seedRequestTime = DateTimeOffset.UtcNow;
         var seedBubble = new ChatMessage { Role = "assistant", RequestTimestamp = seedRequestTime };
-        _messages.Add(seedBubble);
+        AddChatMessage(seedBubble);
         ScrollToBottom();
 
         var seedAccum = new StringBuilder();
         var seedFirstChunk = false;
+        var lastUiUpdateAt = DateTimeOffset.UtcNow;
+        var pendingUiChars = 0;
         await foreach (var evt in vm.SubmitTurnStreamingAsync(seedPrompt, ct).ConfigureAwait(true))
         {
             if (evt.Type == "chunk" && evt.Text is not null)
@@ -560,10 +574,16 @@ public partial class SimplifiedVoiceView : UserControl
                     seedFirstChunk = true;
                     seedBubble.FirstResponseDuration = seedElapsed;
                 }
-                seedBubble.UpdateTiming(seedElapsed);
                 seedAccum.Append(evt.Text);
-                seedBubble.Text = seedAccum.ToString();
-                ScrollToBottom();
+                pendingUiChars += evt.Text.Length;
+                if (ShouldFlushStreamingUi(evt.Text, lastUiUpdateAt, pendingUiChars))
+                {
+                    seedBubble.UpdateTiming(seedElapsed);
+                    seedBubble.Text = seedAccum.ToString();
+                    ScrollToBottom();
+                    lastUiUpdateAt = DateTimeOffset.UtcNow;
+                    pendingUiChars = 0;
+                }
             }
             else if (evt.Type == "done")
             {
@@ -573,6 +593,8 @@ public partial class SimplifiedVoiceView : UserControl
 
         if (seedAccum.Length == 0)
             seedBubble.Text = vm.AssistantDisplayText ?? vm.StatusText ?? "(no response)";
+        else
+            seedBubble.Text = seedAccum.ToString();
 
         seedBubble.SetTimingFromDurations();
 
@@ -1027,7 +1049,7 @@ public partial class SimplifiedVoiceView : UserControl
 
         // Create the chat bubble, initially showing the first sentence
         var bubble = new ChatMessage { Role = "assistant" };
-        _messages.Add(bubble);
+        AddChatMessage(bubble);
 
         var displayed = new StringBuilder();
         using var focusLease = AcquireTextToSpeechFocus();
@@ -1179,9 +1201,16 @@ public partial class SimplifiedVoiceView : UserControl
 
     private void ScrollToBottom()
     {
-        // Double-post: first at Background lets markdown re-layout, second scrolls after
+        if (Interlocked.Exchange(ref _scrollPending, 1) == 1)
+            return;
+
+        // Double-post: first at Background lets markdown re-layout, second scrolls after.
         Dispatcher.UIThread.Post(() =>
-            Dispatcher.UIThread.Post(() => _chatScroller?.ScrollToEnd(), DispatcherPriority.Background),
+            Dispatcher.UIThread.Post(() =>
+            {
+                _chatScroller?.ScrollToEnd();
+                Interlocked.Exchange(ref _scrollPending, 0);
+            }, DispatcherPriority.Background),
             DispatcherPriority.Background);
     }
 
@@ -1320,6 +1349,29 @@ public partial class SimplifiedVoiceView : UserControl
         }
         catch (Exception ex) { _logger.LogDebug(ex, "Failed to update foreground service status"); }
     #endif
+    }
+
+    private void AddChatMessage(ChatMessage message)
+    {
+        _messages.Add(message);
+        TrimChatHistory();
+    }
+
+    private void TrimChatHistory()
+    {
+        while (_messages.Count > MaxChatMessages)
+            _messages.RemoveAt(0);
+    }
+
+    private static bool ShouldFlushStreamingUi(string chunkText, DateTimeOffset lastUiUpdateAt, int pendingUiChars)
+    {
+        if (pendingUiChars >= StreamUiUpdateMinChars)
+            return true;
+
+        if (DateTimeOffset.UtcNow - lastUiUpdateAt >= StreamUiUpdateInterval)
+            return true;
+
+        return chunkText.IndexOf('\n') >= 0;
     }
 
         private IDisposable AcquireSpeechRecognitionFocus()

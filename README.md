@@ -51,6 +51,38 @@ cd src/McpServerManager
 dotnet run
 ```
 
+## Deployment automation
+
+Use NUKE from the repo root as the authoritative build/deploy entry point.
+
+```powershell
+.\build.ps1
+.\build.ps1 --target DeployAll
+.\build.ps1 --target DeployAll --deploy-selection Director,WebUi,DesktopMsix
+.\build.ps1 --target DeployAll --what-if
+.\build.ps1 --target DeployAll --configuration Debug --deploy-selection Director,WebUi
+.\build.ps1 BuildAndInstallVsix --what-if
+```
+
+Current target names:
+- `Director`
+- `WebUi`
+- `AndroidPhone`
+- `AndroidEmulator`
+- `DesktopMsix`
+- `DesktopDeb`
+
+Behavior notes:
+- `build.ps1` and `build.sh` are the primary entry points; they invoke `build\Build.csproj` with the repo root wired up for NUKE.
+- When invoked with no arguments, the root wrappers forward `--help` so you see NUKE help instead of accidentally running a default target.
+- For convenience, the wrappers treat the first bare argument as `--target`, so commands like `.\build.ps1 BuildAndInstallVsix --what-if` work without spelling out `--target`.
+- The build is best-effort for deploy-all: unavailable targets are skipped and reported in the final summary.
+- `--what-if` is the standard dry-run mechanism for NUKE-backed targets.
+- `DesktopMsix` deployment auto-elevates only the certificate trust/install step through `gsudo`, avoiding elevated NUKE re-entry log-file conflicts; otherwise the build fails with guidance to install `gsudo` or rerun from an elevated PowerShell session.
+- `DesktopDeb` installation on Windows launches an interactive WSL `sudo` prompt so the user can enter their password when package installation is requested.
+- Legacy files under `scripts\` now act as compatibility wrappers so existing commands continue to work while NUKE owns the orchestration logic.
+- For independent target execution, import `scripts\DeployAllTargets.psm1` and call the exported compatibility functions directly, for example `Invoke-DeployDirectorTool -Configuration Debug -WhatIf`.
+
 ### WSL with WSLg
 
 On WSL with WSLg enabled (Windows 11), the app window should appear on the Windows desktop. If it doesn’t:

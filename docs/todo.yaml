@@ -510,6 +510,28 @@ Features:
       done: true
     - task: Build and verify no compilation errors
       done: true
+  - id: MCP-VOICECHAT-001
+    title: Add Voice Chat settings to Android and Desktop
+    estimate: 1d
+    note: Requested by user on 2026-03-09 to prioritize Android and Desktop parity.
+    done: false
+    description:
+    - Add a Voice Chat settings section to Android settings UI.
+    - Add matching Voice Chat settings to Desktop settings UI.
+    - Ensure settings are persisted and loaded consistently across both platforms.
+    technical-details:
+    - Define shared settings keys and defaults for both Android and Desktop.
+    - Wire view model/state bindings for platform-specific settings views.
+    - Validate serialization/deserialization compatibility for existing users.
+    implementation-tasks:
+    - task: Define/update shared Voice Chat settings model and persistence contract
+      done: false
+    - task: Implement Android settings UI bindings for Voice Chat options
+      done: false
+    - task: Implement Desktop settings UI bindings for Voice Chat options
+      done: false
+    - task: Add validation/tests for cross-platform settings persistence
+      done: false
 DEPLOY-STATUS:
   high-priority:
   - id: deploy-status-20260302-1512z
@@ -829,3 +851,15 @@ mvp-mcp:
     - '- Desktop as MSIX to Windows'
     - '- Desktop as DEB to WSL'
   medium-priority: []
+director:
+  medium-priority:
+  - id: DIR-UI-001
+    title: '[NEEDS PLAN] Reorder the tabs so that global config tabse are at the end.'
+    done: false
+    description:
+    - Place global config tabs (non-Workspace specific) at the end of the tabs.
+    technical-details:
+    - '-'
+    implementation-tasks:
+    - task: '[ ]'
+      done: false

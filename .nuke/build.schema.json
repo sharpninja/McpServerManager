@@ -1,0 +1,256 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "definitions": {
+    "Host": {
+      "type": "string",
+      "enum": [
+        "AppVeyor",
+        "AzurePipelines",
+        "Bamboo",
+        "Bitbucket",
+        "Bitrise",
+        "GitHubActions",
+        "GitLab",
+        "Jenkins",
+        "Rider",
+        "SpaceAutomation",
+        "TeamCity",
+        "Terminal",
+        "TravisCI",
+        "VisualStudio",
+        "VSCode"
+      ]
+    },
+    "ExecutableTarget": {
+      "type": "string",
+      "enum": [
+        "BuildAndInstallVsix",
+        "BuildAndroidPackage",
+        "BuildDesktopDeb",
+        "BuildDesktopMsix",
+        "BumpGitVersionPatch",
+        "CheckPackageVersions",
+        "CollectAndroidCrashArtifacts",
+        "DeployAll",
+        "DeployAndroid",
+        "DeployMcpTodoExtension",
+        "GenerateFdroidRepo",
+        "InstallMcpServerMcpTodoVsix",
+        "LaunchVsCodeExtension",
+        "ListVsix",
+        "PackageVsix",
+        "PackDirectorTool",
+        "PreparePagesArtifact",
+        "PublishWebZip",
+        "ReadVsix",
+        "StartWebUi",
+        "UpdateDirectorTool",
+        "UpdateDotnetTool",
+        "UpdateWebUiTool",
+        "VerifyFdroidRepo",
+        "VersionInfo"
+      ]
+    },
+    "Verbosity": {
+      "type": "string",
+      "description": "",
+      "enum": [
+        "Verbose",
+        "Normal",
+        "Minimal",
+        "Quiet"
+      ]
+    },
+    "NukeBuild": {
+      "properties": {
+        "Continue": {
+          "type": "boolean",
+          "description": "Indicates to continue a previously failed build attempt"
+        },
+        "Help": {
+          "type": "boolean",
+          "description": "Shows the help text for this build assembly"
+        },
+        "Host": {
+          "description": "Host for execution. Default is 'automatic'",
+          "$ref": "#/definitions/Host"
+        },
+        "NoLogo": {
+          "type": "boolean",
+          "description": "Disables displaying the NUKE logo"
+        },
+        "Partition": {
+          "type": "string",
+          "description": "Partition to use on CI"
+        },
+        "Plan": {
+          "type": "boolean",
+          "description": "Shows the execution plan (HTML)"
+        },
+        "Profile": {
+          "type": "array",
+          "description": "Defines the profiles to load",
+          "items": {
+            "type": "string"
+          }
+        },
+        "Root": {
+          "type": "string",
+          "description": "Root directory during build execution"
+        },
+        "Skip": {
+          "type": "array",
+          "description": "List of targets to be skipped. Empty list skips all dependencies",
+          "items": {
+            "$ref": "#/definitions/ExecutableTarget"
+          }
+        },
+        "Target": {
+          "type": "array",
+          "description": "List of targets to be invoked. Default is '{default_target}'",
+          "items": {
+            "$ref": "#/definitions/ExecutableTarget"
+          }
+        },
+        "Verbosity": {
+          "description": "Logging verbosity during build execution. Default is 'Normal'",
+          "$ref": "#/definitions/Verbosity"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "AndroidEmulatorSerial": {
+          "type": "string"
+        },
+        "AndroidPhoneSerial": {
+          "type": "string"
+        },
+        "Clean": {
+          "type": "boolean"
+        },
+        "Configuration": {
+          "type": "string"
+        },
+        "DeploySelection": {
+          "type": "string"
+        },
+        "DeviceSerial": {
+          "type": "string"
+        },
+        "ExpectedRepoUrl": {
+          "type": "string"
+        },
+        "ExpectedVersion": {
+          "type": "string"
+        },
+        "ExtensionDevelopmentPath": {
+          "type": "string"
+        },
+        "ExtensionsDir": {
+          "type": "string"
+        },
+        "Force": {
+          "type": "boolean"
+        },
+        "IncludeBugreport": {
+          "type": "boolean"
+        },
+        "IncludeCursor": {
+          "type": "boolean"
+        },
+        "IncludeVsCode": {
+          "type": "boolean"
+        },
+        "Install": {
+          "type": "boolean"
+        },
+        "InstallDir": {
+          "type": "string"
+        },
+        "JsonOutputPath": {
+          "type": "string"
+        },
+        "KillExisting": {
+          "type": "boolean"
+        },
+        "NoBuild": {
+          "type": "boolean"
+        },
+        "NoCert": {
+          "type": "boolean"
+        },
+        "NupkgDir": {
+          "type": "string"
+        },
+        "OutputDir": {
+          "type": "string"
+        },
+        "OutputRoot": {
+          "type": "string"
+        },
+        "PackageName": {
+          "type": "string"
+        },
+        "PackageVersion": {
+          "type": "string"
+        },
+        "Phase": {
+          "type": "string"
+        },
+        "Port": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ProjectPath": {
+          "type": "string"
+        },
+        "Rid": {
+          "type": "string"
+        },
+        "SkipInstall": {
+          "type": "boolean"
+        },
+        "SkipProcessStop": {
+          "type": "boolean"
+        },
+        "SkipVersionBump": {
+          "type": "boolean"
+        },
+        "TimeoutSeconds": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "ToolCommand": {
+          "type": "string"
+        },
+        "ToolId": {
+          "type": "string"
+        },
+        "VsCodePath": {
+          "type": "string"
+        },
+        "VsixEntry": {
+          "type": "string"
+        },
+        "VsixPath": {
+          "type": "string"
+        },
+        "WhatIf": {
+          "type": "boolean"
+        },
+        "WorkspaceFolder": {
+          "type": "string"
+        },
+        "WslDistro": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "$ref": "#/definitions/NukeBuild"
+    }
+  ]
+}

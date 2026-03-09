@@ -28,3 +28,9 @@ AGENTS-README-FIRST.yaml
 *.log
 /clip
 /update_log.ps1
+
+.mcpServer/
+.nuke/temp/
+scripts/__pycache__/
+testResults.xml
+.vscode/mcp.json

@@ -1,8 +1,3 @@
-/**
- * Launches VS Code with an extension development path and workspace.
- * Usage: node launch-vscode-extension.js <workspaceFolder> <extensionDevelopmentPath>
- * Used by launch config "McpServer MCP Todo (Launch in VS Code)" so the Run dropdown opens VS Code.
- */
 const path = require('path');
 const { spawn } = require('child_process');
 
@@ -13,10 +8,30 @@ if (!workspace || !extPath) {
   process.exit(1);
 }
 
+const repoRoot = path.resolve(__dirname, '..');
 const codeExe = process.env.VSCODE_PATH ||
   path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Microsoft VS Code', 'Code.exe');
 
-const child = spawn(codeExe, ['--extensionDevelopmentPath=' + extPath, workspace], {
+const args = [
+  'run',
+  '--project',
+  path.join(repoRoot, 'build', 'Build.csproj'),
+  '--',
+  '--root',
+  repoRoot,
+  '--target',
+  'LaunchVsCodeExtension',
+  '--workspace-folder',
+  workspace,
+  '--extension-development-path',
+  extPath,
+];
+
+if (codeExe) {
+  args.push('--vs-code-path', codeExe);
+}
+
+const child = spawn('dotnet', args, {
   stdio: 'inherit',
   detached: true,
   shell: false,

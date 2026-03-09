@@ -1,17 +1,5 @@
 #Requires -Version 7.0
-<#
-.SYNOPSIS
-  Build an MSIX package for McpServerManager Desktop using MsixTools.
-.PARAMETER Configuration  Build configuration: Release (default) or Debug.
-.PARAMETER NoBuild        Skip dotnet publish; use existing publish output.
-.PARAMETER Clean          Delete bin/ and obj/ before publishing.
-.PARAMETER Force          Skip AppxManifest review pause.
-.PARAMETER Install        Install the MSIX after packaging. Requires Administrator.
-.PARAMETER NoCert         Skip signing.
-.PARAMETER Version        Override SemVer version string.
-#>
-
-[CmdletBinding()]
+[CmdletBinding(PositionalBinding = $false, SupportsShouldProcess)]
 param(
     [ValidateSet('Debug', 'Release')]
     [string] $Configuration = 'Release',
@@ -23,27 +11,23 @@ param(
     [string] $Version = ''
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$WorkspaceRoot = Convert-Path (Split-Path $PSScriptRoot -Parent)
+$ProgressPreference = 'SilentlyContinue'
 
-$ModulePath = Join-Path $PSScriptRoot 'MsixTools\MsixTools.psd1'
-if (-not (Test-Path $ModulePath)) {
-    Write-Error "MsixTools not found at $ModulePath. Run: git submodule update --init"
+$nukeArgs = [System.Collections.Generic.List[string]]::new()
+$nukeArgs.Add('--configuration')
+$nukeArgs.Add($Configuration)
+if ($NoBuild) { $nukeArgs.Add('--no-build') }
+if ($Clean) { $nukeArgs.Add('--clean') }
+if ($Force) { $nukeArgs.Add('--force') }
+if ($Install) { $nukeArgs.Add('--install') }
+if ($NoCert) { $nukeArgs.Add('--no-cert') }
+if (-not [string]::IsNullOrWhiteSpace($Version)) {
+    $nukeArgs.Add('--package-version')
+    $nukeArgs.Add($Version)
 }
-Import-Module $ModulePath -Force
+if ($WhatIfPreference) { $nukeArgs.Add('--what-if') }
 
-$params = @{
-    WorkspaceRoot  = $WorkspaceRoot
-    ConfigPath     = Join-Path $WorkspaceRoot 'msix.yml'
-    Configuration  = $Configuration
-    SelfContained  = $true
-    ExcludeService = $true
-    Clean          = $Clean
-    NoBuild        = $NoBuild
-    Force          = $Force
-    Install        = $Install
-}
-if (-not $NoCert) { $params['DevCert'] = $true }
-if ($Version)     { $params['Version'] = $Version }
-
-New-MsixPackage @params
+& (Join-Path $PSScriptRoot 'Invoke-Nuke.ps1') -Target 'BuildDesktopMsix' @nukeArgs
+exit $LASTEXITCODE
