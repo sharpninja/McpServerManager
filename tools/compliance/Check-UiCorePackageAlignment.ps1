@@ -85,6 +85,11 @@ function Assert-PackageVersion {
 
     $fullPath = Resolve-RepoPath -RelativePath $ProjectRelativePath
     if (-not $fullPath -or -not (Test-Path -LiteralPath $fullPath)) {
+        if ($ProjectRelativePath -like "lib/McpServer/Directory.Packages.props") {
+            Write-Host "Skipping package version check for $ProjectRelativePath because this repository checkout does not include the legacy submodule."
+            return
+        }
+
         Add-Finding -Rule $Rule -File $ProjectRelativePath -Message "Required file not found."
         return
     }
