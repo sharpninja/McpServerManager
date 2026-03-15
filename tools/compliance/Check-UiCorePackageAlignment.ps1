@@ -1,5 +1,5 @@
 param(
-    [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\\..")).Path
+    [string]$RepoRoot = (Resolve-Path (Join-Path (Join-Path $PSScriptRoot "..") "..")).Path
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,7 +22,29 @@ function Add-Finding {
             Rule = $Rule
             File = $File
             Message = $Message
-        })
+    })
+}
+
+function Resolve-RepoPath {
+    param([string]$RelativePath)
+
+    $normalized = $RelativePath -replace '[\\/]', [IO.Path]::DirectorySeparatorChar
+    $candidate = Join-Path $RepoRoot $normalized
+
+    if (Test-Path -LiteralPath $candidate) {
+        return (Resolve-Path -LiteralPath $candidate).Path
+    }
+
+    # Compatibility fallback for legacy and alternate layouts.
+    if ($RelativePath -like "lib/McpServer/*") {
+        $altRelative = $RelativePath -replace '^lib[\\/]', ''
+        $altCandidate = Join-Path $RepoRoot $altRelative
+        if (Test-Path -LiteralPath $altCandidate) {
+            return (Resolve-Path -LiteralPath $altCandidate).Path
+        }
+    }
+
+    return $null
 }
 
 function Get-XmlPackageVersion {
@@ -61,8 +83,8 @@ function Assert-PackageVersion {
         [string]$ExpectedVersion
     )
 
-    $fullPath = Join-Path $RepoRoot $ProjectRelativePath
-    if (-not (Test-Path -LiteralPath $fullPath)) {
+    $fullPath = Resolve-RepoPath -RelativePath $ProjectRelativePath
+    if (-not $fullPath -or -not (Test-Path -LiteralPath $fullPath)) {
         Add-Finding -Rule $Rule -File $ProjectRelativePath -Message "Required file not found."
         return
     }
