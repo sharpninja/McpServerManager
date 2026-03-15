@@ -17,7 +17,31 @@ function Add-Finding {
             Rule = $Rule
             File = $File
             Message = $Message
-        })
+    })
+}
+
+function Resolve-RepoPath {
+    param([string]$RelativePath)
+
+    $candidates = [System.Collections.Generic.List[string]]::new()
+    $candidates.Add($RelativePath)
+
+    if ($RelativePath -match '^src[\\/](.+)$') {
+        $candidates.Add("lib/McpServer/src/$($matches[1])")
+    }
+
+    if ($RelativePath -match '^lib[\\/]McpServer[\\/]src[\\/](.+)$') {
+        $candidates.Add("src/$($matches[1])")
+    }
+
+    foreach ($candidate in $candidates | Select-Object -Unique) {
+        $path = Join-Path $RepoRoot $candidate
+        if (Test-Path -LiteralPath $path) {
+            return $path
+        }
+    }
+
+    return Join-Path $RepoRoot $RelativePath
 }
 
 function Assert-ContainsPattern {
@@ -28,7 +52,7 @@ function Assert-ContainsPattern {
         [string]$MissingMessage
     )
 
-    $fullPath = Join-Path $RepoRoot $RelativePath
+    $fullPath = Resolve-RepoPath $RelativePath
     if (-not (Test-Path -LiteralPath $fullPath)) {
         Add-Finding -Rule $Rule -File $RelativePath -Message "Required file not found."
         return
@@ -42,8 +66,8 @@ function Assert-ContainsPattern {
 
 Assert-ContainsPattern `
     -Rule "THR001" `
-    -RelativePath "src/McpServerManager.Core/Services/UiCoreServiceProviderFactory.cs" `
-    -Pattern "AddSingleton<(?:McpServer\.UI\.Core\.Services\.)?IUiDispatcherService>\s*\(\s*_\s*=>\s*new\s+AvaloniaUiDispatcherService\(\)\s*\)" `
+    -RelativePath "src/McpServerManager.Core/ServiceCollectionExtensions.cs" `
+    -Pattern "AddSingleton<(?:(?:McpServer\.UI\.Core\.Services\.)?IUiDispatcherService|IUiDispatcherService)>\s*\([^)]*\bnew\s+AvaloniaUiDispatcherService\s*\(\s*\)\s*\)" `
     -MissingMessage "Host UI.Core service provider must register AvaloniaUiDispatcherService to preserve UI-thread execution."
 
 Assert-ContainsPattern `
@@ -60,7 +84,7 @@ Assert-ContainsPattern `
 
 Assert-ContainsPattern `
     -Rule "THR004" `
-    -RelativePath "lib/McpServer/src/McpServer.UI.Core/Commands/InvokeUiActionCommand.cs" `
+    -RelativePath "src/McpServer.UI.Core/Commands/InvokeUiActionCommand.cs" `
     -Pattern "Dispatcher\.UIThread\.InvokeAsync\(" `
     -MissingMessage "UI.Core InvokeUiAction handler must marshal command delegates via Dispatcher.UIThread.InvokeAsync()."
 

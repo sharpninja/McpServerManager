@@ -17,7 +17,31 @@ function Add-Finding {
             Rule = $Rule
             File = $File
             Message = $Message
-        })
+    })
+}
+
+function Resolve-RepoPath {
+    param([string]$RelativePath)
+
+    $candidates = [System.Collections.Generic.List[string]]::new()
+    $candidates.Add($RelativePath)
+
+    if ($RelativePath -match '^src[\\/](.+)$') {
+        $candidates.Add("lib/McpServer/src/$($matches[1])")
+    }
+
+    if ($RelativePath -match '^lib[\\/]McpServer[\\/]src[\\/](.+)$') {
+        $candidates.Add("src/$($matches[1])")
+    }
+
+    foreach ($candidate in $candidates | Select-Object -Unique) {
+        $path = Join-Path $RepoRoot $candidate
+        if (Test-Path -LiteralPath $path) {
+            return $path
+        }
+    }
+
+    return Join-Path $RepoRoot $RelativePath
 }
 
 function Assert-NoRegexMatches {
@@ -29,7 +53,7 @@ function Assert-NoRegexMatches {
         [string]$Message
     )
 
-    $fullPath = Join-Path $RepoRoot $RelativePath
+    $fullPath = Resolve-RepoPath $RelativePath
     if (-not (Test-Path -LiteralPath $fullPath)) {
         Add-Finding -Rule $Rule -File $RelativePath -Message "Required path not found."
         return
@@ -53,11 +77,11 @@ else {
         $inventoryJson = & $inventoryScript -RepoRoot $RepoRoot
         $inventory = $inventoryJson | ConvertFrom-Json
         if ($inventory.HostIsolation.DirectorLocalViewModelCount -ne 0) {
-            Add-Finding -Rule "RSD001" -File "lib/McpServer/src/McpServer.Director" -Message "Legacy Director-local ViewModel declarations remain."
+            Add-Finding -Rule "RSD001" -File "src/McpServer.Director" -Message "Legacy Director-local ViewModel declarations remain."
         }
 
         if ($inventory.HostIsolation.WebLocalViewModelCount -ne 0) {
-            Add-Finding -Rule "RSD001" -File "lib/McpServer/src/McpServer.Web" -Message "Legacy Web-local ViewModel declarations remain."
+            Add-Finding -Rule "RSD001" -File "src/McpServer.Web" -Message "Legacy Web-local ViewModel declarations remain."
         }
     }
     catch {
@@ -72,9 +96,9 @@ if (Test-Path -LiteralPath $legacyShimPath) {
 
 Assert-NoRegexMatches `
     -Rule "RSD003" `
-    -RelativePath "src" `
+    -RelativePath "src/McpServerManager.Core" `
     -FileFilter "*.cs" `
-    -Pattern "McpServerManager\.Core\.Commands\.InvokeUiActionCommand|new\s+InvokeUiActionCommand\s*\(" `
+    -Pattern "McpServerManager\.Core\.Commands\.InvokeUiActionCommand|new\s+McpServerManager\.Core\.Commands\.InvokeUiActionCommand\s*\(" `
     -Message "Legacy host InvokeUiActionCommand references remain."
 
 Assert-NoRegexMatches `
@@ -93,7 +117,7 @@ Assert-NoRegexMatches `
 
 Assert-NoRegexMatches `
     -Rule "RSD006" `
-    -RelativePath "lib/McpServer/src/McpServer.UI.Core" `
+    -RelativePath "src/McpServer.UI.Core" `
     -FileFilter "*.cs" `
     -Pattern "ConfigureAwait\(false\)" `
     -Message "ConfigureAwait(false) is not allowed in McpServer.UI.Core migration scope."

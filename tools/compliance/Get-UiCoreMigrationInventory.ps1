@@ -10,6 +10,30 @@ function To-RelativePath {
     return [IO.Path]::GetRelativePath($RepoRoot, $Path).Replace("\", "/")
 }
 
+function Resolve-RepoPath {
+    param([string]$RelativePath)
+
+    $candidates = [System.Collections.Generic.List[string]]::new()
+    $candidates.Add($RelativePath)
+
+    if ($RelativePath -match '^src[\\/](.+)$') {
+        $candidates.Add("lib/McpServer/src/$($matches[1])")
+    }
+
+    if ($RelativePath -match '^lib[\\/]McpServer[\\/]src[\\/](.+)$') {
+        $candidates.Add("src/$($matches[1])")
+    }
+
+    foreach ($candidate in $candidates | Select-Object -Unique) {
+        $path = Join-Path $RepoRoot $candidate
+        if (Test-Path -LiteralPath $path) {
+            return $path
+        }
+    }
+
+    return Join-Path $RepoRoot $RelativePath
+}
+
 function New-List {
     New-Object 'System.Collections.Generic.List[object]'
 }
@@ -59,7 +83,7 @@ function Get-CqrsSymbols {
 function Get-HostWrapperInventory {
     param([string]$RelativePath)
 
-    $path = Join-Path $RepoRoot $RelativePath
+    $path = Resolve-RepoPath $RelativePath
     $wrappers = New-List
     if (-not (Test-Path -LiteralPath $path)) {
         return $wrappers.ToArray()
@@ -102,7 +126,7 @@ function Get-HostWrapperInventory {
 function Get-LocalViewModelDeclarations {
     param([string]$RelativePath)
 
-    $path = Join-Path $RepoRoot $RelativePath
+    $path = Resolve-RepoPath $RelativePath
     $declarations = New-List
     if (-not (Test-Path -LiteralPath $path)) {
         return $declarations.ToArray()
@@ -122,15 +146,17 @@ function Get-LocalViewModelDeclarations {
 $managerCommandFiles = @(
     Get-ChildItem -LiteralPath (Join-Path $RepoRoot "src/McpServerManager.Core/Commands") -Filter "*.cs" -File
 )
-$uiCoreMessageFiles = @(
-    Get-ChildItem -LiteralPath (Join-Path $RepoRoot "lib/McpServer/src/McpServer.UI.Core/Messages") -Filter "*.cs" -File
-)
+$uiCoreMessagePath = Resolve-RepoPath "src/McpServer.UI.Core/Messages"
+$uiCoreMessageFiles = @()
+if (Test-Path -LiteralPath $uiCoreMessagePath) {
+    $uiCoreMessageFiles = Get-ChildItem -LiteralPath $uiCoreMessagePath -Filter "*.cs" -File
+}
 
 $managerSymbols = Get-CqrsSymbols -Files $managerCommandFiles
 $uiCoreSymbols = Get-CqrsSymbols -Files $uiCoreMessageFiles
 $hostWrappers = Get-HostWrapperInventory -RelativePath "src/McpServerManager.Core/ViewModels"
-$directorLocal = Get-LocalViewModelDeclarations -RelativePath "lib/McpServer/src/McpServer.Director"
-$webLocal = Get-LocalViewModelDeclarations -RelativePath "lib/McpServer/src/McpServer.Web"
+$directorLocal = Get-LocalViewModelDeclarations -RelativePath "src/McpServer.Director"
+$webLocal = Get-LocalViewModelDeclarations -RelativePath "src/McpServer.Web"
 
 $inventory = [pscustomobject]@{
     GeneratedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
