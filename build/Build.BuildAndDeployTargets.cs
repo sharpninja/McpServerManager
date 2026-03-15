@@ -221,7 +221,14 @@ partial class Build
             File.Delete(nupkgPath);
         }
 
-        InvokeProcess("nuget", new List<string> { "pack", nuspecPath, "-OutputDirectory", outputDirectory, "-NoPackageAnalysis" }, RepoRootPath, true);
+        if (CommandExists("nuget"))
+        {
+            InvokeProcess("nuget", new List<string> { "pack", nuspecPath, "-OutputDirectory", outputDirectory, "-NoPackageAnalysis" }, RepoRootPath, true);
+        }
+        else
+        {
+            InvokeDotNet(new List<string> { "nuget", "pack", nuspecPath, "-OutputDirectory", outputDirectory, "-NoPackageAnalysis" }, RepoRootPath, true);
+        }
 
         if (installAfterPack)
         {
@@ -559,9 +566,9 @@ partial class Build
                 return CreateDeploymentResult("Director", "Skipped", "dotnet was not found in PATH.");
             }
 
-            if (!CommandExists("nuget"))
+            if (!CommandExists("nuget") && !CommandExists("dotnet"))
             {
-                return CreateDeploymentResult("Director", "Skipped", "nuget was not found in PATH.");
+                return CreateDeploymentResult("Director", "Skipped", "nuget or dotnet nuget was not found in PATH.");
             }
 
             var nupkgPath = ExecuteDotnetToolPipeline(
@@ -590,9 +597,9 @@ partial class Build
                 return CreateDeploymentResult("WebUi", "Skipped", "dotnet was not found in PATH.");
             }
 
-            if (!CommandExists("nuget"))
+            if (!CommandExists("nuget") && !CommandExists("dotnet"))
             {
-                return CreateDeploymentResult("WebUi", "Skipped", "nuget was not found in PATH.");
+                return CreateDeploymentResult("WebUi", "Skipped", "nuget or dotnet nuget was not found in PATH.");
             }
 
             var nupkgPath = ExecuteDotnetToolPipeline(
