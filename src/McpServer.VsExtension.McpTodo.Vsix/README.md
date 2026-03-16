@@ -1,20 +1,19 @@
 # McpServer MCP Todo – Visual Studio extension (VSIX)
 
-This is the **Visual Studio VSIX project** for the MCP Todo tool window. It uses the legacy (non-SDK) project format so that building in **Visual Studio** produces a valid VSIX.
+This is the **Visual Studio VSIX project** for the MCP Todo tool window. It is built with the SDK-style project in this folder, while the repo-level packaging flow assembles the final `.vsix`.
 
 ## Building
 
-**Recommended: build in Visual Studio**
+**Build from the repo root**
 
-1. Open `FunWasHad.sln` in Visual Studio 2022.
-2. Set configuration to **Debug** or **Release**.
-3. Build the project **McpServer.VsExtension.McpTodo.Vsix** (or build the solution).
-4. The VSIX is produced at `bin\Debug\McpServer.VsExtension.McpTodo.vsix` or `bin\Release\...`.
-5. Double-click the `.vsix` to install, or use **Extensions > Manage Extensions** to install from disk.
+1. Run `.\build.ps1 BuildAndInstallVsix --skip-install` from the repo root to build and package the VSIX without launching the installer.
+2. The packaged VSIX is written to `bin\Release\net9.0-windows\win\McpServer.VsExtension.McpTodo.vsix`.
+3. Omit `--skip-install` if you want the packaging flow to launch the VSIX installer after the package is created.
 
 **From command line**
 
-- Run `.\scripts\Build-AndInstall-Vsix.ps1` from the repo root (uses MSBuild; may require a first build from Visual Studio so that NuGet restore generates the VSSDK targets).
+- Run `dotnet build src\McpServer.VsExtension.McpTodo.Vsix\McpServer.VsExtension.McpTodo.Vsix.csproj -c Release` to compile the assembly-only output.
+- Use `.\build.ps1 BuildAndInstallVsix --skip-install` when you need the final `.vsix` package.
 
 ## After installing
 

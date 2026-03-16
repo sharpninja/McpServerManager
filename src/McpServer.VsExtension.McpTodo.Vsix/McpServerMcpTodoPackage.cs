@@ -76,7 +76,7 @@ public sealed class McpServerMcpTodoPackage : AsyncPackage, IVsSolutionEvents
 
         if (_todoEnabled) return;
 
-        var client = new McpTodoClient();
+        var client = new McpTodoClient(solutionDir: solutionDir);
         var serverWasStarted = await client.EnsureServerRunningAsync(solutionDir, cancellationToken).ConfigureAwait(true);
 
         if (TodoEditorService.Instance == null)

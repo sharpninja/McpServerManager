@@ -34,3 +34,5 @@ AGENTS-README-FIRST.yaml
 scripts/__pycache__/
 testResults.xml
 .vscode/mcp.json
+/logs/web-ui-startup
+/TestResults/run-all-tests

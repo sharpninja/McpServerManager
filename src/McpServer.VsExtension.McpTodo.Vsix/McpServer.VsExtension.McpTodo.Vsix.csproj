@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0-windows</TargetFramework>
@@ -29,6 +29,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\McpServer.UI.Core\McpServer.UI.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="McpServer.VsExtension.McpTodo.vsct" />
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
@@ -46,12 +50,7 @@
   <!-- Include transitive NuGet runtime dependencies in VSIX (System.Text.Json requires these on net472) -->
   <Target Name="IncludeTransitiveDepsInVsix" BeforeTargets="GetVsixSourceItems">
     <ItemGroup>
-      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)"
-                      Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'
-                                  AND '%(ReferenceCopyLocalPaths.NuGetPackageId)' != ''
-                                  AND '%(ReferenceCopyLocalPaths.NuGetPackageId)' != 'Microsoft.VSSDK.BuildTools'
-                                  AND !$([System.String]::Copy('%(ReferenceCopyLocalPaths.NuGetPackageId)').StartsWith('Microsoft.VisualStudio.'))
-                                  AND '%(ReferenceCopyLocalPaths.FileName)' != 'Newtonsoft.Json'">
+      <VSIXSourceItem Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'&#xD;&#xA;                                  AND '%(ReferenceCopyLocalPaths.NuGetPackageId)' != ''&#xD;&#xA;                                  AND '%(ReferenceCopyLocalPaths.NuGetPackageId)' != 'Microsoft.VSSDK.BuildTools'&#xD;&#xA;                                  AND !$([System.String]::Copy('%(ReferenceCopyLocalPaths.NuGetPackageId)').StartsWith('Microsoft.VisualStudio.'))&#xD;&#xA;                                  AND '%(ReferenceCopyLocalPaths.FileName)' != 'Newtonsoft.Json'">
         <VSIXSubPath></VSIXSubPath>
       </VSIXSourceItem>
     </ItemGroup>
@@ -60,17 +59,13 @@
   <!-- Embed the VSCT-compiled .cto as a managed resource -->
   <Target Name="EmbedCtoResource" AfterTargets="MergeCtoResource" BeforeTargets="CoreCompile">
     <ItemGroup>
-      <EmbeddedResource Include="$(IntermediateOutputPath)$(AssemblyName).cto"
-                        LogicalName="Menus.ctmenu"
-                        WithCulture="false"
-                        Type="Non-Resx"
-                        Condition="Exists('$(IntermediateOutputPath)$(AssemblyName).cto')" />
+      <EmbeddedResource Include="$(IntermediateOutputPath)$(AssemblyName).cto" LogicalName="Menus.ctmenu" WithCulture="false" Type="Non-Resx" Condition="Exists('$(IntermediateOutputPath)$(AssemblyName).cto')" />
     </ItemGroup>
   </Target>
 
   <!-- Inject CodeBase into pkgdef -->
   <Target Name="InjectCodeBase" AfterTargets="Build" Condition="Exists('$(OutputPath)$(TargetName).pkgdef')">
-    <Exec Command='pwsh -NoProfile -File "$(MSBuildProjectDirectory)/InjectCodeBase.ps1" -PkgdefPath "$(OutputPath)$(TargetName).pkgdef" -DllName "$(TargetFileName)"' />
+    <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)/InjectCodeBase.ps1&quot; -PkgdefPath &quot;$(OutputPath)$(TargetName).pkgdef&quot; -DllName &quot;$(TargetFileName)&quot;" />
   </Target>
 
 </Project>

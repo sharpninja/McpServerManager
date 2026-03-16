@@ -26,18 +26,17 @@ public sealed class InvokeUiActionCommand : ICommand<bool>
     public Func<Task> Action { get; }
 }
 
-public sealed class InvokeUiActionHandler : ICommandHandler<InvokeUiActionCommand, bool>
+public sealed class InvokeUiActionHandler(Services.IUiDispatcherService uiDispatcher) : ICommandHandler<InvokeUiActionCommand, bool>
 {
     public async Task<Result<bool>> HandleAsync(InvokeUiActionCommand command, CallContext context)
     {
-        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+        if (uiDispatcher.CheckAccess())
         {
             await command.Action().ConfigureAwait(true);
             return Result<bool>.Success(true);
         }
 
-        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
-            await command.Action().ConfigureAwait(true)).ConfigureAwait(true);
+        await uiDispatcher.InvokeAsync(command.Action).ConfigureAwait(true);
         return Result<bool>.Success(true);
     }
 }

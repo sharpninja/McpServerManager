@@ -1,0 +1,45 @@
+using System;
+using System.Threading.Tasks;
+using System.Windows;
+using McpServer.UI.Core.Services;
+
+namespace McpServer.VsExtension.McpTodo;
+
+internal sealed class VsixUiDispatcherService : StrategyUiDispatcherService
+{
+    public VsixUiDispatcherService()
+        : base(new WpfUiDispatchStrategy())
+    {
+    }
+}
+
+internal sealed class WpfUiDispatchStrategy : IUiDispatchStrategy
+{
+    private static System.Windows.Threading.Dispatcher CurrentDispatcher
+        => Application.Current?.Dispatcher ?? System.Windows.Threading.Dispatcher.CurrentDispatcher;
+
+    public bool CheckAccess() => CurrentDispatcher.CheckAccess();
+
+    public Task InvokeAsync(Func<Task> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (CurrentDispatcher.CheckAccess())
+            return action();
+
+        return CurrentDispatcher.InvokeAsync(action).Task.Unwrap();
+    }
+
+    public void Post(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (CurrentDispatcher.CheckAccess())
+        {
+            action();
+            return;
+        }
+
+        CurrentDispatcher.BeginInvoke(action);
+    }
+}

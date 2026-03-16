@@ -113,7 +113,7 @@ public partial class TodoListHostViewModel : ViewModelBase
 
     protected async Task LoadTodosAsync() => await LoadTodosCoreAsync(forceEditorReload: false);
 
-    protected async Task RefreshAsync() => await LoadTodosCoreAsync(forceEditorReload: true);
+    protected virtual async Task RefreshAsync() => await LoadTodosCoreAsync(forceEditorReload: true);
 
     protected void ClearFilters()
     {
@@ -226,13 +226,13 @@ public partial class TodoListHostViewModel : ViewModelBase
         }
     }
 
-    protected void StopAction()
+    protected virtual void StopAction()
     {
         _activeCts?.Cancel();
         StatusText = "Stopped";
     }
 
-    protected void NewTodo()
+    protected virtual void NewTodo()
     {
         EditorText = TodoMarkdown.BlankTemplate();
         EditorTitle = "NEW-TODO";
@@ -285,7 +285,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         }
     }
 
-    protected async Task OpenSelectedTodoAsync()
+    protected virtual async Task OpenSelectedTodoAsync()
     {
         if (SelectedEntry?.Item is not { } item)
             return;
@@ -388,7 +388,7 @@ public partial class TodoListHostViewModel : ViewModelBase
 
     protected void OpenAiChat() => OpenAiChatRequested?.Invoke(this, EventArgs.Empty);
 
-    public async Task CopilotStatusAsync()
+    public virtual async Task CopilotStatusAsync()
     {
         if (SelectedEntry?.Item is not { } item)
             return;
@@ -397,7 +397,7 @@ public partial class TodoListHostViewModel : ViewModelBase
             static (vm, ct) => vm.GenerateStatusPromptAsync(ct));
     }
 
-    public async Task CopilotPlanAsync()
+    public virtual async Task CopilotPlanAsync()
     {
         if (SelectedEntry?.Item is not { } item)
             return;
@@ -406,7 +406,7 @@ public partial class TodoListHostViewModel : ViewModelBase
             static (vm, ct) => vm.GeneratePlanPromptAsync(ct));
     }
 
-    public async Task CopilotImplementAsync()
+    public virtual async Task CopilotImplementAsync()
     {
         if (SelectedEntry?.Item is not { } item)
             return;

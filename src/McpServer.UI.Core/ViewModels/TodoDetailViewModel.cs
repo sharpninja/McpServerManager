@@ -148,6 +148,18 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
     [ObservableProperty]
     private string? _streamingPromptText;
 
+    /// <summary>
+    /// Error message from the last prompt-generation operation.
+    /// Kept separate from <see cref="AreaDetailViewModelBase{TDetail}.ErrorMessage"/> so that a prompt failure
+    /// does not collapse the detail panel in the Web UI.
+    /// </summary>
+    [ObservableProperty]
+    private string? _promptErrorMessage;
+
+    /// <summary>Whether a prompt-generation operation is currently running.</summary>
+    [ObservableProperty]
+    private bool _isPromptBusy;
+
     /// <summary>Timestamp of the last heartbeat from the active operation.</summary>
     [ObservableProperty]
     private DateTimeOffset? _lastHeartbeatUtc;
@@ -230,6 +242,8 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         EditorMarkdownText = null;
         RequirementsAnalysis = null;
         PromptOutput = null;
+        PromptErrorMessage = null;
+        IsPromptBusy = false;
         IsDirty = true;
         StatusMessage = "New TODO draft.";
     }
@@ -241,6 +255,9 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         IsBusy = true;
         ErrorMessage = null;
         MutationMessage = null;
+        PromptOutput = null;
+        PromptErrorMessage = null;
+        IsPromptBusy = false;
         StatusMessage = "Loading TODO detail...";
 
         try
@@ -429,7 +446,8 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
     private async Task RunPromptAsync(CqrsQueryCommand<TodoPromptOutput> command, string busyMessage, CancellationToken ct)
     {
         IsBusy = true;
-        ErrorMessage = null;
+        IsPromptBusy = true;
+        PromptErrorMessage = null;
         StatusMessage = busyMessage;
 
         try
@@ -437,7 +455,7 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
             var result = await command.DispatchAsync(ct).ConfigureAwait(true);
             if (!result.IsSuccess)
             {
-                ErrorMessage = result.Error ?? "TODO prompt generation failed.";
+                PromptErrorMessage = result.Error ?? "TODO prompt generation failed.";
                 StatusMessage = "TODO prompt generation failed.";
                 return;
             }
@@ -451,11 +469,12 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         catch (Exception ex)
         {
             _logger.LogError("{ExceptionDetail}", ex.ToString());
-            ErrorMessage = ex.Message;
+            PromptErrorMessage = ex.Message;
             StatusMessage = "TODO prompt generation failed.";
         }
         finally
         {
+            IsPromptBusy = false;
             IsBusy = false;
         }
     }

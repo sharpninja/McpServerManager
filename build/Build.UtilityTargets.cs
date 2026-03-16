@@ -102,11 +102,119 @@ partial class Build
         throw new FileNotFoundException("Could not locate devenv.exe. Set DEVENV_PATH or install Visual Studio.");
     }
 
+    private string GetVsixProjectDirectory()
+    {
+        return Path.Combine(RepoRootPath, "src", "McpServer.VsExtension.McpTodo.Vsix");
+    }
+
+    private string GetVsixProjectPath()
+    {
+        return Path.Combine(GetVsixProjectDirectory(), "McpServer.VsExtension.McpTodo.Vsix.csproj");
+    }
+
+    private string ResolveVsixBuildRelativePath()
+    {
+        var projectDocument = XDocument.Load(GetVsixProjectPath());
+        var targetFramework = projectDocument
+            .Descendants()
+            .FirstOrDefault(element => element.Name.LocalName == "TargetFramework")
+            ?.Value
+            .Trim();
+
+        if (string.IsNullOrWhiteSpace(targetFramework))
+        {
+            var targetFrameworks = projectDocument
+                .Descendants()
+                .FirstOrDefault(element => element.Name.LocalName == "TargetFrameworks")
+                ?.Value;
+            targetFramework = targetFrameworks?
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault();
+        }
+
+        if (string.IsNullOrWhiteSpace(targetFramework))
+        {
+            throw new InvalidOperationException($"Could not determine TargetFramework from {GetVsixProjectPath()}");
+        }
+
+        var runtimeIdentifier = projectDocument
+            .Descendants()
+            .FirstOrDefault(element => element.Name.LocalName == "RuntimeIdentifier")
+            ?.Value
+            .Trim();
+
+        return string.IsNullOrWhiteSpace(runtimeIdentifier)
+            ? targetFramework
+            : Path.Combine(targetFramework, runtimeIdentifier);
+    }
+
+    private string ResolveVsixOutputDirectory()
+    {
+        return Path.Combine(GetVsixProjectDirectory(), "bin", Configuration, ResolveVsixBuildRelativePath());
+    }
+
+    private string ResolveVsixObjectDirectory()
+    {
+        return Path.Combine(GetVsixProjectDirectory(), "obj", Configuration, ResolveVsixBuildRelativePath());
+    }
+
+    private void WriteVsixPkgDefFile(string pkgDefPath, string dllFileName)
+    {
+        // CreatePkgDef.exe cannot reflect the VSIX assembly after the project moved to net9.0-windows,
+        // so keep emitting the same registration shape the extension already uses in Visual Studio.
+        const string packageGuid = "{e8f0a1b2-3c4d-4e5f-8a9b-0c1d2e3f4a5b}";
+        const string packageClass = "McpServer.VsExtension.McpTodo.McpServerMcpTodoPackage";
+        const string assemblyIdentity = "McpServer.VsExtension.McpTodo, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
+        const string solutionExistsContextGuid = "{f1536ef8-92ec-443c-9ed7-fdadf150da82}";
+        const string toolWindowGuid = "{a1b2c3d4-e5f6-7890-abcd-ef1234567890}";
+        const string toolWindowClass = "McpServer.VsExtension.McpTodo.McpServerMcpTodoToolWindowPane";
+        const string toolWindowHostGuid = "3ae79031-e1bc-11d0-8f78-00a0c9110057";
+
+        var lines = new[]
+        {
+            $"[$RootKey$\\Packages\\{packageGuid}]",
+            "@=\"McpServerMcpTodoPackage\"",
+            "\"InprocServer32\"=\"$WinDir$\\SYSTEM32\\MSCOREE.DLL\"",
+            $"\"Class\"=\"{packageClass}\"",
+            $"\"Assembly\"=\"{assemblyIdentity}\"",
+            "\"AllowsBackgroundLoad\"=dword:00000001",
+            $"[$RootKey$\\AutoLoadPackages\\{solutionExistsContextGuid}]",
+            $"\"{packageGuid}\"=dword:00000002",
+            "[$RootKey$\\Menus]",
+            $"\"{packageGuid}\"=\", Menus.ctmenu, 1\"",
+            $"[$RootKey$\\ToolWindows\\{toolWindowGuid}]",
+            $"@=\"{packageGuid}\"",
+            $"\"Name\"=\"{toolWindowClass}\"",
+            "\"Style\"=\"Tabbed\"",
+            $"\"Window\"=\"{toolWindowHostGuid}\"",
+            string.Empty
+        };
+
+        EnsureDirectoryExists(Path.GetDirectoryName(pkgDefPath)!);
+        File.WriteAllText(pkgDefPath, string.Join(Environment.NewLine, lines), Encoding.Unicode);
+
+        var injectCodeBasePath = Path.Combine(GetVsixProjectDirectory(), "InjectCodeBase.ps1");
+        InvokeProcess(
+            "pwsh",
+            new List<string>
+            {
+                "-NoProfile",
+                "-File",
+                injectCodeBasePath,
+                "-PkgdefPath",
+                pkgDefPath,
+                "-DllName",
+                dllFileName
+            },
+            RepoRootPath,
+            true);
+    }
+
     private void RunPackageVsixTarget()
     {
-        var extensionDirectory = Path.Combine(RepoRootPath, "src", "McpServer.VsExtension.McpTodo.Vsix");
-        var outputDirectory = Path.Combine(extensionDirectory, "bin", Configuration, "net472", "win");
-        var objectDirectory = Path.Combine(extensionDirectory, "obj", Configuration, "net472", "win");
+        var extensionDirectory = GetVsixProjectDirectory();
+        var outputDirectory = ResolveVsixOutputDirectory();
+        var objectDirectory = ResolveVsixObjectDirectory();
         var stagingDirectory = Path.Combine(objectDirectory, "vsixstaging");
         var vsixPath = Path.Combine(outputDirectory, "McpServer.VsExtension.McpTodo.vsix");
         var dllPath = Path.Combine(outputDirectory, "McpServer.VsExtension.McpTodo.dll");
@@ -123,29 +231,8 @@ partial class Build
             return;
         }
 
-        var nugetRoot = ResolveNuGetPackageRoot();
-        var vssdkPackageRoot = Path.Combine(nugetRoot, "microsoft.vssdk.buildtools");
-        if (!Directory.Exists(vssdkPackageRoot))
-        {
-            throw new DirectoryNotFoundException($"VSSDK build tools package directory not found at {vssdkPackageRoot}");
-        }
-
-        var vssdkVersionDirectory = Directory.GetDirectories(vssdkPackageRoot)
-            .OrderByDescending(path => path, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(vssdkVersionDirectory))
-        {
-            throw new DirectoryNotFoundException($"No VSSDK version directories found at {vssdkPackageRoot}");
-        }
-
-        var createPkgDefPath = Path.Combine(vssdkVersionDirectory, "tools", "vssdk", "bin", "CreatePkgDef.exe");
-        if (!File.Exists(createPkgDefPath))
-        {
-            throw new FileNotFoundException($"CreatePkgDef not found at {createPkgDefPath}");
-        }
-
         EnsureDirectoryExists(objectDirectory);
-        InvokeProcess(createPkgDefPath, new List<string> { $"/out={pkgDefPath}", dllPath }, RepoRootPath, true);
+        WriteVsixPkgDefFile(pkgDefPath, Path.GetFileName(dllPath));
 
         ClearDirectory(stagingDirectory);
         EnsureDirectoryExists(stagingDirectory);
@@ -249,7 +336,7 @@ partial class Build
 
     private void RunBuildAndInstallVsixTarget()
     {
-        var projectPath = Path.Combine(RepoRootPath, "src", "McpServer.VsExtension.McpTodo.Vsix", "McpServer.VsExtension.McpTodo.Vsix.csproj");
+        var projectPath = GetVsixProjectPath();
         if (!ShouldExecuteAction($"Build VSIX project {projectPath}"))
         {
             return;
@@ -258,7 +345,7 @@ partial class Build
         InvokeDotNet(new List<string> { "build", projectPath, "-c", Configuration }, RepoRootPath);
         RunPackageVsixTarget();
 
-        var vsixPath = Path.Combine(RepoRootPath, "src", "McpServer.VsExtension.McpTodo.Vsix", "bin", Configuration, "net472", "win", "McpServer.VsExtension.McpTodo.vsix");
+        var vsixPath = Path.Combine(ResolveVsixOutputDirectory(), "McpServer.VsExtension.McpTodo.vsix");
         if (!SkipInstall)
         {
             if (!ShouldExecuteAction($"Launch VSIX installer for {vsixPath}"))
@@ -402,7 +489,7 @@ partial class Build
     private void RunDeployMcpTodoExtensionTarget()
     {
         var targetInstallDirectory = ResolveVsixInstallDirectory();
-        var sourceDirectory = Path.Combine(RepoRootPath, "src", "McpServer.VsExtension.McpTodo.Vsix", "bin", Configuration, "net472", "win");
+        var sourceDirectory = ResolveVsixOutputDirectory();
         if (!Directory.Exists(sourceDirectory))
         {
             throw new DirectoryNotFoundException($"VSIX output directory not found: {sourceDirectory}");

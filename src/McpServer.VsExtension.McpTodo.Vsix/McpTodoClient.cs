@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using McpServer.VsExtension.McpTodo.Models;
@@ -13,6 +15,8 @@ namespace McpServer.VsExtension.McpTodo;
 public sealed class McpTodoClient
 {
     private readonly HttpClient _http;
+    private readonly string? _workspacePath;
+    private readonly string? _apiKey;
     private static readonly JsonSerializerOptions s_jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -22,11 +26,27 @@ public sealed class McpTodoClient
     public string BaseUrl { get; }
 
 
-    public McpTodoClient(string baseUrl = "http://localhost:7147")
+    public McpTodoClient(string baseUrl = "http://localhost:7147", string? solutionDir = null)
     {
-        BaseUrl = (baseUrl ?? "http://localhost:7147").TrimEnd('/');
+        _workspacePath = ResolveWorkspacePath(solutionDir);
+        _apiKey = TryReadMarkerValue(_workspacePath, "apiKey");
+        var markerBaseUrl = TryReadMarkerValue(_workspacePath, "baseUrl");
+
+        BaseUrl = (string.IsNullOrWhiteSpace(baseUrl) ? markerBaseUrl : baseUrl)?.TrimEnd('/')
+                  ?? "http://localhost:7147";
         _http = new HttpClient { BaseAddress = new Uri(BaseUrl) };
-        _http.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+        _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        if (!string.IsNullOrWhiteSpace(_apiKey))
+        {
+            _http.DefaultRequestHeaders.Add("X-Api-Key", _apiKey);
+            CopilotOutputPane.Log("McpTodoClient configured with X-Api-Key from AGENTS-README-FIRST.yaml");
+        }
+        else if (!string.IsNullOrWhiteSpace(_workspacePath))
+        {
+            _http.DefaultRequestHeaders.Add("X-Workspace-Path", _workspacePath);
+            CopilotOutputPane.Log($"McpTodoClient configured with X-Workspace-Path='{_workspacePath}'");
+        }
     }
 
     /// <summary>
@@ -105,6 +125,43 @@ public sealed class McpTodoClient
 
         var candidate = Path.Combine(solutionDir!, "scripts", "Start-McpServer.ps1");
         return File.Exists(candidate) ? candidate : null;
+    }
+
+    private static string? ResolveWorkspacePath(string? solutionDir)
+    {
+        if (string.IsNullOrWhiteSpace(solutionDir))
+            return null;
+
+        return File.Exists(Path.Combine(solutionDir, "AGENTS-README-FIRST.yaml"))
+            ? solutionDir
+            : null;
+    }
+
+    private static string? TryReadMarkerValue(string? workspacePath, string key)
+    {
+        if (string.IsNullOrWhiteSpace(workspacePath) || string.IsNullOrWhiteSpace(key))
+            return null;
+
+        var markerPath = Path.Combine(workspacePath, "AGENTS-README-FIRST.yaml");
+        if (!File.Exists(markerPath))
+            return null;
+
+        try
+        {
+            var content = File.ReadAllText(markerPath);
+            var match = Regex.Match(content, $@"^{Regex.Escape(key)}:\s*(.+)$", RegexOptions.Multiline);
+            return match.Success ? match.Groups[1].Value.Trim() : null;
+        }
+        catch (IOException ex)
+        {
+            CopilotOutputPane.Log($"Failed to read '{key}' from marker file: {ex.Message}");
+            return null;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            CopilotOutputPane.Log($"Failed to read '{key}' from marker file: {ex.Message}");
+            return null;
+        }
     }
 
     public async Task<TodoQueryResult> GetTodoListAsync(bool? done = false, string? priority = null, string? keyword = null, CancellationToken cancellationToken = default)

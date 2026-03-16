@@ -32,7 +32,7 @@
         {
             <PrimerFlash Variant="danger" Title="Failed to load todo">@ViewModel.ErrorMessage</PrimerFlash>
         }
-        else if (ViewModel.IsBusy)
+        else if (ViewModel.IsBusy && ViewModel.Detail is null)
         {
             <p class="color-fg-muted">Loading todo details...</p>
         }
@@ -47,20 +47,37 @@
                 <PrimerFlash Variant="success" Title="Success">@ViewModel.MutationMessage</PrimerFlash>
             }
 
+            @if (!string.IsNullOrWhiteSpace(ViewModel.PromptErrorMessage))
+            {
+                <PrimerFlash Variant="danger" Title="Prompt generation failed">@ViewModel.PromptErrorMessage</PrimerFlash>
+            }
+
             <div class="Box mb-3">
-                <div class="Box-header d-flex flex-justify-between flex-items-center">
+                <div class="Box-header d-flex flex-justify-between flex-items-center flex-wrap gap-2">
                     <h2 class="h3 mb-0">@ViewModel.Detail.Id — @ViewModel.Detail.Title</h2>
-                    @if (CanEdit)
-                    {
-                        <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap">
+                        @if (CanEdit)
+                        {
                             <button class="btn btn-primary btn-sm" @onclick="SaveAsync" disabled="@ViewModel.IsBusy">
                                 <OcticonIcon Name="check-circle" Size="16" /> Save
                             </button>
                             <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@ViewModel.IsBusy">
                                 <OcticonIcon Name="trash" Size="16" /> Delete
                             </button>
-                        </div>
-                    }
+                        }
+                        <button class="btn btn-sm" @onclick="GenerateStatusPromptAsync" disabled="@ViewModel.IsBusy"
+                                aria-label="Generate Copilot Status prompt">
+                            <OcticonIcon Name="pulse" Size="16" /> Copilot Status
+                        </button>
+                        <button class="btn btn-sm" @onclick="GeneratePlanPromptAsync" disabled="@ViewModel.IsBusy"
+                                aria-label="Generate Copilot Plan prompt">
+                            <OcticonIcon Name="checklist" Size="16" /> Copilot Plan
+                        </button>
+                        <button class="btn btn-sm" @onclick="GenerateImplementAsync" disabled="@ViewModel.IsBusy"
+                                aria-label="Generate Copilot Implementation prompt">
+                            <OcticonIcon Name="code" Size="16" /> Copilot Implementation
+                        </button>
+                    </div>
                 </div>
                 <div class="Box-body p-0">
                     <MonacoEditor @bind-Value="ViewModel.EditorMarkdownText"
@@ -69,6 +86,30 @@
                                   Height="600" />
                 </div>
             </div>
+
+            @if (ViewModel.IsPromptBusy)
+            {
+                <p class="color-fg-muted" id="prompt-generating-indicator">Generating prompt...</p>
+            }
+
+            @if (ViewModel.PromptOutput is { } output)
+            {
+                <div class="Box mb-3" id="prompt-output-panel">
+                    <div class="Box-header d-flex flex-justify-between flex-items-center">
+                        <h3 class="h4 mb-0">
+                            Copilot Prompt — @output.PromptType
+                            <span class="color-fg-muted f6 ml-2">(@output.TodoId)</span>
+                        </h3>
+                        <button class="btn btn-sm" @onclick="ClearPromptOutput" aria-label="Clear prompt output">
+                            <OcticonIcon Name="x" Size="16" /> Clear
+                        </button>
+                    </div>
+                    <div class="Box-body">
+                        <pre class="f6 overflow-auto" style="white-space: pre-wrap; max-height: 400px;"
+                             id="prompt-output-text">@output.Text</pre>
+                    </div>
+                </div>
+            }
         }
     </div>
 </div>
@@ -118,6 +159,21 @@
     {
         await ViewModel.DeleteAsync().ConfigureAwait(true);
         await ListViewModel.LoadAsync().ConfigureAwait(true);
+    }
+
+    private Task GenerateStatusPromptAsync()
+        => ViewModel.GenerateStatusPromptAsync();
+
+    private Task GeneratePlanPromptAsync()
+        => ViewModel.GeneratePlanPromptAsync();
+
+    private Task GenerateImplementAsync()
+        => ViewModel.GenerateImplementPromptAsync();
+
+    private void ClearPromptOutput()
+    {
+        ViewModel.PromptOutput = null;
+        ViewModel.PromptErrorMessage = null;
     }
 }
 
