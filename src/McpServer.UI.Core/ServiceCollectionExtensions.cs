@@ -116,6 +116,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<AgentEventsViewModel>();
         services.AddTransient<AgentPoolViewModel>();
         services.AddTransient<EventStreamViewModel>();
+        services.AddTransient<ConfigurationViewModel>();
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<WorkspaceViewModel>();
         services.AddTransient<VoiceConversationViewModel>();

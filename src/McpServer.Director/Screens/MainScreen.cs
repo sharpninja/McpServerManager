@@ -56,6 +56,7 @@ internal sealed class MainScreen : Window
     private readonly AgentEventsViewModel _agentEventsVm;
     private readonly AgentPoolViewModel _agentPoolVm;
     private readonly EventStreamViewModel _eventStreamVm;
+    private readonly ConfigurationViewModel _configurationVm;
     private readonly WorkspaceContextViewModel _workspaceContextVm;
     private Label _authLabel = null!;
     private TabView _tabView = null!;
@@ -105,6 +106,7 @@ internal sealed class MainScreen : Window
         AgentEventsViewModel agentEventsVm,
         AgentPoolViewModel agentPoolVm,
         EventStreamViewModel eventStreamVm,
+        ConfigurationViewModel configurationVm,
         WorkspaceContextViewModel workspaceContextVm,
         IAuthorizationPolicyService authorizationPolicy,
         IRoleContext roleContext,
@@ -150,6 +152,7 @@ internal sealed class MainScreen : Window
         _agentEventsVm = agentEventsVm;
         _agentPoolVm = agentPoolVm;
         _eventStreamVm = eventStreamVm;
+        _configurationVm = configurationVm;
         _workspaceContextVm = workspaceContextVm;
         _authorizationPolicy = authorizationPolicy;
         _roleContext = roleContext;
@@ -200,14 +203,16 @@ internal sealed class MainScreen : Window
             "Health",
             McpRoles.Viewer,
             _ => new HealthScreen(_healthVm),
-            HasControlConnection));
+            HasControlConnection,
+            TabPlacementGroup.NonWorkspaceTrailing));
 
         _tabRegistry.RegisterTab(new TabRegistration(
             McpArea.Workspaces,
             "Workspaces",
             McpRoles.Admin,
             _ => new WorkspaceListScreen(_workspaceListVm, _workspaceDetailVm, _directorContext),
-            HasControlConnection));
+            HasControlConnection,
+            TabPlacementGroup.NonWorkspaceTrailing));
 
         _tabRegistry.RegisterTab(new TabRegistration(
             McpArea.Agents,
@@ -240,7 +245,8 @@ internal sealed class MainScreen : Window
             "Policy",
             McpRoles.Admin,
             _ => new WorkspacePolicyScreen(_workspacePolicyVm),
-            HasControlConnection));
+            HasControlConnection,
+            TabPlacementGroup.NonWorkspaceTrailing));
 
         _tabRegistry.RegisterTab(new TabRegistration(
             McpArea.Tunnels,
@@ -319,7 +325,16 @@ internal sealed class MainScreen : Window
             "Logs",
             McpRoles.Viewer,
             _ => new DispatcherLogsScreen(_dispatcherLogsVm),
-            Always));
+            Always,
+            TabPlacementGroup.NonWorkspaceTrailing));
+
+        _tabRegistry.RegisterTab(new TabRegistration(
+            McpArea.Configuration,
+            "Config",
+            McpRoles.Admin,
+            _ => new ConfigurationScreen(_configurationVm),
+            HasControlConnection,
+            TabPlacementGroup.NonWorkspaceTrailing));
     }
 
     private void BuildUi()
@@ -641,6 +656,28 @@ internal sealed class MainScreen : Window
         {
             _ = Task.Run(events.LoadAsync);
         }
+
+        if (view is ConfigurationScreen config)
+        {
+            _ = Task.Run(config.LoadAsync);
+        }
+    }
+
+    internal static IReadOnlyList<TabRegistration> GetVisibleTabRegistrations(
+        IEnumerable<TabRegistration> registrations,
+        IAuthorizationPolicyService authorizationPolicy,
+        IServiceProvider serviceProvider)
+    {
+        ArgumentNullException.ThrowIfNull(registrations);
+        ArgumentNullException.ThrowIfNull(authorizationPolicy);
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        return registrations
+            .Where(registration => authorizationPolicy.CanViewArea(registration.Area))
+            .Where(registration => registration.AvailabilityPredicate is null ||
+                registration.AvailabilityPredicate(serviceProvider))
+            .OrderBy(registration => registration.PlacementGroup)
+            .ToArray();
     }
 
     private void RebuildTabs()
@@ -658,15 +695,11 @@ internal sealed class MainScreen : Window
 
         var selectFirst = true;
 
-        foreach (var registration in _tabRegistry.Registrations)
+        foreach (var registration in GetVisibleTabRegistrations(
+            _tabRegistry.Registrations,
+            _authorizationPolicy,
+            _serviceProvider))
         {
-            if (!_authorizationPolicy.CanViewArea(registration.Area))
-                continue;
-
-            if (registration.AvailabilityPredicate is not null &&
-                !registration.AvailabilityPredicate(_serviceProvider))
-                continue;
-
             if (registration.ScreenFactory(_serviceProvider) is not View view)
                 continue;
 

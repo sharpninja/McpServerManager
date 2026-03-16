@@ -34,6 +34,7 @@ internal static class WebServiceRegistration
         services.AddScoped<ITemplateApiClient, TemplateApiClientAdapter>();
         services.AddScoped<IContextApiClient, ContextApiClientAdapter>();
         services.AddScoped<IAuthConfigApiClient, AuthConfigApiClientAdapter>();
+        services.AddScoped<IConfigurationApiClient, ConfigurationApiClientAdapter>();
         services.AddScoped<IAgentApiClient, AgentApiClientAdapter>();
         services.AddScoped<ISseSubscriptionService, SseSubscriptionService>();
 

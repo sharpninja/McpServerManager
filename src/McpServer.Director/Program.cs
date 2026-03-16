@@ -35,6 +35,9 @@ internal static class Program
         // FR-MCP-030: Register interactive TUI command
         InteractiveCommand.Register(rootCommand);
 
+        // Hosted MCP Agent console mode
+        AgentHostCommand.Register(rootCommand);
+
         // exec <viewmodel> [--input <json>]
         var execCommand = BuildExecCommand();
         rootCommand.AddCommand(execCommand);

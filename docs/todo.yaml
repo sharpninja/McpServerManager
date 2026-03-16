@@ -854,12 +854,25 @@ mvp-mcp:
 director:
   medium-priority:
   - id: DIR-UI-001
-    title: '[NEEDS PLAN] Reorder the tabs so that global config tabse are at the end.'
+    title: Reorder the tabs so that non-workspace tabs are at the end.
+    note: Implementation and bookkeeping refreshed on 2026-03-11 after DIR-UI-001 planning and code changes.
     done: false
     description:
-    - Place global config tabs (non-Workspace specific) at the end of the tabs.
+    - Move the Director non-workspace tabs (Health, Workspaces, Policy, Logs, and Config) to the end of the tab strip.
+    - Keep workspace-scoped and workspace-aware tabs first after the existing authorization and availability filtering.
+    remaining: Implementation is complete, but targeted validation and build-tool redeploy are blocked by unrelated McpServer.Director package restore/version issues (missing package versions plus NU1602/NU1605/NU1608 restore-as-error conflicts).
     technical-details:
-    - '-'
+    - Add TabPlacementGroup metadata to TabRegistration in McpServer.UI.Core/Navigation/ITabRegistry.cs.
+    - Apply a stable GetVisibleTabRegistrations helper in MainScreen so filtering happens before placement ordering.
+    - Cover admin, agent-manager, and viewer ordering cases in focused Director tests.
     implementation-tasks:
-    - task: '[ ]'
+    - task: Add placement metadata to the shared Director tab registration model
+      done: true
+    - task: Mark the non-workspace Director tabs as trailing in MainScreen
+      done: true
+    - task: Add focused tab-ordering tests for the Director screen
+      done: true
+    - task: Resolve unrelated McpServer.Director package restore/version failures and rerun targeted validation
+      done: false
+    - task: Redeploy Director through build.ps1 UpdateDirectorTool after restore issues are fixed
       done: false

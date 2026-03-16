@@ -392,4 +392,164 @@ public sealed class WebUiPhase5ViewModelTests
         Assert.Equal("Auth config loaded.", viewModel.StatusMessage);
         Assert.Null(viewModel.ErrorMessage);
     }
+
+    [Fact]
+    public async Task ConfigurationViewModel_SaveAsync_PatchesSelectedKey_AndReloadsPersistedValue()
+    {
+        var configurationApi = Substitute.For<IConfigurationApiClient>();
+        configurationApi.GetValuesAsync(Arg.Any<CancellationToken>())
+            .Returns(
+                new Dictionary<string, string>
+                {
+                    ["Feature:Enabled"] = "true",
+                    ["Service:Name"] = "Director",
+                },
+                new Dictionary<string, string>
+                {
+                    ["Feature:Enabled"] = "false",
+                    ["Service:Name"] = "Director",
+                });
+        configurationApi.PatchValuesAsync(Arg.Any<IReadOnlyDictionary<string, string?>>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, string>
+            {
+                ["Feature:Enabled"] = "false",
+                ["Service:Name"] = "Director",
+            });
+
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(configurationApi));
+        var viewModel = host.GetRequiredService<ConfigurationViewModel>();
+
+        await viewModel.LoadAsync();
+        viewModel.SelectKey("Feature:Enabled");
+        viewModel.SelectedValue = "false";
+
+        await viewModel.SaveAsync();
+
+        Assert.Equal("Feature:Enabled", viewModel.SelectedKey);
+        Assert.Equal("false", viewModel.SelectedValue);
+        Assert.Contains("Saved and reloaded", viewModel.StatusMessage, StringComparison.Ordinal);
+        Assert.Null(viewModel.ErrorMessage);
+
+        await configurationApi.Received(2).GetValuesAsync(Arg.Any<CancellationToken>());
+        await configurationApi.Received(1).PatchValuesAsync(
+            Arg.Is<IReadOnlyDictionary<string, string?>>(values =>
+                values.Count == 1 &&
+                values.ContainsKey("Feature:Enabled") &&
+                values["Feature:Enabled"] == "false"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ConfigurationViewModel_SaveAsync_WithoutSelection_DoesNotPatch()
+    {
+        var configurationApi = Substitute.For<IConfigurationApiClient>();
+
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(configurationApi));
+        var viewModel = host.GetRequiredService<ConfigurationViewModel>();
+
+        await viewModel.SaveAsync();
+
+        Assert.Equal("No key selected. Select a key from the list before saving.", viewModel.StatusMessage);
+        await configurationApi.DidNotReceive().PatchValuesAsync(Arg.Any<IReadOnlyDictionary<string, string?>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ConfigurationViewModel_CreateKeyAsync_PatchesNewKey_AndSelectsItAfterReload()
+    {
+        var configurationApi = Substitute.For<IConfigurationApiClient>();
+
+        // First load (initial state - new key not yet present)
+        configurationApi.GetValuesAsync(Arg.Any<CancellationToken>())
+            .Returns(
+                new Dictionary<string, string>
+                {
+                    ["Existing:Key"] = "existing-value",
+                },
+                new Dictionary<string, string>
+                {
+                    ["Existing:Key"] = "existing-value",
+                    ["New:Key"] = "new-value",
+                });
+
+        configurationApi.PatchValuesAsync(Arg.Any<IReadOnlyDictionary<string, string?>>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, string>
+            {
+                ["Existing:Key"] = "existing-value",
+                ["New:Key"] = "new-value",
+            });
+
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(configurationApi));
+        var viewModel = host.GetRequiredService<ConfigurationViewModel>();
+
+        await viewModel.LoadAsync();
+
+        await viewModel.CreateKeyAsync("New:Key", "new-value");
+
+        Assert.Equal("New:Key", viewModel.SelectedKey);
+        Assert.Equal("new-value", viewModel.SelectedValue);
+        Assert.Contains("Created and reloaded", viewModel.StatusMessage, StringComparison.Ordinal);
+        Assert.Null(viewModel.ErrorMessage);
+        Assert.Contains("New:Key", viewModel.Keys);
+
+        await configurationApi.Received(1).PatchValuesAsync(
+            Arg.Is<IReadOnlyDictionary<string, string?>>(values =>
+                values.Count == 1 &&
+                values.ContainsKey("New:Key") &&
+                values["New:Key"] == "new-value"),
+            Arg.Any<CancellationToken>());
+
+        // GetValuesAsync called once for initial load plus once for reload after create
+        await configurationApi.Received(2).GetValuesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ConfigurationViewModel_CreateKeyAsync_WithBlankKey_DoesNotPatch()
+    {
+        var configurationApi = Substitute.For<IConfigurationApiClient>();
+
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(configurationApi));
+        var viewModel = host.GetRequiredService<ConfigurationViewModel>();
+
+        await viewModel.CreateKeyAsync("   ", "some-value");
+
+        Assert.Equal("Key cannot be empty.", viewModel.StatusMessage);
+        await configurationApi.DidNotReceive().PatchValuesAsync(Arg.Any<IReadOnlyDictionary<string, string?>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ConfigurationViewModel_CreateKeyAsync_WithBlankValue_DoesNotPatch()
+    {
+        var configurationApi = Substitute.For<IConfigurationApiClient>();
+
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(configurationApi));
+        var viewModel = host.GetRequiredService<ConfigurationViewModel>();
+
+        await viewModel.CreateKeyAsync("New:Key", "   ");
+
+        Assert.Equal("Value cannot be empty.", viewModel.StatusMessage);
+        await configurationApi.DidNotReceive().PatchValuesAsync(Arg.Any<IReadOnlyDictionary<string, string?>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ConfigurationViewModel_CreateKeyAsync_TrimsKeyAndValue_BeforePatching()
+    {
+        var configurationApi = Substitute.For<IConfigurationApiClient>();
+
+        configurationApi.GetValuesAsync(Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, string> { ["Trimmed:Key"] = "trimmed-value" });
+
+        configurationApi.PatchValuesAsync(Arg.Any<IReadOnlyDictionary<string, string?>>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, string> { ["Trimmed:Key"] = "trimmed-value" });
+
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(configurationApi));
+        var viewModel = host.GetRequiredService<ConfigurationViewModel>();
+
+        await viewModel.CreateKeyAsync("  Trimmed:Key  ", "  trimmed-value  ");
+
+        await configurationApi.Received(1).PatchValuesAsync(
+            Arg.Is<IReadOnlyDictionary<string, string?>>(values =>
+                values.ContainsKey("Trimmed:Key") &&
+                values["Trimmed:Key"] == "trimmed-value"),
+            Arg.Any<CancellationToken>());
+    }
 }

@@ -625,8 +625,17 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
             ? assembly.GetName().Version?.ToString()
             : informationalVersion;
 
+        return NormalizeAppVersion(version);
+    }
+
+    internal static string NormalizeAppVersion(string? version)
+    {
         if (string.IsNullOrWhiteSpace(version))
             return "unknown";
+
+        var plusIndex = version.IndexOf('+', StringComparison.Ordinal);
+        if (plusIndex > 0)
+            version = version[..plusIndex];
 
         var markerIndex = version.IndexOf(".Sha", StringComparison.OrdinalIgnoreCase);
         return markerIndex > 0 ? version[..markerIndex] : version;

@@ -58,4 +58,7 @@ public enum McpArea
 
     /// <summary>Prompt template registry management.</summary>
     Templates,
+
+    /// <summary>Server configuration management (admin-only flattened key/value view).</summary>
+    Configuration,
 }

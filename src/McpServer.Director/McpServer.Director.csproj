@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>McpServer.Director</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CA1515;CA1849;CA1031</NoWarn>
+    <NoWarn>$(NoWarn);CA1515;CA1849;CA1031;NU1608</NoWarn>
     <AssemblyName>director</AssemblyName>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>director</ToolCommandName>
@@ -21,6 +21,14 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.0.0-rc3" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.12" />
+    <PackageReference Include="OpenAI" Version="2.8.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis" Version="4.11.0" PrivateAssets="all" />
+    <PackageReference Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.3" />
+    <PackageReference Update="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
+    <PackageReference Update="Microsoft.Extensions.Primitives" Version="10.0.3" />
     <PackageReference Include="Spectre.Console" Version="0.49.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.0" />
@@ -29,6 +37,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Client\McpServer.Client.csproj" />
+    <ProjectReference Include="..\..\lib\McpServer\src\McpServer.McpAgent\McpServer.McpAgent.csproj" />
     <ProjectReference Include="..\McpServer.UI.Core\McpServer.UI.Core.csproj" />
   </ItemGroup>
   <ItemGroup>

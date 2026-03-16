@@ -94,6 +94,7 @@
                     </Border>
                     <ListBox ItemsSource="{Binding Items}" Margin="0"
                              SelectionMode="Single"
+                             PointerPressed="OnGroupListBoxPointerPressed"
                              SelectionChanged="OnGroupListBoxSelectionChanged"
                              Loaded="OnGroupListBoxLoaded"
                              Unloaded="OnGroupListBoxUnloaded">

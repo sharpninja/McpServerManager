@@ -353,11 +353,11 @@ partial class Build
         {
             if (CommandExists("gsudo"))
             {
-                Warn("[WhatIf] Elevate the MSIX certificate trust/install step through gsudo.");
+                Warn("[WhatIf] Elevate the MSIX certificate trust step through gsudo, then install the package in the invoking user context.");
             }
             else
             {
-                Warn("[WhatIf] MSIX installation would require elevation, and gsudo was not found in PATH.");
+                Warn("[WhatIf] MSIX certificate trust would require elevation, and gsudo was not found in PATH.");
             }
 
             return BuildDesktopMsixCoreNative(installAfterBuild: false);
@@ -365,33 +365,32 @@ partial class Build
 
         if (!CommandExists("gsudo"))
         {
-            throw new InvalidOperationException("MSIX installation requires elevation, but gsudo was not found in PATH. Install gsudo or rerun this command from an elevated PowerShell session.");
+            throw new InvalidOperationException("MSIX certificate trust requires elevation, but gsudo was not found in PATH. Install gsudo or rerun this command from an elevated PowerShell session.");
         }
 
         var packagingContext = ResolveDesktopMsixPackagingContext();
         var msixPath = BuildDesktopMsixCoreNative(installAfterBuild: false);
-        InstallMsixPackageWithGsudo(packagingContext.Config.PackageName, msixPath, packagingContext.CertificatePath);
+        TrustMsixCertificateWithGsudo(packagingContext.CertificatePath);
+        InstallMsixPackage(packagingContext.Config.PackageName, msixPath);
         return msixPath;
     }
 
     [SupportedOSPlatform("windows")]
-    private void InstallMsixPackageWithGsudo(string packageName, string msixPath, string certificatePath)
+    private void TrustMsixCertificateWithGsudo(string certificatePath)
     {
         var command = string.Join(
             Environment.NewLine,
             new[]
             {
+                "$ErrorActionPreference = 'Stop'",
                 $"$certPath = '{QuotePowerShellLiteral(certificatePath)}'",
-                $"$msixPath = '{QuotePowerShellLiteral(msixPath)}'",
-                $"$packageName = '{QuotePowerShellLiteral(packageName)}'",
                 "if (-not (Test-Path -LiteralPath $certPath)) { throw \"Signing certificate not found at $certPath\" }",
-                "if (-not (Test-Path -LiteralPath $msixPath)) { throw \"MSIX package not found at $msixPath\" }",
                 "$certificate = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 $certPath",
                 "$trustedCertificate = Get-ChildItem Cert:\\LocalMachine\\Root | Where-Object { $_.Thumbprint -eq $certificate.Thumbprint } | Select-Object -First 1",
-                "if ($null -eq $trustedCertificate) { Import-Certificate -FilePath $certPath -CertStoreLocation 'Cert:\\LocalMachine\\Root' | Out-Null }",
-                "$existingPackage = Get-AppxPackage -Name $packageName -ErrorAction SilentlyContinue",
-                "if ($null -ne $existingPackage) { Remove-AppxPackage -Package $existingPackage.PackageFullName }",
-                "Add-AppxPackage -Path $msixPath"
+                "if ($null -eq $trustedCertificate) {",
+                "    $imported = Import-Certificate -FilePath $certPath -CertStoreLocation 'Cert:\\LocalMachine\\Root'",
+                "    if ($null -eq $imported) { throw \"Certificate import did not return a result for $certPath\" }",
+                "}"
             });
 
         var result = InvokeProcess(
@@ -413,7 +412,7 @@ partial class Build
 
         if (result.ExitCode != 0)
         {
-            throw new InvalidOperationException($"gsudo failed to elevate MSIX installation (exit code {result.ExitCode}).{Environment.NewLine}{result.GetCombinedOutput()}");
+            throw new InvalidOperationException($"gsudo failed to elevate MSIX certificate trust (exit code {result.ExitCode}).{Environment.NewLine}{result.GetCombinedOutput()}");
         }
     }
 
@@ -819,9 +818,12 @@ partial class Build
             Environment.NewLine,
             new[]
             {
+                "$ErrorActionPreference = 'Stop'",
                 $"$existing = Get-AppxPackage -Name '{QuotePowerShellLiteral(packageName)}' -ErrorAction SilentlyContinue",
-                "if ($null -ne $existing) { Remove-AppxPackage -Package $existing.PackageFullName }",
-                $"Add-AppxPackage -Path '{QuotePowerShellLiteral(msixPath)}'"
+                "if ($null -ne $existing) { Remove-AppxPackage -Package $existing.PackageFullName -ErrorAction Stop }",
+                $"Add-AppxPackage -Path '{QuotePowerShellLiteral(msixPath)}' -ErrorAction Stop",
+                $"$installed = Get-AppxPackage -Name '{QuotePowerShellLiteral(packageName)}' -ErrorAction Stop",
+                "if ($null -eq $installed) { throw \"Package registration was not visible after Add-AppxPackage completed.\" }"
             });
         InvokePowerShellCommand(command, true);
     }

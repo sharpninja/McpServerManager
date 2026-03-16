@@ -53,15 +53,20 @@ dotnet run
 
 ## Deployment automation
 
-Use NUKE from the repo root as the authoritative build/deploy entry point.
+Use NUKE from the repo root as the authoritative build/deploy entry point for local automation and CI.
 
 ```powershell
 .\build.ps1
-.\build.ps1 --target DeployAll
-.\build.ps1 --target DeployAll --deploy-selection Director,WebUi,DesktopMsix
-.\build.ps1 --target DeployAll --what-if
-.\build.ps1 --target DeployAll --configuration Debug --deploy-selection Director,WebUi
+.\build.ps1 DeployAll
+.\build.ps1 DeployAll --deploy-selection Director,WebUi,DesktopMsix
+.\build.ps1 DeployAll --what-if
+.\build.ps1 DeployAll --configuration Debug --deploy-selection Director,WebUi
 .\build.ps1 BuildAndInstallVsix --what-if
+```
+
+```bash
+bash ./build.sh VersionInfo --json-output-path artifacts/version.json
+bash ./build.sh BuildDesktopDeb --package-version <semver>
 ```
 
 Current target names:
@@ -76,12 +81,18 @@ Behavior notes:
 - `build.ps1` and `build.sh` are the primary entry points; they invoke `build\Build.csproj` with the repo root wired up for NUKE.
 - When invoked with no arguments, the root wrappers forward `--help` so you see NUKE help instead of accidentally running a default target.
 - For convenience, the wrappers treat the first bare argument as `--target`, so commands like `.\build.ps1 BuildAndInstallVsix --what-if` work without spelling out `--target`.
+- `.github\workflows\build-android.yml` is intentionally thin: the workflow restores tools and runner prerequisites, then delegates versioning, packaging, release, F-Droid, and Pages assembly to NUKE targets.
 - The build is best-effort for deploy-all: unavailable targets are skipped and reported in the final summary.
 - `--what-if` is the standard dry-run mechanism for NUKE-backed targets.
-- `DesktopMsix` deployment auto-elevates only the certificate trust/install step through `gsudo`, avoiding elevated NUKE re-entry log-file conflicts; otherwise the build fails with guidance to install `gsudo` or rerun from an elevated PowerShell session.
+- `DesktopMsix` deployment auto-elevates only the certificate trust step through `gsudo`, then installs the package back in the invoking user context to ensure the app registers for the actual desktop user.
 - `DesktopDeb` installation on Windows launches an interactive WSL `sudo` prompt so the user can enter their password when package installation is requested.
 - Legacy files under `scripts\` now act as compatibility wrappers so existing commands continue to work while NUKE owns the orchestration logic.
 - For independent target execution, import `scripts\DeployAllTargets.psm1` and call the exported compatibility functions directly, for example `Invoke-DeployDirectorTool -Configuration Debug -WhatIf`.
+
+Validation commands:
+- `dotnet build build\Build.csproj -nologo`
+- `dotnet build src\McpServerManager.Desktop\McpServerManager.Desktop.csproj -nologo`
+- `Invoke-Pester -Path scripts\DeployAllTargets.Tests.ps1 -Output Detailed -CI`
 
 ### WSL with WSLg
 

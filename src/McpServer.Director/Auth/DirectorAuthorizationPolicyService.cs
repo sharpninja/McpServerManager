@@ -29,6 +29,7 @@ internal sealed class DirectorAuthorizationPolicyService : IAuthorizationPolicyS
         [McpArea.Diagnostic] = McpRoles.Viewer,
         [McpArea.AuthConfig] = McpRoles.Viewer,
         [McpArea.Templates] = McpRoles.Viewer,
+        [McpArea.Configuration] = McpRoles.Admin,
     };
 
     private static readonly IReadOnlyDictionary<string, string> s_actionRoles =
@@ -125,6 +126,8 @@ internal sealed class DirectorAuthorizationPolicyService : IAuthorizationPolicyS
             [McpActionKeys.VoiceTranscript] = McpRoles.Viewer,
             [McpActionKeys.VoiceDeleteSession] = McpRoles.Viewer,
             [McpActionKeys.EventsSubscribe] = McpRoles.Viewer,
+            [McpActionKeys.ConfigurationGet] = McpRoles.Admin,
+            [McpActionKeys.ConfigurationPatch] = McpRoles.Admin,
         };
 
     /// <summary>Initializes a new instance of the policy service.</summary>

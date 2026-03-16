@@ -299,4 +299,10 @@ public static class McpActionKeys
 
     /// <summary>Event stream subscribe action.</summary>
     public const string EventsSubscribe = "events.subscribe";
+
+    /// <summary>Configuration values read action (admin).</summary>
+    public const string ConfigurationGet = "configuration.get";
+
+    /// <summary>Configuration values patch action (admin).</summary>
+    public const string ConfigurationPatch = "configuration.patch";
 }

@@ -51,6 +51,12 @@ public sealed class WebUiHandlerApiDispatchMappingTests
         workspaceApi.ListWorkspacesAsync(Arg.Any<CancellationToken>())
             .Returns(new ListWorkspacesResult([], 0));
 
+        var configurationApi = Substitute.For<IConfigurationApiClient>();
+        configurationApi.GetValuesAsync(Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, string> { ["Feature:Enabled"] = "true" });
+        configurationApi.PatchValuesAsync(Arg.Any<IReadOnlyDictionary<string, string?>>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, string> { ["Feature:Enabled"] = "false" });
+
         using var host = UiCoreTestHost.Create(services =>
         {
             services.AddSingleton(todoApi);
@@ -60,6 +66,7 @@ public sealed class WebUiHandlerApiDispatchMappingTests
             services.AddSingleton(healthApi);
             services.AddSingleton(authApi);
             services.AddSingleton(workspaceApi);
+            services.AddSingleton(configurationApi);
         });
 
         var dispatcher = host.GetRequiredService<Dispatcher>();
@@ -76,6 +83,9 @@ public sealed class WebUiHandlerApiDispatchMappingTests
         await dispatcher.QueryAsync(new CheckHealthQuery());
         await dispatcher.QueryAsync(new GetAuthConfigQuery());
         await dispatcher.QueryAsync(new ListWorkspacesQuery());
+        await dispatcher.QueryAsync(new GetConfigurationValuesQuery());
+        await dispatcher.SendAsync(new PatchConfigurationValuesCommand(
+            new Dictionary<string, string?> { ["Feature:Enabled"] = "false" }));
 
         await todoApi.Received(1).ListTodosAsync(Arg.Any<ListTodosQuery>(), Arg.Any<CancellationToken>());
         await todoApi.Received(1).GetTodoAsync("TODO-001", Arg.Any<CancellationToken>());
@@ -89,5 +99,12 @@ public sealed class WebUiHandlerApiDispatchMappingTests
         await healthApi.Received(1).CheckHealthAsync(Arg.Any<CancellationToken>());
         await authApi.Received(1).GetAuthConfigAsync(Arg.Any<CancellationToken>());
         await workspaceApi.Received(1).ListWorkspacesAsync(Arg.Any<CancellationToken>());
+        await configurationApi.Received(1).GetValuesAsync(Arg.Any<CancellationToken>());
+        await configurationApi.Received(1).PatchValuesAsync(
+            Arg.Is<IReadOnlyDictionary<string, string?>>(values =>
+                values.Count == 1 &&
+                values.ContainsKey("Feature:Enabled") &&
+                values["Feature:Enabled"] == "false"),
+            Arg.Any<CancellationToken>());
     }
 }

@@ -16,6 +16,7 @@ public sealed record McpVoiceSessionCreateRequest
 
     [JsonPropertyName("clientName")]
     public string? ClientName { get; init; }
+
 }
 
 /// <summary>Response returned when an MCP voice session is created.</summary>

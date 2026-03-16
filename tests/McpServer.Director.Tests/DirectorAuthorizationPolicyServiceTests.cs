@@ -56,6 +56,7 @@ public sealed class DirectorAuthorizationPolicyServiceTests
 
         Assert.False(policy.CanViewArea(McpArea.Workspaces));
         Assert.False(policy.CanViewArea(McpArea.Policy));
+        Assert.False(policy.CanViewArea(McpArea.Configuration));
     }
 
     [Fact]
@@ -81,6 +82,7 @@ public sealed class DirectorAuthorizationPolicyServiceTests
     [InlineData(McpActionKeys.RequirementsGenerate, McpRoles.Viewer)]
     [InlineData(McpActionKeys.ToolRegistryMutate, McpRoles.Admin)]
     [InlineData(McpActionKeys.VoiceStatus, McpRoles.Viewer)]
+    [InlineData(McpActionKeys.ConfigurationPatch, McpRoles.Admin)]
     public void GetRequiredRole_ForKnownActionKeys_ReturnsExpectedRole(string actionKey, string expectedRole)
     {
         var policy = new DirectorAuthorizationPolicyService(new FakeRoleContext());

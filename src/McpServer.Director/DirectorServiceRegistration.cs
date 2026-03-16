@@ -73,6 +73,7 @@ internal static class DirectorServiceRegistration
         services.AddSingleton<IRequirementsApiClient>(_ => new RequirementsApiClientAdapter(directorContext));
         services.AddSingleton<IVoiceApiClient>(_ => new VoiceApiClientAdapter(directorContext));
         services.AddSingleton<IEventStreamApiClient>(_ => new EventStreamApiClientAdapter(directorContext));
+        services.AddSingleton<IConfigurationApiClient>(_ => new ConfigurationApiClientAdapter(directorContext));
 
         return directorContext;
     }
