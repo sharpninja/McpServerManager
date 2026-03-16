@@ -541,18 +541,30 @@ partial class Build
         if (OperatingSystem.IsWindows())
         {
             var distro = ResolveWslDistroName(WslDistro);
-            var wslDebRoot = ConvertToWslPath(distro, debStagingDirectory);
+            var wslDebRootSource = ConvertToWslPath(distro, debStagingDirectory);
             var wslDebPath = ConvertToWslPath(distro, debFilePath);
-            var wslAppExecutablePath = ConvertToWslPath(distro, Path.Combine(applicationDirectory, executableName));
-            var wslPostinstPath = ConvertToWslPath(distro, Path.Combine(debStagingDirectory, "DEBIAN", "postinst"));
-            var wslPostrmPath = ConvertToWslPath(distro, Path.Combine(debStagingDirectory, "DEBIAN", "postrm"));
-            InvokeWslCommand(distro, $"chmod +x {QuoteBashLiteral(wslAppExecutablePath)} {QuoteBashLiteral(wslPostinstPath)} {QuoteBashLiteral(wslPostrmPath)}");
-            InvokeWslCommand(distro, $"dpkg-deb --build --root-owner-group {QuoteBashLiteral(wslDebRoot)} {QuoteBashLiteral(wslDebPath)}");
+            var wslBuildRoot = $"/tmp/mcpservermanager-deb-{Guid.NewGuid():N}";
+            var wslDebRoot = $"{wslBuildRoot}/package";
+            var wslTempDebPath = $"{wslBuildRoot}/{Path.GetFileName(debFilePath)}";
+            var wslDebRootSourceContents = $"{wslDebRootSource}/.";
+            var wslControlDirectory = $"{wslDebRoot}/DEBIAN";
+            var wslControlPath = $"{wslControlDirectory}/control";
+            var wslAppExecutablePath = $"{wslDebRoot}/opt/mcpservermanager/{executableName}";
+            var wslPostinstPath = $"{wslControlDirectory}/postinst";
+            var wslPostrmPath = $"{wslControlDirectory}/postrm";
+
+            // Build the Debian package inside the Linux filesystem so dpkg-deb sees valid Unix permissions.
+            InvokeWslCommand(distro, $"rm -rf {QuoteBashLiteral(wslBuildRoot)} && mkdir -p {QuoteBashLiteral(wslDebRoot)} && cp -a {QuoteBashLiteral(wslDebRootSourceContents)} {QuoteBashLiteral(wslDebRoot)}/");
+            InvokeWslCommand(distro, $"chmod 0755 {QuoteBashLiteral(wslControlDirectory)} && chmod 0644 {QuoteBashLiteral(wslControlPath)} && chmod 0755 {QuoteBashLiteral(wslPostinstPath)} {QuoteBashLiteral(wslPostrmPath)} {QuoteBashLiteral(wslAppExecutablePath)}");
+            InvokeWslCommand(distro, $"dpkg-deb --build --root-owner-group {QuoteBashLiteral(wslDebRoot)} {QuoteBashLiteral(wslTempDebPath)}");
+            InvokeWslCommand(distro, $"cp {QuoteBashLiteral(wslTempDebPath)} {QuoteBashLiteral(wslDebPath)}");
             if (installAfterBuild)
             {
                 Info($"Launching interactive WSL sudo in distro '{distro}'. Enter your password if prompted.");
-                InvokeInteractiveWslCommand(distro, $"sudo dpkg -i {QuoteBashLiteral(wslDebPath)}");
+                InvokeInteractiveWslCommand(distro, $"sudo dpkg -i {QuoteBashLiteral(wslTempDebPath)}");
             }
+
+            InvokeWslCommand(distro, $"rm -rf {QuoteBashLiteral(wslBuildRoot)}");
         }
         else
         {
