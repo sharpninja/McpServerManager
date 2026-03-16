@@ -221,13 +221,40 @@ partial class Build
             File.Delete(nupkgPath);
         }
 
+        var supportsDotNetToolPack = propertyGroups
+            .SelectMany(group => group.Elements())
+            .Any(element =>
+                string.Equals(element.Name.LocalName, "PackAsTool", StringComparison.OrdinalIgnoreCase) &&
+                bool.TryParse(element.Value.Trim(), out var enabled) &&
+                enabled);
+
         if (CommandExists("nuget"))
         {
             InvokeProcess("nuget", new List<string> { "pack", nuspecPath, "-OutputDirectory", outputDirectory, "-NoPackageAnalysis" }, RepoRootPath, true);
         }
+        else if (supportsDotNetToolPack)
+        {
+            InvokeDotNet(
+                new List<string>
+                {
+                    "pack",
+                    projectPath,
+                    "-c",
+                    Configuration,
+                    "-o",
+                    outputDirectory,
+                    "/p:PackageVersion=" + version.SemVer,
+                    "/p:Version=" + version.SemVer,
+                    "/p:AssemblyVersion=" + $"{version.Major}.{version.Minor}.{version.Patch}",
+                    "/p:FileVersion=" + $"{version.Major}.{version.Minor}.{version.Patch}",
+                    "/p:InformationalVersion=" + version.SemVer
+                },
+                RepoRootPath,
+                true);
+        }
         else
         {
-            InvokeDotNet(new List<string> { "nuget", "pack", nuspecPath, "-OutputDirectory", outputDirectory, "-NoPackageAnalysis" }, RepoRootPath, true);
+            throw new InvalidOperationException($"nuget.exe was not found in PATH and {Path.GetFileName(projectPath)} does not declare PackAsTool for dotnet pack fallback.");
         }
 
         if (installAfterPack)
