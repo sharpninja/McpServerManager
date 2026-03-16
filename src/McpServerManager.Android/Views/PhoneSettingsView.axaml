@@ -4,33 +4,68 @@
              x:Class="McpServerManager.Android.Views.PhoneSettingsView"
              x:DataType="vm:SettingsViewModel">
 
-  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="8">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="8" Spacing="12">
+      <Border Classes="phone-outline-card" Padding="12">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Voice Chat" FontSize="22" FontWeight="SemiBold"/>
+          <TextBlock Text="Shared voice-chat defaults. These values seed the Android voice experience and the simplified chat view."
+                     TextWrapping="Wrap" Opacity="0.7" FontSize="18"/>
+          <TextBlock Text="Default language" FontSize="18" FontWeight="SemiBold"/>
+          <TextBox Text="{Binding VoiceLanguage, Mode=TwoWay}"
+                   Watermark="en-US"
+                   FontSize="20"/>
+          <CheckBox Content="Auto-continue voice chat after each response"
+                    IsChecked="{Binding AutoContinueEnabled, Mode=TwoWay}"
+                    FontSize="19"/>
+        </StackPanel>
+      </Border>
 
-    <!-- Speech Filter Section Header -->
-    <StackPanel Grid.Row="0" Spacing="4" Margin="0,8,0,8">
-      <TextBlock Text="Speech Filter Phrases" FontSize="22" FontWeight="SemiBold"/>
-      <TextBlock Text="Lines containing any of these phrases (case-insensitive) will be excluded from text-to-speech. One phrase per line."
-                 TextWrapping="Wrap" Opacity="0.7" FontSize="18"/>
+      <Border Classes="phone-outline-card" Padding="12" IsVisible="{Binding SupportsWakeWordSettings}">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Wake Word" FontSize="22" FontWeight="SemiBold"/>
+          <TextBlock Text="Android-only wake-word settings. These are saved to the same device preferences used by the Android wake-word runtime."
+                     TextWrapping="Wrap" Opacity="0.7" FontSize="18"/>
+          <TextBlock Text="Wake phrase" FontSize="18" FontWeight="SemiBold"/>
+          <ComboBox ItemsSource="{Binding AvailableWakePhrases}"
+                    SelectedItem="{Binding WakePhrase, Mode=TwoWay}"
+                    FontSize="20"/>
+          <TextBlock Text="Wake sensitivity" FontSize="18" FontWeight="SemiBold"/>
+          <ComboBox ItemsSource="{Binding AvailableWakeSensitivities}"
+                    SelectedItem="{Binding WakeSensitivity, Mode=TwoWay}"
+                    FontSize="20"/>
+          <CheckBox Content="Auto listen + send when wake phrase is detected"
+                    IsChecked="{Binding AutoListenOnWake, Mode=TwoWay}"
+                    FontSize="19"/>
+          <TextBlock Text="Picovoice access key" FontSize="18" FontWeight="SemiBold"/>
+          <TextBox Text="{Binding PicovoiceAccessKey, Mode=TwoWay}"
+                   Watermark="Optional when already set by environment or metadata"
+                   FontSize="19"/>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="phone-outline-card" Padding="12">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Speech Filter Phrases" FontSize="22" FontWeight="SemiBold"/>
+          <TextBlock Text="Lines containing any of these phrases (case-insensitive) will be excluded from text-to-speech. One phrase per line."
+                     TextWrapping="Wrap" Opacity="0.7" FontSize="18"/>
+          <TextBox Text="{Binding SpeechFilterWords, Mode=TwoWay}"
+                   AcceptsReturn="True"
+                   TextWrapping="Wrap"
+                   Watermark="Enter filter phrases, one per line..."
+                   FontSize="20"
+                   MinHeight="200"
+                   VerticalContentAlignment="Top"/>
+        </StackPanel>
+      </Border>
+
+      <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+        <Button Content="Save" Command="{Binding SaveFilterWordsCommand}" Padding="14,8" FontSize="21"/>
+        <Button Content="Revert" Command="{Binding RevertFilterWordsCommand}" Padding="14,8" FontSize="21"/>
+        <Button Content="Import" x:Name="ImportButton" Click="OnImportClick" Padding="14,8" FontSize="21"/>
+        <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Opacity="0.7" FontSize="19" TextWrapping="Wrap"/>
+      </StackPanel>
     </StackPanel>
-
-    <!-- Filter Words Editor -->
-    <TextBox Grid.Row="2"
-             Text="{Binding SpeechFilterWords, Mode=TwoWay}"
-             AcceptsReturn="True"
-             TextWrapping="Wrap"
-             Watermark="Enter filter phrases, one per line..."
-             FontSize="20"
-             MinHeight="200"
-             VerticalContentAlignment="Top"/>
-
-    <!-- Save/Revert/Import Buttons + Status -->
-    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,8,0,4">
-      <Button Content="Save" Command="{Binding SaveFilterWordsCommand}" Padding="14,8" FontSize="21"/>
-      <Button Content="Revert" Command="{Binding RevertFilterWordsCommand}" Padding="14,8" FontSize="21"/>
-      <Button Content="Import" x:Name="ImportButton" Click="OnImportClick" Padding="14,8" FontSize="21"/>
-      <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Opacity="0.7" FontSize="19"/>
-    </StackPanel>
-
-  </Grid>
+  </ScrollViewer>
 
 </UserControl>

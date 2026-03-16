@@ -73,12 +73,16 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
 
     private VoiceConversationViewModel CreateVoiceConversationViewModel()
     {
+        var voiceSettingsService = VoiceChatSettingsService.Instance;
+        var savedVoiceSettings = voiceSettingsService.Load();
         var vm = new VoiceConversationViewModel(McpVoiceService)
         {
+            Language = savedVoiceSettings.Language,
             ResolveWorkspacePath = ResolveActiveWorkspacePath,
             ResolveWorkspaceReady = ResolveWorkspaceReady
         };
         vm.GlobalStatusChanged += msg => DispatchToUi(() => StatusMessage = msg);
+        voiceSettingsService.SettingsChanged += updatedSettings => DispatchToUi(() => vm.Language = updatedSettings.Language);
         WorkspacePathChanged += path => DispatchToUi(() => _ = vm.RefreshForConnectionChangeAsync());
         return vm;
     }

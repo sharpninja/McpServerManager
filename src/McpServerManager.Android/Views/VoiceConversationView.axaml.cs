@@ -6,12 +6,14 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using McpServerManager.Android.Services;
+using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
 
 namespace McpServerManager.Android.Views;
 
 public partial class VoiceConversationView : UserControl
 {
+    private readonly VoiceChatSettingsService _voiceChatSettingsService = VoiceChatSettingsService.Instance;
     private readonly IAndroidSpeechRecognitionService _speechRecognitionService = new AndroidSpeechRecognitionService();
     private readonly IAndroidTextToSpeechService _textToSpeechService = new AndroidTextToSpeechService();
     private readonly IAndroidAudioFocusService _audioFocusService = new AndroidAudioFocusService();
@@ -30,6 +32,7 @@ public partial class VoiceConversationView : UserControl
         InitializeWakePhraseSelector();
         _audioFocusService.AudioFocusChanged += OnAudioFocusChanged;
         _wakeWordService.WakeWordDetected += OnWakeWordDetected;
+        _voiceChatSettingsService.SettingsChanged += OnVoiceChatSettingsChanged;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
     }
 
@@ -45,8 +48,11 @@ public partial class VoiceConversationView : UserControl
         _isUpdatingWakePhraseSelector = true;
         try
         {
+            var settings = _voiceChatSettingsService.Load();
             _wakePhraseComboBox.ItemsSource = _wakeWordService.AvailableWakePhrases;
-            _wakePhraseComboBox.SelectedItem = _wakeWordService.SelectedWakePhrase;
+            _wakePhraseComboBox.SelectedItem = settings.WakePhrase;
+            if (_autoListenOnWakeCheckBox != null)
+                _autoListenOnWakeCheckBox.IsChecked = settings.AutoListenOnWake;
         }
         finally
         {
@@ -148,20 +154,20 @@ public partial class VoiceConversationView : UserControl
 
         try
         {
-            var updated = await _wakeWordService.SetSelectedWakePhraseAsync(selectedPhrase).ConfigureAwait(true);
-            if (!updated)
+            var updatedSettings = SaveVoiceChatSettings(current => new VoiceChatSettings
             {
-                SyncWakePhraseSelectorFromService();
-                if (vm != null)
-                    vm.StatusText = "Unsupported wake phrase selection.";
-                return;
-            }
-
-            SyncWakePhraseSelectorFromService();
+                Language = current.Language,
+                AutoContinueEnabled = current.AutoContinueEnabled,
+                WakePhrase = selectedPhrase,
+                WakeSensitivity = current.WakeSensitivity,
+                AutoListenOnWake = current.AutoListenOnWake,
+                PicovoiceAccessKey = current.PicovoiceAccessKey
+            });
+            SyncControlsFromSettings(updatedSettings);
             if (vm != null)
                 vm.StatusText = _wakeWordService.IsMonitoring
-                    ? $"Wake phrase set to '{_wakeWordService.SelectedWakePhrase}' and applied to active monitoring."
-                    : $"Wake phrase set to '{_wakeWordService.SelectedWakePhrase}' (saved on device).";
+                    ? $"Wake phrase set to '{updatedSettings.WakePhrase}' and applied to active monitoring."
+                    : $"Wake phrase set to '{updatedSettings.WakePhrase}' (saved on device).";
         }
         catch (Exception ex)
         {
@@ -170,6 +176,30 @@ public partial class VoiceConversationView : UserControl
                 vm.StatusText = $"Failed to save wake phrase: {ex.Message}";
         }
 
+        e.Handled = true;
+    }
+
+    private void OnAutoListenOnWakeCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (_isDisposed || _isUpdatingWakePhraseSelector)
+            return;
+
+        var vm = ViewModel;
+        var isEnabled = (sender as CheckBox)?.IsChecked == true;
+        var updatedSettings = SaveVoiceChatSettings(current => new VoiceChatSettings
+        {
+            Language = current.Language,
+            AutoContinueEnabled = current.AutoContinueEnabled,
+            WakePhrase = current.WakePhrase,
+            WakeSensitivity = current.WakeSensitivity,
+            AutoListenOnWake = isEnabled,
+            PicovoiceAccessKey = current.PicovoiceAccessKey
+        });
+        SyncControlsFromSettings(updatedSettings);
+        if (vm != null)
+            vm.StatusText = updatedSettings.AutoListenOnWake
+                ? "Auto listen + send on wake enabled."
+                : "Auto listen + send on wake disabled.";
         e.Handled = true;
     }
 
@@ -260,6 +290,7 @@ public partial class VoiceConversationView : UserControl
         DetachedFromVisualTree -= OnDetachedFromVisualTree;
         _audioFocusService.AudioFocusChanged -= OnAudioFocusChanged;
         _wakeWordService.WakeWordDetected -= OnWakeWordDetected;
+        _voiceChatSettingsService.SettingsChanged -= OnVoiceChatSettingsChanged;
         StopAudioPlayback();
         _wakeWordService.Dispose();
         _audioFocusService.Dispose();
@@ -308,18 +339,57 @@ public partial class VoiceConversationView : UserControl
 
     private void SyncWakePhraseSelectorFromService()
     {
+        SyncControlsFromSettings(_voiceChatSettingsService.Load());
+    }
+
+    private void SyncControlsFromSettings(VoiceChatSettings settings)
+    {
         if (_wakePhraseComboBox == null)
             return;
 
         _isUpdatingWakePhraseSelector = true;
         try
         {
-            _wakePhraseComboBox.SelectedItem = _wakeWordService.SelectedWakePhrase;
+            _wakePhraseComboBox.SelectedItem = settings.WakePhrase;
+            if (_autoListenOnWakeCheckBox != null)
+                _autoListenOnWakeCheckBox.IsChecked = settings.AutoListenOnWake;
         }
         finally
         {
             _isUpdatingWakePhraseSelector = false;
         }
+    }
+
+    private void OnVoiceChatSettingsChanged(VoiceChatSettings settings)
+    {
+        Dispatcher.UIThread.Post(() => _ = ApplyVoiceChatSettingsAsync(settings));
+    }
+
+    private async Task ApplyVoiceChatSettingsAsync(VoiceChatSettings settings)
+    {
+        if (_isDisposed)
+            return;
+
+        SyncControlsFromSettings(settings);
+
+        try
+        {
+            await _wakeWordService.ApplySettingsAsync(new AndroidWakeWordSettings
+            {
+                SelectedWakePhrase = settings.WakePhrase,
+                Sensitivity = settings.WakeSensitivity
+            }).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            if (ViewModel is { } vm)
+                vm.StatusText = $"Failed to apply wake-word settings: {ex.Message}";
+        }
+    }
+
+    private VoiceChatSettings SaveVoiceChatSettings(Func<VoiceChatSettings, VoiceChatSettings> update)
+    {
+        return _voiceChatSettingsService.Save(update(_voiceChatSettingsService.Load()));
     }
 
     private async Task HandleWakeWordDetectedOnUiAsync(AndroidWakeWordDetectedEventArgs e)

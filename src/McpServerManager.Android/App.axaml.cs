@@ -35,6 +35,7 @@ public partial class App : Application
                 AndroidLogcatBridge.EnsureInitialized();
                 AndroidCrashDiagnostics.ReplayPendingDiagnostics();
                 AndroidOidcJwtCacheInvalidationMonitor.EnsureInitialized();
+                VoiceChatSettingsService.Instance.ConfigureStore(new AndroidVoiceChatSettingsStore());
                 global::Android.Util.Log.Info("McpSM", "[App] OnFrameworkInitializationCompleted entered (Android)");
 
                 try

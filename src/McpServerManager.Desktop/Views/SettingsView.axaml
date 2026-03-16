@@ -7,39 +7,51 @@
              x:Class="McpServerManager.Desktop.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
-  <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" Background="{DynamicResource ThemeBackgroundBrush}" Margin="8">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel Background="{DynamicResource ThemeBackgroundBrush}" Margin="8" Spacing="12">
+      <TextBlock Text="Settings" FontSize="20" FontWeight="Bold"/>
 
-    <!-- Header -->
-    <TextBlock Grid.Row="0" Text="Settings" FontSize="20" FontWeight="Bold" Margin="0,0,0,12"/>
+      <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" Padding="12">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Voice Chat" FontSize="16" FontWeight="SemiBold"/>
+          <TextBlock Text="Shared voice-chat defaults for Desktop and Android. These values seed new voice sessions and keep the quick voice controls consistent with saved settings."
+                     TextWrapping="Wrap" Opacity="0.7" FontSize="13"/>
+          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Default language"/>
+            <TextBox Grid.Row="0" Grid.Column="1"
+                     Text="{Binding VoiceLanguage, Mode=TwoWay}"
+                     Watermark="en-US"/>
+            <TextBlock Grid.Row="1" Grid.Column="0"/>
+            <CheckBox Grid.Row="1" Grid.Column="1"
+                      Content="Auto-continue voice chat after each response"
+                      IsChecked="{Binding AutoContinueEnabled, Mode=TwoWay}"/>
+          </Grid>
+        </StackPanel>
+      </Border>
 
-    <!-- Speech Filter Section Header -->
-    <StackPanel Grid.Row="1" Spacing="4" Margin="0,0,0,8">
-      <TextBlock Text="Speech Filter Phrases" FontSize="16" FontWeight="SemiBold"/>
-      <TextBlock Text="Lines containing any of these phrases (case-insensitive) will be excluded from text-to-speech. One phrase per line."
-                 TextWrapping="Wrap" Opacity="0.7" FontSize="13"/>
+      <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" Padding="12">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Speech Filter Phrases" FontSize="16" FontWeight="SemiBold"/>
+          <TextBlock Text="Lines containing any of these phrases (case-insensitive) will be excluded from text-to-speech. One phrase per line."
+                     TextWrapping="Wrap" Opacity="0.7" FontSize="13"/>
+          <TextBox Text="{Binding SpeechFilterWords, Mode=TwoWay}"
+                   AcceptsReturn="True"
+                   TextWrapping="Wrap"
+                   Watermark="Enter filter phrases, one per line..."
+                   FontFamily="Cascadia Code,Consolas,Menlo,monospace"
+                   FontSize="14"
+                   MinHeight="220"
+                   VerticalContentAlignment="Top"/>
+        </StackPanel>
+      </Border>
+
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="Save" Command="{Binding SaveFilterWordsCommand}" Padding="12,6"/>
+        <Button Content="Revert" Command="{Binding RevertFilterWordsCommand}" Padding="12,6"/>
+        <Button Content="Import" x:Name="ImportButton" Click="OnImportClick" Padding="12,6"/>
+        <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Opacity="0.7" TextWrapping="Wrap"/>
+      </StackPanel>
     </StackPanel>
-
-    <!-- Filter Words Editor -->
-    <TextBox Grid.Row="2"
-             Text="{Binding SpeechFilterWords, Mode=TwoWay}"
-             AcceptsReturn="True"
-             TextWrapping="Wrap"
-             Watermark="Enter filter phrases, one per line..."
-             FontFamily="Cascadia Code,Consolas,Menlo,monospace"
-             FontSize="14"
-             MinHeight="200"
-             VerticalContentAlignment="Top"/>
-
-    <!-- Save/Revert/Import Buttons + Status -->
-    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-      <Button Content="Save" Command="{Binding SaveFilterWordsCommand}" Padding="12,6"/>
-      <Button Content="Revert" Command="{Binding RevertFilterWordsCommand}" Padding="12,6"/>
-      <Button Content="Import" x:Name="ImportButton" Click="OnImportClick" Padding="12,6"/>
-      <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Opacity="0.7"/>
-    </StackPanel>
-
-    <!-- Bottom spacer -->
-    <Panel Grid.Row="4"/>
-  </Grid>
+  </ScrollViewer>
 
 </UserControl>

@@ -512,25 +512,88 @@ Features:
       done: true
   - id: MCP-VOICECHAT-001
     title: Add Voice Chat settings to Android and Desktop
-    estimate: 1d
-    note: Requested by user on 2026-03-09 to prioritize Android and Desktop parity.
-    done: false
+    estimate: 3d
+    note: 'Plan refreshed on 2026-03-15. Scope decision: shared voice settings are cross-platform; wake-word controls remain Android-only; existing wake-word preference keys must remain backward compatible.'
+    done: true
+    completed: 2026-03-16T02:19:08.1466340Z
     description:
-    - Add a Voice Chat settings section to Android settings UI.
-    - Add matching Voice Chat settings to Desktop settings UI.
-    - Ensure settings are persisted and loaded consistently across both platforms.
+    - Expand the current settings implementation from speech-filter-only into a real Voice Chat settings surface for Desktop and Android.
+    - Treat settings state as a single source of truth owned by view model plus persistence services, not by view code-behind controls.
+    - Split scope into shared voice settings available on both platforms and Android-only wake-word settings that only render where the runtime capability exists.
+    - Persist every supported setting across app restarts and apply persisted defaults back into the active voice runtime without requiring users to re-enter them on each launch.
+    - Preserve the existing Speech Filter workflow and extend the Settings tab with a dedicated Voice Chat section rather than replacing current behavior.
+    - Keep this item focused on Desktop and Android application settings only; server-side VoiceConversation options, Director and Web hosts, and iOS are out of scope for this TODO.
+    done-summary: Implemented shared voice-chat settings persistence and UI for Desktop and Android. Added a shared VoiceChatSettings service with a Desktop file-backed store and an Android SharedPreferences-backed store, expanded the shared SettingsViewModel and Desktop/Android settings screens with voice controls, seeded voice language defaults into the runtime, persisted SimplifiedVoiceView auto-continue, and wired Android wake-word quick controls plus settings saves through the same persisted state with live wake-word service application.
+    remaining: 'Execute in five phases: scope freeze, persistence contracts, SettingsViewModel expansion, Desktop and Android UI wiring, then persistence, runtime, and manual validation. Critical acceptance criteria: Desktop and Android both expose shared voice settings in Settings, Android exposes wake-word-specific settings without polluting Desktop, persisted values survive restart, and runtime defaults are seeded from the saved settings instead of hard-coded view state.'
     technical-details:
-    - Define shared settings keys and defaults for both Android and Desktop.
-    - Wire view model/state bindings for platform-specific settings views.
-    - Validate serialization/deserialization compatibility for existing users.
+    - src/McpServer.UI.Core/ViewModels/SettingsViewModel.cs currently owns only SpeechFilterWords and StatusMessage; the detailed plan must extend this settings state or compose a dedicated voice-settings collaborator without moving persistence into the views.
+    - src/McpServerManager.Core/ViewModels/SettingsViewModel.cs is a thin wrapper over the UI.Core settings VM; keep MVVM by injecting any new voice-settings services here rather than storing values in Desktop or Android code-behind.
+    - src/McpServerManager.Desktop/Views/SettingsView.axaml and src/McpServerManager.Android/Views/PhoneSettingsView.axaml currently render only the speech-filter editor; append a Voice Chat group to both surfaces and keep the existing speech-filter section intact.
+    - src/McpServer.UI.Core/ViewModels/VoiceConversationViewModel.cs already exposes Language with a hard default of en-US; replace the hard-coded startup default with a persisted user preference during voice-VM creation or bootstrap.
+    - src/McpServerManager/Views/SimplifiedVoiceView.axaml plus .cs contain an AutoContinueToggle whose startup state is currently view-local and hardcoded true; migrate that value to persisted settings and apply it from VM-owned state.
+    - src/McpServerManager.Android/Views/VoiceConversationView.axaml plus .cs currently keep WakePhraseComboBox and AutoListenOnWakeCheckBox behavior close to the view; move default state ownership to persisted settings while leaving platform-only event glue in the view.
+    - src/McpServerManager.Android/Services/AndroidWakeWordServices.cs already has persisted wake-word settings using SharedPreferences keys WakePhrase and WakeSensitivity; reuse or wrap this store instead of creating a parallel Android-only settings source.
+    - src/McpServerManager.Android/Services/AndroidPorcupineWakeWordEngine.cs already resolves PicovoiceAccessKey from SharedPreferences key PicovoiceAccessKey; expose that setting in Android UI and save it to the same key to avoid split configuration paths.
+    - src/McpServerManager.Core/Services/SpeechFilterService.cs is the current precedent for per-user persisted settings on Desktop; implement the Desktop voice-settings store with the same per-user, app-local persistence expectations rather than mutating packaged appsettings.config.
+    - 'SSOT and MVVM rule: settings views must bind to view model properties and commands only; code-behind may handle platform APIs, but it must not become the durable owner of saved setting values.'
     implementation-tasks:
-    - task: Define/update shared Voice Chat settings model and persistence contract
+    - task: '[01] Freeze scope and publish the settings matrix: shared settings on Desktop and Android = DefaultLanguage plus AutoContinueEnabled; Android-only settings = WakePhrase plus WakeSensitivity plus AutoListenOnWake plus PicovoiceAccessKey.'
       done: false
-    - task: Implement Android settings UI bindings for Voice Chat options
+    - task: '[02] Record explicit out-of-scope boundaries in the TODO item and implementation notes: no server VoiceConversation config editor, no Director or Web parity work, no iOS support in this task.'
       done: false
-    - task: Implement Desktop settings UI bindings for Voice Chat options
+    - task: '[03] Add a shared VoiceChatSettings contract in Core for the cross-platform values that both Settings screens and both voice runtimes need.'
       done: false
-    - task: Add validation/tests for cross-platform settings persistence
+    - task: '[04] Add an Android supplemental contract for wake-word-only values so Android capability-specific state does not leak into Desktop-only UI logic.'
+      done: false
+    - task: '[05] Introduce store or service interfaces for loading and saving voice settings, with one abstraction for shared settings and one Android-specific extension or wrapper where needed.'
+      done: false
+    - task: '[06] Implement a Desktop file-backed voice-settings store under the same LocalApplicationData/McpServerManager area used by existing user settings patterns.'
+      done: false
+    - task: '[07] Reuse or adapt AndroidWakeWordPreferencesStore so the new Android settings path preserves the current SharedPreferences keys for wake phrase and sensitivity instead of silently breaking existing users.'
+      done: false
+    - task: '[08] Add Android persistence for AutoListenOnWake in the same voice preferences bucket so that the current checkbox state survives app restarts.'
+      done: false
+    - task: '[09] Add Android persistence for PicovoiceAccessKey using the existing PicovoiceAccessKey SharedPreferences key already read by AndroidPorcupineWakeWordEngine.'
+      done: false
+    - task: '[10] Define normalization and defaulting rules for every setting: language fallback, supported wake-phrase whitelist, supported sensitivity values, empty access-key handling, and default auto-continue and auto-listen booleans.'
+      done: false
+    - task: '[11] Extend the settings view model load path so it hydrates voice settings alongside existing speech-filter values on initial view-model construction.'
+      done: false
+    - task: '[12] Add VM properties for editable shared settings VoiceLanguage and AutoContinueEnabled and Android-only settings WakePhrase, WakeSensitivity, AutoListenOnWake, and PicovoiceAccessKey plus visibility flags for platform-specific controls.'
+      done: false
+    - task: '[13] Extend the existing Save and Revert workflow so voice settings are saved and reverted atomically with clear status text instead of creating a second unrelated settings-save path.'
+      done: false
+    - task: '[14] Keep unsaved edits in the view model as SSOT; do not allow Desktop or Android views to cache pending voice settings in controls and only push them on save.'
+      done: false
+    - task: '[15] Update src/McpServerManager.Desktop/Views/SettingsView.axaml to add a Voice Chat section with at minimum language and auto-continue controls and explanatory copy.'
+      done: false
+    - task: '[16] Update src/McpServerManager.Android/Views/PhoneSettingsView.axaml to add the same shared Voice Chat controls plus Android-only wake-word and access-key controls.'
+      done: false
+    - task: '[17] Ensure Desktop hides Android-only settings entirely via VM-driven visibility and state rather than dead controls or unsupported save behavior.'
+      done: false
+    - task: '[18] Seed VoiceConversationViewModel.Language from persisted settings during voice-VM creation or bootstrap so the voice screens start with the saved language instead of the hard-coded default.'
+      done: false
+    - task: '[19] Replace the current SimplifiedVoiceView startup assumption that auto-continue is on by default with a read from persisted settings and a write-back when the user changes it.'
+      done: false
+    - task: '[20] Replace the current Android AutoListenOnWakeCheckBox ephemeral state with persisted load and save behavior so wake-triggered auto listen survives restarts.'
+      done: false
+    - task: '[21] Apply saved wake-phrase and sensitivity changes to a live AndroidWakeWordService session when monitoring is already active, or document the exact restart behavior if live apply is not feasible.'
+      done: false
+    - task: '[22] Preserve backward compatibility for existing Android users who already have WakePhrase and WakeSensitivity stored; verify defaults remain stable when no saved values exist.'
+      done: false
+    - task: '[23] Add focused tests for Desktop voice-settings persistence: missing-file defaults, save and load round-trip, and invalid or partial file recovery.'
+      done: false
+    - task: '[24] Add focused tests for Android voice-settings persistence: SharedPreferences round-trip, compatibility with existing keys, and blank or invalid value normalization.'
+      done: false
+    - task: '[25] Add SettingsViewModel tests that cover initial load, edit and save, revert, status text, and SSOT behavior for both shared and Android-only properties.'
+      done: false
+    - task: '[26] Run Desktop manual smoke validation: change settings, save, restart the app, and verify language plus auto-continue restore into the voice experience and settings screen.'
+      done: false
+    - task: '[27] Run Android manual smoke validation: change settings, save, restart the app, and verify language plus wake settings plus auto listen plus access key restore correctly.'
+      done: false
+    - task: '[28] Run Android live-behavior smoke validation while wake monitoring is active to confirm updated phrase and sensitivity settings either apply immediately or surface a clear restart requirement.'
+      done: false
+    - task: '[29] Update any user-facing setup notes if the Android settings screen becomes the recommended place to enter the Picovoice access key instead of environment or app-manifest configuration.'
       done: false
 DEPLOY-STATUS:
   high-priority:
@@ -855,24 +918,47 @@ director:
   medium-priority:
   - id: DIR-UI-001
     title: Reorder the tabs so that non-workspace tabs are at the end.
-    note: Implementation and bookkeeping refreshed on 2026-03-11 after DIR-UI-001 planning and code changes.
-    done: false
+    note: Closed on 2026-03-16 after confirming the implemented tab placement model in source, focused Director ordering tests, successful GitHub Actions run 23124453170, passing local Director/UI.Core validation, and a successful safe local rollout via `build.ps1 UpdateDirectorTool --skip-process-stop --configuration Debug`. The installed tool's interactive entrypoint was verified with `director interactive --help`. A separate hand-run TUI-only smoke checklist was waived because the behavior under this TODO is deterministic tab ordering already covered by the role-based tests that feed the same RebuildTabs() path.
+    done: true
+    completed: 2026-03-16T02:30:52.3381843Z
     description:
     - Move the Director non-workspace tabs (Health, Workspaces, Policy, Logs, and Config) to the end of the tab strip.
     - Keep workspace-scoped and workspace-aware tabs first after the existing authorization and availability filtering.
-    remaining: Implementation is complete, but targeted validation and build-tool redeploy are blocked by unrelated McpServer.Director package restore/version issues (missing package versions plus NU1602/NU1605/NU1608 restore-as-error conflicts).
+    - Preserve relative registration order within each placement group so this feature only changes group placement, not the internal order of existing tab families.
+    - Current code, focused tests, CI evidence, local automated validation, and successful local Director tool rollout now support the ordering; no further work remains for this TODO.
+    done-summary: Implemented Director tab placement grouping so Health, Workspaces, Policy, Logs, and Config trail workspace-aware tabs; covered admin, agent-manager, and viewer ordering with focused tests; validated locally with a Director build plus 111 passing Director tests and 254 passing UI.Core tests; refreshed the local Director tool with UpdateDirectorTool and verified the installed interactive command resolves.
+    remaining: None. DIR-UI-001 was closed on 2026-03-16 after code verification, CI confirmation, local automated validation, and successful local Director tool rollout.
     technical-details:
-    - Add TabPlacementGroup metadata to TabRegistration in McpServer.UI.Core/Navigation/ITabRegistry.cs.
-    - Apply a stable GetVisibleTabRegistrations helper in MainScreen so filtering happens before placement ordering.
-    - Cover admin, agent-manager, and viewer ordering cases in focused Director tests.
+    - src\\McpServer.UI.Core\\Navigation\\ITabRegistry.cs defines TabPlacementGroup and TabRegistration.PlacementGroup; WorkspacePrimary remains the default and NonWorkspaceTrailing is the explicit trailing group.
+    - src\\McpServer.Director\\Screens\\MainScreen.cs tags Health, Workspaces, Policy, Logs, and Config as NonWorkspaceTrailing during tab registration.
+    - MainScreen.GetVisibleTabRegistrations(...) applies authorization filtering, then availability predicates, then stable ordering by PlacementGroup before RebuildTabs() creates visible tabs.
+    - tests\\McpServer.Director.Tests\\MainScreenTabOrderingTests.cs covers admin/control, agent-manager/workspace-only, and viewer/control ordering scenarios.
+    - build\\Build.cs and build\\Build.BuildAndDeployTargets.cs expose UpdateDirectorTool; scripts\\Update-DotnetTool.ps1 is the local scripted rollout path if the Director tool needs refreshing after validation.
+    - 'GitHub Actions workflow run 23124453170 (Build & Release #130) succeeded, including build-director, so the older restore/version blocker note is stale.'
     implementation-tasks:
-    - task: Add placement metadata to the shared Director tab registration model
+    - task: Keep the shared TabPlacementGroup metadata in ITabRegistry so Director can distinguish workspace-first tabs from trailing non-workspace tabs.
       done: true
-    - task: Mark the non-workspace Director tabs as trailing in MainScreen
+    - task: Keep Health, Workspaces, Policy, Logs, and Config registered as NonWorkspaceTrailing tabs in MainScreen.
       done: true
-    - task: Add focused tab-ordering tests for the Director screen
+    - task: Keep RebuildTabs() sourcing visible tabs from GetVisibleTabRegistrations() so authorization and availability filtering happen before placement ordering.
       done: true
-    - task: Resolve unrelated McpServer.Director package restore/version failures and rerun targeted validation
-      done: false
-    - task: Redeploy Director through build.ps1 UpdateDirectorTool after restore issues are fixed
-      done: false
+    - task: Preserve stable relative order inside each placement group so the feature only moves trailing tabs to the end instead of reshuffling each group.
+      done: true
+    - task: Retain focused Director tests for the admin plus control connection ordering scenario.
+      done: true
+    - task: Retain focused Director tests for the agent-manager plus workspace-only ordering scenario.
+      done: true
+    - task: Retain focused Director tests for the viewer plus control connection ordering scenario.
+      done: true
+    - task: Record that GitHub Actions run 23124453170 already validated current Director build and packaging so the old restore/version blocker can be removed from bookkeeping.
+      done: true
+    - task: Run dotnet test tests\\McpServer.Director.Tests\\McpServer.Director.Tests.csproj -nologo as focused local validation before closing the todo.
+      done: true
+    - task: Run dotnet build src\\McpServer.Director\\McpServer.Director.csproj -nologo as focused local build validation before closing the todo.
+      done: true
+    - task: Accept focused role-based automated ordering tests plus successful installed `director interactive --help` verification as sufficient closeout evidence for this deterministic tab-ordering change.
+      done: true
+    - task: If a local tool refresh is needed after validation, run build.ps1 UpdateDirectorTool or scripts\\Update-DotnetTool.ps1.
+      done: true
+    - task: Mark DIR-UI-001 done with an evidence-based completion summary once local validation and any needed rollout are recorded.
+      done: true

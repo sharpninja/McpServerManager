@@ -41,7 +41,9 @@ public interface IAndroidWakeWordService : IDisposable
     bool IsMonitoring { get; }
     IReadOnlyList<string> AvailableWakePhrases { get; }
     string SelectedWakePhrase { get; }
+    string SelectedWakeSensitivity { get; }
     event EventHandler<AndroidWakeWordDetectedEventArgs>? WakeWordDetected;
+    Task ApplySettingsAsync(AndroidWakeWordSettings settings, CancellationToken cancellationToken = default);
     Task<bool> SetSelectedWakePhraseAsync(string phrase, CancellationToken cancellationToken = default);
     Task StartMonitoringAsync(CancellationToken cancellationToken = default);
     Task StopMonitoringAsync(CancellationToken cancellationToken = default);
@@ -199,6 +201,7 @@ public sealed class AndroidWakeWordService : IAndroidWakeWordService
     public bool IsMonitoring { get; private set; }
     public IReadOnlyList<string> AvailableWakePhrases => AndroidWakeWordCatalog.SupportedWakePhrases;
     public string SelectedWakePhrase => _settings.SelectedWakePhrase;
+    public string SelectedWakeSensitivity => _settings.Sensitivity;
 
     public event EventHandler<AndroidWakeWordDetectedEventArgs>? WakeWordDetected;
 
@@ -231,20 +234,32 @@ public sealed class AndroidWakeWordService : IAndroidWakeWordService
         if (string.IsNullOrWhiteSpace(normalized))
             return false;
 
-        if (string.Equals(_settings.SelectedWakePhrase, normalized, StringComparison.Ordinal))
-            return true;
-
-        _settings = new AndroidWakeWordSettings
+        await ApplySettingsAsync(new AndroidWakeWordSettings
         {
             SelectedWakePhrase = normalized,
             Sensitivity = _settings.Sensitivity
-        };
+        }, cancellationToken);
+
+        return true;
+    }
+
+    public async Task ApplySettingsAsync(AndroidWakeWordSettings settings, CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var normalized = NormalizeSettings(settings);
+        if (string.Equals(_settings.SelectedWakePhrase, normalized.SelectedWakePhrase, StringComparison.Ordinal) &&
+            string.Equals(_settings.Sensitivity, normalized.Sensitivity, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _settings = normalized;
         _settingsStore.Save(_settings);
 
         if (IsMonitoring)
             await _wakeWordEngine.ConfigureAsync(_settings, cancellationToken);
-
-        return true;
     }
 
     public async Task StartMonitoringAsync(CancellationToken cancellationToken = default)

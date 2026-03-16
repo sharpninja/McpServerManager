@@ -127,6 +127,7 @@ public partial class SimplifiedVoiceView : UserControl
     private const int MaxChatMessages = 200;
     private static readonly TimeSpan StreamUiUpdateInterval = TimeSpan.FromMilliseconds(100);
     private const int StreamUiUpdateMinChars = 256;
+    private readonly VoiceChatSettingsService _voiceChatSettingsService = VoiceChatSettingsService.Instance;
 #if ANDROID
     private readonly IAndroidSpeechRecognitionService _stt = new AndroidSpeechRecognitionService();
     private readonly IAndroidTextToSpeechService _tts = new AndroidTextToSpeechService();
@@ -160,6 +161,7 @@ public partial class SimplifiedVoiceView : UserControl
     private Button? _pauseButton;
     private Button? _stopButton;
     private Button? _chatToggleButton;
+    private bool _isApplyingAutoContinueSetting;
 
     public SimplifiedVoiceView()
     {
@@ -178,7 +180,10 @@ public partial class SimplifiedVoiceView : UserControl
             chatItems.ItemsSource = _messages;
 
         if (_autoCheck != null)
+            _autoCheck.IsChecked = _voiceChatSettingsService.Load().AutoContinueEnabled;
+        if (_autoCheck != null)
             _autoCheck.IsCheckedChanged += OnAutoCheckedChanged;
+        _voiceChatSettingsService.SettingsChanged += OnVoiceChatSettingsChanged;
 
         DetachedFromVisualTree += OnDetached;
     }
@@ -188,6 +193,20 @@ public partial class SimplifiedVoiceView : UserControl
     // ── Auto-continue toggle ───────────────────────────────────────────
     private async void OnAutoCheckedChanged(object? sender, RoutedEventArgs e)
     {
+        if (!_isApplyingAutoContinueSetting)
+        {
+            var currentSettings = _voiceChatSettingsService.Load();
+            _voiceChatSettingsService.Save(new VoiceChatSettings
+            {
+                Language = currentSettings.Language,
+                AutoContinueEnabled = _autoCheck?.IsChecked == true,
+                WakePhrase = currentSettings.WakePhrase,
+                WakeSensitivity = currentSettings.WakeSensitivity,
+                AutoListenOnWake = currentSettings.AutoListenOnWake,
+                PicovoiceAccessKey = currentSettings.PicovoiceAccessKey
+            });
+        }
+
         // Start the mic loop when auto-turn is enabled and the session is ready but idle.
         if (_autoCheck?.IsChecked != true || !_sessionReady || _conversationActive || _isDisposed)
             return;
@@ -215,6 +234,25 @@ public partial class SimplifiedVoiceView : UserControl
             UpdateButtons();
             SetMicState(_sessionReady ? "ready" : "idle");
         }
+    }
+
+    private void OnVoiceChatSettingsChanged(VoiceChatSettings settings)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_isDisposed || _autoCheck == null)
+                return;
+
+            _isApplyingAutoContinueSetting = true;
+            try
+            {
+                _autoCheck.IsChecked = settings.AutoContinueEnabled;
+            }
+            finally
+            {
+                _isApplyingAutoContinueSetting = false;
+            }
+        });
     }
 
     // ── Start/End Chat toggle ──────────────────────────────────────────
@@ -1440,6 +1478,7 @@ public partial class SimplifiedVoiceView : UserControl
         if (_isDisposed) return;
         _isDisposed = true;
         DetachedFromVisualTree -= OnDetached;
+        _voiceChatSettingsService.SettingsChanged -= OnVoiceChatSettingsChanged;
         if (_autoCheck != null)
             _autoCheck.IsCheckedChanged -= OnAutoCheckedChanged;
         _viewLifetimeCts.Cancel();

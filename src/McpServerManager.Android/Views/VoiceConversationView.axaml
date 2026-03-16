@@ -59,7 +59,7 @@
                 </Grid>
                 <CheckBox x:Name="AutoListenOnWakeCheckBox"
                           Content="Auto listen + send on wake"
-                          IsChecked="True"/>
+                          IsCheckedChanged="OnAutoListenOnWakeCheckedChanged"/>
 
                 <!-- Text input -->
                 <TextBox MinHeight="60"
