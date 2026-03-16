@@ -21,6 +21,12 @@ if (Directory.Exists(toolWebRoot) && !Directory.Exists(defaultWebRoot))
 }
 
 var builder = WebApplication.CreateBuilder(options);
+builder.Host.UseDefaultServiceProvider((_, serviceProviderOptions) =>
+{
+    // Web only wires up a subset of the broader UI.Core surface today. Avoid failing startup
+    // on handlers for feature areas that are not part of the active Web host composition.
+    serviceProviderOptions.ValidateOnBuild = false;
+});
 
 // Enable RCL static web assets in all environments (needed for BlazorMonaco, etc.).
 if (!builder.Environment.IsDevelopment())

@@ -16,14 +16,16 @@ internal sealed class SessionLogApiClientAdapter : ISessionLogApiClient
 
     public async Task<ListSessionLogsResult> ListSessionLogsAsync(ListSessionLogsQuery query, CancellationToken cancellationToken = default)
     {
-        var client = await _context.GetRequiredActiveWorkspaceApiClientAsync(cancellationToken).ConfigureAwait(true);
-        var result = await client.SessionLog.QueryAsync(
-            agent: string.IsNullOrWhiteSpace(query.Agent) ? null : query.Agent,
-            model: string.IsNullOrWhiteSpace(query.Model) ? null : query.Model,
-            text: string.IsNullOrWhiteSpace(query.Text) ? null : query.Text,
-            limit: Math.Max(1, query.Limit),
-            offset: Math.Max(0, query.Offset),
-            cancellationToken: cancellationToken).ConfigureAwait(true);
+        var result = await _context.UseActiveWorkspaceApiClientAsync(
+                (client, ct) => client.SessionLog.QueryAsync(
+                    agent: string.IsNullOrWhiteSpace(query.Agent) ? null : query.Agent,
+                    model: string.IsNullOrWhiteSpace(query.Model) ? null : query.Model,
+                    text: string.IsNullOrWhiteSpace(query.Text) ? null : query.Text,
+                    limit: Math.Max(1, query.Limit),
+                    offset: Math.Max(0, query.Offset),
+                    cancellationToken: ct),
+                cancellationToken)
+            .ConfigureAwait(true);
 
         var items = result.Items
             .Select(MapSummary)
@@ -40,15 +42,16 @@ internal sealed class SessionLogApiClientAdapter : ISessionLogApiClient
         if (string.IsNullOrWhiteSpace(sessionId))
             throw new ArgumentException("SessionId is required.", nameof(sessionId));
 
-        var client = await _context.GetRequiredActiveWorkspaceApiClientAsync(cancellationToken).ConfigureAwait(true);
         var offset = 0;
 
         while (true)
         {
-            var page = await client.SessionLog.QueryAsync(
-                    limit: DetailPageSize,
-                    offset: offset,
-                    cancellationToken: cancellationToken)
+            var page = await _context.UseActiveWorkspaceApiClientAsync(
+                    (client, ct) => client.SessionLog.QueryAsync(
+                        limit: DetailPageSize,
+                        offset: offset,
+                        cancellationToken: ct),
+                    cancellationToken)
                 .ConfigureAwait(true);
 
             var match = page.Items.FirstOrDefault(item => string.Equals(item.SessionId, sessionId, StringComparison.Ordinal));
@@ -67,8 +70,10 @@ internal sealed class SessionLogApiClientAdapter : ISessionLogApiClient
         if (command is null)
             throw new ArgumentNullException(nameof(command));
 
-        var client = await _context.GetRequiredActiveWorkspaceApiClientAsync(cancellationToken).ConfigureAwait(true);
-        var result = await client.SessionLog.SubmitAsync(MapSubmit(command.SessionLog), cancellationToken).ConfigureAwait(true);
+        var result = await _context.UseActiveWorkspaceApiClientAsync(
+                (client, ct) => client.SessionLog.SubmitAsync(MapSubmit(command.SessionLog), ct),
+                cancellationToken)
+            .ConfigureAwait(true);
         return new SessionLogSubmitOutcome(result.Id, result.SourceType, result.SessionId);
     }
 
@@ -87,12 +92,13 @@ internal sealed class SessionLogApiClientAdapter : ISessionLogApiClient
             })
             .ToList();
 
-        var client = await _context.GetRequiredActiveWorkspaceApiClientAsync(cancellationToken).ConfigureAwait(true);
-        var result = await client.SessionLog.AppendDialogAsync(
-                command.Agent,
-                command.SessionId,
-                command.RequestId,
-                items,
+        var result = await _context.UseActiveWorkspaceApiClientAsync(
+                (client, ct) => client.SessionLog.AppendDialogAsync(
+                    command.Agent,
+                    command.SessionId,
+                    command.RequestId,
+                    items,
+                    ct),
                 cancellationToken)
             .ConfigureAwait(true);
 

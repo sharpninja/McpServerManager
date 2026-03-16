@@ -14,8 +14,10 @@ internal sealed class AuthConfigApiClientAdapter : IAuthConfigApiClient
 
     public async Task<AuthConfigSnapshot> GetAuthConfigAsync(CancellationToken cancellationToken = default)
     {
-        var client = await _context.GetRequiredControlApiClientAsync(cancellationToken).ConfigureAwait(true);
-        var result = await client.AuthConfig.GetConfigAsync(cancellationToken).ConfigureAwait(true);
+        var result = await _context.UseControlApiClientAsync(
+                static (client, ct) => client.AuthConfig.GetConfigAsync(ct),
+                cancellationToken)
+            .ConfigureAwait(true);
         return new AuthConfigSnapshot(
             result.Enabled,
             result.Authority,

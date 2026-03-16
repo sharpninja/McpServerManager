@@ -1,6 +1,7 @@
 using McpServer.Cqrs;
 using McpServer.UI.Core;
 using McpServer.UI.Core.Authorization;
+using McpServer.UI.Core.Commands;
 using McpServer.UI.Core.Services;
 using McpServer.Web.Adapters;
 using McpServer.Web.Authorization;
@@ -26,6 +27,20 @@ internal static class WebServiceRegistration
         services.AddSingleton<Dispatcher>();
         services.AddUiCore(typeof(WebServiceRegistration).Assembly);
 
+        services.TryAddSingleton<ICommandTarget, WebNoOpCommandTarget>();
+        services.TryAddSingleton<INavigationTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddSingleton<IRequestDetailsTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddSingleton<IPreviewTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddSingleton<IArchiveTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddSingleton<ISessionDataTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddSingleton<IClipboardTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddSingleton<IConfigTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddSingleton<IUiDispatchTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddSingleton<ITodoCopilotTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+
+        services.RemoveAll<BackendConnectionMonitor>();
+        services.AddScoped<BackendConnectionMonitor>();
+
         services.AddScoped<WebMcpContext>();
         services.AddScoped<ITodoApiClient, TodoApiClientAdapter>();
         services.AddScoped<IWorkspaceApiClient, WorkspaceApiClientAdapter>();
@@ -33,6 +48,8 @@ internal static class WebServiceRegistration
         services.AddScoped<IHealthApiClient, HealthApiClientAdapter>();
         services.AddScoped<ITemplateApiClient, TemplateApiClientAdapter>();
         services.AddScoped<IContextApiClient, ContextApiClientAdapter>();
+        services.AddScoped<IRepoApiClient, RepoApiClientAdapter>();
+        services.AddScoped<IVoiceApiClient, VoiceApiClientAdapter>();
         services.AddScoped<IAuthConfigApiClient, AuthConfigApiClientAdapter>();
         services.AddScoped<IConfigurationApiClient, ConfigurationApiClientAdapter>();
         services.AddScoped<IAgentApiClient, AgentApiClientAdapter>();

@@ -14,17 +14,19 @@ internal sealed class ConfigurationApiClientAdapter : IConfigurationApiClient
     public async Task<IReadOnlyDictionary<string, string>> GetValuesAsync(
         CancellationToken cancellationToken = default)
     {
-        var client = await _context.GetRequiredControlApiClientAsync(cancellationToken).ConfigureAwait(true);
-        var result = await client.Configuration.GetValuesAsync(cancellationToken).ConfigureAwait(true);
-        return result;
+        return await _context.UseControlApiClientAsync(
+                static (client, ct) => client.Configuration.GetValuesAsync(ct),
+                cancellationToken)
+            .ConfigureAwait(true);
     }
 
     public async Task<IReadOnlyDictionary<string, string>> PatchValuesAsync(
         IReadOnlyDictionary<string, string?> values,
         CancellationToken cancellationToken = default)
     {
-        var client = await _context.GetRequiredControlApiClientAsync(cancellationToken).ConfigureAwait(true);
-        var result = await client.Configuration.PatchValuesAsync(values, cancellationToken).ConfigureAwait(true);
-        return result;
+        return await _context.UseControlApiClientAsync(
+                (client, ct) => client.Configuration.PatchValuesAsync(values, ct),
+                cancellationToken)
+            .ConfigureAwait(true);
     }
 }

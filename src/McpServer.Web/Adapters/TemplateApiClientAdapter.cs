@@ -23,8 +23,10 @@ internal sealed class TemplateApiClientAdapter : ITemplateApiClient
         string? category, string? tag, string? keyword,
         CancellationToken cancellationToken = default)
     {
-        var client = await _context.GetRequiredActiveWorkspaceApiClientAsync(cancellationToken).ConfigureAwait(true);
-        var response = await client.Template.QueryAsync(category, tag, keyword, cancellationToken).ConfigureAwait(true);
+        var response = await _context.UseActiveWorkspaceApiClientAsync(
+                (client, ct) => client.Template.QueryAsync(category, tag, keyword, ct),
+                cancellationToken)
+            .ConfigureAwait(true);
 
         var items = response.Items
             .Select(i => new TemplateListItem(i.Id, i.Title, i.Category, i.Tags.ToList(), i.Description))
@@ -37,8 +39,10 @@ internal sealed class TemplateApiClientAdapter : ITemplateApiClient
     {
         try
         {
-            var client = await _context.GetRequiredActiveWorkspaceApiClientAsync(cancellationToken).ConfigureAwait(true);
-            var item = await client.Template.GetAsync(templateId, cancellationToken).ConfigureAwait(true);
+            var item = await _context.UseActiveWorkspaceApiClientAsync(
+                    (client, ct) => client.Template.GetAsync(templateId, ct),
+                    cancellationToken)
+                .ConfigureAwait(true);
             return MapDetail(item);
         }
         catch (McpNotFoundException ex)
@@ -53,17 +57,19 @@ internal sealed class TemplateApiClientAdapter : ITemplateApiClient
     {
         try
         {
-            var client = await _context.GetRequiredActiveWorkspaceApiClientAsync(cancellationToken).ConfigureAwait(true);
-            var result = await client.Template.CreateAsync(new TemplateCreateRequest
-            {
-                Id = command.Id,
-                Title = command.Title,
-                Category = command.Category,
-                Content = command.Content,
-                Tags = command.Tags?.ToList(),
-                Description = command.Description,
-                Engine = command.Engine,
-            }, cancellationToken).ConfigureAwait(true);
+            var result = await _context.UseActiveWorkspaceApiClientAsync(
+                    (client, ct) => client.Template.CreateAsync(new TemplateCreateRequest
+                    {
+                        Id = command.Id,
+                        Title = command.Title,
+                        Category = command.Category,
+                        Content = command.Content,
+                        Tags = command.Tags?.ToList(),
+                        Description = command.Description,
+                        Engine = command.Engine,
+                    }, ct),
+                    cancellationToken)
+                .ConfigureAwait(true);
 
             return MapMutationOutcome(result);
         }
@@ -84,16 +90,18 @@ internal sealed class TemplateApiClientAdapter : ITemplateApiClient
     {
         try
         {
-            var client = await _context.GetRequiredActiveWorkspaceApiClientAsync(cancellationToken).ConfigureAwait(true);
-            var result = await client.Template.UpdateAsync(command.TemplateId, new TemplateUpdateRequest
-            {
-                Title = command.Title,
-                Category = command.Category,
-                Content = command.Content,
-                Tags = command.Tags?.ToList(),
-                Description = command.Description,
-                Engine = command.Engine,
-            }, cancellationToken).ConfigureAwait(true);
+            var result = await _context.UseActiveWorkspaceApiClientAsync(
+                    (client, ct) => client.Template.UpdateAsync(command.TemplateId, new TemplateUpdateRequest
+                    {
+                        Title = command.Title,
+                        Category = command.Category,
+                        Content = command.Content,
+                        Tags = command.Tags?.ToList(),
+                        Description = command.Description,
+                        Engine = command.Engine,
+                    }, ct),
+                    cancellationToken)
+                .ConfigureAwait(true);
 
             return MapMutationOutcome(result);
         }
@@ -114,8 +122,10 @@ internal sealed class TemplateApiClientAdapter : ITemplateApiClient
     {
         try
         {
-            var client = await _context.GetRequiredActiveWorkspaceApiClientAsync(cancellationToken).ConfigureAwait(true);
-            var result = await client.Template.DeleteAsync(templateId, cancellationToken).ConfigureAwait(true);
+            var result = await _context.UseActiveWorkspaceApiClientAsync(
+                    (client, ct) => client.Template.DeleteAsync(templateId, ct),
+                    cancellationToken)
+                .ConfigureAwait(true);
             return MapMutationOutcome(result);
         }
         catch (McpNotFoundException ex)
@@ -128,18 +138,18 @@ internal sealed class TemplateApiClientAdapter : ITemplateApiClient
     public async Task<TemplateTestOutcome> TestTemplateAsync(
         TestTemplateQuery query, CancellationToken cancellationToken = default)
     {
-        var client = await _context.GetRequiredActiveWorkspaceApiClientAsync(cancellationToken).ConfigureAwait(true);
         var variables = string.IsNullOrWhiteSpace(query.VariablesJson)
             ? new Dictionary<string, object?>()
             : JsonSerializer.Deserialize<Dictionary<string, object?>>(query.VariablesJson) ?? new();
 
         var request = new TemplateTestRequest { Variables = variables, InlineTemplate = query.InlineTemplate };
 
-        TemplateTestResult result;
-        if (!string.IsNullOrWhiteSpace(query.TemplateId))
-            result = await client.Template.TestAsync(query.TemplateId, request, cancellationToken).ConfigureAwait(true);
-        else
-            result = await client.Template.TestInlineAsync(request, cancellationToken).ConfigureAwait(true);
+        var result = await _context.UseActiveWorkspaceApiClientAsync(
+                (client, ct) => !string.IsNullOrWhiteSpace(query.TemplateId)
+                    ? client.Template.TestAsync(query.TemplateId, request, ct)
+                    : client.Template.TestInlineAsync(request, ct),
+                cancellationToken)
+            .ConfigureAwait(true);
 
         return new TemplateTestOutcome(
             result.Success,
