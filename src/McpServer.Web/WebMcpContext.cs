@@ -148,13 +148,10 @@ internal sealed class WebMcpContext
     {
         // If the user is authenticated, prefer their OIDC access token over the static API key.
         var bearerToken = await _bearerTokenAccessor.GetAccessTokenAsync(cancellationToken).ConfigureAwait(true);
+        AlignAuthenticationMode(bearerToken);
+
         if (!string.IsNullOrWhiteSpace(bearerToken))
         {
-            lock (_gate)
-            {
-                _controlApiClient.BearerToken = bearerToken;
-                _activeWorkspaceApiClient.BearerToken = bearerToken;
-            }
             return;
         }
 
@@ -181,6 +178,61 @@ internal sealed class WebMcpContext
         var apiKey = await client.InitializeAsync(cancellationToken).ConfigureAwait(true);
         ApplyApiKey(apiKey, overwriteExisting: false);
     }
+
+    private void AlignAuthenticationMode(string? bearerToken)
+    {
+        lock (_gate)
+        {
+            if (!string.IsNullOrWhiteSpace(bearerToken))
+            {
+                SwitchToBearerTokenNoLock(bearerToken);
+                return;
+            }
+
+            if (!HasCachedBearerAuthNoLock())
+                return;
+
+            var apiKeyToRestore = _apiKey;
+            _controlApiClient.Logout();
+            _activeWorkspaceApiClient.Logout();
+
+            if (!string.IsNullOrWhiteSpace(apiKeyToRestore))
+            {
+                _controlApiClient.ApiKey = apiKeyToRestore;
+                _activeWorkspaceApiClient.ApiKey = apiKeyToRestore;
+            }
+
+            _logger.LogInformation(
+                "No current Web MCP bearer token is available. Cleared cached bearer-token auth and restored API key mode for the current circuit.");
+        }
+    }
+
+    private void SwitchToBearerTokenNoLock(string bearerToken)
+    {
+        var bearerChanged =
+            (!string.IsNullOrWhiteSpace(_controlApiClient.BearerToken) &&
+             !string.Equals(_controlApiClient.BearerToken, bearerToken, StringComparison.Ordinal)) ||
+            (!string.IsNullOrWhiteSpace(_activeWorkspaceApiClient.BearerToken) &&
+             !string.Equals(_activeWorkspaceApiClient.BearerToken, bearerToken, StringComparison.Ordinal));
+
+        if (bearerChanged)
+        {
+            _controlApiClient.Logout();
+            _activeWorkspaceApiClient.Logout();
+        }
+
+        if (string.IsNullOrWhiteSpace(_controlApiClient.BearerToken))
+            _controlApiClient.BearerToken = bearerToken;
+
+        if (string.IsNullOrWhiteSpace(_activeWorkspaceApiClient.BearerToken))
+            _activeWorkspaceApiClient.BearerToken = bearerToken;
+    }
+
+    private bool HasCachedBearerAuthNoLock()
+        => !string.IsNullOrWhiteSpace(_controlApiClient.BearerToken) ||
+           !string.IsNullOrWhiteSpace(_activeWorkspaceApiClient.BearerToken) ||
+           _controlApiClient.Todo.RequireBearerToken ||
+           _activeWorkspaceApiClient.Todo.RequireBearerToken;
 
     private async Task<T> UseApiClientAsync<T>(
         Func<CancellationToken, Task<McpServerClient>> getClientAsync,

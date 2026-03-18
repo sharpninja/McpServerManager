@@ -212,7 +212,7 @@ public sealed class WebUiPhase5ViewModelTests
                 null,
                 null,
                 [
-                    new SessionLogEntryDetail(
+                    new SessionLogTurnDetail(
                         "req-1",
                         "2026-01-01T00:00:00Z",
                         "Query title",
@@ -243,9 +243,9 @@ public sealed class WebUiPhase5ViewModelTests
         await viewModel.LoadAsync();
 
         Assert.NotNull(viewModel.Detail);
-        Assert.Single(viewModel.Detail!.Entries);
-        Assert.Equal("req-1", viewModel.Detail.Entries[0].RequestId);
-        Assert.Single(viewModel.Detail.Entries[0].Actions);
+        Assert.Single(viewModel.Detail!.Turns);
+        Assert.Equal("req-1", viewModel.Detail.Turns[0].RequestId);
+        Assert.Single(viewModel.Detail.Turns[0].Actions);
     }
 
     [Fact]

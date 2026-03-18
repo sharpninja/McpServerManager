@@ -1,6 +1,7 @@
 @page "/context/search"
 
 @inject ContextSearchViewModel ViewModel
+@inject WebCommandTarget CommandTarget
 
 <PageTitle>Context Search</PageTitle>
 
@@ -96,10 +97,13 @@ else
         if (safeLimit <= 0)
             safeLimit = 20;
 
-        ViewModel.Query = Q ?? string.Empty;
-        ViewModel.SourceType = string.IsNullOrWhiteSpace(SourceType) ? null : SourceType;
-        ViewModel.Limit = safeLimit;
-        await ViewModel.LoadAsync().ConfigureAwait(true);
+        await CommandTarget.RunAsync(async () =>
+        {
+            ViewModel.Query = Q ?? string.Empty;
+            ViewModel.SourceType = string.IsNullOrWhiteSpace(SourceType) ? null : SourceType;
+            ViewModel.Limit = safeLimit;
+            await ViewModel.LoadAsync().ConfigureAwait(true);
+        }).ConfigureAwait(true);
     }
 
     private string GetLimitValue() => Limit?.ToString() ?? "20";

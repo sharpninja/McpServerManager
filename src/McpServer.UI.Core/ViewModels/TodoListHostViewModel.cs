@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
+using McpServer.Cqrs.Mvvm;
 using McpServer.UI.Core.Messages;
 using McpServer.UI.Core.Models;
 using McpServer.UI.Core.Services;
@@ -32,6 +33,9 @@ public partial class TodoListHostViewModel : ViewModelBase
     private readonly ITimerService _timerService;
     private List<TodoListEntry> _allEntries = new();
     private CancellationTokenSource? _activeCts;
+    private CqrsRelayCommand<bool>? _copilotStatusCommand;
+    private CqrsRelayCommand<bool>? _copilotPlanCommand;
+    private CqrsRelayCommand<bool>? _copilotImplementCommand;
 
     [ObservableProperty] private ObservableCollection<TodoListGroup> _groupedItems = new();
     [ObservableProperty] private TodoListEntry? _selectedEntry;
@@ -60,6 +64,15 @@ public partial class TodoListHostViewModel : ViewModelBase
     public event Action<string>? GlobalStatusChanged;
 
     public event EventHandler? OpenAiChatRequested;
+
+    public CqrsRelayCommand<bool> CopilotStatusCommand
+        => _copilotStatusCommand ??= CreateCopilotCommand(ExecuteCopilotStatusAsync);
+
+    public CqrsRelayCommand<bool> CopilotPlanCommand
+        => _copilotPlanCommand ??= CreateCopilotCommand(ExecuteCopilotPlanAsync);
+
+    public CqrsRelayCommand<bool> CopilotImplementCommand
+        => _copilotImplementCommand ??= CreateCopilotCommand(ExecuteCopilotImplementAsync);
 
     public static IReadOnlyList<string> PriorityOptions { get; } = ["All", "High", "Medium", "Low"];
     public static IReadOnlyList<string> ScopeOptions { get; } = ["Title", "ID", "All Fields"];
@@ -413,6 +426,35 @@ public partial class TodoListHostViewModel : ViewModelBase
 
         await RunTodoPromptCommandAsync(item, "implement",
             static (vm, ct) => vm.GenerateImplementPromptAsync(ct));
+    }
+
+    private CqrsRelayCommand<bool> CreateCopilotCommand(Func<TodoListEntry?, Task> executeAsync)
+        => Commands.CqrsRelayFactory.Create<TodoListEntry>(
+            _serviceProvider.GetRequiredService<McpServer.Cqrs.Dispatcher>(),
+            executeAsync);
+
+    private async Task ExecuteCopilotStatusAsync(TodoListEntry? entry)
+    {
+        if (entry is not null)
+            SelectedEntry = entry;
+
+        await CopilotStatusAsync();
+    }
+
+    private async Task ExecuteCopilotPlanAsync(TodoListEntry? entry)
+    {
+        if (entry is not null)
+            SelectedEntry = entry;
+
+        await CopilotPlanAsync();
+    }
+
+    private async Task ExecuteCopilotImplementAsync(TodoListEntry? entry)
+    {
+        if (entry is not null)
+            SelectedEntry = entry;
+
+        await CopilotImplementAsync();
     }
 
     private async Task RunTodoPromptCommandAsync(

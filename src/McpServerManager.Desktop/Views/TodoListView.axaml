@@ -92,7 +92,7 @@
                       <SelectableTextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13"
                                  Foreground="White"/>
                     </Border>
-                    <ListBox ItemsSource="{Binding Items}" Margin="0"
+                    <ListBox x:Name="GroupTodoList" ItemsSource="{Binding Items}" Margin="0"
                              SelectionMode="Single"
                              PointerPressed="OnGroupListBoxPointerPressed"
                              SelectionChanged="OnGroupListBoxSelectionChanged"
@@ -132,11 +132,14 @@
                                     Command="{Binding DataContext.AnalyzeRequirementsCommand, ElementName=TodoRoot}"/>
                           <Separator/>
                           <MenuItem Header="Copilot Status"
-                                    Command="{Binding DataContext.CopilotStatusCommand, ElementName=TodoRoot}"/>
+                                    Command="{Binding DataContext.CopilotStatusCommand, ElementName=TodoRoot}"
+                                    CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                           <MenuItem Header="Copilot Plan"
-                                    Command="{Binding DataContext.CopilotPlanCommand, ElementName=TodoRoot}"/>
+                                    Command="{Binding DataContext.CopilotPlanCommand, ElementName=TodoRoot}"
+                                    CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                           <MenuItem Header="Copilot Implement"
-                                    Command="{Binding DataContext.CopilotImplementCommand, ElementName=TodoRoot}"/>
+                                    Command="{Binding DataContext.CopilotImplementCommand, ElementName=TodoRoot}"
+                                    CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                           <Separator/>
                           <MenuItem Header="Delete"
                                     Command="{Binding DataContext.DeleteSelectedCommand, ElementName=TodoRoot}"/>

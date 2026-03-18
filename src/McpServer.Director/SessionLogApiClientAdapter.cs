@@ -119,7 +119,7 @@ internal sealed class SessionLogApiClientAdapter : ISessionLogApiClient
             Model: item.Model,
             Started: item.Started,
             LastUpdated: item.LastUpdated,
-            EntryCount: item.EntryCount);
+            TurnCount: item.TurnCount);
 
     private static UnifiedSessionLogDto MapSubmit(SessionLogDetail detail)
         => new()
@@ -131,7 +131,7 @@ internal sealed class SessionLogApiClientAdapter : ISessionLogApiClient
             Model = detail.Model,
             Started = detail.Started,
             LastUpdated = detail.LastUpdated,
-            EntryCount = detail.EntryCount,
+            TurnCount = detail.TurnCount,
             TotalTokens = detail.TotalTokens,
             CursorSessionLabel = detail.CursorSessionLabel,
             Workspace = detail.Workspace is null
@@ -153,10 +153,10 @@ internal sealed class SessionLogApiClientAdapter : ISessionLogApiClient
                     CompletedCount = detail.CopilotStatistics.CompletedCount,
                     InProgressCount = detail.CopilotStatistics.InProgressCount
                 },
-            Entries = detail.Entries.Select(MapSubmitEntry).ToList()
+            Turns = detail.Turns.Select(MapSubmitTurn).ToList()
         };
 
-    private static UnifiedRequestEntryDto MapSubmitEntry(SessionLogEntryDetail entry)
+    private static UnifiedRequestEntryDto MapSubmitTurn(SessionLogTurnDetail entry)
         => new()
         {
             RequestId = entry.RequestId,
@@ -222,7 +222,7 @@ internal sealed class SessionLogApiClientAdapter : ISessionLogApiClient
             Model: item.Model,
             Started: item.Started,
             LastUpdated: item.LastUpdated,
-            EntryCount: item.EntryCount,
+            TurnCount: item.TurnCount,
             TotalTokens: item.TotalTokens,
             CursorSessionLabel: item.CursorSessionLabel,
             Workspace: item.Workspace is null ? null : new SessionLogWorkspaceInfo(
@@ -236,9 +236,9 @@ internal sealed class SessionLogApiClientAdapter : ISessionLogApiClient
                 item.CopilotStatistics.TotalNetPremiumRequests,
                 item.CopilotStatistics.CompletedCount,
                 item.CopilotStatistics.InProgressCount),
-            Entries: item.Entries?.Select(MapEntry).ToList() ?? []);
+            Turns: item.Turns?.Select(MapTurn).ToList() ?? []);
 
-    private static SessionLogEntryDetail MapEntry(UnifiedRequestEntryDto entry)
+    private static SessionLogTurnDetail MapTurn(UnifiedRequestEntryDto entry)
         => new(
             RequestId: entry.RequestId ?? string.Empty,
             Timestamp: entry.Timestamp,

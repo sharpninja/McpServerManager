@@ -22,21 +22,21 @@ namespace McpServerManager.Models.Json
 
         // Unified Stats (converter allows number/string from JSON, e.g. totalTokens as double)
         [JsonConverter(typeof(FlexibleInt32Converter))]
-        public int EntryCount { get; set; }
+        public int TurnCount { get; set; }
         [JsonConverter(typeof(FlexibleInt32Converter))]
         public int TotalTokens { get; set; }
 
         [JsonConverter(typeof(WorkspaceInfoConverter))]
         public WorkspaceInfo? Workspace { get; set; }
 
-        public List<UnifiedRequestEntry> Entries { get; set; } = new();
+        public List<UnifiedSessionTurn> Turns { get; set; } = new();
 
         // Specifics retained for fidelity
         public StatisticsInfo? CopilotStatistics { get; set; }
         public string? CursorSessionLabel { get; set; }
     }
 
-    public class UnifiedRequestEntry
+    public class UnifiedSessionTurn
     {
         public string RequestId { get; set; } = "";
         public DateTime? Timestamp { get; set; }
@@ -86,7 +86,7 @@ namespace McpServerManager.Models.Json
 
         /// <summary>Original source object for the "Original JSON" viewer. Not serialized to avoid object cycle when building the JSON tree.</summary>
         [JsonIgnore]
-        public object? OriginalEntry { get; set; }
+        public object? OriginalTurn { get; set; }
     }
 
     public class UnifiedAction
@@ -147,16 +147,16 @@ namespace McpServerManager.Models.Json
     public static class UnifiedLogFactory
     {
         private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("UnifiedLogFactory");
-        /// <summary>Ensures entries have OriginalEntry set and Agent set from log SourceType when empty (e.g. when loaded from unified-format file).</summary>
-        public static void EnsureOriginalEntriesSet(UnifiedSessionLog? log)
+        /// <summary>Ensures turns have OriginalTurn set and Agent set from log SourceType when empty (e.g. when loaded from unified-format file).</summary>
+        public static void EnsureOriginalTurnsSet(UnifiedSessionLog? log)
         {
-            if (log?.Entries == null) return;
+            if (log?.Turns == null) return;
             var agentFromLog = string.IsNullOrWhiteSpace(log.SourceType) ? "Unknown" : log.SourceType.Trim();
-            foreach (var entry in log.Entries)
+            foreach (var entry in log.Turns)
             {
                 if (entry == null) continue;
-                if (entry.OriginalEntry == null)
-                    entry.OriginalEntry = entry;
+                if (entry.OriginalTurn == null)
+                    entry.OriginalTurn = entry;
                 if (string.IsNullOrWhiteSpace(entry.Agent))
                     entry.Agent = agentFromLog;
             }
@@ -171,7 +171,7 @@ namespace McpServerManager.Models.Json
                 Started = log.Started,
                 LastUpdated = log.LastUpdated ?? log.Completed,
                 Status = log.Status,
-                EntryCount = log.Requests?.Count ?? 0,
+                TurnCount = log.Requests?.Count ?? 0,
 
                 Title = log.Workspace?.Project ?? log.Workspace?.Repository ?? "Copilot Session",
                 Model = log.Model, // Copilot has session-level model
@@ -186,7 +186,7 @@ namespace McpServerManager.Models.Json
                 {
                     int tokens = ParseTokens(r.Cost?.Tokens);
 
-                    var entry = new UnifiedRequestEntry
+                    var entry = new UnifiedSessionTurn
                     {
                         RequestId = r.RequestId,
                         Timestamp = r.Timestamp,
@@ -208,13 +208,13 @@ namespace McpServerManager.Models.Json
                         TokenCount = tokens,
                         IsPremium = ParseBool(r.Cost?.PremiumRequests),
 
-                        OriginalEntry = r
+                        OriginalTurn = r
                     };
 
                     if (r.RequestNumber.HasValue) entry.Tags.Add($"Request #{r.RequestNumber}");
                     if (!string.IsNullOrEmpty(r.Slug) && r.Slug != r.Title) entry.Tags.Add($"Slug: {r.Slug}");
 
-                    u.Entries.Add(entry);
+                    u.Turns.Add(entry);
                 }
             }
             return u;
@@ -233,7 +233,7 @@ namespace McpServerManager.Models.Json
 
             if (log.Entries != null && log.Entries.Count > 0)
             {
-                // Cursor doesn't have session-level model, try to get from first entry
+                // Cursor doesn't have session-level model, try to get from first turn
                 u.Model = log.Entries[0].Model;
             }
 
@@ -244,7 +244,7 @@ namespace McpServerManager.Models.Json
 
             if (log.Entries != null)
             {
-                u.EntryCount = log.Entries.Count;
+                u.TurnCount = log.Entries.Count;
                 int totalTokens = 0;
 
                 foreach (var r in log.Entries)
@@ -253,7 +253,7 @@ namespace McpServerManager.Models.Json
                     int tokens = ParseTokens(r.Cost?.Tokens);
                     totalTokens += tokens;
 
-                    var entry = new UnifiedRequestEntry
+                    var entry = new UnifiedSessionTurn
                     {
                         RequestId = r.RequestId,
                         Timestamp = ts,
@@ -275,13 +275,13 @@ namespace McpServerManager.Models.Json
                         Score = r.Successfulness?.Score,
                         FailureNote = r.PriorFailureNote,
 
-                        OriginalEntry = r
+                        OriginalTurn = r
                     };
 
                     if (r.ActionsTaken != null) entry.Tags.AddRange(r.ActionsTaken);
                     if (r.Successfulness?.Notes != null) entry.Tags.AddRange(r.Successfulness.Notes);
 
-                    u.Entries.Add(entry);
+                    u.Turns.Add(entry);
                 }
                 u.TotalTokens = totalTokens;
             }
@@ -372,7 +372,7 @@ namespace McpServerManager.Models.Json
         }
 
         /// <summary>
-        /// Parses actions from a raw JSON entry element (e.g. one item from entries[]).
+        /// Parses actions from a raw JSON entry element (e.g. one item from turns[]).
         /// Cursor logs use "actionsTaken" or "actions_taken" (array of strings); also looks for "actions"/"Actions" (structured).
         /// </summary>
         public static List<UnifiedAction> ParseActionsFromEntryElement(System.Text.Json.JsonElement entryElement)

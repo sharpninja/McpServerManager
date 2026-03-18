@@ -5,7 +5,7 @@
              x:Class="McpServerManager.Android.Views.SimplifiedVoiceView"
              x:DataType="vm:VoiceConversationViewModel">
 
-    <Grid RowDefinitions="Auto,*,Auto,Auto,Auto">
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
 
         <!-- Header -->
         <Border Grid.Row="0" Classes="phone-outline-card" Padding="12,10" Margin="8,8,8,0">
@@ -58,45 +58,47 @@
             </ScrollViewer>
         </Border>
 
-        <!-- Input preview (accumulated speech before "send now") -->
-        <Border Grid.Row="2" x:Name="InputPreviewBorder" IsVisible="False"
-                Classes="phone-outline-card" Margin="8,0" Padding="10,6">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-                <Button Grid.Column="0" x:Name="ClearInputButton" Content="✕"
-                        Click="OnClearInputClick" VerticalAlignment="Center"
-                        Padding="8,4" FontSize="20" Opacity="0.7"/>
-                <StackPanel Grid.Column="1" Margin="6,0">
-                    <TextBlock Text="Drafting:" FontSize="18" Opacity="0.6" FontWeight="SemiBold"/>
-                    <TextBlock x:Name="InputPreviewText" TextWrapping="Wrap" FontSize="22"/>
-                </StackPanel>
-                <Button Grid.Column="2" x:Name="SendInputButton" Content="➤"
-                        Click="OnSendInputClick" VerticalAlignment="Center"
-                        Padding="8,4" FontSize="22" Opacity="0.7"/>
-            </Grid>
-        </Border>
+        <StackPanel Grid.Row="2" x:Name="ManualInputRowsPanel">
+            <!-- Input preview (accumulated speech before "send now") -->
+            <Border x:Name="InputPreviewBorder" IsVisible="False"
+                    Classes="phone-outline-card" Margin="8,0" Padding="10,6">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Button Grid.Column="0" x:Name="ClearInputButton" Content="✕"
+                            Click="OnClearInputClick" VerticalAlignment="Center"
+                            Padding="8,4" FontSize="20" Opacity="0.7"/>
+                    <StackPanel Grid.Column="1" Margin="6,0">
+                        <TextBlock Text="Drafting:" FontSize="18" Opacity="0.6" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="InputPreviewText" TextWrapping="Wrap" FontSize="22"/>
+                    </StackPanel>
+                    <Button Grid.Column="2" x:Name="SendInputButton" Content="➤"
+                            Click="OnSendInputClick" VerticalAlignment="Center"
+                            Padding="8,4" FontSize="22" Opacity="0.7"/>
+                </Grid>
+            </Border>
 
-        <!-- Text input -->
-        <Border Grid.Row="3" Classes="phone-outline-card" Margin="8,4,8,0" Padding="6">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-                <Button Grid.Column="0" x:Name="TextClearButton" Click="OnTextClearClick"
-                        VerticalAlignment="Center" Padding="8,4" Opacity="0.7"
-                        ToolTip.Tip="Clear">
-                    <TextBlock Text="✕" FontSize="20"/>
-                </Button>
-                <TextBox Grid.Column="1" x:Name="TextInputBox" Watermark="Type a message..."
-                         AcceptsReturn="False" TextWrapping="Wrap" FontSize="22"
-                         Margin="6,0" MinHeight="38" VerticalContentAlignment="Center"
-                         KeyDown="OnTextInputKeyDown"/>
-                <Button Grid.Column="2" x:Name="TextSendButton" Click="OnTextSendClick"
-                        VerticalAlignment="Center" Padding="8,4" Opacity="0.7"
-                        ToolTip.Tip="Send">
-                    <TextBlock Text="➤" FontSize="22"/>
-                </Button>
-            </Grid>
-        </Border>
+            <!-- Text input -->
+            <Border x:Name="ManualTextEntryBorder" Classes="phone-outline-card" Margin="8,4,8,0" Padding="6">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Button Grid.Column="0" x:Name="TextClearButton" Click="OnTextClearClick"
+                            VerticalAlignment="Center" Padding="8,4" Opacity="0.7"
+                            ToolTip.Tip="Clear">
+                        <TextBlock Text="✕" FontSize="20"/>
+                    </Button>
+                    <TextBox Grid.Column="1" x:Name="TextInputBox" Watermark="Type a message..."
+                             AcceptsReturn="False" TextWrapping="Wrap" FontSize="22"
+                             Margin="6,0" MinHeight="38" VerticalContentAlignment="Center"
+                             KeyDown="OnTextInputKeyDown"/>
+                    <Button Grid.Column="2" x:Name="TextSendButton" Click="OnTextSendClick"
+                            VerticalAlignment="Center" Padding="8,4" Opacity="0.7"
+                            ToolTip.Tip="Send">
+                        <TextBlock Text="➤" FontSize="22"/>
+                    </Button>
+                </Grid>
+            </Border>
+        </StackPanel>
 
         <!-- Bottom controls -->
-        <StackPanel Grid.Row="4" Spacing="6" Margin="12,4,12,8" HorizontalAlignment="Center">
+        <StackPanel Grid.Row="3" Spacing="6" Margin="12,4,12,8" HorizontalAlignment="Center">
             <TextBlock Text="{Binding StatusText}" HorizontalAlignment="Center"
                        TextWrapping="Wrap" FontSize="16" Opacity="0.8"/>
             <StackPanel Orientation="Horizontal" Spacing="24" HorizontalAlignment="Center">

@@ -218,14 +218,14 @@
                                 </Grid>
                             </Border>
                             <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                                <ItemsControl x:Name="SearchIndexList" ItemsSource="{Binding FilteredSearchEntries}" x:CompileBindings="False">
+                                <ItemsControl x:Name="SearchIndexList" ItemsSource="{Binding FilteredSearchTurns}" x:CompileBindings="False">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <StackPanel Spacing="0"/>
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="jsonModels:SearchableEntry">
+                                        <DataTemplate DataType="jsonModels:SearchableTurn">
                                             <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Margin="2" Padding="4"
                                                     beh:TappedBehavior.Command="{Binding DataContext.SearchRowTappedCommand, ElementName=ContentRoot}"
                                                     beh:TappedBehavior.CommandParameter="{Binding}"
@@ -234,7 +234,7 @@
                                                 <Border.Background>
                                                     <MultiBinding Converter="{StaticResource EqualityToBrush}">
                                                         <Binding Path="."/>
-                                                        <Binding Path="DataContext.SelectedSearchEntry" ElementName="ContentRoot"/>
+                                                        <Binding Path="DataContext.SelectedSearchTurn" ElementName="ContentRoot"/>
                                                     </MultiBinding>
                                                 </Border.Background>
                                                 <Grid ColumnDefinitions="250,*,100,100,130" Margin="0">
@@ -290,7 +290,7 @@
                     </Grid>
                     </Border>
                     <Border Grid.Row="1">
-                    <views:RequestDetailsView DataContext="{Binding SelectedUnifiedRequest}"/>
+                    <views:RequestDetailsView DataContext="{Binding SelectedUnifiedTurn}"/>
                     </Border>
                 </Grid>
              </Border>

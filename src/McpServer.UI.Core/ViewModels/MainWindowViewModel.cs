@@ -167,7 +167,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     }
 
     [ObservableProperty]
-    private UnifiedRequestEntry? _selectedUnifiedRequest;
+    private UnifiedSessionTurn? _selectedUnifiedTurn;
 
     [ObservableProperty]
     private ObservableCollection<JsonTreeNode> _jsonTree = new();
@@ -176,7 +176,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private JsonLogSummary _jsonLogSummary = new();
 
     [ObservableProperty]
-    private ObservableCollection<SearchableEntry> _searchableEntries = new();
+    private ObservableCollection<SearchableTurn> _searchableTurns = new();
 
     [ObservableProperty]
     private string _searchQuery = "";
@@ -213,10 +213,10 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private ObservableCollection<string> _distinctTimestamps = new() { "" };
 
     [ObservableProperty]
-    private ObservableCollection<SearchableEntry> _filteredSearchEntries = new();
+    private ObservableCollection<SearchableTurn> _filteredSearchTurns = new();
 
     [ObservableProperty]
-    private SearchableEntry? _selectedSearchEntry;
+    private SearchableTurn? _selectedSearchTurn;
 
     [ObservableProperty]
     private JsonTreeNode? _selectedJsonNode;
@@ -595,22 +595,22 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     }
 
     /// <summary>Command for search row single-tap (select entry).</summary>
-    protected void SearchRowTapped(SearchableEntry? entry)
+    protected void SearchRowTapped(SearchableTurn? entry)
         => _ = _dispatcher.SendAsync(new Commands.SearchRowTappedCommand(entry));
 
-    internal void SearchRowTappedInternal(SearchableEntry? entry)
+    internal void SearchRowTappedInternal(SearchableTurn? entry)
     {
         if (entry != null)
-            SelectedSearchEntry = entry;
+            SelectedSearchTurn = entry;
     }
 
     /// <summary>Command for search row double-tap (open request details).</summary>
-    protected void SearchRowDoubleTapped(SearchableEntry? entry)
+    protected void SearchRowDoubleTapped(SearchableTurn? entry)
         => _ = _dispatcher.SendAsync(new Commands.SearchRowDoubleTappedCommand(entry));
 
-    internal void SearchRowDoubleTappedInternal(SearchableEntry? entry)
+    internal void SearchRowDoubleTappedInternal(SearchableTurn? entry)
     {
-        if (entry?.UnifiedEntry != null)
+        if (entry?.UnifiedTurn != null)
             ShowRequestDetailsInternal(entry);
     }
 
@@ -1371,16 +1371,16 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
 
     partial void OnSearchQueryChanged(string value)
     {
-        UpdateFilteredSearchEntriesInternal();
+        UpdateFilteredSearchTurnsInternal();
     }
 
-    partial void OnRequestIdFilterChanged(string value) => UpdateFilteredSearchEntriesInternal();
-    partial void OnDisplayFilterChanged(string value) => UpdateFilteredSearchEntriesInternal();
-    partial void OnModelFilterChanged(string value) => UpdateFilteredSearchEntriesInternal();
-    partial void OnTimestampFilterChanged(string value) => UpdateFilteredSearchEntriesInternal();
-    partial void OnAgentFilterChanged(string value) => UpdateFilteredSearchEntriesInternal();
+    partial void OnRequestIdFilterChanged(string value) => UpdateFilteredSearchTurnsInternal();
+    partial void OnDisplayFilterChanged(string value) => UpdateFilteredSearchTurnsInternal();
+    partial void OnModelFilterChanged(string value) => UpdateFilteredSearchTurnsInternal();
+    partial void OnTimestampFilterChanged(string value) => UpdateFilteredSearchTurnsInternal();
+    partial void OnAgentFilterChanged(string value) => UpdateFilteredSearchTurnsInternal();
 
-    partial void OnSelectedSearchEntryChanged(SearchableEntry? value)
+    partial void OnSelectedSearchTurnChanged(SearchableTurn? value)
     {
         if (value == null) return;
         var node = FindJsonNodeBySourcePath(JsonTree, value.SourcePath);
@@ -1391,15 +1391,15 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         }
     }
 
-    internal void UpdateFilteredSearchEntriesInternal()
+    internal void UpdateFilteredSearchTurnsInternal()
     {
         var shouldRestoreDetailView = IsRequestDetailsVisible || _restoreRequestDetailsAfterRefresh;
-        var detailRequestId = _pendingDetailRequestId ?? SelectedUnifiedRequest?.RequestId;
-        var detailSourcePath = _pendingDetailSourcePath ?? SelectedSearchEntry?.SourcePath;
+        var detailRequestId = _pendingDetailRequestId ?? SelectedUnifiedTurn?.RequestId;
+        var detailSourcePath = _pendingDetailSourcePath ?? SelectedSearchTurn?.SourcePath;
 
         if (string.IsNullOrWhiteSpace(detailSourcePath) && !string.IsNullOrWhiteSpace(detailRequestId))
         {
-            detailSourcePath = SearchableEntries
+            detailSourcePath = SearchableTurns
                 .FirstOrDefault(e => string.Equals(e.RequestId, detailRequestId, StringComparison.OrdinalIgnoreCase))
                 ?.SourcePath;
         }
@@ -1410,7 +1410,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         var mod = (ModelFilter ?? "").Trim().ToLowerInvariant();
         var ts = (TimestampFilter ?? "").Trim().ToLowerInvariant();
 
-        IEnumerable<SearchableEntry> filtered = SearchableEntries;
+        IEnumerable<SearchableTurn> filtered = SearchableTurns;
 
         if (!string.IsNullOrEmpty(q))
         {
@@ -1436,14 +1436,14 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
                                             string.Equals(e.Timestamp ?? "", ts, StringComparison.OrdinalIgnoreCase));
 
         var sorted = filtered.OrderByDescending(e => e.SortableTimestamp ?? DateTime.MinValue).ToList();
-        FilteredSearchEntries = new ObservableCollection<SearchableEntry>(sorted);
+        FilteredSearchTurns = new ObservableCollection<SearchableTurn>(sorted);
 
         if (shouldRestoreDetailView)
         {
-            var restoredEntry = FindDetailEntryForRestore(FilteredSearchEntries, detailSourcePath, detailRequestId);
-            if (restoredEntry?.UnifiedEntry != null)
+            var restoredEntry = FindDetailTurnForRestore(FilteredSearchTurns, detailSourcePath, detailRequestId);
+            if (restoredEntry?.UnifiedTurn != null)
             {
-                SelectedSearchEntry = restoredEntry;
+                SelectedSearchTurn = restoredEntry;
                 ShowRequestDetailsInternal(restoredEntry);
             }
             NotifyRequestNavigationCanExecuteChanged();
@@ -1456,8 +1456,8 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         NotifyContextConsumer();
     }
 
-    private static SearchableEntry? FindDetailEntryForRestore(
-        IEnumerable<SearchableEntry> entries,
+    private static SearchableTurn? FindDetailTurnForRestore(
+        IEnumerable<SearchableTurn> entries,
         string? sourcePath,
         string? requestId)
     {
@@ -1555,15 +1555,15 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         }
     }
 
-    partial void OnSelectedUnifiedRequestChanged(UnifiedRequestEntry? value)
+    partial void OnSelectedUnifiedTurnChanged(UnifiedSessionTurn? value)
     {
-        LogUnifiedEntryActionsForGrid(value);
+        LogUnifiedTurnActionsForGrid(value);
     }
 
     /// <summary>
     /// Detailed logging when the unified entry (and its Actions) are bound by the details grid.
     /// </summary>
-    private static void LogUnifiedEntryActionsForGrid(UnifiedRequestEntry? entry)
+    private static void LogUnifiedTurnActionsForGrid(UnifiedSessionTurn? entry)
     {
         const string prefix = "[Unified Grid Actions]";
         if (entry == null)
@@ -1588,13 +1588,13 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         }
     }
 
-    protected void ShowRequestDetails(SearchableEntry entry) => _ = _dispatcher.SendAsync(new Commands.ShowRequestDetailsCommand(entry));
+    protected void ShowRequestDetails(SearchableTurn entry) => _ = _dispatcher.SendAsync(new Commands.ShowRequestDetailsCommand(entry));
 
-    public void ShowRequestDetailsInternal(SearchableEntry entry)
+    public void ShowRequestDetailsInternal(SearchableTurn entry)
     {
-        if (entry != null && entry.UnifiedEntry != null)
+        if (entry != null && entry.UnifiedTurn != null)
         {
-            SelectedUnifiedRequest = entry.UnifiedEntry;
+            SelectedUnifiedTurn = entry.UnifiedTurn;
             IsMarkdownVisible = false;
             IsJsonVisible = false;
             IsRequestDetailsVisible = true;
@@ -1605,9 +1605,9 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     }
 
     /// <summary>Navigates to the request details view for the currently selected search entry (e.g. on double-click).</summary>
-    public void TryNavigateToSelectedSearchEntry()
+    public void TryNavigateToSelectedSearchTurn()
     {
-        if (SelectedSearchEntry is { } e && e.UnifiedEntry != null)
+        if (SelectedSearchTurn is { } e && e.UnifiedTurn != null)
             ShowRequestDetails(e);
     }
 
@@ -1675,7 +1675,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     /// <summary>Builds a short summary of the current log view for the AI assistant (filtered entries and selected request). Includes agent config, docs folder, src folder, and current log view.</summary>
     public string GetLogContextForAgent()
     {
-        var entries = FilteredSearchEntries ?? SearchableEntries;
+        var entries = FilteredSearchTurns ?? SearchableTurns;
         var sb = new StringBuilder();
         string? resolvedPath = null;
         try { resolvedPath = GetResolvedTargetPath(); } catch (Exception ex) { _logger.LogDebug(ex, "[Path] GetResolvedTargetPath failed"); }
@@ -1722,11 +1722,11 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         }
         if (entries.Count > take)
             sb.AppendLine($"  ... and {entries.Count - take} more.");
-        if (SelectedUnifiedRequest != null)
+        if (SelectedUnifiedTurn != null)
         {
             sb.AppendLine();
             sb.AppendLine("Selected request:");
-            var r = SelectedUnifiedRequest;
+            var r = SelectedUnifiedTurn;
             sb.AppendLine($"  RequestId: {r.RequestId}; Model: {r.Model}; Agent: {r.Agent}; Status: {r.Status}");
             if (!string.IsNullOrWhiteSpace(r.QueryTitle)) sb.AppendLine($"  Title: {r.QueryTitle}");
             if (!string.IsNullOrWhiteSpace(r.QueryText)) sb.AppendLine($"  Query: {TruncateForContext(r.QueryText, 200)}");
@@ -1864,13 +1864,13 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     public bool TryNavigateToDetailsForSourcePath(string? sourcePath)
     {
         if (string.IsNullOrWhiteSpace(sourcePath)) return false;
-        var entries = FilteredSearchEntries ?? SearchableEntries;
+        var entries = FilteredSearchTurns ?? SearchableTurns;
         if (entries == null) return false;
         foreach (var entry in entries)
         {
-            if (string.Equals(entry.SourcePath, sourcePath, StringComparison.OrdinalIgnoreCase) && entry.UnifiedEntry != null)
+            if (string.Equals(entry.SourcePath, sourcePath, StringComparison.OrdinalIgnoreCase) && entry.UnifiedTurn != null)
             {
-                SelectedSearchEntry = entry;
+                SelectedSearchTurn = entry;
                 ShowRequestDetails(entry);
                 return true;
             }
@@ -1878,12 +1878,12 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         return false;
     }
 
-    protected void SelectSearchEntry(SearchableEntry entry) => _ = _dispatcher.SendAsync(new Commands.SelectSearchEntryCommand(entry));
+    protected void SelectSearchTurn(SearchableTurn entry) => _ = _dispatcher.SendAsync(new Commands.SelectSearchTurnCommand(entry));
 
-    public void SelectSearchEntryInternal(SearchableEntry entry)
+    public void SelectSearchTurnInternal(SearchableTurn entry)
     {
         if (entry != null)
-            SelectedSearchEntry = entry;
+            SelectedSearchTurn = entry;
     }
 
     public void CloseRequestDetailsInternal()
@@ -1897,15 +1897,15 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
 
     private int GetCurrentRequestIndexInFilteredList()
     {
-        if (SelectedUnifiedRequest == null || FilteredSearchEntries == null || FilteredSearchEntries.Count == 0)
+        if (SelectedUnifiedTurn == null || FilteredSearchTurns == null || FilteredSearchTurns.Count == 0)
             return -1;
-        for (int i = 0; i < FilteredSearchEntries.Count; i++)
+        for (int i = 0; i < FilteredSearchTurns.Count; i++)
         {
-            var entry = FilteredSearchEntries[i].UnifiedEntry;
-            if (entry == SelectedUnifiedRequest)
+            var entry = FilteredSearchTurns[i].UnifiedTurn;
+            if (entry == SelectedUnifiedTurn)
                 return i;
             if (entry != null && !string.IsNullOrEmpty(entry.RequestId) &&
-                string.Equals(entry.RequestId, SelectedUnifiedRequest.RequestId, StringComparison.Ordinal))
+                string.Equals(entry.RequestId, SelectedUnifiedTurn.RequestId, StringComparison.Ordinal))
                 return i;
         }
         return -1;
@@ -1919,7 +1919,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     protected bool CanNavigateToNextRequest()
     {
         int i = GetCurrentRequestIndexInFilteredList();
-        return i >= 0 && i < FilteredSearchEntries.Count - 1;
+        return i >= 0 && i < FilteredSearchTurns.Count - 1;
     }
 
     protected void NavigateToPreviousRequest() => _ = _dispatcher.SendAsync(new Commands.NavigateToPreviousRequestCommand());
@@ -1928,9 +1928,9 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     {
         int i = GetCurrentRequestIndexInFilteredList();
         if (i <= 0) return;
-        var entry = FilteredSearchEntries[i - 1];
-        if (entry?.UnifiedEntry == null) return;
-        SelectedSearchEntry = entry;
+        var entry = FilteredSearchTurns[i - 1];
+        if (entry?.UnifiedTurn == null) return;
+        SelectedSearchTurn = entry;
         ShowRequestDetails(entry);
             NotifyRequestNavigationCanExecuteChanged();
     }
@@ -1940,10 +1940,10 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     public void NavigateToNextRequestInternal()
     {
         int i = GetCurrentRequestIndexInFilteredList();
-        if (i < 0 || i >= FilteredSearchEntries.Count - 1) return;
-        var entry = FilteredSearchEntries[i + 1];
-        if (entry?.UnifiedEntry == null) return;
-        SelectedSearchEntry = entry;
+        if (i < 0 || i >= FilteredSearchTurns.Count - 1) return;
+        var entry = FilteredSearchTurns[i + 1];
+        if (entry?.UnifiedTurn == null) return;
+        SelectedSearchTurn = entry;
         ShowRequestDetails(entry);
             NotifyRequestNavigationCanExecuteChanged();
     }
@@ -1997,18 +1997,18 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         }
     }
 
-    protected async Task CopyOriginalJson(UnifiedRequestEntry? entry) => await _dispatcher.SendAsync(new Commands.CopyOriginalJsonCommand(entry));
+    protected async Task CopyOriginalJson(UnifiedSessionTurn? entry) => await _dispatcher.SendAsync(new Commands.CopyOriginalJsonCommand(entry));
 
-    public async Task CopyOriginalJsonInternal(UnifiedRequestEntry? entry)
+    public async Task CopyOriginalJsonInternal(UnifiedSessionTurn? entry)
     {
-        if (entry?.OriginalEntry == null)
+        if (entry?.OriginalTurn == null)
         {
             SetStatus("No original JSON to copy.");
             return;
         }
         try
         {
-            var json = JsonSerializer.Serialize(entry.OriginalEntry, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(entry.OriginalTurn, new JsonSerializerOptions { WriteIndented = true });
             await _clipboardService.SetTextAsync(json);
             SetStatus("Copied original JSON to clipboard.");
         }
@@ -2242,8 +2242,8 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         if (IsRequestDetailsVisible)
         {
             _restoreRequestDetailsAfterRefresh = true;
-            _pendingDetailRequestId = SelectedUnifiedRequest?.RequestId;
-            _pendingDetailSourcePath = SelectedSearchEntry?.SourcePath;
+            _pendingDetailRequestId = SelectedUnifiedTurn?.RequestId;
+            _pendingDetailSourcePath = SelectedSearchTurn?.SourcePath;
         }
 
         var sessions = await McpSessionService.GetAllSessionsAsync(CancellationToken.None).ConfigureAwait(true);
@@ -2619,11 +2619,11 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
          return ext;
     }
 
-    /// <summary>Removes duplicate entries by RequestId (case-insensitive). Keeps the first occurrence when ordered by timestamp descending (newest wins). Entries with empty RequestId are not deduplicated.</summary>
-    public static List<UnifiedRequestEntry> DeduplicateUnifiedEntries(IEnumerable<UnifiedRequestEntry> orderedByNewestFirst)
+    /// <summary>Removes duplicate turns by RequestId (case-insensitive). Keeps the first occurrence when ordered by timestamp descending (newest wins). Turns with empty RequestId are not deduplicated.</summary>
+    public static List<UnifiedSessionTurn> DeduplicateUnifiedTurns(IEnumerable<UnifiedSessionTurn> orderedByNewestFirst)
     {
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var result = new List<UnifiedRequestEntry>();
+        var result = new List<UnifiedSessionTurn>();
         foreach (var e in orderedByNewestFirst)
         {
             if (!string.IsNullOrWhiteSpace(e.RequestId))
@@ -2953,17 +2953,17 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
                                 Entries = new List<CursorRequestEntry> { singleEntry }
                             };
                             unifiedLog = UnifiedLogFactory.Create(syntheticLog);
-                            if (unifiedLog != null && unifiedLog.Entries.Count > 0 && unifiedLog.Entries[0].Actions.Count == 0)
+                            if (unifiedLog != null && unifiedLog.Turns.Count > 0 && unifiedLog.Turns[0].Actions.Count == 0)
                                 FillActionsFromSingleEntryJson(jsonContent, unifiedLog);
                         }
                     }
-                    else if (HasKeyCI(obj, "entries") && HasKeyCI(obj, "sourceType"))
+                    else if (HasKeyCI(obj, "turns") && HasKeyCI(obj, "sourceType"))
                     {
                         schemaType = "Unified Session Log";
                         var unified = JsonSerializer.Deserialize<UnifiedSessionLog>(jsonContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                        if (unified?.Entries != null)
+                        if (unified?.Turns != null)
                         {
-                            UnifiedLogFactory.EnsureOriginalEntriesSet(unified);
+                            UnifiedLogFactory.EnsureOriginalTurnsSet(unified);
                             unifiedLog = unified;
                         }
                     }
@@ -2978,8 +2978,8 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
                 DispatchToUi(() =>
                 {
                     JsonTree.Clear();
-                    SearchableEntries.Clear();
-                    FilteredSearchEntries.Clear();
+                    SearchableTurns.Clear();
+                    FilteredSearchTurns.Clear();
                     UpdateDistinctFilterValues();
                     JsonLogSummary = new JsonLogSummary();
                     JsonTree.Add(new JsonTreeNode("Error", msg, "Error"));
@@ -2992,7 +2992,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private void ApplyLoadedJsonToUi(string path, JsonNode? jsonNode, string schemaType, JsonLogSummary summary, UnifiedSessionLog? unifiedLog)
     {
         JsonTree.Clear();
-        SearchableEntries.Clear();
+        SearchableTurns.Clear();
         UpdateDistinctFilterValues();
         JsonLogSummary = new JsonLogSummary();
 
@@ -3005,7 +3005,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
             summary.SummaryLines.Clear();
             summary.SummaryLines.Add($"Type: {unifiedLog.SourceType}");
             summary.SummaryLines.Add($"Session: {unifiedLog.SessionId}");
-            summary.SummaryLines.Add($"Entries: {unifiedLog.EntryCount}");
+            summary.SummaryLines.Add($"Turns: {unifiedLog.TurnCount}");
             if (!string.IsNullOrEmpty(unifiedLog.Model))
                 summary.SummaryLines.Add($"Model: {unifiedLog.Model}");
             if (unifiedLog.LastUpdated.HasValue)
@@ -3032,17 +3032,17 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
             JsonTree.Add(root);
         }
 
-        UpdateFilteredSearchEntriesInternal();
+        UpdateFilteredSearchTurnsInternal();
         StatusMessage = $"Loaded {Path.GetFileName(path)}";
     }
 
     /// <summary>
-    /// Fills Actions on unified entries from raw JSON when the deserialized Cursor entry didn't have them
+        /// Fills Actions on unified turns from raw JSON when the deserialized Cursor entry didn't have them
     /// (e.g. "Actions" vs "actions" or different structure). Ensures req-001-logging-system and others show actions.
     /// </summary>
     private void FillActionsFromRawJson(string jsonContent, UnifiedSessionLog unifiedLog)
     {
-        if (unifiedLog?.Entries == null || unifiedLog.Entries.Count == 0) return;
+        if (unifiedLog?.Turns == null || unifiedLog.Turns.Count == 0) return;
         try
         {
             var treeResult = _jsonParser.ParseToTree(jsonContent);
@@ -3062,13 +3062,13 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
             int i = 0;
             foreach (var entryNode in entriesArray)
             {
-                if (i >= unifiedLog.Entries.Count) break;
-                if (unifiedLog.Entries[i].Actions.Count == 0 && entryNode != null)
+                if (i >= unifiedLog.Turns.Count) break;
+                if (unifiedLog.Turns[i].Actions.Count == 0 && entryNode != null)
                 {
                     var entryElement = entryNode.Deserialize<JsonElement>();
                     var actions = UnifiedLogFactory.ParseActionsFromEntryElement(entryElement);
                     if (actions.Count > 0)
-                        unifiedLog.Entries[i].Actions = new ObservableCollection<UnifiedAction>(actions);
+                        unifiedLog.Turns[i].Actions = new ObservableCollection<UnifiedAction>(actions);
                 }
                 i++;
             }
@@ -3122,14 +3122,14 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
 
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-            // 1) Unified (entries + sourceType)
-            if (HasKeyCI(obj, "entries") && HasKeyCI(obj, "sourceType"))
+            // 1) Unified (turns + sourceType)
+            if (HasKeyCI(obj, "turns") && HasKeyCI(obj, "sourceType"))
             {
                 var unifiedLog = JsonSerializer.Deserialize<UnifiedSessionLog>(text, options);
-                if (unifiedLog?.Entries != null)
+                if (unifiedLog?.Turns != null)
                 {
-                    UnifiedLogFactory.EnsureOriginalEntriesSet(unifiedLog);
-                    return (unifiedLog, unifiedLog.EntryCount);
+                    UnifiedLogFactory.EnsureOriginalTurnsSet(unifiedLog);
+                    return (unifiedLog, unifiedLog.TurnCount);
                 }
             }
 
@@ -3140,7 +3140,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
                 if (cursorLog?.Entries != null)
                 {
                     var unified = UnifiedLogFactory.Create(cursorLog);
-                    if (unified != null) return (unified, unified.EntryCount);
+                    if (unified != null) return (unified, unified.TurnCount);
                 }
             }
 
@@ -3151,7 +3151,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
                 if (copilotLog?.Requests != null && copilotLog.Requests.Count > 0)
                 {
                     var unified = UnifiedLogFactory.Create(copilotLog);
-                    if (unified != null) return (unified, unified.EntryCount);
+                    if (unified != null) return (unified, unified.TurnCount);
                 }
             }
 
@@ -3168,7 +3168,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
                         Entries = new List<CursorRequestEntry> { singleEntry }
                     };
                     var unified = UnifiedLogFactory.Create(syntheticLog);
-                    if (unified != null) return (unified, unified.EntryCount);
+                    if (unified != null) return (unified, unified.TurnCount);
                 }
             }
 
@@ -3179,7 +3179,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
                 if (cursorLog?.Entries != null && cursorLog.Entries.Count > 0)
                 {
                     var unified = UnifiedLogFactory.Create(cursorLog);
-                    if (unified != null) return (unified, unified.EntryCount);
+                    if (unified != null) return (unified, unified.TurnCount);
                 }
             }
 
@@ -3193,7 +3193,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
 
     private void FillActionsFromSingleEntryJson(string jsonContent, UnifiedSessionLog unifiedLog)
     {
-        if (unifiedLog?.Entries == null || unifiedLog.Entries.Count == 0) return;
+        if (unifiedLog?.Turns == null || unifiedLog.Turns.Count == 0) return;
         try
         {
             var treeResult = _jsonParser.ParseToTree(jsonContent);
@@ -3202,7 +3202,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
                 var rootElement = rootNode.Deserialize<JsonElement>();
                 var actions = UnifiedLogFactory.ParseActionsFromEntryElement(rootElement);
                 if (actions.Count > 0)
-                    unifiedLog.Entries[0].Actions = new ObservableCollection<UnifiedAction>(actions);
+                    unifiedLog.Turns[0].Actions = new ObservableCollection<UnifiedAction>(actions);
             }
         }
         catch (Exception ex) { _logger.LogDebug(ex, "[Actions] Failed to parse actions from JSON entry"); }
@@ -3212,7 +3212,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     {
         var requests = log.Requests ?? new List<CopilotRequestEntry>();
         summary.TotalCount = requests.Count;
-        summary.SearchIndex = new List<SearchableEntry>();
+        summary.SearchIndex = new List<SearchableTurn>();
 
         var byModel = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         for (int i = 0; i < requests.Count; i++)
@@ -3224,13 +3224,13 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
             var display = (r.Slug ?? r.Title ?? r.UserRequest ?? "").Trim();
             if (display.Length > 60) display = display.Substring(0, 57) + "...";
             var searchText = string.Join(" ", r.RequestId ?? "", r.Slug ?? "", r.Title ?? "", r.UserRequest ?? "", r.Model ?? "", r.Timestamp?.ToString() ?? "");
-            summary.SearchIndex.Add(new SearchableEntry
+            summary.SearchIndex.Add(new SearchableTurn
             {
                 RequestId = r.RequestId ?? "",
                 DisplayText = string.IsNullOrEmpty(display) ? $"Request {i + 1}" : display,
                 Timestamp = r.Timestamp?.ToString("o") ?? "",
                 Model = r.Model ?? "",
-                EntryIndex = i,
+                TurnIndex = i,
                 SourcePath = $"requests[{i}]",
                 SearchText = searchText
             });
@@ -3250,7 +3250,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     {
         var entries = log.Entries ?? new List<CursorRequestEntry>();
         summary.TotalCount = entries.Count;
-        summary.SearchIndex = new List<SearchableEntry>();
+        summary.SearchIndex = new List<SearchableTurn>();
 
         var byModel = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var successScores = new List<int>();
@@ -3265,13 +3265,13 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
             if (display.Length > 60) display = display.Substring(0, 57) + "...";
             var searchText = string.Join(" ", e.RequestId ?? "", e.ExactRequest ?? "", e.ExactRequestNote ?? "", e.Model ?? "", e.Timestamp ?? "",
                 e.Successfulness?.Score?.ToString() ?? "", e.ActionsTaken ?? new List<string>());
-            summary.SearchIndex.Add(new SearchableEntry
+            summary.SearchIndex.Add(new SearchableTurn
             {
                 RequestId = e.RequestId ?? "",
-                DisplayText = string.IsNullOrEmpty(display) ? $"Entry {i + 1}" : display,
+                DisplayText = string.IsNullOrEmpty(display) ? $"Turn {i + 1}" : display,
                 Timestamp = e.Timestamp ?? "",
                 Model = e.Model ?? "",
-                EntryIndex = i,
+                TurnIndex = i,
                 SourcePath = $"entries[{i}]",
                 SearchText = searchText
             });
@@ -3291,7 +3291,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
          // Update Summary Header for Aggregated view
          summary.SummaryLines.Clear();
          summary.SummaryLines.Add($"Type: {log.SourceType}");
-         summary.SummaryLines.Add($"Total Entries: {log.EntryCount}");
+         summary.SummaryLines.Add($"Total Turns: {log.TurnCount}");
          summary.SummaryLines.Add($"Total Tokens: {log.TotalTokens:N0}");
          summary.SummaryLines.Add($"Aggregated at: {log.Started}");
 
@@ -3306,13 +3306,13 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
          BuildJsonTreeInternal(unifiedNode, root, null);
          JsonTree.Add(root);
 
-         UpdateFilteredSearchEntriesInternal();
+         UpdateFilteredSearchTurnsInternal();
     }
 
     internal void BuildUnifiedSummaryAndIndexInternal(UnifiedSessionLog log, JsonLogSummary summary)
     {
-        summary.SearchIndex = new List<SearchableEntry>();
-        var entries = log.Entries;
+        summary.SearchIndex = new List<SearchableTurn>();
+        var entries = log.Turns;
 
         for (int i = 0; i < entries.Count; i++)
         {
@@ -3329,27 +3329,27 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
                 e.Timestamp?.ToString() ?? "",
                 e.Status ?? "");
 
-            summary.SearchIndex.Add(new SearchableEntry
+            summary.SearchIndex.Add(new SearchableTurn
             {
                 RequestId = e.RequestId ?? "",
-                DisplayText = string.IsNullOrEmpty(display) ? $"Entry {i + 1}" : display,
+                DisplayText = string.IsNullOrEmpty(display) ? $"Turn {i + 1}" : display,
                 Timestamp = e.Timestamp?.ToString("o") ?? "",
                 Model = e.Model ?? "",
                 Agent = e.Agent ?? "",
-                EntryIndex = i,
+                TurnIndex = i,
                 SourcePath = $"entries[{i}]", // Matches Unified Model structure
                 SearchText = searchText,
-                UnifiedEntry = e
+                UnifiedTurn = e
             });
         }
         var sorted = summary.SearchIndex.OrderByDescending(e => e.SortableTimestamp ?? DateTime.MinValue).ToList();
-        SearchableEntries = new ObservableCollection<SearchableEntry>(sorted);
+        SearchableTurns = new ObservableCollection<SearchableTurn>(sorted);
         UpdateDistinctFilterValues();
     }
 
     private void UpdateDistinctFilterValues()
     {
-        var entries = SearchableEntries ?? new ObservableCollection<SearchableEntry>();
+        var entries = SearchableTurns ?? new ObservableCollection<SearchableTurn>();
         var requestIds = new List<string> { "" };
         requestIds.AddRange(entries.Select(e => e.RequestId ?? "").Where(s => !string.IsNullOrEmpty(s)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(s => s, StringComparer.OrdinalIgnoreCase));
         var displayTexts = new List<string> { "" };
@@ -3913,19 +3913,19 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     void INavigationTarget.OpenTreeItem(FileNode? node) => OpenTreeItemInternal(node);
     void INavigationTarget.TreeItemTapped(FileNode? node) => TreeItemTappedInternal(node);
     void INavigationTarget.JsonNodeDoubleTapped(JsonTreeNode? node) => JsonNodeDoubleTappedInternal(node);
-    void IRequestDetailsTarget.ShowRequestDetails(SearchableEntry entry) => ShowRequestDetailsInternal(entry);
+    void IRequestDetailsTarget.ShowRequestDetails(SearchableTurn entry) => ShowRequestDetailsInternal(entry);
     void IRequestDetailsTarget.CloseRequestDetails() => CloseRequestDetailsInternal();
     void IRequestDetailsTarget.NavigateToPreviousRequest() => NavigateToPreviousRequestInternal();
     void IRequestDetailsTarget.NavigateToNextRequest() => NavigateToNextRequestInternal();
-    void IRequestDetailsTarget.SelectSearchEntry(SearchableEntry entry) => SelectSearchEntryInternal(entry);
-    void IRequestDetailsTarget.SearchRowTapped(SearchableEntry? entry) => SearchRowTappedInternal(entry);
-    void IRequestDetailsTarget.SearchRowDoubleTapped(SearchableEntry? entry) => SearchRowDoubleTappedInternal(entry);
+    void IRequestDetailsTarget.SelectSearchTurn(SearchableTurn entry) => SelectSearchTurnInternal(entry);
+    void IRequestDetailsTarget.SearchRowTapped(SearchableTurn? entry) => SearchRowTappedInternal(entry);
+    void IRequestDetailsTarget.SearchRowDoubleTapped(SearchableTurn? entry) => SearchRowDoubleTappedInternal(entry);
     void IPreviewTarget.OpenPreviewInBrowser() => OpenPreviewInBrowserInternal();
     void IPreviewTarget.ToggleShowRawMarkdown() => ToggleShowRawMarkdownInternal();
     void IArchiveTarget.Archive() => ArchiveInternal();
     void IArchiveTarget.ArchiveTreeItem(FileNode? node) => ArchiveTreeItemInternal(node);
     Task IClipboardTarget.CopyText(string text) => CopyTextInternal(text);
-    Task IClipboardTarget.CopyOriginalJson(UnifiedRequestEntry? entry) => CopyOriginalJsonInternal(entry);
+    Task IClipboardTarget.CopyOriginalJson(UnifiedSessionTurn? entry) => CopyOriginalJsonInternal(entry);
     void IConfigTarget.OpenAgentConfig() => OpenAgentConfigInternal();
     void IConfigTarget.OpenPromptTemplates() => OpenPromptTemplatesInternal();
     Task ISessionDataTarget.ReloadFromMcpAsync() => ReloadFromMcpAsyncInternal();
@@ -3934,7 +3934,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     void ISessionDataTarget.LoadJson(string filePath) => LoadJsonInternal(filePath);
     void ISessionDataTarget.LoadMarkdownFile(FileNode node) => LoadMarkdownFileInternal(node);
     void ISessionDataTarget.LoadSourceFile(FileNode node) => LoadSourceFileInternal(node);
-    void ISessionDataTarget.UpdateFilteredSearchEntries() => UpdateFilteredSearchEntriesInternal();
+    void ISessionDataTarget.UpdateFilteredSearchTurns() => UpdateFilteredSearchTurnsInternal();
     private readonly object _busyLock = new();
     private readonly List<Task> _outstandingTasks = new();
 

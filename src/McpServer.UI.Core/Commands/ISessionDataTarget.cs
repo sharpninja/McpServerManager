@@ -19,7 +19,7 @@ public interface ISessionDataTarget
     void LoadJson(string filePath);
     void LoadMarkdownFile(FileNode node);
     void LoadSourceFile(FileNode node);
-    void UpdateFilteredSearchEntries();
+    void UpdateFilteredSearchTurns();
     McpSessionLogService McpSessionService { get; }
     JsonLogSummary JsonLogSummary { get; set; }
     ObservableCollection<JsonTreeNode> JsonTree { get; }

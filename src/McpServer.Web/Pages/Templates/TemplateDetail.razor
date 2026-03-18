@@ -3,6 +3,7 @@
 @inject TemplateDetailViewModel ViewModel
 @inject TemplateListViewModel ListViewModel
 @inject IAuthorizationPolicyService AuthPolicy
+@inject WebCommandTarget CommandTarget
 
 <PageTitle>Template Detail</PageTitle>
 
@@ -193,23 +194,29 @@
         if (!string.Equals(filterKey, _lastFilterKey, StringComparison.Ordinal))
         {
             _lastFilterKey = filterKey;
-            ListViewModel.Category = Category;
-            ListViewModel.Tag = Tag;
-            ListViewModel.Keyword = Keyword;
-            await ListViewModel.LoadAsync().ConfigureAwait(true);
+            await CommandTarget.RunAsync(async () =>
+            {
+                ListViewModel.Category = Category;
+                ListViewModel.Tag = Tag;
+                ListViewModel.Keyword = Keyword;
+                await ListViewModel.LoadAsync().ConfigureAwait(true);
+            }).ConfigureAwait(true);
         }
 
         if (string.Equals(_loadedTemplateId, TemplateId, StringComparison.Ordinal))
             return;
 
         _loadedTemplateId = TemplateId;
-        await ViewModel.LoadAsync(TemplateId).ConfigureAwait(true);
-        ViewModel.PopulateEditorFromDetail();
+        await CommandTarget.RunAsync(async () =>
+        {
+            await ViewModel.LoadAsync(TemplateId).ConfigureAwait(true);
+            ViewModel.PopulateEditorFromDetail();
+        }).ConfigureAwait(true);
     }
 
-    private async Task SaveAsync() => await ViewModel.SaveAsync().ConfigureAwait(true);
+    private async Task SaveAsync() => await CommandTarget.RunAsync(() => ViewModel.SaveAsync()).ConfigureAwait(true);
 
-    private async Task DeleteAsync() => await ViewModel.DeleteAsync().ConfigureAwait(true);
+    private async Task DeleteAsync() => await CommandTarget.RunAsync(() => ViewModel.DeleteAsync()).ConfigureAwait(true);
 
     private string GetDetailHref(string templateId)
     {

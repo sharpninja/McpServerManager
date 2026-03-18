@@ -87,31 +87,31 @@ public sealed class RefreshAndLoadAllJsonHandler(IUiDispatchTarget dispatch, ISe
                     uniqueSessions = data.OrderAndDeduplicateSessions(byPath);
                 }
 
-                // Stamp agent on entries
+                // Stamp agent on turns
                 foreach (var log in uniqueSessions)
                 {
                     var agent = string.IsNullOrWhiteSpace(log.SourceType) ? "Unknown" : log.SourceType.Trim();
-                    if (log.Entries == null) continue;
-                    foreach (var entry in log.Entries)
+                    if (log.Turns == null) continue;
+                    foreach (var entry in log.Turns)
                     {
                         if (entry != null && string.IsNullOrWhiteSpace(entry.Agent))
                             entry.Agent = agent;
                     }
                 }
 
-                var allEntries = uniqueSessions.SelectMany(l => l.Entries).OrderByDescending(e => e.Timestamp).ToList();
-                var deduped = MainWindowViewModel.DeduplicateUnifiedEntries(allEntries);
+                var allTurns = uniqueSessions.SelectMany(l => l.Turns).OrderByDescending(e => e.Timestamp).ToList();
+                var deduped = MainWindowViewModel.DeduplicateUnifiedTurns(allTurns);
 
                 var masterLog = new UnifiedSessionLog
                 {
                     SourceType = "Aggregated",
                     SessionId = "ALL-JSON",
-                    Title = "All Requests",
+                    Title = "All Turns",
                     Model = "Various",
                     Started = DateTime.Now,
                     Status = "Aggregated",
-                    EntryCount = deduped.Count,
-                    Entries = deduped,
+                    TurnCount = deduped.Count,
+                    Turns = deduped,
                     TotalTokens = uniqueSessions.Sum(l => l.TotalTokens)
                 };
 
@@ -119,7 +119,7 @@ public sealed class RefreshAndLoadAllJsonHandler(IUiDispatchTarget dispatch, ISe
                 data.BuildUnifiedSummaryAndIndex(masterLog, summary);
                 summary.SummaryLines.Clear();
                 summary.SummaryLines.Add($"Type: {masterLog.SourceType}");
-                summary.SummaryLines.Add($"Total Entries: {masterLog.EntryCount}");
+                summary.SummaryLines.Add($"Total Turns: {masterLog.TurnCount}");
                 summary.SummaryLines.Add($"Total Tokens: {masterLog.TotalTokens:N0}");
                 summary.SummaryLines.Add($"Aggregated at: {masterLog.Started}");
 
@@ -129,7 +129,7 @@ public sealed class RefreshAndLoadAllJsonHandler(IUiDispatchTarget dispatch, ISe
                 root.Children.Add(new JsonTreeNode("sourceType", masterLog.SourceType ?? "Aggregated", "String"));
                 root.Children.Add(new JsonTreeNode("sessionId", masterLog.SessionId ?? "ALL-JSON", "String"));
                 root.Children.Add(new JsonTreeNode("title", masterLog.Title ?? "All Requests", "String"));
-                root.Children.Add(new JsonTreeNode("entryCount", masterLog.EntryCount.ToString(), "Number"));
+                root.Children.Add(new JsonTreeNode("turnCount", masterLog.TurnCount.ToString(), "Number"));
                 root.Children.Add(new JsonTreeNode("totalTokens", $"{masterLog.TotalTokens:N0}", "Number"));
                 root.Children.Add(new JsonTreeNode("sessions", $"{uniqueSessions.Count} sessions", "Number"));
 
@@ -145,7 +145,7 @@ public sealed class RefreshAndLoadAllJsonHandler(IUiDispatchTarget dispatch, ISe
                         data.JsonLogSummary = summary;
                         data.JsonTree.Clear();
                         data.JsonTree.Add(root);
-                        data.UpdateFilteredSearchEntries();
+                        data.UpdateFilteredSearchTurns();
                         data.AgentFilter = string.IsNullOrWhiteSpace(preselectedAgent) ? "" : preselectedAgent.Trim();
                         dispatch.StatusMessage = string.IsNullOrWhiteSpace(preselectedAgent)
                             ? $"Loaded {reqCount} requests from {sessionCount} sessions."
@@ -212,7 +212,7 @@ public sealed class RefreshAndLoadSessionHandler(IUiDispatchTarget dispatch, ISe
                 summary.SummaryLines.Clear();
                 summary.SummaryLines.Add($"Type: {session.SourceType}");
                 summary.SummaryLines.Add($"Session: {session.SessionId}");
-                summary.SummaryLines.Add($"Entries: {session.EntryCount}");
+                summary.SummaryLines.Add($"Turns: {session.TurnCount}");
                 if (!string.IsNullOrEmpty(session.Model))
                     summary.SummaryLines.Add($"Model: {session.Model}");
                 if (session.LastUpdated.HasValue)
@@ -229,7 +229,7 @@ public sealed class RefreshAndLoadSessionHandler(IUiDispatchTarget dispatch, ISe
                     data.JsonTree.Clear();
                     data.JsonLogSummary = summary;
                     data.JsonTree.Add(root);
-                    data.UpdateFilteredSearchEntries();
+                    data.UpdateFilteredSearchTurns();
                     dispatch.StatusMessage = $"Loaded {session.SourceType}/{session.SessionId}";
                 });
             }

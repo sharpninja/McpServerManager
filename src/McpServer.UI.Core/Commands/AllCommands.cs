@@ -42,7 +42,7 @@ public sealed class RefreshViewHandler(INavigationTarget target) : ICommandHandl
 
 // --- Request Details ---
 
-public sealed record ShowRequestDetailsCommand(Models.Json.SearchableEntry Entry) : ICommand<bool>;
+public sealed record ShowRequestDetailsCommand(Models.Json.SearchableTurn Entry) : ICommand<bool>;
 
 public sealed class ShowRequestDetailsHandler(IRequestDetailsTarget target) : ICommandHandler<ShowRequestDetailsCommand, bool>
 {
@@ -88,13 +88,13 @@ public sealed class NavigateToNextRequestHandler(IRequestDetailsTarget target) :
 
 // --- Selection ---
 
-public sealed record SelectSearchEntryCommand(Models.Json.SearchableEntry Entry) : ICommand<bool>;
+public sealed record SelectSearchTurnCommand(Models.Json.SearchableTurn Entry) : ICommand<bool>;
 
-public sealed class SelectSearchEntryHandler(IRequestDetailsTarget target) : ICommandHandler<SelectSearchEntryCommand, bool>
+public sealed class SelectSearchTurnHandler(IRequestDetailsTarget target) : ICommandHandler<SelectSearchTurnCommand, bool>
 {
-    public Task<Result<bool>> HandleAsync(SelectSearchEntryCommand command, CallContext context)
+    public Task<Result<bool>> HandleAsync(SelectSearchTurnCommand command, CallContext context)
     {
-        target.SelectSearchEntry(command.Entry);
+        target.SelectSearchTurn(command.Entry);
         return Task.FromResult(Result<bool>.Success(true));
     }
 }
@@ -112,7 +112,7 @@ public sealed class CopyTextHandler(IClipboardTarget target) : ICommandHandler<C
     }
 }
 
-public sealed record CopyOriginalJsonCommand(Models.Json.UnifiedRequestEntry? Entry) : ICommand<bool>;
+public sealed record CopyOriginalJsonCommand(Models.Json.UnifiedSessionTurn? Entry) : ICommand<bool>;
 
 public sealed class CopyOriginalJsonHandler(IClipboardTarget target) : ICommandHandler<CopyOriginalJsonCommand, bool>
 {
@@ -249,7 +249,7 @@ public sealed class JsonNodeDoubleTappedHandler(INavigationTarget target) : ICom
 
 // --- Search Row Tap ---
 
-public sealed record SearchRowTappedCommand(Models.Json.SearchableEntry? Entry) : ICommand<bool>;
+public sealed record SearchRowTappedCommand(Models.Json.SearchableTurn? Entry) : ICommand<bool>;
 
 public sealed class SearchRowTappedHandler(IRequestDetailsTarget target) : ICommandHandler<SearchRowTappedCommand, bool>
 {
@@ -262,7 +262,7 @@ public sealed class SearchRowTappedHandler(IRequestDetailsTarget target) : IComm
 
 // --- Search Row Double-Tap ---
 
-public sealed record SearchRowDoubleTappedCommand(Models.Json.SearchableEntry? Entry) : ICommand<bool>;
+public sealed record SearchRowDoubleTappedCommand(Models.Json.SearchableTurn? Entry) : ICommand<bool>;
 
 public sealed class SearchRowDoubleTappedHandler(IRequestDetailsTarget target) : ICommandHandler<SearchRowDoubleTappedCommand, bool>
 {

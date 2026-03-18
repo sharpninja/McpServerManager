@@ -6,6 +6,7 @@ using McpServer.UI.Core.Services;
 using McpServer.Web.Adapters;
 using McpServer.Web.Authorization;
 using McpServer.Web.Services;
+using McpServer.Web.ViewModels;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace McpServer.Web;
@@ -24,19 +25,24 @@ internal static class WebServiceRegistration
         services.AddScoped<BearerTokenAccessor>();
 
         // Avoid registering Dispatcher as an ILoggerProvider (AddCqrs) to prevent startup DI/logger cycles.
-        services.AddSingleton<Dispatcher>();
+        // Web command dispatch needs the current scope so scoped CQRS behaviors can resolve correctly.
+        services.AddScoped<Dispatcher>();
         services.AddUiCore(typeof(WebServiceRegistration).Assembly);
 
-        services.TryAddSingleton<ICommandTarget, WebNoOpCommandTarget>();
-        services.TryAddSingleton<INavigationTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddSingleton<IRequestDetailsTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddSingleton<IPreviewTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddSingleton<IArchiveTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddSingleton<ISessionDataTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddSingleton<IClipboardTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddSingleton<IConfigTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddSingleton<IUiDispatchTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddSingleton<ITodoCopilotTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddScoped<WebCommandTarget>();
+        services.TryAddScoped<ICommandTarget>(sp => sp.GetRequiredService<WebCommandTarget>());
+        services.TryAddScoped<INavigationTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddScoped<IRequestDetailsTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddScoped<IPreviewTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddScoped<IArchiveTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddScoped<ISessionDataTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddScoped<IClipboardTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddScoped<IConfigTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddScoped<IUiDispatchTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.TryAddScoped<ITodoCopilotTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+
+        services.RemoveAll<WorkspaceAutoSelector>();
+        services.AddScoped<WorkspaceAutoSelector>();
 
         services.RemoveAll<BackendConnectionMonitor>();
         services.AddScoped<BackendConnectionMonitor>();
@@ -50,10 +56,13 @@ internal static class WebServiceRegistration
         services.AddScoped<IContextApiClient, ContextApiClientAdapter>();
         services.AddScoped<IRepoApiClient, RepoApiClientAdapter>();
         services.AddScoped<IVoiceApiClient, VoiceApiClientAdapter>();
+        services.RemoveAll<IVoiceConversationService>();
+        services.AddScoped<IVoiceConversationService, WebVoiceConversationService>();
         services.AddScoped<IAuthConfigApiClient, AuthConfigApiClientAdapter>();
         services.AddScoped<IConfigurationApiClient, ConfigurationApiClientAdapter>();
         services.AddScoped<IAgentApiClient, AgentApiClientAdapter>();
         services.AddScoped<ISseSubscriptionService, SseSubscriptionService>();
+        services.AddScoped<WebVoiceConversationViewModel>();
 
         return services;
     }

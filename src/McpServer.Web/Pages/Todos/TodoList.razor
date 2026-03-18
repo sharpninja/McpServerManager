@@ -1,6 +1,7 @@
 @page "/todos"
 
 @inject TodoListViewModel ViewModel
+@inject WebCommandTarget CommandTarget
 
 <PageTitle>Todo List</PageTitle>
 
@@ -94,10 +95,21 @@ else
             return;
 
         _lastQueryKey = queryKey;
-        ViewModel.Section = Section;
-        ViewModel.Priority = Priority;
-        ViewModel.Done = Done ?? false;
-        await ViewModel.LoadAsync().ConfigureAwait(true);
+        var loadTask = CommandTarget.RunAsync(async () =>
+        {
+            ViewModel.Section = Section;
+            ViewModel.Priority = Priority;
+            ViewModel.Done = Done ?? false;
+            await ViewModel.LoadAsync().ConfigureAwait(true);
+        });
+
+        while (!ViewModel.IsLoading && !loadTask.IsCompleted)
+            await Task.Yield();
+
+        if (ViewModel.IsLoading)
+            await InvokeAsync(StateHasChanged);
+
+        await loadTask.ConfigureAwait(true);
     }
 
     private string GetTodoDetailHref(string id)

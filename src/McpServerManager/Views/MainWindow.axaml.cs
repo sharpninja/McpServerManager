@@ -16,7 +16,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using FileNode = McpServer.UI.Core.Models.FileNode;
 using JsonTreeNode = McpServer.UI.Core.Models.Json.JsonTreeNode;
-using SearchableEntry = McpServer.UI.Core.Models.Json.SearchableEntry;
+using SearchableTurn = McpServer.UI.Core.Models.Json.SearchableTurn;
 
 namespace McpServerManager.Views;
 
@@ -475,15 +475,15 @@ public partial class MainWindow : Window
 
     private void OnSearchRowTapped(object? sender, TappedEventArgs e)
     {
-        if (sender is not Avalonia.Controls.Control control || control.DataContext is not SearchableEntry entry)
+        if (sender is not Avalonia.Controls.Control control || control.DataContext is not SearchableTurn entry)
             return;
         if (DataContext is MainWindowViewModel vm)
-            vm.SelectSearchEntryCommand.Execute(entry);
+            vm.SelectSearchTurnCommand.Execute(entry);
     }
 
     private void OnSearchRowDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (sender is not Avalonia.Controls.Control control || control.DataContext is not SearchableEntry entry)
+        if (sender is not Avalonia.Controls.Control control || control.DataContext is not SearchableTurn entry)
             return;
         if (DataContext is MainWindowViewModel vm)
             vm.ShowRequestDetailsCommand.Execute(entry);

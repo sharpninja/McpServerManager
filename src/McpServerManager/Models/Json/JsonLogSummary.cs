@@ -38,14 +38,14 @@ namespace McpServerManager.Models.Json
         /// <summary>
         /// Flat list of searchable entries (requests/entries) for indexing and search. Populated during LoadJson.
         /// </summary>
-        public List<SearchableEntry> SearchIndex { get; set; } = new();
+        public List<SearchableTurn> SearchIndex { get; set; } = new();
     }
 
     /// <summary>
     /// One searchable entry in the log (a single request or Cursor entry).
     /// Used to build a flat index for search and to jump to the corresponding tree node.
     /// </summary>
-    public partial class SearchableEntry : ObservableObject
+    public partial class SearchableTurn : ObservableObject
     {
         /// <summary>
         /// Request ID or similar unique key.
@@ -87,7 +87,7 @@ namespace McpServerManager.Models.Json
         /// 0-based index in requests[] or entries[] for this log type.
         /// </summary>
         [ObservableProperty]
-        private int _entryIndex;
+        private int _turnIndex;
 
         /// <summary>
         /// Path into the JSON tree to locate this node, e.g. "requests[3]" or "entries[5]".
@@ -114,7 +114,7 @@ namespace McpServerManager.Models.Json
             }
         }
 
-        /// <summary>Gets the entry's timestamp for display/sort. Prefers stored Timestamp string, then UnifiedEntry.Timestamp.</summary>
+        /// <summary>Gets the entry's timestamp for display/sort. Prefers stored Timestamp string, then UnifiedTurn.Timestamp.</summary>
         private DateTime? GetEntryTimestamp()
         {
             if (!string.IsNullOrWhiteSpace(Timestamp))
@@ -124,7 +124,7 @@ namespace McpServerManager.Models.Json
                 if (DateTime.TryParse(Timestamp, CultureInfo.CurrentCulture, DateTimeStyles.None, out var dt2))
                     return dt2;
             }
-            return UnifiedEntry?.Timestamp;
+            return UnifiedTurn?.Timestamp;
         }
 
         private static DateTime ToLocalTime(DateTime dt)
@@ -149,6 +149,6 @@ namespace McpServerManager.Models.Json
         /// <summary>
         /// Reference to the unified entry object for detailed viewing.
         /// </summary>
-        public UnifiedRequestEntry? UnifiedEntry { get; set; }
+        public UnifiedSessionTurn? UnifiedTurn { get; set; }
     }
 }

@@ -41,8 +41,8 @@ public sealed class McpUnifiedSessionLogDto
     [JsonPropertyName("status")]
     public string? Status { get; set; }
 
-    [JsonPropertyName("entryCount")]
-    public int EntryCount { get; set; }
+    [JsonPropertyName("turnCount")]
+    public int TurnCount { get; set; }
 
     [JsonPropertyName("totalTokens")]
     public int? TotalTokens { get; set; }
@@ -56,8 +56,8 @@ public sealed class McpUnifiedSessionLogDto
     [JsonPropertyName("copilotStatistics")]
     public McpCopilotStatisticsDto? CopilotStatistics { get; set; }
 
-    [JsonPropertyName("entries")]
-    public List<McpUnifiedRequestEntryDto> Entries { get; set; } = new();
+    [JsonPropertyName("turns")]
+    public List<McpUnifiedSessionTurnDto> Turns { get; set; } = new();
 }
 
 public sealed class McpWorkspaceInfoDto
@@ -93,7 +93,7 @@ public sealed class McpCopilotStatisticsDto
     public int? InProgressCount { get; set; }
 }
 
-public sealed class McpUnifiedRequestEntryDto
+public sealed class McpUnifiedSessionTurnDto
 {
     [JsonPropertyName("requestId")]
     public string? RequestId { get; set; }
@@ -144,7 +144,7 @@ public sealed class McpUnifiedRequestEntryDto
     public object? RawContext { get; set; }
 
     [JsonPropertyName("originalEntry")]
-    public object? OriginalEntry { get; set; }
+    public object? OriginalTurn { get; set; }
 
     [JsonPropertyName("actions")]
     public List<McpUnifiedActionDto>? Actions { get; set; }

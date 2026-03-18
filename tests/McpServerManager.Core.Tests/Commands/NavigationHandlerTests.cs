@@ -88,7 +88,7 @@ public sealed class NavigationHandlerTests
     [Fact]
     public async Task SearchRowTappedHandler_HandleAsync_CallsSearchRowTapped()
     {
-        var entry = new SearchableEntry();
+        var entry = new SearchableTurn();
         var handler = new SearchRowTappedHandler(_target.Object);
         var result = await handler.HandleAsync(new SearchRowTappedCommand(entry), _ctx);
 
@@ -99,7 +99,7 @@ public sealed class NavigationHandlerTests
     [Fact]
     public async Task SearchRowDoubleTappedHandler_HandleAsync_CallsSearchRowDoubleTapped()
     {
-        var entry = new SearchableEntry();
+        var entry = new SearchableTurn();
         var handler = new SearchRowDoubleTappedHandler(_target.Object);
         var result = await handler.HandleAsync(new SearchRowDoubleTappedCommand(entry), _ctx);
 

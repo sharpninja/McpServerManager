@@ -7,12 +7,12 @@ namespace McpServerManager.Core.Commands;
 /// </summary>
 public interface IRequestDetailsTarget
 {
-    void ShowRequestDetails(SearchableEntry entry);
+    void ShowRequestDetails(SearchableTurn entry);
     void CloseRequestDetails();
     void NavigateToPreviousRequest();
     void NavigateToNextRequest();
-    void SelectSearchEntry(SearchableEntry entry);
-    void SearchRowTapped(SearchableEntry? entry);
-    void SearchRowDoubleTapped(SearchableEntry? entry);
+    void SelectSearchTurn(SearchableTurn entry);
+    void SearchRowTapped(SearchableTurn? entry);
+    void SearchRowDoubleTapped(SearchableTurn? entry);
 }
 

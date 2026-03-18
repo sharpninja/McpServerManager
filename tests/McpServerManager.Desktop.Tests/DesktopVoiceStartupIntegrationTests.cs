@@ -9,6 +9,7 @@ using Avalonia.Interactivity;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.Themes.Fluent;
+using McpServerManager.Android.Views;
 using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
 using McpServerManager.Desktop.Views;
@@ -71,6 +72,70 @@ public sealed class DesktopVoiceStartupIntegrationTests
                 || status.Contains("failed", StringComparison.OrdinalIgnoreCase)
                 || status.Contains("error", StringComparison.OrdinalIgnoreCase),
                 $"Unexpected voice status after Start click: '{status}'");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task SimplifiedVoiceView_DefaultLayout_DoesNotShiftManualInputRows()
+    {
+        await EnsureHeadlessAppResourcesAsync();
+
+        var view = new SimplifiedVoiceView();
+        var window = new Window
+        {
+            Width = 480,
+            Height = 800,
+            Content = view
+        };
+
+        try
+        {
+            window.Show();
+            await PumpUiAsync();
+
+            var inputRowsPanel = view.FindControl<StackPanel>("ManualInputRowsPanel");
+            Assert.NotNull(inputRowsPanel);
+            Assert.True(Math.Abs(inputRowsPanel.Margin.Top) < 0.5, $"Expected no top offset, but got {inputRowsPanel.Margin.Top}.");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task SimplifiedVoiceView_PhoneLayout_ShiftsManualInputRowsByManualRowHeight()
+    {
+        await EnsureHeadlessAppResourcesAsync();
+
+        var view = new SimplifiedVoiceView
+        {
+            IsPhoneVoiceLayout = true
+        };
+        var window = new Window
+        {
+            Width = 480,
+            Height = 800,
+            Content = view
+        };
+
+        try
+        {
+            window.Show();
+            await PumpUiAsync();
+
+            var inputRowsPanel = view.FindControl<StackPanel>("ManualInputRowsPanel");
+            var manualTextEntryBorder = view.FindControl<Border>("ManualTextEntryBorder");
+            Assert.NotNull(inputRowsPanel);
+            Assert.NotNull(manualTextEntryBorder);
+            Assert.True(manualTextEntryBorder.Bounds.Height > 0, "Expected the manual text entry row to be measured.");
+            Assert.True(
+                Math.Abs(inputRowsPanel.Margin.Top + manualTextEntryBorder.Bounds.Height) < 1.0,
+                $"Expected top offset {-manualTextEntryBorder.Bounds.Height}, but got {inputRowsPanel.Margin.Top}.");
         }
         finally
         {

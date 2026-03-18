@@ -3,6 +3,7 @@
 @inject TodoDetailViewModel ViewModel
 @inject TodoListViewModel ListViewModel
 @inject IAuthorizationPolicyService AuthPolicy
+@inject WebCommandTarget CommandTarget
 
 <PageTitle>Todo Detail</PageTitle>
 
@@ -61,6 +62,12 @@
                             <button class="btn btn-primary btn-sm" @onclick="SaveAsync" disabled="@ViewModel.IsBusy">
                                 <OcticonIcon Name="check-circle" Size="16" /> Save
                             </button>
+                            @if (!ViewModel.EditorDone)
+                            {
+                                <button class="btn btn-sm" @onclick="MarkDoneAsync" disabled="@ViewModel.IsBusy">
+                                    <OcticonIcon Name="check" Size="16" /> Done
+                                </button>
+                            }
                             <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@ViewModel.IsBusy">
                                 <OcticonIcon Name="trash" Size="16" /> Delete
                             </button>
@@ -136,39 +143,60 @@
         // Apply same defaults as TodoList.razor (Done=false shows open items).
         if (ListViewModel.Items.Count == 0)
         {
-            ListViewModel.Done = false;
-            await ListViewModel.LoadAsync().ConfigureAwait(true);
+            await CommandTarget.RunAsync(async () =>
+            {
+                ListViewModel.Done = false;
+                await ListViewModel.LoadAsync().ConfigureAwait(true);
+            }).ConfigureAwait(true);
         }
 
         if (string.Equals(_loadedId, TodoId, StringComparison.Ordinal))
             return;
 
         _loadedId = TodoId;
-        ViewModel.TodoId = TodoId;
-        await ViewModel.LoadAsync().ConfigureAwait(true);
+        await CommandTarget.RunAsync(async () =>
+        {
+            ViewModel.TodoId = TodoId;
+            await ViewModel.LoadAsync().ConfigureAwait(true);
+        }).ConfigureAwait(true);
     }
 
     private async Task SaveAsync()
     {
-        ViewModel.ApplyMarkdownToEditor();
-        await ViewModel.SaveAsync().ConfigureAwait(true);
-        await ListViewModel.LoadAsync().ConfigureAwait(true);
+        await CommandTarget.RunAsync(async () =>
+        {
+            ViewModel.ApplyMarkdownToEditor();
+            await ViewModel.SaveAsync().ConfigureAwait(true);
+            await ListViewModel.LoadAsync().ConfigureAwait(true);
+        }).ConfigureAwait(true);
     }
 
     private async Task DeleteAsync()
     {
-        await ViewModel.DeleteAsync().ConfigureAwait(true);
-        await ListViewModel.LoadAsync().ConfigureAwait(true);
+        await CommandTarget.RunAsync(async () =>
+        {
+            await ViewModel.DeleteAsync().ConfigureAwait(true);
+            await ListViewModel.LoadAsync().ConfigureAwait(true);
+        }).ConfigureAwait(true);
+    }
+
+    private async Task MarkDoneAsync()
+    {
+        await CommandTarget.RunAsync(async () =>
+        {
+            await ViewModel.MarkDoneAsync().ConfigureAwait(true);
+            await ListViewModel.LoadAsync().ConfigureAwait(true);
+        }).ConfigureAwait(true);
     }
 
     private Task GenerateStatusPromptAsync()
-        => ViewModel.GenerateStatusPromptAsync();
+        => CommandTarget.RunAsync(() => ViewModel.GenerateStatusPromptAsync());
 
     private Task GeneratePlanPromptAsync()
-        => ViewModel.GeneratePlanPromptAsync();
+        => CommandTarget.RunAsync(() => ViewModel.GeneratePlanPromptAsync());
 
     private Task GenerateImplementAsync()
-        => ViewModel.GenerateImplementPromptAsync();
+        => CommandTarget.RunAsync(() => ViewModel.GenerateImplementPromptAsync());
 
     private void ClearPromptOutput()
     {

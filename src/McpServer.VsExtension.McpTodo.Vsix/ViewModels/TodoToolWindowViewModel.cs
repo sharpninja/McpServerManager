@@ -51,9 +51,6 @@ internal sealed class TodoToolWindowViewModel : UiCoreTodoListHostViewModel
         StopCommand = new RelayCommand(Stop);
         ClearFiltersCommand = new RelayCommand(ClearFilters);
         OpenItemCommand = new AsyncRelayCommand(OpenSelectedTodoAsync);
-        StatusPromptCommand = new AsyncRelayCommand(CopilotStatusAsync);
-        ImplementCommand = new AsyncRelayCommand(CopilotImplementAsync);
-        PlanCommand = new AsyncRelayCommand(CopilotPlanAsync);
 
         SyncFilteredItems();
     }
@@ -114,9 +111,6 @@ internal sealed class TodoToolWindowViewModel : UiCoreTodoListHostViewModel
     public IRelayCommand StopCommand { get; }
     public IRelayCommand ClearFiltersCommand { get; }
     public IAsyncRelayCommand OpenItemCommand { get; }
-    public IAsyncRelayCommand StatusPromptCommand { get; }
-    public IAsyncRelayCommand ImplementCommand { get; }
-    public IAsyncRelayCommand PlanCommand { get; }
 
     public override Task CopilotStatusAsync()
     {

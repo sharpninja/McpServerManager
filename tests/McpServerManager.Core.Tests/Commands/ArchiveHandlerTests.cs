@@ -66,14 +66,14 @@ public sealed class ArchiveHandlerTests
     }
 
     [Fact]
-    public async Task SelectSearchEntryHandler_HandleAsync_CallsSelectSearchEntry()
+    public async Task SelectSearchTurnHandler_HandleAsync_CallsSelectSearchTurn()
     {
-        var entry = new SearchableEntry();
-        var handler = new SelectSearchEntryHandler(_target.Object);
-        var result = await handler.HandleAsync(new SelectSearchEntryCommand(entry), _ctx);
+        var entry = new SearchableTurn();
+        var handler = new SelectSearchTurnHandler(_target.Object);
+        var result = await handler.HandleAsync(new SelectSearchTurnCommand(entry), _ctx);
 
         result.IsSuccess.Should().BeTrue();
-        _target.Verify(t => t.SelectSearchEntry(entry), Times.Once);
+        _target.Verify(t => t.SelectSearchTurn(entry), Times.Once);
     }
 }
 

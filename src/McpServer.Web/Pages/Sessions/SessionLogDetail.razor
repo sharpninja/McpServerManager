@@ -2,6 +2,7 @@
 
 @inject SessionLogDetailViewModel ViewModel
 @inject SessionLogListViewModel ListViewModel
+@inject WebCommandTarget CommandTarget
 
 <PageTitle>Session Log Detail</PageTitle>
 
@@ -42,35 +43,35 @@
                     <h2 class="h3 mb-0">@ViewModel.Detail.Title</h2>
                 </div>
                 <div class="Box-body">
-                    <div class="session-entry-meta-grid">
+                    <div class="session-turn-meta-grid">
                         <div><span class="color-fg-muted f6">Session ID</span><div><code>@ViewModel.Detail.SessionId</code></div></div>
                         <div><span class="color-fg-muted f6">Source Type</span><div>@ViewModel.Detail.SourceType</div></div>
                         <div><span class="color-fg-muted f6">Status</span><div>@ViewModel.Detail.Status</div></div>
                         <div><span class="color-fg-muted f6">Model</span><div>@(ViewModel.Detail.Model ?? "(not set)")</div></div>
                         <div><span class="color-fg-muted f6">Started</span><div>@FormatTimestamp(ViewModel.Detail.Started)</div></div>
                         <div><span class="color-fg-muted f6">Last Updated</span><div>@FormatTimestamp(ViewModel.Detail.LastUpdated)</div></div>
-                        <div><span class="color-fg-muted f6">Entry Count</span><div>@ViewModel.Detail.EntryCount</div></div>
+                        <div><span class="color-fg-muted f6">Turn Count</span><div>@ViewModel.Detail.TurnCount</div></div>
                         <div><span class="color-fg-muted f6">Total Tokens</span><div>@(ViewModel.Detail.TotalTokens?.ToString() ?? "(unknown)")</div></div>
                         <div><span class="color-fg-muted f6">Cursor Session Label</span><div>@(ViewModel.Detail.CursorSessionLabel ?? "(none)")</div></div>
                     </div>
                 </div>
             </div>
 
-            @if (ViewModel.Detail.Entries.Count == 0)
+            @if (ViewModel.Detail.Turns.Count == 0)
             {
-                <PrimerBlankslate Heading="No entries" Description="This session does not have request entries." />
+                <PrimerBlankslate Heading="No turns" Description="This session does not have request turns." />
             }
             else
             {
                 <div class="Box mb-3">
                     <div class="Box-header">
-                        <h3 class="h4 mb-0">Entries</h3>
+                        <h3 class="h4 mb-0">Turns</h3>
                     </div>
-                    <PrimerDataTable TItem="McpServer.UI.Core.Messages.SessionLogEntryDetail"
-                                     Items="ViewModel.Detail.Entries"
+                    <PrimerDataTable TItem="McpServer.UI.Core.Messages.SessionLogTurnDetail"
+                                     Items="ViewModel.Detail.Turns"
                                      ColumnCount="6"
                                      Class="Table--full-width"
-                                     RowClass="GetEntryRowClass"
+                                     RowClass="GetTurnRowClass"
                                      style="width:100%; table-layout:fixed;">
                         <HeaderTemplate>
                             <tr>
@@ -82,103 +83,103 @@
                                 <th style="width:90px;"></th>
                             </tr>
                         </HeaderTemplate>
-                        <RowTemplate Context="entry">
-                            <td>@(GetEntryIndex(entry) + 1)</td>
+                        <RowTemplate Context="turn">
+                            <td>@(GetTurnIndex(turn) + 1)</td>
                             <td>
-                                <span class="dashboard-link-truncate" title="@GetEntryHeading(entry)">
-                                    @GetEntryHeading(entry)
+                                <span class="dashboard-link-truncate" title="@GetTurnHeading(turn)">
+                                    @GetTurnHeading(turn)
                                 </span>
                             </td>
-                            <td><code>@entry.RequestId</code></td>
-                            <td>@(entry.Status ?? "(unknown)")</td>
-                            <td>@FormatTimestamp(entry.Timestamp)</td>
+                            <td><code>@turn.RequestId</code></td>
+                            <td>@(turn.Status ?? "(unknown)")</td>
+                            <td>@FormatTimestamp(turn.Timestamp)</td>
                             <td class="text-right">
-                                <button class="btn btn-sm" @onclick="() => SelectEntry(GetEntryIndex(entry))">Details</button>
+                                <button class="btn btn-sm" @onclick="() => SelectTurn(GetTurnIndex(turn))">Details</button>
                             </td>
                         </RowTemplate>
                     </PrimerDataTable>
                 </div>
 
-                @if (SelectedEntry is not null)
+                @if (SelectedTurn is not null)
                 {
-                    <div class="d-flex flex-wrap flex-items-center gap-2 mb-2 session-entry-controls">
-                        <button class="btn btn-sm" @onclick="SelectPreviousEntry" disabled="@(!CanSelectPrevious)">Previous</button>
-                        <button class="btn btn-sm" @onclick="SelectNextEntry" disabled="@(!CanSelectNext)">Next</button>
-                        <span class="color-fg-muted f6">Entry @(_selectedEntryIndex + 1) of @ViewModel.Detail.Entries.Count</span>
+                    <div class="d-flex flex-wrap flex-items-center gap-2 mb-2 session-turn-controls">
+                        <button class="btn btn-sm" @onclick="SelectPreviousTurn" disabled="@(!CanSelectPrevious)">Previous</button>
+                        <button class="btn btn-sm" @onclick="SelectNextTurn" disabled="@(!CanSelectNext)">Next</button>
+                        <span class="color-fg-muted f6">Turn @(_selectedTurnIndex + 1) of @ViewModel.Detail.Turns.Count</span>
                     </div>
 
-                    <div class="d-flex flex-wrap gap-2 mb-3 session-entry-controls">
-                        <button class="@GetEntryViewButtonClass("overview")" @onclick='() => SetEntryView("overview")'>Overview</button>
-                        <button class="@GetEntryViewButtonClass("query")" @onclick='() => SetEntryView("query")'>Query</button>
-                        <button class="@GetEntryViewButtonClass("response")" @onclick='() => SetEntryView("response")'>Response</button>
-                        <button class="@GetEntryViewButtonClass("dialog")" @onclick='() => SetEntryView("dialog")'>Processing Dialog</button>
-                        <button class="@GetEntryViewButtonClass("actions")" @onclick='() => SetEntryView("actions")'>Actions</button>
+                    <div class="d-flex flex-wrap gap-2 mb-3 session-turn-controls">
+                        <button class="@GetTurnViewButtonClass("overview")" @onclick='() => SetTurnView("overview")'>Overview</button>
+                        <button class="@GetTurnViewButtonClass("query")" @onclick='() => SetTurnView("query")'>Query</button>
+                        <button class="@GetTurnViewButtonClass("response")" @onclick='() => SetTurnView("response")'>Response</button>
+                        <button class="@GetTurnViewButtonClass("dialog")" @onclick='() => SetTurnView("dialog")'>Processing Dialog</button>
+                        <button class="@GetTurnViewButtonClass("actions")" @onclick='() => SetTurnView("actions")'>Actions</button>
                     </div>
 
                     <div class="Box mb-3">
                         <div class="Box-header">
-                            <h3 class="h4 mb-0">Entry Details · @GetEntryHeading(SelectedEntry)</h3>
+                            <h3 class="h4 mb-0">Turn Details · @GetTurnHeading(SelectedTurn)</h3>
                         </div>
                         <div class="Box-body">
-                            @if (string.Equals(_entryView, "overview", StringComparison.Ordinal))
+                            @if (string.Equals(_turnView, "overview", StringComparison.Ordinal))
                             {
-                                <div class="session-entry-meta-grid">
-                                    <div><span class="color-fg-muted f6">Request ID</span><div><code>@SelectedEntry.RequestId</code></div></div>
-                                    <div><span class="color-fg-muted f6">Status</span><div>@(SelectedEntry.Status ?? "(unknown)")</div></div>
-                                    <div><span class="color-fg-muted f6">Timestamp</span><div>@FormatTimestamp(SelectedEntry.Timestamp)</div></div>
-                                    <div><span class="color-fg-muted f6">Model</span><div>@(SelectedEntry.Model ?? "(unknown)")</div></div>
-                                    <div><span class="color-fg-muted f6">Provider</span><div>@(SelectedEntry.ModelProvider ?? "(unknown)")</div></div>
-                                    <div><span class="color-fg-muted f6">Tokens</span><div>@(SelectedEntry.TokenCount?.ToString() ?? "(unknown)")</div></div>
-                                    <div><span class="color-fg-muted f6">Processing Dialog</span><div>@SelectedEntry.ProcessingDialog.Count</div></div>
-                                    <div><span class="color-fg-muted f6">Actions</span><div>@SelectedEntry.Actions.Count</div></div>
+                                <div class="session-turn-meta-grid">
+                                    <div><span class="color-fg-muted f6">Request ID</span><div><code>@SelectedTurn.RequestId</code></div></div>
+                                    <div><span class="color-fg-muted f6">Status</span><div>@(SelectedTurn.Status ?? "(unknown)")</div></div>
+                                    <div><span class="color-fg-muted f6">Timestamp</span><div>@FormatTimestamp(SelectedTurn.Timestamp)</div></div>
+                                    <div><span class="color-fg-muted f6">Model</span><div>@(SelectedTurn.Model ?? "(unknown)")</div></div>
+                                    <div><span class="color-fg-muted f6">Provider</span><div>@(SelectedTurn.ModelProvider ?? "(unknown)")</div></div>
+                                    <div><span class="color-fg-muted f6">Tokens</span><div>@(SelectedTurn.TokenCount?.ToString() ?? "(unknown)")</div></div>
+                                    <div><span class="color-fg-muted f6">Processing Dialog</span><div>@SelectedTurn.ProcessingDialog.Count</div></div>
+                                    <div><span class="color-fg-muted f6">Actions</span><div>@SelectedTurn.Actions.Count</div></div>
                                 </div>
-                                @if (!string.IsNullOrWhiteSpace(SelectedEntry.Interpretation))
+                                @if (!string.IsNullOrWhiteSpace(SelectedTurn.Interpretation))
                                 {
                                     <div class="mt-3">
                                         <span class="color-fg-muted f6">Interpretation</span>
-                                        <pre class="session-entry-text mt-1">@SelectedEntry.Interpretation</pre>
+                                        <pre class="session-turn-text mt-1">@SelectedTurn.Interpretation</pre>
                                     </div>
                                 }
-                                @if (!string.IsNullOrWhiteSpace(SelectedEntry.FailureNote))
+                                @if (!string.IsNullOrWhiteSpace(SelectedTurn.FailureNote))
                                 {
                                     <div class="mt-3">
                                         <span class="color-fg-muted f6">Failure Note</span>
-                                        <pre class="session-entry-text mt-1">@SelectedEntry.FailureNote</pre>
+                                        <pre class="session-turn-text mt-1">@SelectedTurn.FailureNote</pre>
                                     </div>
                                 }
                             }
-                            else if (string.Equals(_entryView, "query", StringComparison.Ordinal))
+                            else if (string.Equals(_turnView, "query", StringComparison.Ordinal))
                             {
-                                @if (string.IsNullOrWhiteSpace(SelectedEntry.QueryText))
+                                @if (string.IsNullOrWhiteSpace(SelectedTurn.QueryText))
                                 {
-                                    <p class="color-fg-muted mb-0">No query text for this entry.</p>
+                                    <p class="color-fg-muted mb-0">No query text for this turn.</p>
                                 }
                                 else
                                 {
-                                    <pre class="session-entry-text mb-0">@SelectedEntry.QueryText</pre>
+                                    <pre class="session-turn-text mb-0">@SelectedTurn.QueryText</pre>
                                 }
                             }
-                            else if (string.Equals(_entryView, "response", StringComparison.Ordinal))
+                            else if (string.Equals(_turnView, "response", StringComparison.Ordinal))
                             {
-                                @if (string.IsNullOrWhiteSpace(SelectedEntry.Response))
+                                @if (string.IsNullOrWhiteSpace(SelectedTurn.Response))
                                 {
-                                    <p class="color-fg-muted mb-0">No response content for this entry.</p>
+                                    <p class="color-fg-muted mb-0">No response content for this turn.</p>
                                 }
                                 else
                                 {
-                                    <pre class="session-entry-text mb-0">@SelectedEntry.Response</pre>
+                                    <pre class="session-turn-text mb-0">@SelectedTurn.Response</pre>
                                 }
                             }
-                            else if (string.Equals(_entryView, "dialog", StringComparison.Ordinal))
+                            else if (string.Equals(_turnView, "dialog", StringComparison.Ordinal))
                             {
-                                @if (SelectedEntry.ProcessingDialog.Count == 0)
+                                @if (SelectedTurn.ProcessingDialog.Count == 0)
                                 {
-                                    <p class="color-fg-muted mb-0">No processing dialog for this entry.</p>
+                                    <p class="color-fg-muted mb-0">No processing dialog for this turn.</p>
                                 }
                                 else
                                 {
                                     <PrimerDataTable TItem="McpServer.UI.Core.Messages.SessionLogDialogDetail"
-                                                     Items="SelectedEntry.ProcessingDialog"
+                                                     Items="SelectedTurn.ProcessingDialog"
                                                      ColumnCount="4"
                                                      Class="Table--full-width"
                                                      style="width:100%; table-layout:fixed;">
@@ -194,21 +195,21 @@
                                             <td>@FormatTimestamp(dialog.Timestamp)</td>
                                             <td>@(dialog.Role ?? "(unknown)")</td>
                                             <td>@(dialog.Category ?? "(unknown)")</td>
-                                            <td><span class="session-entry-dialog-content">@((dialog.Content ?? "(none)"))</span></td>
+                                            <td><span class="session-turn-dialog-content">@((dialog.Content ?? "(none)"))</span></td>
                                         </RowTemplate>
                                     </PrimerDataTable>
                                 }
                             }
-                            else if (string.Equals(_entryView, "actions", StringComparison.Ordinal))
+                            else if (string.Equals(_turnView, "actions", StringComparison.Ordinal))
                             {
-                                @if (SelectedEntry.Actions.Count == 0)
+                                @if (SelectedTurn.Actions.Count == 0)
                                 {
-                                    <p class="color-fg-muted mb-0">No actions for this entry.</p>
+                                    <p class="color-fg-muted mb-0">No actions for this turn.</p>
                                 }
                                 else
                                 {
                                     <PrimerDataTable TItem="McpServer.UI.Core.Messages.SessionLogActionDetail"
-                                                     Items="SelectedEntry.Actions"
+                                                     Items="SelectedTurn.Actions"
                                                      ColumnCount="5"
                                                      Class="Table--full-width"
                                                      style="width:100%; table-layout:fixed;">
@@ -254,8 +255,8 @@
 
     private string? _loadedSessionId;
     private string? _lastFilterKey;
-    private int _selectedEntryIndex;
-    private string _entryView = "overview";
+    private int _selectedTurnIndex;
+    private string _turnView = "overview";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -263,78 +264,84 @@
         if (!string.Equals(filterKey, _lastFilterKey, StringComparison.Ordinal))
         {
             _lastFilterKey = filterKey;
-            ListViewModel.Agent = Agent;
-            ListViewModel.Model = Model;
-            ListViewModel.Text = Text;
-            ListViewModel.Limit = 50;
-            ListViewModel.Offset = 0;
-            await ListViewModel.LoadAsync().ConfigureAwait(true);
+            await CommandTarget.RunAsync(async () =>
+            {
+                ListViewModel.Agent = Agent;
+                ListViewModel.Model = Model;
+                ListViewModel.Text = Text;
+                ListViewModel.Limit = 50;
+                ListViewModel.Offset = 0;
+                await ListViewModel.LoadAsync().ConfigureAwait(true);
+            }).ConfigureAwait(true);
         }
 
         if (string.Equals(_loadedSessionId, SessionId, StringComparison.Ordinal))
             return;
 
         _loadedSessionId = SessionId;
-        ViewModel.SessionId = SessionId;
-        await ViewModel.LoadAsync().ConfigureAwait(true);
-        _selectedEntryIndex = 0;
-        _entryView = "overview";
+        await CommandTarget.RunAsync(async () =>
+        {
+            ViewModel.SessionId = SessionId;
+            await ViewModel.LoadAsync().ConfigureAwait(true);
+        }).ConfigureAwait(true);
+        _selectedTurnIndex = 0;
+        _turnView = "overview";
     }
 
-    private static string GetEntryHeading(McpServer.UI.Core.Messages.SessionLogEntryDetail entry)
-        => string.IsNullOrWhiteSpace(entry.QueryTitle) ? "Request Entry" : entry.QueryTitle;
+    private static string GetTurnHeading(McpServer.UI.Core.Messages.SessionLogTurnDetail turn)
+        => string.IsNullOrWhiteSpace(turn.QueryTitle) ? "Turn" : turn.QueryTitle;
 
-    private McpServer.UI.Core.Messages.SessionLogEntryDetail? SelectedEntry
-        => ViewModel.Detail is null || ViewModel.Detail.Entries.Count == 0 || _selectedEntryIndex < 0 || _selectedEntryIndex >= ViewModel.Detail.Entries.Count
+    private McpServer.UI.Core.Messages.SessionLogTurnDetail? SelectedTurn
+        => ViewModel.Detail is null || ViewModel.Detail.Turns.Count == 0 || _selectedTurnIndex < 0 || _selectedTurnIndex >= ViewModel.Detail.Turns.Count
             ? null
-            : ViewModel.Detail.Entries[_selectedEntryIndex];
+            : ViewModel.Detail.Turns[_selectedTurnIndex];
 
-    private bool CanSelectPrevious => SelectedEntry is not null && _selectedEntryIndex > 0;
+    private bool CanSelectPrevious => SelectedTurn is not null && _selectedTurnIndex > 0;
 
-    private bool CanSelectNext => ViewModel.Detail is not null && SelectedEntry is not null && _selectedEntryIndex < ViewModel.Detail.Entries.Count - 1;
+    private bool CanSelectNext => ViewModel.Detail is not null && SelectedTurn is not null && _selectedTurnIndex < ViewModel.Detail.Turns.Count - 1;
 
-    private void SelectPreviousEntry()
+    private void SelectPreviousTurn()
     {
         if (CanSelectPrevious)
-            _selectedEntryIndex--;
+            _selectedTurnIndex--;
     }
 
-    private void SelectNextEntry()
+    private void SelectNextTurn()
     {
         if (CanSelectNext)
-            _selectedEntryIndex++;
+            _selectedTurnIndex++;
     }
 
-    private void SelectEntry(int index)
+    private void SelectTurn(int index)
     {
-        if (ViewModel.Detail is null || index < 0 || index >= ViewModel.Detail.Entries.Count)
+        if (ViewModel.Detail is null || index < 0 || index >= ViewModel.Detail.Turns.Count)
             return;
 
-        _selectedEntryIndex = index;
+        _selectedTurnIndex = index;
     }
 
-    private int GetEntryIndex(McpServer.UI.Core.Messages.SessionLogEntryDetail entry)
+    private int GetTurnIndex(McpServer.UI.Core.Messages.SessionLogTurnDetail turn)
     {
         if (ViewModel.Detail is null)
             return -1;
 
-        for (var i = 0; i < ViewModel.Detail.Entries.Count; i++)
+        for (var i = 0; i < ViewModel.Detail.Turns.Count; i++)
         {
-            if (ReferenceEquals(ViewModel.Detail.Entries[i], entry))
+            if (ReferenceEquals(ViewModel.Detail.Turns[i], turn))
                 return i;
         }
 
         return -1;
     }
 
-    private string? GetEntryRowClass(McpServer.UI.Core.Messages.SessionLogEntryDetail entry)
-        => GetEntryIndex(entry) == _selectedEntryIndex ? "session-entry-row-selected" : null;
+    private string? GetTurnRowClass(McpServer.UI.Core.Messages.SessionLogTurnDetail turn)
+        => GetTurnIndex(turn) == _selectedTurnIndex ? "session-turn-row-selected" : null;
 
-    private string GetEntryViewButtonClass(string view)
-        => string.Equals(_entryView, view, StringComparison.Ordinal) ? "btn btn-sm btn-primary" : "btn btn-sm";
+    private string GetTurnViewButtonClass(string view)
+        => string.Equals(_turnView, view, StringComparison.Ordinal) ? "btn btn-sm btn-primary" : "btn btn-sm";
 
-    private void SetEntryView(string view)
-        => _entryView = view;
+    private void SetTurnView(string view)
+        => _turnView = view;
 
     private string GetDetailHref(string sessionId)
     {

@@ -15,7 +15,7 @@ public sealed class RequestDetailsHandlerTests
     [Fact]
     public async Task ShowRequestDetailsHandler_HandleAsync_CallsShowRequestDetails()
     {
-        var entry = new SearchableEntry { RequestId = "req-1", DisplayText = "Test" };
+        var entry = new SearchableTurn { RequestId = "req-1", DisplayText = "Test" };
         var handler = new ShowRequestDetailsHandler(_target.Object);
         var result = await handler.HandleAsync(new ShowRequestDetailsCommand(entry), _ctx);
 

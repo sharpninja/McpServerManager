@@ -1,6 +1,7 @@
 @page "/templates"
 
 @inject TemplateListViewModel ViewModel
+@inject WebCommandTarget CommandTarget
 
 <PageTitle>Template List</PageTitle>
 
@@ -86,10 +87,13 @@ else
             return;
 
         _lastQueryKey = queryKey;
-        ViewModel.Category = Category;
-        ViewModel.Tag = Tag;
-        ViewModel.Keyword = Keyword;
-        await ViewModel.LoadAsync().ConfigureAwait(true);
+        await CommandTarget.RunAsync(async () =>
+        {
+            ViewModel.Category = Category;
+            ViewModel.Tag = Tag;
+            ViewModel.Keyword = Keyword;
+            await ViewModel.LoadAsync().ConfigureAwait(true);
+        }).ConfigureAwait(true);
     }
 
     private static string GetDetailHref(string templateId)

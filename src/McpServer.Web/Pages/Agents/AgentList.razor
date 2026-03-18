@@ -4,6 +4,7 @@
 @inject AgentDefinitionDetailViewModel DefinitionDetailViewModel
 @inject WorkspaceAgentListViewModel WorkspaceAgentListViewModel
 @inject WorkspaceAgentDetailViewModel WorkspaceAgentDetailViewModel
+@inject WebCommandTarget CommandTarget
 
 <PageTitle>Agent List</PageTitle>
 
@@ -174,26 +175,42 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await DefinitionListViewModel.LoadAsync().ConfigureAwait(true);
-        await WorkspaceAgentListViewModel.LoadAsync().ConfigureAwait(true);
+        var loadTask = CommandTarget.RunAsync(async () =>
+        {
+            await DefinitionListViewModel.LoadAsync().ConfigureAwait(true);
+            await WorkspaceAgentListViewModel.LoadAsync().ConfigureAwait(true);
+        });
+
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
+        await loadTask.ConfigureAwait(true);
     }
 
     private async Task OnSelectedWorkspaceChanged(string? workspacePath)
     {
-        await WorkspaceAgentListViewModel.LoadAsync(workspacePath).ConfigureAwait(true);
-        SelectedWorkspaceAgentId = null;
-        WorkspaceAgentDetailViewModel.Detail = null;
+        await CommandTarget.RunAsync(async () =>
+        {
+            await WorkspaceAgentListViewModel.LoadAsync(workspacePath).ConfigureAwait(true);
+            SelectedWorkspaceAgentId = null;
+            WorkspaceAgentDetailViewModel.Detail = null;
+        }).ConfigureAwait(true);
     }
 
     private async Task LoadDefinitionDetailAsync(string agentId)
     {
-        SelectedDefinitionId = agentId;
-        await DefinitionDetailViewModel.LoadAsync(agentId).ConfigureAwait(true);
+        await CommandTarget.RunAsync(async () =>
+        {
+            SelectedDefinitionId = agentId;
+            await DefinitionDetailViewModel.LoadAsync(agentId).ConfigureAwait(true);
+        }).ConfigureAwait(true);
     }
 
     private async Task LoadWorkspaceAgentDetailAsync(string agentId, string workspacePath)
     {
-        SelectedWorkspaceAgentId = agentId;
-        await WorkspaceAgentDetailViewModel.LoadAsync(agentId, workspacePath).ConfigureAwait(true);
+        await CommandTarget.RunAsync(async () =>
+        {
+            SelectedWorkspaceAgentId = agentId;
+            await WorkspaceAgentDetailViewModel.LoadAsync(agentId, workspacePath).ConfigureAwait(true);
+        }).ConfigureAwait(true);
     }
 }

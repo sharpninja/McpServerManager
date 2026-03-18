@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.VisualTree;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.ViewModels;
 using UiCoreTodoListEntry = McpServer.UI.Core.ViewModels.TodoListEntry;
@@ -14,6 +16,7 @@ public partial class TodoListView : UserControl
     private bool? _wasPortrait;
     private bool _isUpdatingLayout;
     private bool _hasAutoLoaded;
+    private bool _suppressOpenSelectedTodoOnce;
     private LayoutSettings _layoutSettings = new();
     private readonly List<ListBox> _groupListBoxes = new();
 
@@ -104,20 +107,46 @@ public partial class TodoListView : UserControl
     private void OnGroupListBoxSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is not ListBox activeListBox) return;
-        if (activeListBox.SelectedItem == null) return;
+        if (activeListBox.SelectedItem is not UiCoreTodoListEntry entry) return;
 
+        var openSelectedTodo = !_suppressOpenSelectedTodoOnce;
+        _suppressOpenSelectedTodoOnce = false;
+        ApplyGroupSelection(activeListBox, entry, openSelectedTodo);
+    }
+
+    private void OnGroupListBoxPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not ListBox activeListBox) return;
+        if (!e.GetCurrentPoint(activeListBox).Properties.IsRightButtonPressed) return;
+        if (e.Source is not Control source) return;
+
+        var itemContainer = source as ListBoxItem ?? source.FindAncestorOfType<ListBoxItem>();
+        if (itemContainer?.DataContext is not UiCoreTodoListEntry entry) return;
+
+        if (!ReferenceEquals(activeListBox.SelectedItem, entry))
+        {
+            _suppressOpenSelectedTodoOnce = true;
+            activeListBox.SelectedItem = entry;
+            return;
+        }
+
+        ApplyGroupSelection(activeListBox, entry, openSelectedTodo: false);
+    }
+
+    private void ApplyGroupSelection(ListBox activeListBox, UiCoreTodoListEntry entry, bool openSelectedTodo)
+    {
         foreach (var lb in _groupListBoxes)
         {
             if (!ReferenceEquals(lb, activeListBox))
                 lb.SelectedItem = null;
         }
 
-        if (DataContext is TodoListViewModel vm && activeListBox.SelectedItem is UiCoreTodoListEntry entry)
-        {
-            vm.SelectedEntry = entry;
-            if (vm.OpenSelectedTodoCommand.CanExecute(null))
-                vm.OpenSelectedTodoCommand.Execute(null);
-        }
+        if (DataContext is not TodoListViewModel vm)
+            return;
+
+        vm.SelectedEntry = entry;
+        if (openSelectedTodo && vm.OpenSelectedTodoCommand.CanExecute(null))
+            vm.OpenSelectedTodoCommand.Execute(null);
     }
 
     private void OnGroupListBoxLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

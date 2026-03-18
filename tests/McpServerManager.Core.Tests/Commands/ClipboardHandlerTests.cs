@@ -26,7 +26,7 @@ public sealed class ClipboardHandlerTests
     [Fact]
     public async Task CopyOriginalJsonHandler_HandleAsync_CallsCopyOriginalJson()
     {
-        var entry = new UnifiedRequestEntry();
+        var entry = new UnifiedSessionTurn();
         _target.Setup(t => t.CopyOriginalJson(entry)).Returns(Task.CompletedTask);
         var handler = new CopyOriginalJsonHandler(_target.Object);
         var result = await handler.HandleAsync(new CopyOriginalJsonCommand(entry), _ctx);

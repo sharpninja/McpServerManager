@@ -1,0 +1,607 @@
+@using System.Collections.Generic
+@using System.Collections.Specialized
+@using System.ComponentModel
+@using System.Globalization
+@using System.Linq
+@using McpServer.UI.Core.Models
+@using McpServer.Web.ViewModels
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<div class="agent-chat-flyout @(this.IsOpen ? "is-open" : null) @(this.IsInline ? "agent-chat-flyout--inline" : null)"
+     data-display-mode="@this.DisplayModeName"
+      aria-hidden="@(!this.IsOpen)"
+      style="@this.FlyoutContainerStyle">
+    <button type="button"
+            class="agent-chat-flyout-backdrop"
+            aria-label="Close agent chat"
+            hidden="@(!this.IsOpen || this.IsInline)"
+            style="@this.BackdropStyle"
+            @onclick="this.CloseAsync"></button>
+
+    <aside id="agent-chat-flyout"
+            class="agent-chat-flyout-panel @(this.IsInline ? "agent-chat-flyout-panel--inline" : null)"
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby="agent-chat-title"
+            @ref="this.panelElement"
+            style="@this.PanelStyle">
+        <div class="agent-chat-resize-handle"
+             role="separator"
+             aria-label="Resize agent chat sidebar"
+             aria-orientation="vertical"
+             aria-valuemin="@MinPanelWidthPx"
+             aria-valuemax="@MaxPanelWidthPx"
+             aria-valuenow="@this.PanelWidthValue"
+             tabindex="0"
+             title="Drag to resize"
+             @onmousedown="this.StartResizeAsync"
+             @onmousedown:preventDefault="true"
+             @onkeydown="this.OnResizeHandleKeyDownAsync"></div>
+
+        <div class="agent-chat-flyout-header">
+            <div class="agent-chat-flyout-title-group">
+                <h2 id="agent-chat-title" class="agent-chat-flyout-title">Agent Chat</h2>
+                <p class="agent-chat-flyout-subtitle">@this.WorkspaceSummary</p>
+            </div>
+
+            <div class="agent-chat-flyout-header-actions">
+                <button type="button"
+                        class="btn btn-sm"
+                        id="agent-chat-display-mode-toggle"
+                        aria-pressed="@this.IsInline"
+                        @onclick="this.ToggleDisplayModeAsync">
+                    @(this.IsInline ? "Float" : "Inline")
+                </button>
+                <button type="button"
+                        class="btn btn-sm btn-primary"
+                        disabled="@this.IsHeaderActionDisabled"
+                        @onclick="this.ToggleSessionAsync">
+                    @(this.ViewModel.IsSessionActive ? "End" : "Start")
+                </button>
+                <button type="button"
+                        class="btn btn-sm"
+                        aria-label="Close agent chat flyout"
+                        @onclick="this.CloseAsync">
+                    Close
+                </button>
+            </div>
+        </div>
+
+        <div class="agent-chat-flyout-body">
+            @if (!this.ViewModel.IsWorkspaceReady)
+            {
+                <div class="flash flash-warn" role="status">
+                    Select an active workspace to start agent chat.
+                </div>
+            }
+
+            <div class="agent-chat-message-list">
+                @if (!this.DisplayMessages.Any())
+                {
+                    <div class="agent-chat-empty-state">
+                        <p class="text-bold mb-1">@this.EmptyStateTitle</p>
+                        <p class="mb-0 color-fg-muted">
+                            @this.EmptyStateDescription
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var message in this.DisplayMessages)
+                    {
+                        <article class="agent-chat-message @message.CssClass">
+                            <div class="agent-chat-message-meta">@message.MetaText</div>
+                            <div class="@this.GetMessageBubbleCssClass(message)">@message.Text</div>
+                        </article>
+                    }
+                }
+            </div>
+        </div>
+
+        <div class="agent-chat-flyout-footer">
+            <div class="agent-chat-status-row">
+                <span class="agent-chat-status-text">@this.ViewModel.StatusText</span>
+                @if (this.ViewModel.LastLatencyMs > 0)
+                {
+                    <span class="agent-chat-status-latency">@this.ViewModel.LastLatencyMs ms</span>
+                }
+            </div>
+
+            <div class="agent-chat-preferences-row">
+                <label class="agent-chat-checkbox" for="agent-chat-wrap-toggle">
+                    <input id="agent-chat-wrap-toggle"
+                           type="checkbox"
+                           checked="@this.isResponseWrapEnabled"
+                           @onchange="this.OnWrapResponsesChanged" />
+                    <span>Wrap responses</span>
+                </label>
+            </div>
+
+            <div class="agent-chat-toolbar">
+                <button type="button"
+                        class="btn btn-sm"
+                        disabled="@(!this.ViewModel.IsSessionActive)"
+                        @onclick="this.RefreshChatAsync">
+                    Refresh
+                </button>
+                <button type="button"
+                        class="btn btn-sm"
+                        disabled="@(!this.ViewModel.IsSessionActive)"
+                        @onclick="this.InterruptAsync">
+                    Interrupt
+                </button>
+                <button type="button"
+                        class="btn btn-sm"
+                        disabled="@(!this.ViewModel.IsSessionActive)"
+                        @onclick="this.SendEscapeAsync">
+                    ESC
+                </button>
+            </div>
+
+            <form class="agent-chat-input-row" @onsubmit="this.SubmitAsync" @onsubmit:preventDefault="true">
+                <button type="button"
+                        class="btn btn-sm"
+                        disabled="@string.IsNullOrWhiteSpace(this.draftText)"
+                        @onclick="this.ClearDraftAsync">
+                    ✕
+                </button>
+                <input class="FormControl"
+                       placeholder="Type a message..."
+                       value="@this.draftText"
+                       disabled="@this.IsInputDisabled"
+                       @oninput="this.OnDraftInput" />
+                <button type="submit"
+                        class="btn btn-primary"
+                        disabled="@(!this.CanSubmit)">
+                    Send
+                </button>
+            </form>
+        </div>
+    </aside>
+</div>
+
+@code {
+    private const double DefaultPanelWidthPx = 420;
+    private const double MinPanelWidthPx = 320;
+    private const double MaxPanelWidthPx = 960;
+    private const double ResizeStepPx = 32;
+    private readonly List<AgentChatMessage> ephemeralMessages = [];
+    private CancellationTokenSource? activeStreamCts;
+    private bool isStreamingTurn;
+    private bool isResponseWrapEnabled = true;
+    private bool hasLoadedStoredWidth;
+    private double panelWidthPx = DefaultPanelWidthPx;
+    private string draftText = string.Empty;
+    private DotNetObjectReference<AgentChatFlyout>? resizeCallbackReference;
+    private ElementReference panelElement;
+    private WebVoiceConversationViewModel? subscribedViewModel;
+
+    [Parameter, EditorRequired] public required WebVoiceConversationViewModel ViewModel { get; set; }
+
+    [Parameter] public bool IsOpen { get; set; }
+
+    [Parameter] public bool IsInline { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    [Parameter] public EventCallback<bool> OnInlineModeChanged { get; set; }
+
+    private IReadOnlyList<AgentChatMessage> DisplayMessages
+    {
+        get
+        {
+            var transcriptMessages = this.GetTranscriptMessages().ToList();
+            if (transcriptMessages.Count == 0 && this.ViewModel.ShouldShowSessionReadyBubble)
+                transcriptMessages.Add(new AgentChatMessage("assistant", this.ViewModel.SessionReadyBubbleText, "Agent"));
+
+            if (this.ephemeralMessages.Count == 0)
+                return transcriptMessages;
+
+            return transcriptMessages.Concat(this.ephemeralMessages).ToList();
+        }
+    }
+
+    private string FlyoutContainerStyle
+        => this.IsInline
+            ? (this.IsOpen
+                ? $"position: relative; inset: auto; z-index: auto; pointer-events: auto; display: block; width: {this.PanelWidthCss}; min-width: {MinPanelWidthCss}; max-width: 100vw; flex: 0 0 auto; align-self: stretch; min-height: 0;"
+                : "display: none;")
+            : $"position: fixed; inset: 0; z-index: 200; pointer-events: {(this.IsOpen ? "auto" : "none")};";
+
+    private string BackdropStyle
+        => this.IsInline
+            ? "display: none;"
+            : $"position: absolute; inset: 0; opacity: {(this.IsOpen ? "1" : "0")};";
+
+    private bool IsHeaderActionDisabled
+        => this.isStreamingTurn || (this.ViewModel.IsBusy && !this.ViewModel.IsSessionActive) || (!this.ViewModel.IsWorkspaceReady && !this.ViewModel.IsSessionActive);
+
+    private bool IsInputDisabled => this.isStreamingTurn || !this.ViewModel.IsWorkspaceReady;
+
+    private bool CanSubmit => !this.IsInputDisabled && !string.IsNullOrWhiteSpace(this.draftText);
+
+    private string PanelStyle
+        => this.IsInline
+            ? $"position: fixed; top: var(--app-header-height, 64px); right: 0; bottom: 0; width: {this.PanelWidthCss}; min-width: {MinPanelWidthCss}; max-width: 100vw; height: calc(100vh - var(--app-header-height, 64px)); min-height: calc(100vh - var(--app-header-height, 64px)); max-height: calc(100vh - var(--app-header-height, 64px)); display: flex; flex-direction: column; transform: none; z-index: 90;"
+            : $"position: absolute; top: 0; right: 0; bottom: 0; width: {this.PanelWidthCss}; min-width: {MinPanelWidthCss}; max-width: 100vw; display: flex; flex-direction: column; transform: {(this.IsOpen ? "translateX(0)" : "translateX(100%)")};";
+
+    private int PanelWidthValue => Convert.ToInt32(Math.Round(this.panelWidthPx, MidpointRounding.AwayFromZero));
+
+    private string PanelWidthCss => $"min({FormatPixels(this.panelWidthPx)}px, 100vw)";
+
+    private static string MinPanelWidthCss => $"min({FormatPixels(MinPanelWidthPx)}px, 100vw)";
+
+    private string DisplayModeName => this.IsInline ? "inline" : "floating";
+
+    private string WorkspaceSummary
+        => string.IsNullOrWhiteSpace(this.ViewModel.WorkspacePath)
+            ? "No workspace selected"
+            : this.ViewModel.WorkspacePath;
+
+    private string EmptyStateTitle
+        => this.ViewModel.IsSessionActive
+            ? "Agent chat session ready."
+            : this.ViewModel.IsBusy
+                ? "Starting agent chat..."
+                : "Start a chat to talk to the workspace agent.";
+
+    private string EmptyStateDescription
+    {
+        get
+        {
+            if (this.ViewModel.IsSessionActive || this.ViewModel.IsBusy)
+            {
+                return string.IsNullOrWhiteSpace(this.ViewModel.StatusText)
+                    ? "Type a message to begin the conversation."
+                    : this.ViewModel.StatusText;
+            }
+
+            return "The shared voice conversation model powers this flyout, but the web UI keeps the experience text-first and phone-style.";
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(this.subscribedViewModel, this.ViewModel))
+            return;
+
+        this.Unsubscribe();
+        this.subscribedViewModel = this.ViewModel;
+        this.subscribedViewModel.PropertyChanged += this.OnViewModelPropertyChanged;
+        this.subscribedViewModel.TranscriptItems.CollectionChanged += this.OnTranscriptItemsChanged;
+        this.subscribedViewModel.LastToolCalls.CollectionChanged += this.OnTranscriptItemsChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || this.hasLoadedStoredWidth)
+            return;
+
+        this.hasLoadedStoredWidth = true;
+
+        var storedWidthText = await this.JSRuntime.InvokeAsync<string>("agentChatFlyout.getStoredWidth");
+        if (string.IsNullOrWhiteSpace(storedWidthText)
+            || !double.TryParse(storedWidthText, NumberStyles.Float, CultureInfo.InvariantCulture, out var storedWidth))
+            return;
+
+        var clampedWidth = ClampPanelWidth(storedWidth);
+        if (Math.Abs(clampedWidth - this.panelWidthPx) < 0.1)
+            return;
+
+        this.panelWidthPx = clampedWidth;
+        await this.InvokeAsync(this.StateHasChanged);
+    }
+
+    private async Task ToggleSessionAsync()
+    {
+        if (this.ViewModel.IsSessionActive)
+        {
+            this.activeStreamCts?.Cancel();
+            this.ephemeralMessages.Clear();
+            this.draftText = string.Empty;
+            this.ViewModel.ClearDraft();
+            await this.ViewModel.EndAgentChatAsync().ConfigureAwait(true);
+            await this.InvokeAsync(this.StateHasChanged);
+            return;
+        }
+
+        this.ephemeralMessages.Clear();
+        await this.ViewModel.StartOrResumeSessionAsync().ConfigureAwait(true);
+        await this.InvokeAsync(this.StateHasChanged);
+    }
+
+    private async Task SubmitAsync()
+    {
+        var text = this.draftText.Trim();
+        if (string.IsNullOrWhiteSpace(text) || this.isStreamingTurn)
+            return;
+
+        this.draftText = string.Empty;
+        this.ViewModel.TranscriptInput = text;
+        this.ephemeralMessages.Clear();
+
+        var userMessage = new AgentChatMessage("user", text, "You");
+        var assistantMessage = new AgentChatMessage("assistant", string.Empty, "Agent · Thinking…");
+        this.ephemeralMessages.Add(userMessage);
+        this.ephemeralMessages.Add(assistantMessage);
+
+        this.isStreamingTurn = true;
+        this.activeStreamCts?.Cancel();
+        this.activeStreamCts?.Dispose();
+        this.activeStreamCts = new CancellationTokenSource();
+
+        var completed = false;
+
+        try
+        {
+            await foreach (var item in this.ViewModel.SubmitTurnStreamingAsync(text, this.activeStreamCts.Token).ConfigureAwait(true))
+            {
+                if (item.Type == "chunk" && !string.IsNullOrWhiteSpace(item.Text))
+                {
+                    assistantMessage.Text += item.Text;
+                    assistantMessage.MetaText = "Agent · Streaming…";
+                }
+                else if (item.Type == "error")
+                {
+                    assistantMessage.Text = string.IsNullOrWhiteSpace(item.Message)
+                        ? "The agent chat request failed."
+                        : $"Error: {item.Message}";
+                    assistantMessage.MetaText = "Agent · Error";
+                }
+                else if (item.Type == "done")
+                {
+                    completed = true;
+                    assistantMessage.MetaText = item.LatencyMs.HasValue
+                        ? $"Agent · Completed in {item.LatencyMs.Value} ms"
+                        : "Agent · Completed";
+                }
+
+                await this.InvokeAsync(this.StateHasChanged);
+            }
+
+            if (completed)
+            {
+                await this.ViewModel.RefreshChatAsync().ConfigureAwait(true);
+                this.ephemeralMessages.Clear();
+            }
+            else if (string.IsNullOrWhiteSpace(assistantMessage.Text))
+            {
+                assistantMessage.Text = this.ViewModel.AssistantDisplayText;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            if (string.IsNullOrWhiteSpace(assistantMessage.Text))
+            {
+                assistantMessage.Text = "Agent chat canceled.";
+                assistantMessage.MetaText = "Agent · Canceled";
+            }
+        }
+        finally
+        {
+            this.isStreamingTurn = false;
+            this.activeStreamCts?.Dispose();
+            this.activeStreamCts = null;
+            await this.InvokeAsync(this.StateHasChanged);
+        }
+    }
+
+    private async Task RefreshChatAsync()
+    {
+        await this.ViewModel.RefreshChatAsync().ConfigureAwait(true);
+        this.ephemeralMessages.Clear();
+        await this.InvokeAsync(this.StateHasChanged);
+    }
+
+    private async Task InterruptAsync()
+    {
+        await this.ViewModel.InterruptTurnAsync().ConfigureAwait(true);
+        this.activeStreamCts?.Cancel();
+        await this.InvokeAsync(this.StateHasChanged);
+    }
+
+    private async Task SendEscapeAsync()
+    {
+        await this.ViewModel.SendEscapeToAgentAsync().ConfigureAwait(true);
+        await this.InvokeAsync(this.StateHasChanged);
+    }
+
+    private Task ClearDraftAsync()
+    {
+        this.draftText = string.Empty;
+        this.ViewModel.ClearDraft();
+        return this.InvokeAsync(this.StateHasChanged);
+    }
+
+    private Task CloseAsync()
+        => this.OnClose.InvokeAsync();
+
+    private Task ToggleDisplayModeAsync()
+        => this.OnInlineModeChanged.InvokeAsync(!this.IsInline);
+
+    private async Task StartResizeAsync(MouseEventArgs args)
+    {
+        if (args.Button != 0)
+            return;
+
+        this.resizeCallbackReference ??= DotNetObjectReference.Create(this);
+
+        await this.JSRuntime.InvokeVoidAsync(
+            "agentChatFlyout.beginResize",
+            this.panelElement,
+            this.resizeCallbackReference,
+            args.ClientX,
+            this.panelWidthPx,
+            MinPanelWidthPx,
+            MaxPanelWidthPx);
+    }
+
+    private void OnDraftInput(ChangeEventArgs args)
+    {
+        this.draftText = args.Value?.ToString() ?? string.Empty;
+        this.ViewModel.TranscriptInput = this.draftText;
+    }
+
+    private Task OnWrapResponsesChanged(ChangeEventArgs args)
+    {
+        this.isResponseWrapEnabled = args.Value switch
+        {
+            bool value => value,
+            string value when bool.TryParse(value, out var parsed) => parsed,
+            _ => true,
+        };
+
+        return this.InvokeAsync(this.StateHasChanged);
+    }
+
+    private Task OnResizeHandleKeyDownAsync(KeyboardEventArgs args)
+    {
+        var nextWidth = args.Key switch
+        {
+            "ArrowLeft" => this.panelWidthPx + ResizeStepPx,
+            "ArrowRight" => this.panelWidthPx - ResizeStepPx,
+            "Home" => MinPanelWidthPx,
+            "End" => MaxPanelWidthPx,
+            _ => (double?)null,
+        };
+
+        if (nextWidth is null)
+            return Task.CompletedTask;
+
+        this.panelWidthPx = ClampPanelWidth(nextWidth.Value);
+        return this.PersistPanelWidthAsync();
+    }
+
+    private IEnumerable<AgentChatMessage> GetTranscriptMessages()
+    {
+        foreach (var item in this.ViewModel.TranscriptItems)
+        {
+            var role = this.NormalizeRole(item);
+            yield return new AgentChatMessage(role, item.Text, this.GetMetaText(item, role));
+        }
+    }
+
+    private string NormalizeRole(McpVoiceTranscriptEntry item)
+    {
+        if (string.Equals(item.Role, "assistant", StringComparison.OrdinalIgnoreCase))
+            return "assistant";
+        if (string.Equals(item.Role, "user", StringComparison.OrdinalIgnoreCase))
+            return "user";
+        if (string.Equals(item.Role, "tool", StringComparison.OrdinalIgnoreCase))
+            return "tool";
+        return "system";
+    }
+
+    private string GetMetaText(McpVoiceTranscriptEntry item, string role)
+    {
+        var label = role switch
+        {
+            "assistant" => "Agent",
+            "user" => "You",
+            "tool" => "Tool",
+            _ => "System",
+        };
+
+        if (DateTimeOffset.TryParse(item.TimestampUtc, out var timestamp))
+            return $"{label} · {timestamp.LocalDateTime:t}";
+
+        return string.IsNullOrWhiteSpace(item.Category)
+            ? label
+            : $"{label} · {item.Category}";
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        => _ = this.InvokeAsync(this.StateHasChanged);
+
+    private void OnTranscriptItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        => _ = this.InvokeAsync(this.StateHasChanged);
+
+    private void Unsubscribe()
+    {
+        if (this.subscribedViewModel is null)
+            return;
+
+        this.subscribedViewModel.PropertyChanged -= this.OnViewModelPropertyChanged;
+        this.subscribedViewModel.TranscriptItems.CollectionChanged -= this.OnTranscriptItemsChanged;
+        this.subscribedViewModel.LastToolCalls.CollectionChanged -= this.OnTranscriptItemsChanged;
+        this.subscribedViewModel = null;
+    }
+
+    [JSInvokable]
+    public Task CompleteResizeAsync(double widthPx)
+    {
+        this.panelWidthPx = ClampPanelWidth(widthPx);
+        return this.PersistPanelWidthAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        this.activeStreamCts?.Cancel();
+        this.activeStreamCts?.Dispose();
+        if (this.resizeCallbackReference is not null)
+        {
+            try
+            {
+                await this.JSRuntime.InvokeVoidAsync("agentChatFlyout.cancelResize");
+            }
+            catch (InvalidOperationException)
+            {
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+
+            this.resizeCallbackReference.Dispose();
+            this.resizeCallbackReference = null;
+        }
+
+        this.Unsubscribe();
+    }
+
+    private string GetMessageBubbleCssClass(AgentChatMessage message)
+    {
+        if (this.isResponseWrapEnabled || message.Role is "user")
+            return "agent-chat-message-bubble";
+
+        return "agent-chat-message-bubble agent-chat-message-bubble--no-wrap";
+    }
+
+    private static double ClampPanelWidth(double widthPx)
+        => Math.Clamp(widthPx, MinPanelWidthPx, MaxPanelWidthPx);
+
+    private static string FormatPixels(double value)
+        => value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private async Task PersistPanelWidthAsync()
+    {
+        await this.JSRuntime.InvokeVoidAsync("agentChatFlyout.storeWidth", this.panelWidthPx);
+        await this.InvokeAsync(this.StateHasChanged);
+    }
+
+    private sealed class AgentChatMessage
+    {
+        public AgentChatMessage(string role, string? text, string metaText)
+        {
+            this.Role = role;
+            this.Text = text ?? string.Empty;
+            this.MetaText = metaText;
+        }
+
+        public string Role { get; }
+
+        public string Text { get; set; }
+
+        public string MetaText { get; set; }
+
+        public string CssClass => this.Role switch
+        {
+            "assistant" => "agent-chat-message--assistant",
+            "user" => "agent-chat-message--user",
+            "tool" => "agent-chat-message--tool",
+            _ => "agent-chat-message--system",
+        };
+    }
+}

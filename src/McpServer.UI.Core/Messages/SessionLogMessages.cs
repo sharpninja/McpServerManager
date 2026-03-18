@@ -37,7 +37,7 @@ public sealed record SessionLogSummary(
     string? Model,
     string? Started,
     string? LastUpdated,
-    int EntryCount);
+    int TurnCount);
 
 /// <summary>TR-PLANNED-013: Query to load a single session log by session ID.</summary>
 public sealed record GetSessionLogQuery(string SessionId) : IQuery<SessionLogDetail?>;
@@ -51,12 +51,12 @@ public sealed record SessionLogDetail(
     string? Model,
     string? Started,
     string? LastUpdated,
-    int EntryCount,
+    int TurnCount,
     int? TotalTokens,
     string? CursorSessionLabel,
     SessionLogWorkspaceInfo? Workspace,
     SessionLogCopilotStatistics? CopilotStatistics,
-    IReadOnlyList<SessionLogEntryDetail> Entries);
+    IReadOnlyList<SessionLogTurnDetail> Turns);
 
 /// <summary>Workspace metadata attached to a session log.</summary>
 public sealed record SessionLogWorkspaceInfo(
@@ -73,8 +73,8 @@ public sealed record SessionLogCopilotStatistics(
     int? CompletedCount,
     int? InProgressCount);
 
-/// <summary>Detailed request entry within a session log.</summary>
-public sealed record SessionLogEntryDetail(
+/// <summary>Detailed turn within a session log.</summary>
+public sealed record SessionLogTurnDetail(
     string RequestId,
     string? Timestamp,
     string? QueryTitle,
@@ -98,7 +98,7 @@ public sealed record SessionLogEntryDetail(
     IReadOnlyList<SessionLogDialogDetail> ProcessingDialog,
     IReadOnlyList<SessionLogCommitDetail> Commits);
 
-/// <summary>Action detail attached to a session log request entry.</summary>
+/// <summary>Action detail attached to a session log turn.</summary>
 public sealed record SessionLogActionDetail(
     int Order,
     string? Description,
@@ -106,14 +106,14 @@ public sealed record SessionLogActionDetail(
     string? Status,
     string? FilePath);
 
-/// <summary>Processing dialog detail attached to a session log request entry.</summary>
+/// <summary>Processing dialog detail attached to a session log turn.</summary>
 public sealed record SessionLogDialogDetail(
     string? Timestamp,
     string? Role,
     string? Category,
     string? Content);
 
-/// <summary>Commit detail attached to a session log request entry.</summary>
+/// <summary>Commit detail attached to a session log turn.</summary>
 public sealed record SessionLogCommitDetail(
     string? Sha,
     string? Branch,
@@ -128,7 +128,7 @@ public sealed record SubmitSessionLogCommand(SessionLogDetail SessionLog) : ICom
 /// <summary>Result of submitting a session log payload.</summary>
 public sealed record SessionLogSubmitOutcome(long Id, string? SourceType, string? SessionId);
 
-/// <summary>Command to append processing dialog items to a specific request entry.</summary>
+/// <summary>Command to append processing dialog items to a specific turn.</summary>
 public sealed record AppendSessionLogDialogCommand(
     string Agent,
     string SessionId,

@@ -57,7 +57,7 @@ public sealed class McpSessionLogService
             Started = ParseDateTime(dto.Started),
             LastUpdated = ParseDateTime(dto.LastUpdated),
             Status = dto.Status ?? "",
-            EntryCount = dto.EntryCount,
+            TurnCount = dto.TurnCount,
             TotalTokens = dto.TotalTokens ?? 0,
             CursorSessionLabel = dto.CursorSessionLabel,
             Workspace = dto.Workspace == null
@@ -81,21 +81,21 @@ public sealed class McpSessionLogService
                 }
         };
 
-        if (dto.Entries != null)
+        if (dto.Turns != null)
         {
-            foreach (var entry in dto.Entries)
-                log.Entries.Add(MapEntry(entry, log.SourceType));
+            foreach (var entry in dto.Turns)
+                log.Turns.Add(MapTurn(entry, log.SourceType));
         }
 
-        if (log.EntryCount <= 0)
-            log.EntryCount = log.Entries.Count;
+        if (log.TurnCount <= 0)
+            log.TurnCount = log.Turns.Count;
 
         return log;
     }
 
-    private static UnifiedRequestEntry MapEntry(UnifiedRequestEntryDto dto, string sourceType)
+    private static UnifiedSessionTurn MapTurn(UnifiedRequestEntryDto dto, string sourceType)
     {
-        var entry = new UnifiedRequestEntry
+        var entry = new UnifiedSessionTurn
         {
             RequestId = dto.RequestId ?? "",
             Timestamp = ParseDateTime(dto.Timestamp),
@@ -113,7 +113,7 @@ public sealed class McpSessionLogService
             IsPremium = dto.IsPremium ?? false,
             Score = dto.Score,
             FailureNote = dto.FailureNote ?? "",
-            OriginalEntry = dto.OriginalEntry ?? dto
+            OriginalTurn = dto.OriginalEntry ?? dto
         };
 
         if (dto.Tags != null && dto.Tags.Count > 0)

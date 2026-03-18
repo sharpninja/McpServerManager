@@ -162,7 +162,7 @@
                 <Button Grid.Column="2"
                         Content="Copy JSON"
                         Command="{Binding CopyOriginalJsonCommand}"
-                        CommandParameter="{Binding SelectedUnifiedRequest}"
+                        CommandParameter="{Binding SelectedUnifiedTurn}"
                         Padding="10,6"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center"/>
@@ -206,12 +206,12 @@
 
                         <Border Grid.Row="2" MinHeight="80" Padding="4">
                             <ScrollViewer>
-                                <ItemsControl ItemsSource="{Binding FilteredSearchEntries}" x:CompileBindings="False">
+                                <ItemsControl ItemsSource="{Binding FilteredSearchTurns}" x:CompileBindings="False">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate><StackPanel Spacing="2"/></ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="jsonModels:SearchableEntry">
+                                        <DataTemplate DataType="jsonModels:SearchableTurn">
                                             <Border BorderBrush="{DynamicResource EntryBorderBrush}"
                                                     BorderThickness="0,0,0,1"
                                                     Margin="2"
@@ -247,7 +247,7 @@
 
                     <!-- Request details -->
                     <Grid IsVisible="{Binding IsRequestDetailsVisible}">
-                        <views:RequestDetailsView DataContext="{Binding SelectedUnifiedRequest}"
+                        <views:RequestDetailsView DataContext="{Binding SelectedUnifiedTurn}"
                                                   ShowOriginalJson="False"
                                                   Margin="0"/>
                     </Grid>

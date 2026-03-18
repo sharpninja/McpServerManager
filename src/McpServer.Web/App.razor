@@ -9,7 +9,7 @@
     <base href="/" />
     <title>McpServer.Web</title>
     <link rel="stylesheet" href="https://unpkg.com/%40primer/css%4021.0.8/dist/primer.css" />
-    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="@VersionedAsset("css/app.css")" />
     <HeadOutlet />
 </head>
 <body>
@@ -23,16 +23,22 @@
             <p class="color-fg-muted">Loading workspace...</p>
         </main>
     }
-    <script src="js/sse.js"></script>
-    <script src="_content/BlazorMonaco/jsInterop.js"></script>
-    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>
-    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
-    <script src="_framework/blazor.web.js"></script>
+    <script src="@VersionedAsset("js/sse.js")"></script>
+    <script src="@VersionedAsset("js/agentChatFlyout.js")"></script>
+    <script src="@VersionedAsset("_content/BlazorMonaco/jsInterop.js")"></script>
+    <script src="@VersionedAsset("_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js")"></script>
+    <script src="@VersionedAsset("_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js")"></script>
+    <script src="@VersionedAsset("_framework/blazor.web.js")"></script>
 </body>
 </html>
 
 @code {
+    private static readonly string AssetVersion = typeof(App).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+
     private bool _workspaceReady;
+
+    private static string VersionedAsset(string relativePath)
+        => $"{relativePath}?v={AssetVersion}";
 
     protected override async Task OnInitializedAsync()
     {

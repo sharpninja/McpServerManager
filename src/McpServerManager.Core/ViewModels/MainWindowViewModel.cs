@@ -14,9 +14,9 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
 {
     private readonly CqrsDispatcher _dispatcher;
 
-    public static new System.Collections.Generic.List<McpServer.UI.Core.Models.Json.UnifiedRequestEntry> DeduplicateUnifiedEntries(
-        System.Collections.Generic.IEnumerable<McpServer.UI.Core.Models.Json.UnifiedRequestEntry> entries)
-        => UiCoreMainWindowViewModel.DeduplicateUnifiedEntries(entries);
+    public static new System.Collections.Generic.List<McpServer.UI.Core.Models.Json.UnifiedSessionTurn> DeduplicateUnifiedTurns(
+        System.Collections.Generic.IEnumerable<McpServer.UI.Core.Models.Json.UnifiedSessionTurn> entries)
+        => UiCoreMainWindowViewModel.DeduplicateUnifiedTurns(entries);
 
     private IClipboardService CoreClipboardService => (IClipboardService)ClipboardService;
 
@@ -153,13 +153,13 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
     void Commands.INavigationTarget.TreeItemTapped(McpServer.UI.Core.Models.FileNode? node) => ((McpServer.UI.Core.Commands.INavigationTarget)this).TreeItemTapped(node);
     void Commands.INavigationTarget.JsonNodeDoubleTapped(McpServer.UI.Core.Models.Json.JsonTreeNode? node) => ((McpServer.UI.Core.Commands.INavigationTarget)this).JsonNodeDoubleTapped(node);
 
-    void Commands.IRequestDetailsTarget.ShowRequestDetails(McpServer.UI.Core.Models.Json.SearchableEntry entry) => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).ShowRequestDetails(entry);
+    void Commands.IRequestDetailsTarget.ShowRequestDetails(McpServer.UI.Core.Models.Json.SearchableTurn entry) => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).ShowRequestDetails(entry);
     void Commands.IRequestDetailsTarget.CloseRequestDetails() => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).CloseRequestDetails();
     void Commands.IRequestDetailsTarget.NavigateToPreviousRequest() => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).NavigateToPreviousRequest();
     void Commands.IRequestDetailsTarget.NavigateToNextRequest() => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).NavigateToNextRequest();
-    void Commands.IRequestDetailsTarget.SelectSearchEntry(McpServer.UI.Core.Models.Json.SearchableEntry entry) => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).SelectSearchEntry(entry);
-    void Commands.IRequestDetailsTarget.SearchRowTapped(McpServer.UI.Core.Models.Json.SearchableEntry? entry) => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).SearchRowTapped(entry);
-    void Commands.IRequestDetailsTarget.SearchRowDoubleTapped(McpServer.UI.Core.Models.Json.SearchableEntry? entry) => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).SearchRowDoubleTapped(entry);
+    void Commands.IRequestDetailsTarget.SelectSearchTurn(McpServer.UI.Core.Models.Json.SearchableTurn entry) => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).SelectSearchTurn(entry);
+    void Commands.IRequestDetailsTarget.SearchRowTapped(McpServer.UI.Core.Models.Json.SearchableTurn? entry) => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).SearchRowTapped(entry);
+    void Commands.IRequestDetailsTarget.SearchRowDoubleTapped(McpServer.UI.Core.Models.Json.SearchableTurn? entry) => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).SearchRowDoubleTapped(entry);
 
     void Commands.IPreviewTarget.OpenPreviewInBrowser() => ((McpServer.UI.Core.Commands.IPreviewTarget)this).OpenPreviewInBrowser();
     void Commands.IPreviewTarget.ToggleShowRawMarkdown() => ((McpServer.UI.Core.Commands.IPreviewTarget)this).ToggleShowRawMarkdown();
@@ -168,7 +168,7 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
     void Commands.IArchiveTarget.ArchiveTreeItem(McpServer.UI.Core.Models.FileNode? node) => ((McpServer.UI.Core.Commands.IArchiveTarget)this).ArchiveTreeItem(node);
 
     Task Commands.IClipboardTarget.CopyText(string text) => ((McpServer.UI.Core.Commands.IClipboardTarget)this).CopyText(text);
-    Task Commands.IClipboardTarget.CopyOriginalJson(McpServer.UI.Core.Models.Json.UnifiedRequestEntry? entry) => ((McpServer.UI.Core.Commands.IClipboardTarget)this).CopyOriginalJson(entry);
+    Task Commands.IClipboardTarget.CopyOriginalJson(McpServer.UI.Core.Models.Json.UnifiedSessionTurn? entry) => ((McpServer.UI.Core.Commands.IClipboardTarget)this).CopyOriginalJson(entry);
 
     void Commands.IConfigTarget.OpenAgentConfig() => ((McpServer.UI.Core.Commands.IConfigTarget)this).OpenAgentConfig();
     void Commands.IConfigTarget.OpenPromptTemplates() => ((McpServer.UI.Core.Commands.IConfigTarget)this).OpenPromptTemplates();
@@ -179,7 +179,7 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
     void Commands.ISessionDataTarget.LoadJson(string filePath) => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).LoadJson(filePath);
     void Commands.ISessionDataTarget.LoadMarkdownFile(McpServer.UI.Core.Models.FileNode node) => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).LoadMarkdownFile(node);
     void Commands.ISessionDataTarget.LoadSourceFile(McpServer.UI.Core.Models.FileNode node) => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).LoadSourceFile(node);
-    void Commands.ISessionDataTarget.UpdateFilteredSearchEntries() => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).UpdateFilteredSearchEntries();
+    void Commands.ISessionDataTarget.UpdateFilteredSearchTurns() => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).UpdateFilteredSearchTurns();
     McpServer.UI.Core.Services.McpSessionLogService Commands.ISessionDataTarget.McpSessionService => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).McpSessionService;
     McpServer.UI.Core.Models.Json.JsonLogSummary Commands.ISessionDataTarget.JsonLogSummary
     {

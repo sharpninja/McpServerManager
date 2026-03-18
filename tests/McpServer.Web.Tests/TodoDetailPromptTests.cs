@@ -4,6 +4,7 @@ using McpServer.UI.Core;
 using McpServer.UI.Core.Messages;
 using McpServer.UI.Core.Services;
 using McpServer.UI.Core.ViewModels;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -57,6 +58,52 @@ public sealed class TodoDetailPromptTests
         Assert.Contains("Copilot Status", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Copilot Plan", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Copilot Implementation", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TodoDetailPage_RendersDoneButton_WhenTodoIsNotDone()
+    {
+        var api = new TodoApiClientStub { OnGetTodoAsync = (_, _) => Task.FromResult<TodoDetail?>(SampleTodo) };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
+        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
+
+        cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
+        Assert.Contains("> Done", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TodoDetailPage_ClickingDoneButton_MarksTodoDone()
+    {
+        UpdateTodoCommand? updateCommand = null;
+        var api = new TodoApiClientStub
+        {
+            OnGetTodoAsync = (_, _) => Task.FromResult<TodoDetail?>(SampleTodo),
+            OnUpdateTodoAsync = (command, _) =>
+            {
+                updateCommand = command;
+                return Task.FromResult(new TodoMutationOutcome(
+                    Success: true,
+                    Error: null,
+                    Item: SampleTodo with
+                    {
+                        Done = true,
+                        CompletedDate = command.CompletedDate
+                    }));
+            }
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
+        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
+
+        cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
+        cut.FindAll("button").First(b => b.TextContent.Contains("Done", StringComparison.Ordinal)).Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("TODO marked done.", cut.Markup, StringComparison.Ordinal));
+        Assert.NotNull(updateCommand);
+        Assert.True(updateCommand!.Done);
+        Assert.False(string.IsNullOrWhiteSpace(updateCommand.CompletedDate));
+        Assert.DoesNotContain("> Done", cut.Markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -306,11 +353,20 @@ public sealed class TodoDetailPromptTests
         // rather than throwing UnhandledJSInteropCallException.
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["McpServer:BaseUrl"] = "http://localhost:7147",
+                ["McpServer:ApiKey"] = "test-api-key",
+                ["McpServer:WorkspacePath"] = @"E:\\repo"
+            })
+            .Build();
+
+        ctx.Services.AddSingleton<IConfiguration>(config);
         ctx.Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         ctx.Services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        ctx.Services.AddSingleton<McpServer.Cqrs.Dispatcher>();
+        ctx.Services.AddWebServices();
         ctx.Services.AddSingleton<IHealthApiClient>(new HealthApiClientStub());
-        ctx.Services.AddUiCore();
 
         // Default no-op todo API (tests override individual methods via OnXxx)
         ctx.Services.AddSingleton<ITodoApiClient>(new TodoApiClientStub());
@@ -327,6 +383,7 @@ public sealed class TodoDetailPromptTests
     {
         public Func<ListTodosQuery, CancellationToken, Task<ListTodosResult>>? OnListTodosAsync { get; init; }
         public Func<string, CancellationToken, Task<TodoDetail?>>? OnGetTodoAsync { get; init; }
+        public Func<UpdateTodoCommand, CancellationToken, Task<TodoMutationOutcome>>? OnUpdateTodoAsync { get; init; }
         public Func<string, CancellationToken, Task<TodoPromptOutput>>? OnGenerateStatusPromptAsync { get; init; }
         public Func<string, CancellationToken, Task<TodoPromptOutput>>? OnGeneratePlanPromptAsync { get; init; }
         public Func<string, CancellationToken, Task<TodoPromptOutput>>? OnGenerateImplementPromptAsync { get; init; }
@@ -338,7 +395,9 @@ public sealed class TodoDetailPromptTests
             => OnGetTodoAsync?.Invoke(todoId, cancellationToken) ?? Task.FromResult<TodoDetail?>(null);
 
         public Task<TodoMutationOutcome> CreateTodoAsync(CreateTodoCommand command, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<TodoMutationOutcome> UpdateTodoAsync(UpdateTodoCommand command, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<TodoMutationOutcome> UpdateTodoAsync(UpdateTodoCommand command, CancellationToken cancellationToken = default)
+            => OnUpdateTodoAsync?.Invoke(command, cancellationToken)
+               ?? Task.FromException<TodoMutationOutcome>(new InvalidOperationException("UpdateTodoAsync not configured."));
         public Task<TodoMutationOutcome> DeleteTodoAsync(DeleteTodoCommand command, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<TodoRequirementsAnalysis> AnalyzeTodoRequirementsAsync(string todoId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
 

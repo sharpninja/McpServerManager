@@ -45,7 +45,8 @@
         <TabControl x:Name="MainTabControl" Grid.Row="0" TabStripPlacement="Bottom" SelectedIndex="0"
                     SelectionChanged="MainTabControl_OnSelectionChanged">
             <TabItem Header="Voice">
-                <views:SimplifiedVoiceView DataContext="{Binding VoiceConversationViewModel}"/>
+                <views:SimplifiedVoiceView DataContext="{Binding VoiceConversationViewModel}"
+                                           IsPhoneVoiceLayout="True"/>
             </TabItem>
             <TabItem Header="Todos">
                 <views:PhoneTodoView DataContext="{Binding TodoViewModel}"/>

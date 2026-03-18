@@ -113,6 +113,59 @@ public sealed class WebMcpContextAuthRecoveryTests
         Assert.Equal("Bearer user-access-token", handler.AuthorizationHeaders[0]);
     }
 
+    [Fact]
+    public async Task TodoAdapter_FallsBackToApiKey_WhenBearerWasCachedButCurrentContextHasNoToken()
+    {
+        var workspacePath = Path.Combine(Path.GetTempPath(), $"webmcp-bearer-fallback-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspacePath);
+
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(workspacePath, "AGENTS-README-FIRST.yaml"),
+                """
+                baseUrl: http://localhost:7147
+                apiKey: marker-api-key
+                workspacePath: E:\github\RequestTracker
+                """);
+
+            var config = BuildConfig(apiKey: null, workspacePath: workspacePath);
+            var workspaceContext = new WorkspaceContextViewModel();
+            var accessor = BuildAccessor(BuildAuthenticatedContext("user-access-token"));
+            var bearerTokenAccessor = new BearerTokenAccessor(accessor);
+            using var handler = new BearerThenMarkerApiKeyTodoHandler();
+            var webContext = new WebMcpContext(
+                config,
+                workspaceContext,
+                bearerTokenAccessor,
+                clientFactory: options => CreateClient(handler, options));
+
+            // Simulate the initial page request where the authenticated HttpContext is available.
+            await webContext.GetRequiredActiveWorkspaceApiClientAsync();
+
+            // Simulate the later interactive Blazor circuit/event where HttpContext is no longer available.
+            accessor.HttpContext.Returns((HttpContext?)null);
+
+            var adapter = new TodoApiClientAdapter(webContext);
+            var result = await adapter.ListTodosAsync(new ListTodosQuery { Done = false });
+
+            Assert.Equal(1, result.TotalCount);
+            Assert.Single(result.Items);
+            Assert.Equal("TODO-003", result.Items[0].Id);
+            Assert.DoesNotContain(handler.AuthorizationHeaders, header => !string.IsNullOrWhiteSpace(header));
+            Assert.Equal(["marker-api-key"], handler.TodoApiKeys);
+
+            var client = await webContext.GetRequiredActiveWorkspaceApiClientAsync();
+            Assert.Equal("marker-api-key", client.ApiKey);
+            Assert.Equal(string.Empty, client.BearerToken);
+        }
+        finally
+        {
+            if (Directory.Exists(workspacePath))
+                Directory.Delete(workspacePath, recursive: true);
+        }
+    }
+
     private static IConfiguration BuildConfig(string? apiKey, string? workspacePath = "E:/ws/default")
     {
         return new ConfigurationBuilder()
@@ -283,6 +336,49 @@ public sealed class WebMcpContextAuthRecoveryTests
             {
                 ApiKeyRequestCount++;
                 return Task.FromResult(JsonResponse(HttpStatusCode.OK, "{\"apiKey\":\"default-api-key\"}"));
+            }
+
+            return Task.FromResult(JsonResponse(HttpStatusCode.NotFound, "{\"message\":\"Not found.\"}"));
+        }
+    }
+
+    private sealed class BearerThenMarkerApiKeyTodoHandler : HttpMessageHandler
+    {
+        public List<string?> AuthorizationHeaders { get; } = [];
+        public List<string?> TodoApiKeys { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            if (path.Equals("/mcpserver/todo", StringComparison.OrdinalIgnoreCase))
+            {
+                AuthorizationHeaders.Add(request.Headers.Authorization?.ToString());
+                request.Headers.TryGetValues("X-Api-Key", out var keyValues);
+                var apiKey = keyValues?.SingleOrDefault();
+                TodoApiKeys.Add(apiKey);
+
+                if (string.Equals(apiKey, "marker-api-key", StringComparison.Ordinal))
+                {
+                    return Task.FromResult(JsonResponse(
+                        HttpStatusCode.OK,
+                        """
+                        {
+                          "items": [
+                            {
+                              "id": "TODO-003",
+                              "title": "Recovered after cached bearer",
+                              "section": "Runtime",
+                              "priority": "high",
+                              "done": false,
+                              "estimate": "15m"
+                            }
+                          ],
+                          "totalCount": 1
+                        }
+                        """));
+                }
+
+                return Task.FromResult(JsonResponse(HttpStatusCode.Unauthorized, "{\"message\":\"Invalid credential.\"}"));
             }
 
             return Task.FromResult(JsonResponse(HttpStatusCode.NotFound, "{\"message\":\"Not found.\"}"));

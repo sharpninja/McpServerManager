@@ -5,6 +5,7 @@ using McpServer.UI.Core.Messages;
 using McpServer.UI.Core.Services;
 using McpServer.UI.Core.ViewModels;
 using McpServer.Web.Pages.Agents;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -137,14 +138,20 @@ public sealed class AgentListPageTests
     private static Bunit.BunitContext CreateTestContext(IWorkspaceApiClient workspaceApiClient, IAgentApiClient agentApiClient)
     {
         var ctx = new Bunit.BunitContext();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["McpServer:BaseUrl"] = "http://localhost:7147",
+                ["McpServer:ApiKey"] = "test-api-key",
+                ["McpServer:WorkspacePath"] = @"E:\\repo"
+            })
+            .Build();
+
+        ctx.Services.AddSingleton<IConfiguration>(config);
         ctx.Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         ctx.Services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        ctx.Services.AddSingleton<Dispatcher>();
-        
-        // Mock health client required by BackendConnectionMonitor
+        ctx.Services.AddWebServices();
         ctx.Services.AddSingleton<IHealthApiClient>(new HealthApiClientStub());
-        
-        ctx.Services.AddUiCore();
         ctx.Services.AddSingleton(workspaceApiClient);
         ctx.Services.AddSingleton(agentApiClient);
         return ctx;

@@ -21,11 +21,11 @@ public partial class MainWindowViewModel
 
     private CqrsRelayCommand<bool>? _searchRowTappedCommand;
     public CqrsRelayCommand<bool> SearchRowTappedCommand => _searchRowTappedCommand ??=
-        CqrsRelayFactory.Create<SearchableEntry?>(_dispatcher, SearchRowTapped);
+        CqrsRelayFactory.Create<SearchableTurn?>(_dispatcher, SearchRowTapped);
 
     private CqrsRelayCommand<bool>? _searchRowDoubleTappedCommand;
     public CqrsRelayCommand<bool> SearchRowDoubleTappedCommand => _searchRowDoubleTappedCommand ??=
-        CqrsRelayFactory.Create<SearchableEntry?>(_dispatcher, SearchRowDoubleTapped);
+        CqrsRelayFactory.Create<SearchableTurn?>(_dispatcher, SearchRowDoubleTapped);
 
     private CqrsRelayCommand<bool>? _loadWorkspaceConnectionsCommand;
     public CqrsRelayCommand<bool> LoadWorkspaceConnectionsCommand => _loadWorkspaceConnectionsCommand ??=
@@ -45,7 +45,7 @@ public partial class MainWindowViewModel
 
     private CqrsRelayCommand<bool>? _showRequestDetailsCommand;
     public CqrsRelayCommand<bool> ShowRequestDetailsCommand => _showRequestDetailsCommand ??=
-        CqrsRelayFactory.Create<SearchableEntry?>(_dispatcher, entry =>
+        CqrsRelayFactory.Create<SearchableTurn?>(_dispatcher, entry =>
         {
             if (entry is not null)
                 ShowRequestDetails(entry);
@@ -60,11 +60,11 @@ public partial class MainWindowViewModel
         CqrsRelayFactory.Create(_dispatcher, Logout);
 
     private CqrsRelayCommand<bool>? _selectSearchEntryCommand;
-    public CqrsRelayCommand<bool> SelectSearchEntryCommand => _selectSearchEntryCommand ??=
-        CqrsRelayFactory.Create<SearchableEntry?>(_dispatcher, entry =>
+    public CqrsRelayCommand<bool> SelectSearchTurnCommand => _selectSearchEntryCommand ??=
+        CqrsRelayFactory.Create<SearchableTurn?>(_dispatcher, entry =>
         {
             if (entry is not null)
-                SelectSearchEntry(entry);
+                SelectSearchTurn(entry);
         });
 
     private CqrsRelayCommand<bool>? _navigateToPreviousRequestCommand;
@@ -82,7 +82,7 @@ public partial class MainWindowViewModel
 
     private CqrsRelayCommand<bool>? _copyOriginalJsonCommand;
     public CqrsRelayCommand<bool> CopyOriginalJsonCommand => _copyOriginalJsonCommand ??=
-        CqrsRelayFactory.Create<UnifiedRequestEntry?>(_dispatcher, CopyOriginalJson);
+        CqrsRelayFactory.Create<UnifiedSessionTurn?>(_dispatcher, CopyOriginalJson);
 
     private CqrsRelayCommand<bool>? _archiveCommand;
     public CqrsRelayCommand<bool> ArchiveCommand => _archiveCommand ??=

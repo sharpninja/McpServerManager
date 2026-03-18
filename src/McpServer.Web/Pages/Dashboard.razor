@@ -6,6 +6,7 @@
 @inject WorkspaceContextViewModel WorkspaceContext
 @inject TodoListViewModel TodoListVm
 @inject SessionLogListViewModel SessionLogListVm
+@inject WebCommandTarget CommandTarget
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -216,20 +217,25 @@ else
 @code {
     protected override async Task OnInitializedAsync()
     {
-        await ViewModel.LoadAsync();
-        await WorkspaceListVm.LoadAsync();
+        await CommandTarget.RunAsync(async () =>
+        {
+            await ViewModel.LoadAsync().ConfigureAwait(true);
+            await WorkspaceListVm.LoadAsync().ConfigureAwait(true);
+        }).ConfigureAwait(true);
         await LoadWorkspaceDataAsync();
     }
 
     private async Task LoadWorkspaceDataAsync()
     {
-        TodoListVm.Done ??= false;
-        SessionLogListVm.Limit = 50;
-        SessionLogListVm.Offset = 0;
-        await Task.WhenAll(
-            TodoListVm.LoadAsync(),
-            SessionLogListVm.LoadAsync()
-        );
+        await CommandTarget.RunAsync(async () =>
+        {
+            TodoListVm.Done ??= false;
+            SessionLogListVm.Limit = 50;
+            SessionLogListVm.Offset = 0;
+            await Task.WhenAll(
+                TodoListVm.LoadAsync(),
+                SessionLogListVm.LoadAsync()).ConfigureAwait(true);
+        }).ConfigureAwait(true);
     }
 
     private static readonly string[] PriorityOrder = ["critical", "high", "medium", "low"];
@@ -266,7 +272,7 @@ else
 
     private async Task SelectWorkspace(string workspacePath)
     {
-        WorkspaceContext.ActiveWorkspacePath = workspacePath;
+        await CommandTarget.RunAsync(() => WorkspaceContext.ActiveWorkspacePath = workspacePath).ConfigureAwait(true);
         await LoadWorkspaceDataAsync();
     }
 

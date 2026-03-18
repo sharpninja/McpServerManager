@@ -1,5 +1,8 @@
 using System;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using McpServer.UI;
 using Microsoft.VisualStudio.Shell;
 
@@ -18,6 +21,20 @@ public partial class McpServerMcpTodoToolWindowControl : UserControl
         InitializeComponent();
         DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         Loaded += (s, e) => viewModel.RefreshCommand.Execute(null);
+    }
+
+    private void OnTodoEntriesListPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not ListView listView || e.OriginalSource is not DependencyObject source)
+            return;
+
+        var item = FindAncestor<ListViewItem>(source);
+        if (item is null)
+            return;
+
+        item.IsSelected = true;
+        listView.SelectedItem = item.DataContext;
+        item.Focus();
     }
 
     /// <summary>
@@ -105,4 +122,18 @@ public partial class McpServerMcpTodoToolWindowControl : UserControl
         }
     }
 #pragma warning restore VSTHRD010
+
+    private static T? FindAncestor<T>(DependencyObject? current)
+        where T : DependencyObject
+    {
+        while (current is not null)
+        {
+            if (current is T match)
+                return match;
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        return null;
+    }
 }

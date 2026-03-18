@@ -248,13 +248,14 @@
                Text="{Binding StatusText}"
                Foreground="{DynamicResource {x:Static vs:VsBrushes.GrayTextKey}}"
                TextWrapping="Wrap"/>
-    <ListView Grid.Row="2" Margin="6,2,6,4" Padding="2"
+    <ListView x:Name="TodoEntriesList" Grid.Row="2" Margin="6,2,6,4" Padding="2"
               Background="{DynamicResource {x:Static vs:VsBrushes.WindowKey}}"
               Foreground="{DynamicResource {x:Static vs:VsBrushes.WindowTextKey}}"
               BorderBrush="{DynamicResource {x:Static vs:VsBrushes.ComboBoxBorderKey}}"
               DisplayMemberPath="DisplayLine" SelectedValuePath="Item"
               ItemsSource="{Binding Source={StaticResource GroupedEntries}}"
-              SelectedItem="{Binding SelectedEntry}">
+              SelectedItem="{Binding SelectedEntry}"
+              PreviewMouseRightButtonDown="OnTodoEntriesListPreviewMouseRightButtonDown">
       <ListView.InputBindings>
         <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding OpenItemCommand}"/>
       </ListView.InputBindings>
@@ -270,17 +271,23 @@
               <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.OpenFile}"/>
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="Status" Command="{Binding StatusPromptCommand}">
+          <MenuItem Header="Copilot Status"
+                    Command="{Binding CopilotStatusCommand}"
+                    CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
             <MenuItem.Icon>
               <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.StatusInformation}"/>
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="Implement" Command="{Binding ImplementCommand}">
+          <MenuItem Header="Copilot Implement"
+                    Command="{Binding CopilotImplementCommand}"
+                    CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
             <MenuItem.Icon>
               <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Run}"/>
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem Header="Plan" Command="{Binding PlanCommand}">
+          <MenuItem Header="Copilot Plan"
+                    Command="{Binding CopilotPlanCommand}"
+                    CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
             <MenuItem.Icon>
               <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Checklist}"/>
             </MenuItem.Icon>

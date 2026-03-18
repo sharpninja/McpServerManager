@@ -2,6 +2,7 @@ using McpServer.UI.Core;
 using McpServer.Cqrs;
 using McpServer.UI.Core.Authorization;
 using McpServer.UI.Core.Messages;
+using McpServer.UI.Core.Models;
 using McpServer.UI.Core.Services;
 using McpServer.UI.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -199,6 +200,51 @@ public sealed class TodoViewModelTests
             entry.Message.Contains("Todo status update", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task TodoListHostViewModel_CopilotStatusCommand_SelectsProvidedEntry()
+    {
+        var apiClient = Substitute.For<ITodoApiClient>();
+        using var sp = BuildProvider(apiClient);
+
+        var host = CreateTrackingHost(sp);
+        var entry = CreateTodoListEntry("TODO-STATUS-001");
+
+        await host.CopilotStatusCommand.ExecuteAsync(entry);
+
+        Assert.Same(entry, host.SelectedEntry);
+        Assert.Equal(1, host.StatusCalls);
+    }
+
+    [Fact]
+    public async Task TodoListHostViewModel_CopilotPlanCommand_SelectsProvidedEntry()
+    {
+        var apiClient = Substitute.For<ITodoApiClient>();
+        using var sp = BuildProvider(apiClient);
+
+        var host = CreateTrackingHost(sp);
+        var entry = CreateTodoListEntry("TODO-PLAN-001");
+
+        await host.CopilotPlanCommand.ExecuteAsync(entry);
+
+        Assert.Same(entry, host.SelectedEntry);
+        Assert.Equal(1, host.PlanCalls);
+    }
+
+    [Fact]
+    public async Task TodoListHostViewModel_CopilotImplementCommand_SelectsProvidedEntry()
+    {
+        var apiClient = Substitute.For<ITodoApiClient>();
+        using var sp = BuildProvider(apiClient);
+
+        var host = CreateTrackingHost(sp);
+        var entry = CreateTodoListEntry("TODO-IMPLEMENT-001");
+
+        await host.CopilotImplementCommand.ExecuteAsync(entry);
+
+        Assert.Same(entry, host.SelectedEntry);
+        Assert.Equal(1, host.ImplementCalls);
+    }
+
     private static ServiceProvider BuildProvider(ITodoApiClient apiClient)
     {
         var auth = Substitute.For<IAuthorizationPolicyService>();
@@ -219,9 +265,70 @@ public sealed class TodoViewModelTests
         return services.BuildServiceProvider();
     }
 
+    private static TrackingTodoListHostViewModel CreateTrackingHost(ServiceProvider sp)
+        => new(
+            sp.GetRequiredService<IClipboardService>(),
+            sp.GetRequiredService<TodoListViewModel>(),
+            sp.GetRequiredService<TodoDetailViewModel>(),
+            sp.GetRequiredService<WorkspaceContextViewModel>(),
+            sp,
+            sp.GetRequiredService<ITimerService>(),
+            sp.GetRequiredService<ILogger<TodoListHostViewModel>>());
+
+    private static TodoListEntry CreateTodoListEntry(string id)
+        => new()
+        {
+            PriorityGroup = "High",
+            DisplayLine = $"{id} Sample TODO",
+            Item = new McpTodoFlatItem
+            {
+                Id = id,
+                Title = "Sample TODO",
+                Section = "general",
+                Priority = "high"
+            }
+        };
+
     private sealed class NullServiceProvider : IServiceProvider
     {
         public object? GetService(Type serviceType) => null;
+    }
+
+    private sealed class TrackingTodoListHostViewModel : TodoListHostViewModel
+    {
+        public TrackingTodoListHostViewModel(
+            IClipboardService clipboardService,
+            TodoListViewModel listVm,
+            TodoDetailViewModel detailVm,
+            WorkspaceContextViewModel workspaceContext,
+            IServiceProvider serviceProvider,
+            ITimerService timerService,
+            ILogger<TodoListHostViewModel> logger)
+            : base(clipboardService, listVm, detailVm, workspaceContext, serviceProvider, timerService, logger)
+        {
+        }
+
+        public int StatusCalls { get; private set; }
+        public int PlanCalls { get; private set; }
+        public int ImplementCalls { get; private set; }
+
+        public override Task CopilotStatusAsync()
+        {
+            StatusCalls++;
+            return Task.CompletedTask;
+        }
+
+        public override Task CopilotPlanAsync()
+        {
+            PlanCalls++;
+            return Task.CompletedTask;
+        }
+
+        public override Task CopilotImplementAsync()
+        {
+            ImplementCalls++;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class RecordingLogger<T> : ILogger<T>

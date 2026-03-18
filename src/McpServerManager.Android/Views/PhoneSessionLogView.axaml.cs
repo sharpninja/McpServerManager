@@ -68,7 +68,7 @@ public partial class PhoneSessionLogView : UserControl
                 RefreshDetailHeader();
                 break;
 
-            case nameof(MainWindowViewModel.SelectedUnifiedRequest):
+            case nameof(MainWindowViewModel.SelectedUnifiedTurn):
             case nameof(MainWindowViewModel.IsJsonVisible):
             case nameof(MainWindowViewModel.IsMarkdownVisible):
             case nameof(MainWindowViewModel.IsRequestDetailsVisible):
@@ -107,7 +107,7 @@ public partial class PhoneSessionLogView : UserControl
             return;
         }
 
-        if (vm.IsRequestDetailsVisible && vm.SelectedUnifiedRequest is { } request)
+        if (vm.IsRequestDetailsVisible && vm.SelectedUnifiedTurn is { } request)
         {
             DetailTitleText.Text = string.IsNullOrWhiteSpace(request.RequestId)
                 ? "Request Details"

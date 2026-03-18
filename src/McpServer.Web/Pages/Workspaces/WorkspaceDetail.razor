@@ -3,6 +3,7 @@
 @inject WorkspaceDetailViewModel ViewModel
 @inject WorkspaceListViewModel ListViewModel
 @inject IAuthorizationPolicyService AuthPolicy
+@inject WebCommandTarget CommandTarget
 
 <PageTitle>Workspace Detail</PageTitle>
 
@@ -202,7 +203,7 @@ else
     {
         if (ListViewModel.Workspaces.Count == 0)
         {
-            await ListViewModel.LoadAsync().ConfigureAwait(true);
+            await CommandTarget.RunAsync(() => ListViewModel.LoadAsync()).ConfigureAwait(true);
         }
     }
 
@@ -215,13 +216,16 @@ else
         if (string.IsNullOrWhiteSpace(WorkspacePath))
             return;
 
-        ViewModel.WorkspacePath = WorkspacePath;
-        await ViewModel.LoadAsync().ConfigureAwait(true);
+        await CommandTarget.RunAsync(async () =>
+        {
+            ViewModel.WorkspacePath = WorkspacePath;
+            await ViewModel.LoadAsync().ConfigureAwait(true);
+        }).ConfigureAwait(true);
     }
 
-    private async Task SaveAsync() => await ViewModel.SaveAsync().ConfigureAwait(true);
+    private async Task SaveAsync() => await CommandTarget.RunAsync(() => ViewModel.SaveAsync()).ConfigureAwait(true);
 
-    private async Task DeleteAsync() => await ViewModel.DeleteAsync().ConfigureAwait(true);
+    private async Task DeleteAsync() => await CommandTarget.RunAsync(() => ViewModel.DeleteAsync()).ConfigureAwait(true);
 
     private static RenderFragment RenderStringList(IReadOnlyList<string> values) => builder =>
     {

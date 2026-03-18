@@ -2,6 +2,7 @@
 
 @inject WorkspaceListViewModel ViewModel
 @inject WorkspaceContextViewModel WorkspaceContext
+@inject WebCommandTarget CommandTarget
 
 <PageTitle>Workspace List</PageTitle>
 
@@ -78,7 +79,7 @@ else
 @code {
     protected override async Task OnInitializedAsync()
     {
-        await ViewModel.LoadAsync().ConfigureAwait(true);
+        await CommandTarget.RunAsync(() => ViewModel.LoadAsync()).ConfigureAwait(true);
     }
 
     private bool IsActive(string workspacePath)
@@ -92,10 +93,9 @@ else
             .FirstOrDefault(w => IsActive(w.WorkspacePath))
             ?.Name ?? WorkspaceContext.ActiveWorkspacePath;
 
-    private void SelectWorkspace(string workspacePath)
+    private async Task SelectWorkspace(string workspacePath)
     {
-        WorkspaceContext.ActiveWorkspacePath = workspacePath;
-        StateHasChanged();
+        await CommandTarget.RunAsync(() => WorkspaceContext.ActiveWorkspacePath = workspacePath).ConfigureAwait(true);
     }
 
     private static string GetWorkspaceDetailHref(string workspacePath)

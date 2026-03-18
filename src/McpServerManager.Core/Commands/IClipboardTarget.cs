@@ -9,6 +9,6 @@ namespace McpServerManager.Core.Commands;
 public interface IClipboardTarget
 {
     Task CopyText(string text);
-    Task CopyOriginalJson(UnifiedRequestEntry? entry);
+    Task CopyOriginalJson(UnifiedSessionTurn? entry);
 }
 

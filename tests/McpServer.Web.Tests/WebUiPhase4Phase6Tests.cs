@@ -168,13 +168,20 @@ public sealed class WebUiPhase4Phase6Tests
     private static Bunit.BunitContext CreateTestContext(Action<IServiceCollection>? configureServices = null)
     {
         var ctx = new Bunit.BunitContext();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["McpServer:BaseUrl"] = "http://localhost:7147",
+                ["McpServer:ApiKey"] = "test-api-key",
+                ["McpServer:WorkspacePath"] = @"E:\\repo"
+            })
+            .Build();
+
+        ctx.Services.AddSingleton<IConfiguration>(config);
         ctx.Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         ctx.Services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        ctx.Services.AddSingleton<McpServer.Cqrs.Dispatcher>();
-        
+        ctx.Services.AddWebServices();
         ctx.Services.AddSingleton<IHealthApiClient>(new HealthApiClientStub());
-        
-        ctx.Services.AddUiCore();
 
         configureServices?.Invoke(ctx.Services);
         return ctx;

@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using McpServer.Cqrs;
@@ -313,6 +314,32 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         }
 
         await RunMutationAsync(_updateCommand, "Saving TODO...", "TODO saved.", ct).ConfigureAwait(true);
+    }
+
+    /// <summary>Marks the current TODO item as done and saves the change.</summary>
+    public async Task MarkDoneAsync(CancellationToken ct = default)
+    {
+        if (IsNewDraft)
+        {
+            ErrorMessage = "TODO must be created before it can be marked done.";
+            StatusMessage = "TODO mutation failed.";
+            return;
+        }
+
+        ApplyMarkdownToEditor();
+
+        if (EditorDone)
+        {
+            MutationMessage = "TODO already marked done.";
+            StatusMessage = MutationMessage;
+            return;
+        }
+
+        EditorDone = true;
+        if (string.IsNullOrWhiteSpace(EditorCompletedDate))
+            EditorCompletedDate = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        await RunMutationAsync(_updateCommand, "Marking TODO done...", "TODO marked done.", ct).ConfigureAwait(true);
     }
 
     /// <summary>Deletes the current TODO item.</summary>

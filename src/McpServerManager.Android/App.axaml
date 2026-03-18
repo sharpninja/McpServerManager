@@ -44,7 +44,7 @@
     </Application.Resources>
 
     <Application.DataTemplates>
-        <DataTemplate DataType="models:UnifiedRequestEntry">
+        <DataTemplate DataType="models:UnifiedSessionTurn">
             <views:RequestDetailsView/>
         </DataTemplate>
     </Application.DataTemplates>

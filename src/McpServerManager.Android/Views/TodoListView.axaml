@@ -91,8 +91,9 @@
                     <SelectableTextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15"
                                Foreground="White"/>
                   </Border>
-                  <ListBox ItemsSource="{Binding Items}" Margin="4,0"
+                  <ListBox x:Name="GroupTodoList" ItemsSource="{Binding Items}" Margin="4,0"
                            SelectionMode="Single"
+                           PointerPressed="OnGroupListBoxPointerPressed"
                            SelectionChanged="OnGroupListBoxSelectionChanged"
                            Loaded="OnGroupListBoxLoaded"
                            Unloaded="OnGroupListBoxUnloaded">
@@ -128,6 +129,16 @@
                                   Command="{Binding DataContext.ToggleDoneCommand, ElementName=TodoRoot}"/>
                         <MenuItem Header="Analyze Requirements"
                                   Command="{Binding DataContext.AnalyzeRequirementsCommand, ElementName=TodoRoot}"/>
+                        <Separator/>
+                        <MenuItem Header="Copilot Status"
+                                  Command="{Binding DataContext.CopilotStatusCommand, ElementName=TodoRoot}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <MenuItem Header="Copilot Plan"
+                                  Command="{Binding DataContext.CopilotPlanCommand, ElementName=TodoRoot}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <MenuItem Header="Copilot Implement"
+                                  Command="{Binding DataContext.CopilotImplementCommand, ElementName=TodoRoot}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                         <Separator/>
                         <MenuItem Header="Delete"
                                   Command="{Binding DataContext.DeleteSelectedCommand, ElementName=TodoRoot}"/>

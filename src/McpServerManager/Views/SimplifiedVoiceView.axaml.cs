@@ -142,6 +142,8 @@ public partial class SimplifiedVoiceView : UserControl
     private ToggleButton? _autoCheck;
     private Border? _inputPreviewBorder;
     private TextBlock? _inputPreviewText;
+    private StackPanel? _manualInputRowsPanel;
+    private Border? _manualTextEntryBorder;
 
     private CancellationTokenSource? _loopCts;
     private bool _conversationActive;
@@ -162,7 +164,17 @@ public partial class SimplifiedVoiceView : UserControl
     private Button? _stopButton;
     private Button? _chatToggleButton;
     private bool _isApplyingAutoContinueSetting;
+    private double _lastAppliedPhoneInputOffset = double.NaN;
 
+    public static readonly StyledProperty<bool> IsPhoneVoiceLayoutProperty =
+        AvaloniaProperty.Register<SimplifiedVoiceView, bool>(nameof(IsPhoneVoiceLayout));
+
+    public bool IsPhoneVoiceLayout
+    {
+        get => GetValue(IsPhoneVoiceLayoutProperty);
+        set => SetValue(IsPhoneVoiceLayoutProperty, value);
+    }
+ 
     public SimplifiedVoiceView()
     {
         InitializeComponent();
@@ -170,6 +182,8 @@ public partial class SimplifiedVoiceView : UserControl
         _autoCheck = this.FindControl<ToggleButton>("AutoContinueToggle");
         _inputPreviewBorder = this.FindControl<Border>("InputPreviewBorder");
         _inputPreviewText = this.FindControl<TextBlock>("InputPreviewText");
+        _manualInputRowsPanel = this.FindControl<StackPanel>("ManualInputRowsPanel");
+        _manualTextEntryBorder = this.FindControl<Border>("ManualTextEntryBorder");
         _pauseButton = this.FindControl<Button>("PauseResumeButton");
         _stopButton = this.FindControl<Button>("StopButton");
         _chatToggleButton = this.FindControl<Button>("ChatToggleButton");
@@ -185,6 +199,7 @@ public partial class SimplifiedVoiceView : UserControl
             _autoCheck.IsCheckedChanged += OnAutoCheckedChanged;
         _voiceChatSettingsService.SettingsChanged += OnVoiceChatSettingsChanged;
 
+        LayoutUpdated += OnLayoutUpdated;
         DetachedFromVisualTree += OnDetached;
     }
 
@@ -906,6 +921,33 @@ public partial class SimplifiedVoiceView : UserControl
         });
     }
 
+    private void OnLayoutUpdated(object? sender, EventArgs e)
+    {
+        UpdatePhoneManualInputOffset();
+    }
+
+    private void UpdatePhoneManualInputOffset()
+    {
+        if (_manualInputRowsPanel == null || _manualTextEntryBorder == null)
+            return;
+
+        var desiredOffset = 0d;
+        if (IsPhoneVoiceLayout)
+        {
+            var manualRowHeight = _manualTextEntryBorder.Bounds.Height;
+            if (manualRowHeight > 0)
+            {
+                desiredOffset = -manualRowHeight;
+            }
+        }
+
+        if (Math.Abs(desiredOffset - _lastAppliedPhoneInputOffset) < 0.5)
+            return;
+
+        _manualInputRowsPanel.Margin = new Thickness(0, desiredOffset, 0, 0);
+        _lastAppliedPhoneInputOffset = desiredOffset;
+    }
+
     // ── Pause/Resume (contextual: listening vs speaking) ──────────────
 
     private void OnPauseResumeClick(object? sender, RoutedEventArgs e)
@@ -1477,6 +1519,7 @@ public partial class SimplifiedVoiceView : UserControl
     {
         if (_isDisposed) return;
         _isDisposed = true;
+        LayoutUpdated -= OnLayoutUpdated;
         DetachedFromVisualTree -= OnDetached;
         _voiceChatSettingsService.SettingsChanged -= OnVoiceChatSettingsChanged;
         if (_autoCheck != null)

@@ -26,6 +26,7 @@ public partial class VoiceConversationViewModel : ViewModelBase
 
     [ObservableProperty] private string _sessionId = string.Empty;
     [ObservableProperty] private string _language = "en-US";
+    [ObservableProperty] private string _clientName = "RequestTracker.Android";
     [ObservableProperty] private string _statusText = "Voice ready";
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _transcriptInput = string.Empty;
@@ -130,7 +131,7 @@ public partial class VoiceConversationViewModel : ViewModelBase
             var response = await _voiceService.CreateSessionAsync(new McpVoiceSessionCreateRequest
             {
                 Language = Language,
-                ClientName = "RequestTracker.Android",
+                ClientName = string.IsNullOrWhiteSpace(ClientName) ? "RequestTracker.Android" : ClientName.Trim(),
                 DeviceId = deviceId
             }).ConfigureAwait(true);
 

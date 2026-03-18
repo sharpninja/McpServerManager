@@ -390,7 +390,7 @@ internal static class UiCoreMessageMapper
             log.Model,
             log.Started?.ToString("o"),
             log.LastUpdated?.ToString("o"),
-            log.EntryCount);
+            log.TurnCount);
 
     public static SessionLogDetail ToSessionLogDetail(Models.Json.UnifiedSessionLog log)
         => new(
@@ -401,7 +401,7 @@ internal static class UiCoreMessageMapper
             log.Model,
             log.Started?.ToString("o"),
             log.LastUpdated?.ToString("o"),
-            log.EntryCount,
+            log.TurnCount,
             log.TotalTokens > 0 ? log.TotalTokens : null,
             log.CursorSessionLabel,
             log.Workspace is null ? null : new SessionLogWorkspaceInfo(
@@ -415,9 +415,9 @@ internal static class UiCoreMessageMapper
                 (int?)log.CopilotStatistics.TotalNetPremiumRequests,
                 log.CopilotStatistics.CompletedCount,
                 log.CopilotStatistics.InProgressCount),
-            log.Entries.Select(ToSessionLogEntryDetail).ToList());
+            log.Turns.Select(ToSessionLogTurnDetail).ToList());
 
-    public static SessionLogEntryDetail ToSessionLogEntryDetail(Models.Json.UnifiedRequestEntry entry)
+    public static SessionLogTurnDetail ToSessionLogTurnDetail(Models.Json.UnifiedSessionTurn entry)
         => new(
             entry.RequestId ?? string.Empty,
             entry.Timestamp?.ToString("o"),
@@ -460,7 +460,7 @@ internal static class UiCoreMessageMapper
             Started = detail.Started,
             LastUpdated = detail.LastUpdated,
             Status = detail.Status,
-            EntryCount = detail.EntryCount,
+            TurnCount = detail.TurnCount,
             TotalTokens = detail.TotalTokens,
             CursorSessionLabel = detail.CursorSessionLabel,
             Workspace = detail.Workspace is null ? null : new ClientModels.WorkspaceInfoDto
@@ -478,10 +478,10 @@ internal static class UiCoreMessageMapper
                 CompletedCount = detail.CopilotStatistics.CompletedCount,
                 InProgressCount = detail.CopilotStatistics.InProgressCount,
             },
-            Entries = detail.Entries.Select(ToUnifiedRequestEntryDto).ToList(),
+            Turns = detail.Turns.Select(ToClientTurnDto).ToList(),
         };
 
-    public static ClientModels.UnifiedRequestEntryDto ToUnifiedRequestEntryDto(SessionLogEntryDetail entry)
+    public static ClientModels.UnifiedRequestEntryDto ToClientTurnDto(SessionLogTurnDetail entry)
         => new()
         {
             RequestId = entry.RequestId,

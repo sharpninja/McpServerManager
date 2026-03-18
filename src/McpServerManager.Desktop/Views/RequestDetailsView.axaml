@@ -6,7 +6,7 @@
              xmlns:conv="clr-namespace:McpServerManager.Core.Converters;assembly=McpServerManager.Core"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="McpServerManager.Desktop.Views.RequestDetailsView"
-             x:DataType="models:UnifiedRequestEntry">
+             x:DataType="models:UnifiedSessionTurn">
 
   <UserControl.Resources>
       <conv:ObjectToJsonConverter x:Key="ObjectToJson"/>
@@ -208,7 +208,7 @@
             <Button Content="Copy" Command="{Binding DataContext.CopyOriginalJsonCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                     CommandParameter="{Binding}" HorizontalAlignment="Right"/>
             <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="10" Background="{DynamicResource ContentBgBrush}" HorizontalAlignment="Stretch">
-              <SelectableTextBlock Text="{Binding OriginalEntry, Converter={StaticResource ObjectToJson}}"
+              <SelectableTextBlock Text="{Binding OriginalTurn, Converter={StaticResource ObjectToJson}}"
                                  TextWrapping="Wrap" FontFamily="Consolas, Monospace" Foreground="Black" HorizontalAlignment="Stretch"/>
             </Border>
           </StackPanel>

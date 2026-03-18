@@ -263,7 +263,7 @@ internal sealed class SessionLogScreen : View
             $"Model: {ValueOrDash(detail.Model)}",
             $"Started: {FormatTimestampOrDash(detail.Started)}",
             $"Updated: {FormatTimestampOrDash(detail.LastUpdated)}",
-            $"EntryCount: {detail.EntryCount}",
+            $"TurnCount: {detail.TurnCount}",
             $"TotalTokens: {detail.TotalTokens?.ToString() ?? "—"}",
             $"CursorSessionLabel: {ValueOrDash(detail.CursorSessionLabel)}",
         };
@@ -290,13 +290,13 @@ internal sealed class SessionLogScreen : View
         }
 
         lines.Add("");
-        lines.Add($"Entries ({detail.Entries.Count}):");
-        if (detail.Entries.Count == 0)
+        lines.Add($"Turns ({detail.Turns.Count}):");
+        if (detail.Turns.Count == 0)
             return string.Join(Environment.NewLine, lines);
 
-        for (var i = 0; i < detail.Entries.Count; i++)
+        for (var i = 0; i < detail.Turns.Count; i++)
         {
-            var entry = detail.Entries[i];
+            var entry = detail.Turns[i];
             lines.Add("");
             lines.Add($"[{i + 1}] RequestId: {ValueOrDash(entry.RequestId)}");
             lines.Add($"  Status: {ValueOrDash(entry.Status)}");

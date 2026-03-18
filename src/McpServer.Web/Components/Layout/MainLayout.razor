@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject WorkspaceAutoSelector WorkspaceAutoSelector
 @inject BackendConnectionMonitor ConnectionMonitor
+@inject WebVoiceConversationViewModel AgentChatViewModel
 @implements IDisposable
 
 <div class="d-flex flex-column" style="min-height: 100vh">
@@ -24,6 +25,16 @@
                     <OcticonIcon Name="alert" Class="mr-1" />Disconnected
                 </span>
             }
+        </div>
+        <div class="Header-item">
+            <button type="button"
+                    class="btn btn-sm"
+                    id="agent-chat-launch"
+                    aria-controls="agent-chat-flyout"
+                    aria-expanded="@_isAgentChatOpen"
+                    @onclick="ToggleAgentChat">
+                Agent Chat
+            </button>
         </div>
         <div class="Header-item">
             <AuthorizeView>
@@ -50,14 +61,24 @@
         </div>
     }
 
-    <main class="app-content flex-1">
-        @Body
-    </main>
+    <div class="app-shell flex-1 @(_isAgentChatOpen && _isAgentChatInline ? "app-shell--with-inline-chat" : null)">
+        <main class="app-content flex-1">
+            @Body
+        </main>
+
+        <AgentChatFlyout ViewModel="AgentChatViewModel"
+                         IsOpen="@_isAgentChatOpen"
+                         IsInline="@_isAgentChatInline"
+                         OnClose="CloseAgentChatAsync"
+                         OnInlineModeChanged="SetAgentChatInlineModeAsync" />
+    </div>
 </div>
 
 @code {
     private bool _isConnected = true;
     private string? _lastError;
+    private bool _isAgentChatOpen;
+    private bool _isAgentChatInline;
 
     protected override async Task OnInitializedAsync()
     {
@@ -77,6 +98,23 @@
             _lastError = ConnectionMonitor.LastError;
             InvokeAsync(StateHasChanged);
         }
+    }
+
+    private void ToggleAgentChat()
+    {
+        _isAgentChatOpen = !_isAgentChatOpen;
+    }
+
+    private Task CloseAgentChatAsync()
+    {
+        _isAgentChatOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private Task SetAgentChatInlineModeAsync(bool isInline)
+    {
+        _isAgentChatInline = isInline;
+        return Task.CompletedTask;
     }
 
     public void Dispose()

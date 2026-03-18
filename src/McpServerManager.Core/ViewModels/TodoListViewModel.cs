@@ -1,6 +1,4 @@
 using Microsoft.Extensions.Logging;
-using McpServer.Cqrs.Mvvm;
-using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
 using CqrsDispatcher = McpServer.Cqrs.Dispatcher;
 using UiCoreTodoDetailViewModel = McpServer.UI.Core.ViewModels.TodoDetailViewModel;
@@ -16,10 +14,6 @@ public partial class TodoListViewModel : McpServer.UI.Core.ViewModels.TodoListHo
 {
     private readonly CqrsDispatcher _dispatcher;
 
-    public CqrsRelayCommand<bool> CopilotStatusCommand { get; }
-    public CqrsRelayCommand<bool> CopilotPlanCommand { get; }
-    public CqrsRelayCommand<bool> CopilotImplementCommand { get; }
-
     internal TodoListViewModel(IClipboardService clipboardService, McpServer.UI.Core.Services.UiCoreAppRuntime runtime)
         : base(
             clipboardService,
@@ -31,9 +25,6 @@ public partial class TodoListViewModel : McpServer.UI.Core.ViewModels.TodoListHo
             runtime.GetRequiredService<ILogger<McpServer.UI.Core.ViewModels.TodoListHostViewModel>>())
     {
         _dispatcher = runtime.GetRequiredService<CqrsDispatcher>();
-        CopilotStatusCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new CopilotStatusCommand());
-        CopilotPlanCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new CopilotPlanCommand());
-        CopilotImplementCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new CopilotImplementCommand());
     }
 }
 

@@ -99,6 +99,7 @@ internal sealed class McpWebTestFactory : WebApplicationFactory<Program>
             // Stub out IHealthApiClient (Singleton) to satisfy BackendConnectionMonitor (Singleton)
             // and override the Scoped registration from the app.
             services.AddSingleton<IHealthApiClient>(new HealthApiClientStub());
+            services.AddSingleton<IWorkspaceApiClient>(new WorkspaceApiClientStub());
 
             // Stub out OIDC discovery so no real HTTP calls are made to the provider.
             services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
@@ -150,4 +151,25 @@ internal sealed class HealthApiClientStub : IHealthApiClient
     {
         return Task.FromResult(new HealthSnapshot(DateTimeOffset.UtcNow, "Healthy", "{}"));
     }
+}
+
+internal sealed class WorkspaceApiClientStub : IWorkspaceApiClient
+{
+    public Task<ListWorkspacesResult> ListWorkspacesAsync(CancellationToken ct = default)
+        => Task.FromResult(new ListWorkspacesResult(
+            [new WorkspaceSummary(@"E:\repo", "Repo", true, true)],
+            1));
+
+    public Task<WorkspaceDetail?> GetWorkspaceAsync(string workspacePath, CancellationToken ct = default) => Task.FromResult<WorkspaceDetail?>(null);
+    public Task<bool> UpdateWorkspacePolicyAsync(UpdateWorkspacePolicyCommand command, CancellationToken ct = default) => Task.FromResult(false);
+    public Task<WorkspaceMutationOutcome> CreateWorkspaceAsync(CreateWorkspaceCommand command, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<WorkspaceMutationOutcome> UpdateWorkspaceAsync(UpdateWorkspaceCommand command, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<WorkspaceMutationOutcome> DeleteWorkspaceAsync(DeleteWorkspaceCommand command, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<WorkspaceProcessState> GetWorkspaceStatusAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<WorkspaceProcessState> StartWorkspaceAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<WorkspaceProcessState> StopWorkspaceAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<WorkspaceHealthState> CheckWorkspaceHealthAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<WorkspaceGlobalPromptState> GetWorkspaceGlobalPromptAsync(CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<WorkspaceGlobalPromptState> UpdateWorkspaceGlobalPromptAsync(UpdateWorkspaceGlobalPromptCommand command, CancellationToken ct = default) => throw new NotImplementedException();
+    public Task<WorkspaceInitInfo> InitWorkspaceAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
 }
