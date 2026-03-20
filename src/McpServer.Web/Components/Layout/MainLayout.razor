@@ -1,10 +1,11 @@
 @inherits LayoutComponentBase
+@inject McpServer.UI.Core.Services.IUiDispatcherService UiDispatcher
 @inject WorkspaceAutoSelector WorkspaceAutoSelector
 @inject BackendConnectionMonitor ConnectionMonitor
 @inject WebVoiceConversationViewModel AgentChatViewModel
 @implements IDisposable
 
-<div class="d-flex flex-column" style="min-height: 100vh">
+<div class="d-flex flex-column" style="height: 100vh; min-height: 0">
     <header class="Header app-header-sticky">
         <div class="Header-item">
             <a href="/" class="Header-link f4 d-flex flex-items-center">
@@ -96,9 +97,16 @@
         {
             _isConnected = ConnectionMonitor.IsConnected;
             _lastError = ConnectionMonitor.LastError;
-            InvokeAsync(StateHasChanged);
+            _ = RefreshUiAsync();
         }
     }
+
+    private Task RefreshUiAsync()
+        => UiDispatcher.InvokeAsync(() =>
+        {
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
 
     private void ToggleAgentChat()
     {

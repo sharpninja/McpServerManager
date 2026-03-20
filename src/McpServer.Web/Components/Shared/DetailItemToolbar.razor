@@ -1,0 +1,78 @@
+@if (CurrentItem is not null)
+{
+    <nav class="detail-item-toolbar" aria-label="@AriaLabel">
+        <div class="detail-item-toolbar__inner">
+            @if (PreviousItem is null)
+            {
+                <span class="btn btn-sm disabled detail-item-toolbar__action" aria-disabled="true">Previous</span>
+            }
+            else
+            {
+                <a class="btn btn-sm detail-item-toolbar__action" href="@PreviousItem.Href" rel="prev">Previous</a>
+            }
+
+            <div class="detail-item-toolbar__summary">
+                <p class="detail-item-toolbar__eyebrow">@ItemTypeLabel navigation</p>
+                <p class="detail-item-toolbar__title" title="@CurrentItem.Label">@CurrentItem.Label</p>
+                @if (!string.IsNullOrWhiteSpace(CurrentItem.Description))
+                {
+                    <p class="detail-item-toolbar__description" title="@CurrentItem.Description">@CurrentItem.Description</p>
+                }
+                <p class="detail-item-toolbar__position">Item @(CurrentIndex + 1) of @Items.Count</p>
+            </div>
+
+            @if (NextItem is null)
+            {
+                <span class="btn btn-sm disabled detail-item-toolbar__action" aria-disabled="true">Next</span>
+            }
+            else
+            {
+                <a class="btn btn-sm detail-item-toolbar__action" href="@NextItem.Href" rel="next">Next</a>
+            }
+        </div>
+    </nav>
+}
+
+@code {
+    [Parameter]
+    public IReadOnlyList<DetailNavigationItem> Items { get; set; } = Array.Empty<DetailNavigationItem>();
+
+    [Parameter]
+    public string? CurrentKey { get; set; }
+
+    [Parameter]
+    public string ItemTypeLabel { get; set; } = "Item";
+
+    [Parameter]
+    public string AriaLabel { get; set; } = "Item navigation";
+
+    [Parameter]
+    public bool IgnoreKeyCase { get; set; }
+
+    private int CurrentIndex => FindCurrentIndex();
+
+    private DetailNavigationItem? CurrentItem => CurrentIndex >= 0 && CurrentIndex < Items.Count ? Items[CurrentIndex] : null;
+
+    private DetailNavigationItem? PreviousItem => CurrentIndex > 0 ? Items[CurrentIndex - 1] : null;
+
+    private DetailNavigationItem? NextItem => CurrentIndex >= 0 && CurrentIndex < Items.Count - 1 ? Items[CurrentIndex + 1] : null;
+
+    private int FindCurrentIndex()
+    {
+        if (string.IsNullOrWhiteSpace(CurrentKey) || Items.Count == 0)
+        {
+            return -1;
+        }
+
+        var comparison = IgnoreKeyCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        for (var i = 0; i < Items.Count; i++)
+        {
+            if (string.Equals(Items[i].Key, CurrentKey, comparison))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+}

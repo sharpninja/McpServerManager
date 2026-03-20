@@ -20,6 +20,11 @@
     </aside>
 
     <div class="detail-main">
+        <DetailItemToolbar Items="GetNavigationItems()"
+                           CurrentKey="@SessionId"
+                           ItemTypeLabel="Session"
+                           AriaLabel="Session item navigation" />
+
         @if (string.IsNullOrWhiteSpace(SessionId))
         {
             <PrimerBlankslate Heading="No session selected" Description="Open this page from the sidebar." />
@@ -38,13 +43,13 @@
         }
         else
         {
-            <div class="Box mb-3">
+            <div class="Box">
                 <div class="Box-header">
                     <h2 class="h3 mb-0">@ViewModel.Detail.Title</h2>
                 </div>
                 <div class="Box-body">
-                    <div class="session-turn-meta-grid">
-                        <div><span class="color-fg-muted f6">Session ID</span><div><code>@ViewModel.Detail.SessionId</code></div></div>
+                    <div class="detail-field-grid detail-field-grid--compact">
+                        <div class="detail-field--wide"><span class="color-fg-muted f6">Session ID</span><div><code>@ViewModel.Detail.SessionId</code></div></div>
                         <div><span class="color-fg-muted f6">Source Type</span><div>@ViewModel.Detail.SourceType</div></div>
                         <div><span class="color-fg-muted f6">Status</span><div>@ViewModel.Detail.Status</div></div>
                         <div><span class="color-fg-muted f6">Model</span><div>@(ViewModel.Detail.Model ?? "(not set)")</div></div>
@@ -63,7 +68,7 @@
             }
             else
             {
-                <div class="Box mb-3">
+                <div class="Box">
                     <div class="Box-header">
                         <h3 class="h4 mb-0">Turns</h3>
                     </div>
@@ -108,23 +113,25 @@
                         <span class="color-fg-muted f6">Turn @(_selectedTurnIndex + 1) of @ViewModel.Detail.Turns.Count</span>
                     </div>
 
-                    <div class="d-flex flex-wrap gap-2 mb-3 session-turn-controls">
-                        <button class="@GetTurnViewButtonClass("overview")" @onclick='() => SetTurnView("overview")'>Overview</button>
-                        <button class="@GetTurnViewButtonClass("query")" @onclick='() => SetTurnView("query")'>Query</button>
-                        <button class="@GetTurnViewButtonClass("response")" @onclick='() => SetTurnView("response")'>Response</button>
-                        <button class="@GetTurnViewButtonClass("dialog")" @onclick='() => SetTurnView("dialog")'>Processing Dialog</button>
-                        <button class="@GetTurnViewButtonClass("actions")" @onclick='() => SetTurnView("actions")'>Actions</button>
+                    <div class="session-turn-heading mb-3">
+                        <h3 class="h4 mb-0">Turn Details · @GetTurnHeading(SelectedTurn)</h3>
                     </div>
 
-                    <div class="Box mb-3">
+                    <div class="Box session-turn-section">
                         <div class="Box-header">
-                            <h3 class="h4 mb-0">Turn Details · @GetTurnHeading(SelectedTurn)</h3>
+                            <button type="button"
+                                    class="session-turn-expander"
+                                    aria-expanded="@IsTurnSectionExpanded(OverviewSectionKey).ToString().ToLowerInvariant()"
+                                    @onclick='() => ToggleTurnSection(OverviewSectionKey)'>
+                                <span>Overview</span>
+                                <span class="session-turn-expander__icon" aria-hidden="true">@GetTurnSectionIcon(OverviewSectionKey)</span>
+                            </button>
                         </div>
-                        <div class="Box-body">
-                            @if (string.Equals(_turnView, "overview", StringComparison.Ordinal))
-                            {
-                                <div class="session-turn-meta-grid">
-                                    <div><span class="color-fg-muted f6">Request ID</span><div><code>@SelectedTurn.RequestId</code></div></div>
+                        @if (IsTurnSectionExpanded(OverviewSectionKey))
+                        {
+                            <div class="Box-body">
+                                <div class="detail-field-grid detail-field-grid--compact">
+                                    <div class="detail-field--wide"><span class="color-fg-muted f6">Request ID</span><div><code>@SelectedTurn.RequestId</code></div></div>
                                     <div><span class="color-fg-muted f6">Status</span><div>@(SelectedTurn.Status ?? "(unknown)")</div></div>
                                     <div><span class="color-fg-muted f6">Timestamp</span><div>@FormatTimestamp(SelectedTurn.Timestamp)</div></div>
                                     <div><span class="color-fg-muted f6">Model</span><div>@(SelectedTurn.Model ?? "(unknown)")</div></div>
@@ -147,9 +154,23 @@
                                         <pre class="session-turn-text mt-1">@SelectedTurn.FailureNote</pre>
                                     </div>
                                 }
-                            }
-                            else if (string.Equals(_turnView, "query", StringComparison.Ordinal))
-                            {
+                            </div>
+                        }
+                    </div>
+
+                    <div class="Box session-turn-section">
+                        <div class="Box-header">
+                            <button type="button"
+                                    class="session-turn-expander"
+                                    aria-expanded="@IsTurnSectionExpanded(QuerySectionKey).ToString().ToLowerInvariant()"
+                                    @onclick='() => ToggleTurnSection(QuerySectionKey)'>
+                                <span>Query</span>
+                                <span class="session-turn-expander__icon" aria-hidden="true">@GetTurnSectionIcon(QuerySectionKey)</span>
+                            </button>
+                        </div>
+                        @if (IsTurnSectionExpanded(QuerySectionKey))
+                        {
+                            <div class="Box-body">
                                 @if (string.IsNullOrWhiteSpace(SelectedTurn.QueryText))
                                 {
                                     <p class="color-fg-muted mb-0">No query text for this turn.</p>
@@ -158,9 +179,23 @@
                                 {
                                     <pre class="session-turn-text mb-0">@SelectedTurn.QueryText</pre>
                                 }
-                            }
-                            else if (string.Equals(_turnView, "response", StringComparison.Ordinal))
-                            {
+                            </div>
+                        }
+                    </div>
+
+                    <div class="Box session-turn-section">
+                        <div class="Box-header">
+                            <button type="button"
+                                    class="session-turn-expander"
+                                    aria-expanded="@IsTurnSectionExpanded(ResponseSectionKey).ToString().ToLowerInvariant()"
+                                    @onclick='() => ToggleTurnSection(ResponseSectionKey)'>
+                                <span>Response</span>
+                                <span class="session-turn-expander__icon" aria-hidden="true">@GetTurnSectionIcon(ResponseSectionKey)</span>
+                            </button>
+                        </div>
+                        @if (IsTurnSectionExpanded(ResponseSectionKey))
+                        {
+                            <div class="Box-body">
                                 @if (string.IsNullOrWhiteSpace(SelectedTurn.Response))
                                 {
                                     <p class="color-fg-muted mb-0">No response content for this turn.</p>
@@ -169,9 +204,23 @@
                                 {
                                     <pre class="session-turn-text mb-0">@SelectedTurn.Response</pre>
                                 }
-                            }
-                            else if (string.Equals(_turnView, "dialog", StringComparison.Ordinal))
-                            {
+                            </div>
+                        }
+                    </div>
+
+                    <div class="Box session-turn-section">
+                        <div class="Box-header">
+                            <button type="button"
+                                    class="session-turn-expander"
+                                    aria-expanded="@IsTurnSectionExpanded(DialogSectionKey).ToString().ToLowerInvariant()"
+                                    @onclick='() => ToggleTurnSection(DialogSectionKey)'>
+                                <span>Processing Dialog</span>
+                                <span class="session-turn-expander__icon" aria-hidden="true">@GetTurnSectionIcon(DialogSectionKey)</span>
+                            </button>
+                        </div>
+                        @if (IsTurnSectionExpanded(DialogSectionKey))
+                        {
+                            <div class="Box-body">
                                 @if (SelectedTurn.ProcessingDialog.Count == 0)
                                 {
                                     <p class="color-fg-muted mb-0">No processing dialog for this turn.</p>
@@ -199,9 +248,23 @@
                                         </RowTemplate>
                                     </PrimerDataTable>
                                 }
-                            }
-                            else if (string.Equals(_turnView, "actions", StringComparison.Ordinal))
-                            {
+                            </div>
+                        }
+                    </div>
+
+                    <div class="Box session-turn-section">
+                        <div class="Box-header">
+                            <button type="button"
+                                    class="session-turn-expander"
+                                    aria-expanded="@IsTurnSectionExpanded(ActionsSectionKey).ToString().ToLowerInvariant()"
+                                    @onclick='() => ToggleTurnSection(ActionsSectionKey)'>
+                                <span>Actions</span>
+                                <span class="session-turn-expander__icon" aria-hidden="true">@GetTurnSectionIcon(ActionsSectionKey)</span>
+                            </button>
+                        </div>
+                        @if (IsTurnSectionExpanded(ActionsSectionKey))
+                        {
+                            <div class="Box-body">
                                 @if (SelectedTurn.Actions.Count == 0)
                                 {
                                     <p class="color-fg-muted mb-0">No actions for this turn.</p>
@@ -231,8 +294,8 @@
                                         </RowTemplate>
                                     </PrimerDataTable>
                                 }
-                            }
-                        </div>
+                            </div>
+                        }
                     </div>
                 }
             }
@@ -256,7 +319,13 @@
     private string? _loadedSessionId;
     private string? _lastFilterKey;
     private int _selectedTurnIndex;
-    private string _turnView = "overview";
+    private HashSet<string> _expandedTurnSections = CreateDefaultExpandedTurnSections();
+
+    private const string OverviewSectionKey = "overview";
+    private const string QuerySectionKey = "query";
+    private const string ResponseSectionKey = "response";
+    private const string DialogSectionKey = "dialog";
+    private const string ActionsSectionKey = "actions";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -285,7 +354,7 @@
             await ViewModel.LoadAsync().ConfigureAwait(true);
         }).ConfigureAwait(true);
         _selectedTurnIndex = 0;
-        _turnView = "overview";
+        ResetExpandedTurnSections();
     }
 
     private static string GetTurnHeading(McpServer.UI.Core.Messages.SessionLogTurnDetail turn)
@@ -303,13 +372,19 @@
     private void SelectPreviousTurn()
     {
         if (CanSelectPrevious)
+        {
             _selectedTurnIndex--;
+            ResetExpandedTurnSections();
+        }
     }
 
     private void SelectNextTurn()
     {
         if (CanSelectNext)
+        {
             _selectedTurnIndex++;
+            ResetExpandedTurnSections();
+        }
     }
 
     private void SelectTurn(int index)
@@ -318,6 +393,7 @@
             return;
 
         _selectedTurnIndex = index;
+        ResetExpandedTurnSections();
     }
 
     private int GetTurnIndex(McpServer.UI.Core.Messages.SessionLogTurnDetail turn)
@@ -337,11 +413,32 @@
     private string? GetTurnRowClass(McpServer.UI.Core.Messages.SessionLogTurnDetail turn)
         => GetTurnIndex(turn) == _selectedTurnIndex ? "session-turn-row-selected" : null;
 
-    private string GetTurnViewButtonClass(string view)
-        => string.Equals(_turnView, view, StringComparison.Ordinal) ? "btn btn-sm btn-primary" : "btn btn-sm";
+    private bool IsTurnSectionExpanded(string section)
+        => _expandedTurnSections.Contains(section);
 
-    private void SetTurnView(string view)
-        => _turnView = view;
+    private void ToggleTurnSection(string section)
+    {
+        if (!_expandedTurnSections.Add(section))
+        {
+            _expandedTurnSections.Remove(section);
+        }
+    }
+
+    private void ResetExpandedTurnSections()
+        => _expandedTurnSections = CreateDefaultExpandedTurnSections();
+
+    private static HashSet<string> CreateDefaultExpandedTurnSections()
+        => new(StringComparer.Ordinal)
+        {
+            OverviewSectionKey,
+            QuerySectionKey,
+            ResponseSectionKey,
+            DialogSectionKey,
+            ActionsSectionKey
+        };
+
+    private string GetTurnSectionIcon(string section)
+        => IsTurnSectionExpanded(section) ? "▾" : "▸";
 
     private string GetDetailHref(string sessionId)
     {
@@ -350,6 +447,15 @@
             ? $"/sessions/{Uri.EscapeDataString(sessionId)}"
             : $"/sessions/{Uri.EscapeDataString(sessionId)}?{qs}";
     }
+
+    private IReadOnlyList<DetailNavigationItem> GetNavigationItems()
+        => (ListViewModel?.Items ?? [])
+            .Select(item => new DetailNavigationItem(
+                item.SessionId,
+                GetDetailHref(item.SessionId),
+                item.Title,
+                $"{item.SourceType} · {item.Status}"))
+            .ToArray();
 
     private string BuildFilterQueryString()
     {

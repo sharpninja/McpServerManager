@@ -21,174 +21,190 @@
     </aside>
 
     <div class="detail-main">
+        <DetailItemToolbar Items="GetNavigationItems()"
+                           CurrentKey="@WorkspacePath"
+                           ItemTypeLabel="Workspace"
+                           AriaLabel="Workspace item navigation"
+                           IgnoreKeyCase="true" />
 
-@if (string.IsNullOrWhiteSpace(WorkspacePath))
-{
-    <PrimerBlankslate Heading="No workspace selected" Description="Choose a workspace from the workspace list to view details." />
-}
-else if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
-{
-    <PrimerFlash Variant="danger" Title="Failed to load workspace">@ViewModel.ErrorMessage</PrimerFlash>
-}
-else if (ViewModel.IsBusy)
-{
-    <p class="color-fg-muted">Loading workspace details...</p>
-}
-else if (ViewModel.Detail is null)
-{
-    <PrimerBlankslate Heading="Workspace not found" Description="The requested workspace could not be loaded." />
-}
-else
-{
-    @if (!string.IsNullOrWhiteSpace(ViewModel.MutationMessage))
-    {
-        <PrimerFlash Variant="@(ViewModel.MutationMessage.Contains("failed", StringComparison.OrdinalIgnoreCase) ? "danger" : "success")" Title="Result">@ViewModel.MutationMessage</PrimerFlash>
-    }
-
-    <div class="Box mb-3">
-        <div class="Box-header d-flex flex-justify-between flex-items-center">
-            <h2 class="h3 mb-0">@ViewModel.Detail.Name</h2>
-            @if (CanEdit)
+        @if (string.IsNullOrWhiteSpace(WorkspacePath))
+        {
+            <PrimerBlankslate Heading="No workspace selected" Description="Choose a workspace from the workspace list to view details." />
+        }
+        else if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+        {
+            <PrimerFlash Variant="danger" Title="Failed to load workspace">@ViewModel.ErrorMessage</PrimerFlash>
+        }
+        else if (ViewModel.IsBusy)
+        {
+            <p class="color-fg-muted">Loading workspace details...</p>
+        }
+        else if (ViewModel.Detail is null)
+        {
+            <PrimerBlankslate Heading="Workspace not found" Description="The requested workspace could not be loaded." />
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(ViewModel.MutationMessage))
             {
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary btn-sm" @onclick="SaveAsync" disabled="@ViewModel.IsBusy">Save</button>
-                    <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@ViewModel.IsBusy">Delete</button>
-                </div>
+                <PrimerFlash Variant="@(ViewModel.MutationMessage.Contains("failed", StringComparison.OrdinalIgnoreCase) ? "danger" : "success")" Title="Result">@ViewModel.MutationMessage</PrimerFlash>
             }
-        </div>
-        <div class="Box-body">
-            <div class="d-flex flex-column gap-3">
-                <div>
-                    <label class="text-small text-bold d-block">Path</label>
-                    <code>@ViewModel.Detail.WorkspacePath</code>
-                </div>
-                <div>
-                    <label class="text-small text-bold d-block">Name</label>
-                    @if (CanEdit)
-                    {
-                        <input class="form-control" @bind="ViewModel.EditorName" />
-                    }
-                    else
-                    {
-                        <span>@ViewModel.Detail.Name</span>
-                    }
-                </div>
-                <div>
-                    <label class="text-small text-bold d-block">Todo Path</label>
-                    @if (CanEdit)
-                    {
-                        <input class="form-control" @bind="ViewModel.EditorTodoPath" />
-                    }
-                    else
-                    {
-                        <code>@ViewModel.Detail.TodoPath</code>
-                    }
-                </div>
-                <div>
-                    <label class="text-small text-bold d-block">Data Directory</label>
-                    @if (CanEdit)
-                    {
-                        <input class="form-control" @bind="ViewModel.EditorDataDirectory" />
-                    }
-                    else
-                    {
-                        <span>@(ViewModel.Detail.DataDirectory ?? "(not set)")</span>
-                    }
-                </div>
-                <div>
-                    <label class="text-small text-bold d-block">Tunnel Provider</label>
-                    @if (CanEdit)
-                    {
-                        <input class="form-control" @bind="ViewModel.EditorTunnelProvider" />
-                    }
-                    else
-                    {
-                        <span>@(ViewModel.Detail.TunnelProvider ?? "(not set)")</span>
-                    }
-                </div>
-                <div>
-                    <label class="text-small text-bold d-block">Run As</label>
-                    @if (CanEdit)
-                    {
-                        <input class="form-control" @bind="ViewModel.EditorRunAs" />
-                    }
-                    else
-                    {
-                        <span>@(ViewModel.Detail.RunAs ?? "(not set)")</span>
-                    }
-                </div>
-                <div class="d-flex gap-4">
-                    <div>
-                        <label class="text-small text-bold d-block">Enabled</label>
-                        @if (CanEdit)
-                        {
-                            <label class="d-flex flex-items-center gap-2">
-                                <input type="checkbox" @bind="ViewModel.EditorIsEnabled" /> Enabled
-                            </label>
-                        }
-                        else
-                        {
-                            <span>@(ViewModel.Detail.IsEnabled ? "Yes" : "No")</span>
-                        }
-                    </div>
-                    <div>
-                        <label class="text-small text-bold d-block">Primary</label>
-                        @if (CanEdit)
-                        {
-                            <label class="d-flex flex-items-center gap-2">
-                                <input type="checkbox" @bind="ViewModel.EditorIsPrimary" /> Primary
-                            </label>
-                        }
-                        else
-                        {
-                            <span>@(ViewModel.Detail.IsPrimary ? "Yes" : "No")</span>
-                        }
-                    </div>
-                </div>
-                <div>
-                    <label class="text-small text-bold d-block">Created</label>
-                    <span>@ViewModel.Detail.DateTimeCreated.ToLocalTime().ToString("g")</span>
-                </div>
-                <div>
-                    <label class="text-small text-bold d-block">Modified</label>
-                    <span>@ViewModel.Detail.DateTimeModified.ToLocalTime().ToString("g")</span>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="Box mb-3">
-        <div class="Box-header"><h3 class="h4 mb-0">Policy</h3></div>
-        <div class="Box-body">
-            <div class="d-flex flex-column gap-2">
-                <div>
-                    <strong>Banned Licenses</strong>
-                    @RenderStringList(ViewModel.Detail.BannedLicenses)
+            <div class="Box detail-card-section">
+                <div class="Box-header detail-card-section__header">
+                    <button type="button"
+                            class="detail-card-expander"
+                            aria-expanded="@IsSectionExpanded(WorkspaceSectionKey).ToString().ToLowerInvariant()"
+                            @onclick='() => ToggleSection(WorkspaceSectionKey)'>
+                        <span class="h3 mb-0">@ViewModel.Detail.Name</span>
+                        <span class="detail-card-expander__icon" aria-hidden="true">@GetSectionIcon(WorkspaceSectionKey)</span>
+                    </button>
+                    @if (CanEdit)
+                    {
+                        <div class="detail-card-expander__actions">
+                            <button class="btn btn-primary btn-sm" @onclick="SaveAsync" disabled="@ViewModel.IsBusy">Save</button>
+                            <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@ViewModel.IsBusy">Delete</button>
+                        </div>
+                    }
                 </div>
-                <div>
-                    <strong>Banned Countries</strong>
-                    @RenderStringList(ViewModel.Detail.BannedCountriesOfOrigin)
-                </div>
-                <div>
-                    <strong>Banned Organizations</strong>
-                    @RenderStringList(ViewModel.Detail.BannedOrganizations)
-                </div>
-                <div>
-                    <strong>Banned Individuals</strong>
-                    @RenderStringList(ViewModel.Detail.BannedIndividuals)
-                </div>
+                @if (IsSectionExpanded(WorkspaceSectionKey))
+                {
+                    <div class="Box-body">
+                        <div class="detail-field-grid">
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-block">Path</label>
+                                <code>@ViewModel.Detail.WorkspacePath</code>
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Name</label>
+                                @if (CanEdit)
+                                {
+                                    <input class="form-control" @bind="ViewModel.EditorName" />
+                                }
+                                else
+                                {
+                                    <span>@ViewModel.Detail.Name</span>
+                                }
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Tunnel Provider</label>
+                                @if (CanEdit)
+                                {
+                                    <input class="form-control" @bind="ViewModel.EditorTunnelProvider" />
+                                }
+                                else
+                                {
+                                    <span>@(ViewModel.Detail.TunnelProvider ?? "(not set)")</span>
+                                }
+                            </div>
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-block">Todo Path</label>
+                                @if (CanEdit)
+                                {
+                                    <input class="form-control" @bind="ViewModel.EditorTodoPath" />
+                                }
+                                else
+                                {
+                                    <code>@ViewModel.Detail.TodoPath</code>
+                                }
+                            </div>
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-block">Data Directory</label>
+                                @if (CanEdit)
+                                {
+                                    <input class="form-control" @bind="ViewModel.EditorDataDirectory" />
+                                }
+                                else
+                                {
+                                    <span>@(ViewModel.Detail.DataDirectory ?? "(not set)")</span>
+                                }
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Run As</label>
+                                @if (CanEdit)
+                                {
+                                    <input class="form-control" @bind="ViewModel.EditorRunAs" />
+                                }
+                                else
+                                {
+                                    <span>@(ViewModel.Detail.RunAs ?? "(not set)")</span>
+                                }
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Enabled</label>
+                                @if (CanEdit)
+                                {
+                                    <label class="d-flex flex-items-center gap-2">
+                                        <input type="checkbox" @bind="ViewModel.EditorIsEnabled" /> Enabled
+                                    </label>
+                                }
+                                else
+                                {
+                                    <span>@(ViewModel.Detail.IsEnabled ? "Yes" : "No")</span>
+                                }
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Primary</label>
+                                @if (CanEdit)
+                                {
+                                    <label class="d-flex flex-items-center gap-2">
+                                        <input type="checkbox" @bind="ViewModel.EditorIsPrimary" /> Primary
+                                    </label>
+                                }
+                                else
+                                {
+                                    <span>@(ViewModel.Detail.IsPrimary ? "Yes" : "No")</span>
+                                }
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Created</label>
+                                <span>@ViewModel.Detail.DateTimeCreated.ToLocalTime().ToString("g")</span>
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Modified</label>
+                                <span>@ViewModel.Detail.DateTimeModified.ToLocalTime().ToString("g")</span>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
-        </div>
-    </div>
 
-    @if (CanEdit)
-    {
-        <div class="d-flex gap-2 mb-3">
-            <button class="btn btn-primary" @onclick="SaveAsync" disabled="@ViewModel.IsBusy">Save</button>
-            <button class="btn btn-danger" @onclick="DeleteAsync" disabled="@ViewModel.IsBusy">Delete</button>
-        </div>
-    }
-}
+            <div class="Box detail-card-section">
+                <div class="Box-header detail-card-section__header">
+                    <button type="button"
+                            class="detail-card-expander"
+                            aria-expanded="@IsSectionExpanded(PolicySectionKey).ToString().ToLowerInvariant()"
+                            @onclick='() => ToggleSection(PolicySectionKey)'>
+                        <span class="h4 mb-0">Policy</span>
+                        <span class="detail-card-expander__icon" aria-hidden="true">@GetSectionIcon(PolicySectionKey)</span>
+                    </button>
+                </div>
+                @if (IsSectionExpanded(PolicySectionKey))
+                {
+                    <div class="Box-body">
+                        <div class="detail-field-grid detail-field-grid--compact">
+                            <div>
+                                <strong>Banned Licenses</strong>
+                                @RenderStringList(ViewModel.Detail.BannedLicenses)
+                            </div>
+                            <div>
+                                <strong>Banned Countries</strong>
+                                @RenderStringList(ViewModel.Detail.BannedCountriesOfOrigin)
+                            </div>
+                            <div>
+                                <strong>Banned Organizations</strong>
+                                @RenderStringList(ViewModel.Detail.BannedOrganizations)
+                            </div>
+                            <div>
+                                <strong>Banned Individuals</strong>
+                                @RenderStringList(ViewModel.Detail.BannedIndividuals)
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+        }
     </div>
 </div>
 
@@ -197,6 +213,11 @@ else
     public string? WorkspacePath { get; set; }
 
     private string? _loadedPath;
+    private HashSet<string> _expandedSections = CreateDefaultExpandedSections();
+
+    private const string WorkspaceSectionKey = "workspace";
+    private const string PolicySectionKey = "policy";
+
     private bool CanEdit => AuthPolicy.CanExecuteAction(McpServer.UI.Core.Authorization.McpActionKeys.WorkspaceUpdate);
 
     protected override async Task OnInitializedAsync()
@@ -221,11 +242,48 @@ else
             ViewModel.WorkspacePath = WorkspacePath;
             await ViewModel.LoadAsync().ConfigureAwait(true);
         }).ConfigureAwait(true);
+        ResetExpandedSections();
     }
 
     private async Task SaveAsync() => await CommandTarget.RunAsync(() => ViewModel.SaveAsync()).ConfigureAwait(true);
 
     private async Task DeleteAsync() => await CommandTarget.RunAsync(() => ViewModel.DeleteAsync()).ConfigureAwait(true);
+
+    private IReadOnlyList<DetailNavigationItem> GetNavigationItems()
+        => ListViewModel.Workspaces
+            .Select(ws => new DetailNavigationItem(
+                ws.WorkspacePath,
+                $"/workspaces/detail?path={Uri.EscapeDataString(ws.WorkspacePath)}",
+                ws.Name,
+                GetWorkspaceStatusText(ws)))
+            .ToArray();
+
+    private static string GetWorkspaceStatusText(WorkspaceSummary workspace)
+        => workspace.IsPrimary ? "Primary" : workspace.IsEnabled ? "Enabled" : "Disabled";
+
+    private bool IsSectionExpanded(string section)
+        => _expandedSections.Contains(section);
+
+    private void ToggleSection(string section)
+    {
+        if (!_expandedSections.Add(section))
+        {
+            _expandedSections.Remove(section);
+        }
+    }
+
+    private void ResetExpandedSections()
+        => _expandedSections = CreateDefaultExpandedSections();
+
+    private static HashSet<string> CreateDefaultExpandedSections()
+        => new(StringComparer.Ordinal)
+        {
+            WorkspaceSectionKey,
+            PolicySectionKey
+        };
+
+    private string GetSectionIcon(string section)
+        => IsSectionExpanded(section) ? "▾" : "▸";
 
     private static RenderFragment RenderStringList(IReadOnlyList<string> values) => builder =>
     {
@@ -250,4 +308,3 @@ else
         builder.CloseElement();
     };
 }
-

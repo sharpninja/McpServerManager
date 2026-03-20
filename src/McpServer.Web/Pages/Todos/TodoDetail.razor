@@ -25,6 +25,11 @@
     </aside>
 
     <div class="detail-main">
+        <DetailItemToolbar Items="GetNavigationItems()"
+                           CurrentKey="@TodoId"
+                           ItemTypeLabel="Todo"
+                           AriaLabel="Todo item navigation" />
+
         @if (string.IsNullOrWhiteSpace(TodoId))
         {
             <PrimerBlankslate Heading="No todo selected" Description="Choose a TODO from the sidebar." />
@@ -53,10 +58,16 @@
                 <PrimerFlash Variant="danger" Title="Prompt generation failed">@ViewModel.PromptErrorMessage</PrimerFlash>
             }
 
-            <div class="Box mb-3">
-                <div class="Box-header d-flex flex-justify-between flex-items-center flex-wrap gap-2">
-                    <h2 class="h3 mb-0">@ViewModel.Detail.Id — @ViewModel.Detail.Title</h2>
-                    <div class="d-flex gap-2 flex-wrap">
+            <div class="Box detail-card-section">
+                <div class="Box-header detail-card-section__header">
+                    <button type="button"
+                            class="detail-card-expander"
+                            aria-expanded="@IsSectionExpanded(EditorSectionKey).ToString().ToLowerInvariant()"
+                            @onclick='() => ToggleSection(EditorSectionKey)'>
+                        <span class="h3 mb-0">@ViewModel.Detail.Id — @ViewModel.Detail.Title</span>
+                        <span class="detail-card-expander__icon" aria-hidden="true">@GetSectionIcon(EditorSectionKey)</span>
+                    </button>
+                    <div class="detail-card-expander__actions">
                         @if (CanEdit)
                         {
                             <button class="btn btn-primary btn-sm" @onclick="SaveAsync" disabled="@ViewModel.IsBusy">
@@ -86,36 +97,50 @@
                         </button>
                     </div>
                 </div>
-                <div class="Box-body p-0">
-                    <MonacoEditor @bind-Value="ViewModel.EditorMarkdownText"
-                                  Language="markdown"
-                                  ReadOnly="@(!CanEdit)"
-                                  Height="600" />
-                </div>
+                @if (IsSectionExpanded(EditorSectionKey))
+                {
+                    <div class="Box-body p-0">
+                        <MonacoEditor @bind-Value="ViewModel.EditorMarkdownText"
+                                      Language="markdown"
+                                      ReadOnly="@(!CanEdit)"
+                                      Height="600" />
+                    </div>
+                }
             </div>
+
+            @if (ViewModel.PromptOutput is { } output)
+            {
+                <div class="Box detail-card-section" id="prompt-output-panel">
+                    <div class="Box-header detail-card-section__header">
+                        <button type="button"
+                                class="detail-card-expander"
+                                aria-expanded="@IsSectionExpanded(PromptSectionKey).ToString().ToLowerInvariant()"
+                                @onclick='() => ToggleSection(PromptSectionKey)'>
+                            <span class="h4 mb-0">
+                                Copilot Prompt — @output.PromptType
+                                <span class="color-fg-muted f6 ml-2">(@output.TodoId)</span>
+                            </span>
+                            <span class="detail-card-expander__icon" aria-hidden="true">@GetSectionIcon(PromptSectionKey)</span>
+                        </button>
+                        <div class="detail-card-expander__actions">
+                            <button class="btn btn-sm" @onclick="ClearPromptOutput" aria-label="Clear prompt output">
+                                <OcticonIcon Name="x" Size="16" /> Clear
+                            </button>
+                        </div>
+                    </div>
+                    @if (IsSectionExpanded(PromptSectionKey))
+                    {
+                        <div class="Box-body">
+                            <pre class="f6 overflow-auto" style="white-space: pre-wrap; max-height: 400px;"
+                                 id="prompt-output-text">@output.Text</pre>
+                        </div>
+                    }
+                </div>
+            }
 
             @if (ViewModel.IsPromptBusy)
             {
                 <p class="color-fg-muted" id="prompt-generating-indicator">Generating prompt...</p>
-            }
-
-            @if (ViewModel.PromptOutput is { } output)
-            {
-                <div class="Box mb-3" id="prompt-output-panel">
-                    <div class="Box-header d-flex flex-justify-between flex-items-center">
-                        <h3 class="h4 mb-0">
-                            Copilot Prompt — @output.PromptType
-                            <span class="color-fg-muted f6 ml-2">(@output.TodoId)</span>
-                        </h3>
-                        <button class="btn btn-sm" @onclick="ClearPromptOutput" aria-label="Clear prompt output">
-                            <OcticonIcon Name="x" Size="16" /> Clear
-                        </button>
-                    </div>
-                    <div class="Box-body">
-                        <pre class="f6 overflow-auto" style="white-space: pre-wrap; max-height: 400px;"
-                             id="prompt-output-text">@output.Text</pre>
-                    </div>
-                </div>
             }
         }
     </div>
@@ -126,6 +151,11 @@
     public string TodoId { get; set; } = string.Empty;
 
     private string? _loadedId;
+    private HashSet<string> _expandedSections = CreateDefaultExpandedSections();
+
+    private const string EditorSectionKey = "editor";
+    private const string PromptSectionKey = "prompt";
+
     private bool CanEdit => AuthPolicy.CanExecuteAction(McpServer.UI.Core.Authorization.McpActionKeys.TodoUpdate);
 
     private static readonly string[] PriorityOrder = ["critical", "high", "medium", "low"];
@@ -137,10 +167,18 @@
             .GroupBy(i => i.Priority ?? "low")
             .OrderBy(g => Array.IndexOf(PriorityOrder, g.Key.ToLowerInvariant()) is var idx && idx < 0 ? int.MaxValue : idx);
 
+    private IReadOnlyList<DetailNavigationItem> GetNavigationItems()
+        => GroupByPriority(ListViewModel.Items)
+            .SelectMany(static group => group)
+            .Select(item => new DetailNavigationItem(
+                item.Id,
+                $"/todos/{Uri.EscapeDataString(item.Id)}",
+                item.Id,
+                item.Title))
+            .ToArray();
+
     protected override async Task OnParametersSetAsync()
     {
-        // Ensure the shared ListViewModel has items (direct navigation without visiting list page first).
-        // Apply same defaults as TodoList.razor (Done=false shows open items).
         if (ListViewModel.Items.Count == 0)
         {
             await CommandTarget.RunAsync(async () =>
@@ -159,6 +197,7 @@
             ViewModel.TodoId = TodoId;
             await ViewModel.LoadAsync().ConfigureAwait(true);
         }).ConfigureAwait(true);
+        ResetExpandedSections();
     }
 
     private async Task SaveAsync()
@@ -190,18 +229,50 @@
     }
 
     private Task GenerateStatusPromptAsync()
-        => CommandTarget.RunAsync(() => ViewModel.GenerateStatusPromptAsync());
+        => RunPromptGenerationAsync(() => ViewModel.GenerateStatusPromptAsync());
 
     private Task GeneratePlanPromptAsync()
-        => CommandTarget.RunAsync(() => ViewModel.GeneratePlanPromptAsync());
+        => RunPromptGenerationAsync(() => ViewModel.GeneratePlanPromptAsync());
 
     private Task GenerateImplementAsync()
-        => CommandTarget.RunAsync(() => ViewModel.GenerateImplementPromptAsync());
+        => RunPromptGenerationAsync(() => ViewModel.GenerateImplementPromptAsync());
 
     private void ClearPromptOutput()
     {
         ViewModel.PromptOutput = null;
         ViewModel.PromptErrorMessage = null;
+        _expandedSections.Remove(PromptSectionKey);
     }
-}
 
+    private async Task RunPromptGenerationAsync(Func<Task> generator)
+    {
+        await CommandTarget.RunAsync(generator).ConfigureAwait(true);
+        if (ViewModel.PromptOutput is not null)
+        {
+            _expandedSections.Add(PromptSectionKey);
+        }
+    }
+
+    private bool IsSectionExpanded(string section)
+        => _expandedSections.Contains(section);
+
+    private void ToggleSection(string section)
+    {
+        if (!_expandedSections.Add(section))
+        {
+            _expandedSections.Remove(section);
+        }
+    }
+
+    private void ResetExpandedSections()
+        => _expandedSections = CreateDefaultExpandedSections();
+
+    private static HashSet<string> CreateDefaultExpandedSections()
+        => new(StringComparer.Ordinal)
+        {
+            EditorSectionKey
+        };
+
+    private string GetSectionIcon(string section)
+        => IsSectionExpanded(section) ? "▾" : "▸";
+}

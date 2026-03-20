@@ -27,6 +27,7 @@ internal static class WebServiceRegistration
         // Avoid registering Dispatcher as an ILoggerProvider (AddCqrs) to prevent startup DI/logger cycles.
         // Web command dispatch needs the current scope so scoped CQRS behaviors can resolve correctly.
         services.AddScoped<Dispatcher>();
+        services.TryAddScoped<IUiDispatcherService, BlazorUiDispatcherService>();
         services.AddUiCore(typeof(WebServiceRegistration).Assembly);
 
         services.TryAddScoped<WebCommandTarget>();

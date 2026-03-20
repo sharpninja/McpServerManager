@@ -153,6 +153,9 @@ public sealed class TodoDetailPromptTests
         Assert.Contains("Line 1\nLine 2", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("status", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal);
+        var expanders = cut.FindAll("button.detail-card-expander");
+        Assert.Equal(2, expanders.Count);
+        Assert.All(expanders, button => Assert.Equal("true", button.GetAttribute("aria-expanded")));
     }
 
     [Fact]

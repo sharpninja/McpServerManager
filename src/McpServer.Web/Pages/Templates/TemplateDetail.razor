@@ -21,6 +21,11 @@
     </aside>
 
     <div class="detail-main">
+        <DetailItemToolbar Items="GetNavigationItems()"
+                           CurrentKey="@TemplateId"
+                           ItemTypeLabel="Template"
+                           AriaLabel="Template item navigation" />
+
         @if (string.IsNullOrWhiteSpace(TemplateId))
         {
             <PrimerBlankslate Heading="No template selected" Description="Choose a template from the sidebar." />
@@ -44,128 +49,155 @@
                 <PrimerFlash Variant="success" Title="Success">@ViewModel.StatusMessage</PrimerFlash>
             }
 
-            <div class="Box mb-3">
-                <div class="Box-header d-flex flex-justify-between flex-items-center">
-                    <h2 class="h3 mb-0">@ViewModel.Detail.Title</h2>
+            <div class="Box detail-card-section">
+                <div class="Box-header detail-card-section__header">
+                    <button type="button"
+                            class="detail-card-expander"
+                            aria-expanded="@IsSectionExpanded(SummarySectionKey).ToString().ToLowerInvariant()"
+                            @onclick='() => ToggleSection(SummarySectionKey)'>
+                        <span class="h3 mb-0">@ViewModel.Detail.Title</span>
+                        <span class="detail-card-expander__icon" aria-hidden="true">@GetSectionIcon(SummarySectionKey)</span>
+                    </button>
                     @if (CanEdit)
                     {
-                        <div class="d-flex gap-2">
+                        <div class="detail-card-expander__actions">
                             <button class="btn btn-primary btn-sm" @onclick="SaveAsync" disabled="@ViewModel.IsBusy">Save</button>
                             <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@ViewModel.IsBusy">Delete</button>
                         </div>
                     }
                 </div>
-                <div class="Box-body">
-                    <div class="d-flex flex-wrap gap-3" style="display: grid !important; grid-template-columns: 1fr 1fr; gap: 16px;">
-                        <div>
-                            <label class="text-small text-bold d-block">ID</label>
-                            <code>@ViewModel.Detail.Id</code>
+                @if (IsSectionExpanded(SummarySectionKey))
+                {
+                    <div class="Box-body">
+                        <div class="detail-field-grid">
+                            <div>
+                                <label class="text-small text-bold d-block">ID</label>
+                                <code>@ViewModel.Detail.Id</code>
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Title</label>
+                                @if (CanEdit)
+                                {
+                                    <input class="form-control width-full" @bind="ViewModel.EditorTitle" />
+                                }
+                                else
+                                {
+                                    <span>@ViewModel.Detail.Title</span>
+                                }
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Category</label>
+                                @if (CanEdit)
+                                {
+                                    <input class="form-control width-full" @bind="ViewModel.EditorCategory" />
+                                }
+                                else
+                                {
+                                    <span>@ViewModel.Detail.Category</span>
+                                }
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Engine</label>
+                                @if (CanEdit)
+                                {
+                                    <input class="form-control width-full" @bind="ViewModel.EditorEngine" />
+                                }
+                                else
+                                {
+                                    <span>@ViewModel.Detail.Engine</span>
+                                }
+                            </div>
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-block">Tags</label>
+                                @if (CanEdit)
+                                {
+                                    <input class="form-control width-full" placeholder="tag1, tag2, tag3" @bind="ViewModel.EditorTags" />
+                                }
+                                else
+                                {
+                                    <span>@string.Join(", ", ViewModel.Detail.Tags)</span>
+                                }
+                            </div>
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-block">Description</label>
+                                @if (CanEdit)
+                                {
+                                    <textarea class="form-control width-full" rows="3" @bind="ViewModel.EditorDescription"></textarea>
+                                }
+                                else
+                                {
+                                    <span>@(ViewModel.Detail.Description ?? "(none)")</span>
+                                }
+                            </div>
                         </div>
-                        <div>
-                            <label class="text-small text-bold d-block">Title</label>
-                            @if (CanEdit)
-                            {
-                                <input class="form-control width-full" @bind="ViewModel.EditorTitle" />
-                            }
-                            else
-                            {
-                                <span>@ViewModel.Detail.Title</span>
-                            }
-                        </div>
-                        <div>
-                            <label class="text-small text-bold d-block">Category</label>
-                            @if (CanEdit)
-                            {
-                                <input class="form-control width-full" @bind="ViewModel.EditorCategory" />
-                            }
-                            else
-                            {
-                                <span>@ViewModel.Detail.Category</span>
-                            }
-                        </div>
-                        <div>
-                            <label class="text-small text-bold d-block">Engine</label>
-                            @if (CanEdit)
-                            {
-                                <input class="form-control width-full" @bind="ViewModel.EditorEngine" />
-                            }
-                            else
-                            {
-                                <span>@ViewModel.Detail.Engine</span>
-                            }
-                        </div>
-                        <div>
-                            <label class="text-small text-bold d-block">Tags</label>
-                            @if (CanEdit)
-                            {
-                                <input class="form-control width-full" placeholder="tag1, tag2, tag3" @bind="ViewModel.EditorTags" />
-                            }
-                            else
-                            {
-                                <span>@string.Join(", ", ViewModel.Detail.Tags)</span>
-                            }
-                        </div>
-                        <div>
-                            <label class="text-small text-bold d-block">Description</label>
-                            @if (CanEdit)
-                            {
-                                <textarea class="form-control width-full" rows="3" @bind="ViewModel.EditorDescription"></textarea>
-                            }
-                            else
-                            {
-                                <span>@(ViewModel.Detail.Description ?? "(none)")</span>
-                            }
+                        <div class="mt-3">
+                            <a class="btn btn-sm" href="@GetTestHref(ViewModel.Detail.Id)">Test this template</a>
                         </div>
                     </div>
-                    <div class="mt-3">
-                        <a class="btn btn-sm" href="@GetTestHref(ViewModel.Detail.Id)">Test this template</a>
+                }
+            </div>
+
+            <div class="Box detail-card-section">
+                <div class="Box-header detail-card-section__header">
+                    <button type="button"
+                            class="detail-card-expander"
+                            aria-expanded="@IsSectionExpanded(VariablesSectionKey).ToString().ToLowerInvariant()"
+                            @onclick='() => ToggleSection(VariablesSectionKey)'>
+                        <span class="h4 mb-0">Variables</span>
+                        <span class="detail-card-expander__icon" aria-hidden="true">@GetSectionIcon(VariablesSectionKey)</span>
+                    </button>
+                </div>
+                @if (IsSectionExpanded(VariablesSectionKey))
+                {
+                    <div class="Box-body">
+                        @if (ViewModel.Detail.Variables.Count == 0)
+                        {
+                            <p class="color-fg-muted mb-0">No variables declared.</p>
+                        }
+                        else
+                        {
+                            <PrimerDataTable TItem="TemplateVariableDetail" Items="ViewModel.Detail.Variables" ColumnCount="5" Class="Table--full-width">
+                                <HeaderTemplate>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Required</th>
+                                        <th>Description</th>
+                                        <th>Example</th>
+                                        <th>Default</th>
+                                    </tr>
+                                </HeaderTemplate>
+                                <RowTemplate Context="variable">
+                                    <td><code>@variable.Name</code></td>
+                                    <td>@(variable.Required ? "Yes" : "No")</td>
+                                    <td>@(variable.Description ?? string.Empty)</td>
+                                    <td><code>@(variable.Example ?? string.Empty)</code></td>
+                                    <td><code>@(variable.DefaultValue ?? string.Empty)</code></td>
+                                </RowTemplate>
+                            </PrimerDataTable>
+                        }
                     </div>
-                </div>
+                }
             </div>
 
-            <div class="Box mb-3">
-                <div class="Box-header">
-                    <h3 class="h4 mb-0">Variables</h3>
+            <div class="Box detail-card-section">
+                <div class="Box-header detail-card-section__header">
+                    <button type="button"
+                            class="detail-card-expander"
+                            aria-expanded="@IsSectionExpanded(ContentSectionKey).ToString().ToLowerInvariant()"
+                            @onclick='() => ToggleSection(ContentSectionKey)'>
+                        <span class="h4 mb-0">Template Content</span>
+                        <span class="detail-card-expander__icon" aria-hidden="true">@GetSectionIcon(ContentSectionKey)</span>
+                    </button>
                 </div>
-                <div class="Box-body">
-                    @if (ViewModel.Detail.Variables.Count == 0)
-                    {
-                        <p class="color-fg-muted mb-0">No variables declared.</p>
-                    }
-                    else
-                    {
-                        <PrimerDataTable TItem="TemplateVariableDetail" Items="ViewModel.Detail.Variables" ColumnCount="5" Class="Table--full-width">
-                            <HeaderTemplate>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Required</th>
-                                    <th>Description</th>
-                                    <th>Example</th>
-                                    <th>Default</th>
-                                </tr>
-                            </HeaderTemplate>
-                            <RowTemplate Context="variable">
-                                <td><code>@variable.Name</code></td>
-                                <td>@(variable.Required ? "Yes" : "No")</td>
-                                <td>@(variable.Description ?? string.Empty)</td>
-                                <td><code>@(variable.Example ?? string.Empty)</code></td>
-                                <td><code>@(variable.DefaultValue ?? string.Empty)</code></td>
-                            </RowTemplate>
-                        </PrimerDataTable>
-                    }
-                </div>
-            </div>
-
-            <div class="Box mb-3">
-                <div class="Box-header">
-                    <h3 class="h4 mb-0">Template Content</h3>
-                </div>
-                <div class="Box-body p-0">
-                    <MonacoEditor @bind-Value="ViewModel.EditorContent"
-                                  Language="handlebars"
-                                  ReadOnly="@(!CanEdit)"
-                                  Height="500" />
-                </div>
+                @if (IsSectionExpanded(ContentSectionKey))
+                {
+                    <div class="Box-body p-0">
+                        <MonacoEditor @bind-Value="ViewModel.EditorContent"
+                                      Language="handlebars"
+                                      ReadOnly="@(!CanEdit)"
+                                      Height="500" />
+                    </div>
+                }
             </div>
         }
     </div>
@@ -186,6 +218,12 @@
 
     private string? _loadedTemplateId;
     private string? _lastFilterKey;
+    private HashSet<string> _expandedSections = CreateDefaultExpandedSections();
+
+    private const string SummarySectionKey = "summary";
+    private const string VariablesSectionKey = "variables";
+    private const string ContentSectionKey = "content";
+
     private bool CanEdit => AuthPolicy.CanExecuteAction(McpServer.UI.Core.Authorization.McpActionKeys.TemplateUpdate);
 
     protected override async Task OnParametersSetAsync()
@@ -212,6 +250,7 @@
             await ViewModel.LoadAsync(TemplateId).ConfigureAwait(true);
             ViewModel.PopulateEditorFromDetail();
         }).ConfigureAwait(true);
+        ResetExpandedSections();
     }
 
     private async Task SaveAsync() => await CommandTarget.RunAsync(() => ViewModel.SaveAsync()).ConfigureAwait(true);
@@ -226,8 +265,42 @@
             : $"/templates/{Uri.EscapeDataString(templateId)}?{qs}";
     }
 
+    private IReadOnlyList<DetailNavigationItem> GetNavigationItems()
+        => (ListViewModel?.Items ?? [])
+            .Select(item => new DetailNavigationItem(
+                item.Id,
+                GetDetailHref(item.Id),
+                item.Title,
+                item.Category))
+            .ToArray();
+
     private static string GetTestHref(string templateId)
         => $"/templates/test?templateId={Uri.EscapeDataString(templateId)}";
+
+    private bool IsSectionExpanded(string section)
+        => _expandedSections.Contains(section);
+
+    private void ToggleSection(string section)
+    {
+        if (!_expandedSections.Add(section))
+        {
+            _expandedSections.Remove(section);
+        }
+    }
+
+    private void ResetExpandedSections()
+        => _expandedSections = CreateDefaultExpandedSections();
+
+    private static HashSet<string> CreateDefaultExpandedSections()
+        => new(StringComparer.Ordinal)
+        {
+            SummarySectionKey,
+            VariablesSectionKey,
+            ContentSectionKey
+        };
+
+    private string GetSectionIcon(string section)
+        => IsSectionExpanded(section) ? "▾" : "▸";
 
     private string BuildFilterQueryString()
     {
@@ -238,4 +311,3 @@
         return string.Join("&", parts);
     }
 }
-
