@@ -13,7 +13,6 @@ using System.Text.Json.Serialization;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Threading;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -52,6 +51,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private const string McpAgentPrefix = "MCP_AGENT://";
 
     private readonly IClipboardService _clipboardService;
+    private readonly IUiDispatcherService _uiDispatcher;
     private readonly ISystemNotificationService _systemNotificationService;
     private string _defaultMcpBaseUrl = "";
     private string? _defaultMcpApiKey;
@@ -323,17 +323,32 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private bool _isNavigatingHistory;
 
     public MainWindowViewModel(IClipboardService clipboardService)
-        : this(clipboardService, GetMcpBaseUrl(), mcpApiKey: null, bearerToken: null, systemNotificationService: null)
+        : this(clipboardService, GetMcpBaseUrl(), mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher: null)
+    {
+    }
+
+    public MainWindowViewModel(IClipboardService clipboardService, IUiDispatcherService uiDispatcher)
+        : this(clipboardService, GetMcpBaseUrl(), mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher)
     {
     }
 
     public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl)
-        : this(clipboardService, mcpBaseUrl, mcpApiKey: null, bearerToken: null, systemNotificationService: null)
+        : this(clipboardService, mcpBaseUrl, mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher: null)
+    {
+    }
+
+    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, IUiDispatcherService uiDispatcher)
+        : this(clipboardService, mcpBaseUrl, mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher)
     {
     }
 
     public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey)
-        : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null, systemNotificationService: null)
+        : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null, systemNotificationService: null, uiDispatcher: null)
+    {
+    }
+
+    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey, IUiDispatcherService uiDispatcher)
+        : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null, systemNotificationService: null, uiDispatcher)
     {
     }
 
@@ -342,9 +357,11 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         string mcpBaseUrl,
         string? mcpApiKey,
         string? bearerToken,
-        ISystemNotificationService? systemNotificationService = null)
+        ISystemNotificationService? systemNotificationService = null,
+        IUiDispatcherService? uiDispatcher = null)
     {
         _clipboardService = clipboardService;
+        _uiDispatcher = uiDispatcher ?? new ImmediateUiDispatcherService();
         _systemNotificationService = systemNotificationService ?? NoOpSystemNotificationService.Instance;
         _activeBearerToken = string.IsNullOrWhiteSpace(bearerToken) ? null : bearerToken.Trim();
         InitializeMcpEndpoint(mcpBaseUrl, mcpApiKey);
@@ -2259,7 +2276,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         var (allJsonNode, documentsDto, sourceDto) = BuildMcpTreeOffThread(uniqueSessions);
         // Await the UI dispatch so the tracked task stays alive until the tree selection
         // (and any subsequent navigation commands it triggers) has been dispatched.
-        await Dispatcher.UIThread.InvokeAsync(() =>
+        await DispatchToUiAsync(() =>
         {
             _mcpSessions = uniqueSessions;
             _mcpSessionsByPath = byPath;
@@ -2377,34 +2394,29 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     /// <summary>Dispatches an action to the UI thread. Use for any property/collection updates from background work.</summary>
     protected void DispatchToUi(Action action)
     {
-        if (Dispatcher.UIThread.CheckAccess())
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (_uiDispatcher.CheckAccess())
             action();
         else
-            Dispatcher.UIThread.Post(() => action());
+            _uiDispatcher.Post(action);
     }
 
     internal Task DispatchToUiAsync(Action action)
     {
-        if (Dispatcher.UIThread.CheckAccess())
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (_uiDispatcher.CheckAccess())
         {
             action();
             return Task.CompletedTask;
         }
 
-        var tcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        Dispatcher.UIThread.Post(() =>
+        return _uiDispatcher.InvokeAsync(() =>
         {
-            try
-            {
-                action();
-                tcs.TrySetResult(null);
-            }
-            catch (Exception ex)
-            {
-                tcs.TrySetException(ex);
-            }
+            action();
+            return Task.CompletedTask;
         });
-        return tcs.Task;
     }
 
     /// <summary>Reads a text file with encoding detection (BOM) and strips BOM so Markdown.Avalonia displays correctly.</summary>
@@ -3883,7 +3895,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
 
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
-        Dispatcher.UIThread.InvokeAsync(() =>
+        DispatchToUi(() =>
         {
             // If the changed file is the current one, regenerate
             if (_currentMarkdownPath != null && e.FullPath.Equals(_currentMarkdownPath, StringComparison.OrdinalIgnoreCase))

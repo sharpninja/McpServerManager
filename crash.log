@@ -1,7 +1,0 @@
-System.NullReferenceException: Object reference not set to an instance of an object.
-   at McpServerManager.Desktop.Views.TodoListView..ctor() in E:\github\McpServerManager\src\McpServerManager.Desktop\Views\TodoListView.axaml.cs:line 25
-   at McpServerManager.Desktop.Views.MainWindow.!XamlIlPopulate(IServiceProvider, MainWindow) in E:\github\McpServerManager\src\McpServerManager.Desktop\Views/MainWindow.axaml:line 22
-   at McpServerManager.Desktop.Views.MainWindow.!XamlIlPopulateTrampoline(MainWindow)
-   at McpServerManager.Desktop.Views.MainWindow.InitializeComponent(Boolean loadXaml, Boolean attachDevTools) in E:\github\McpServerManager\src\McpServerManager.Desktop\obj\Debug\net9.0\Avalonia.Generators\Avalonia.Generators.NameGenerator.AvaloniaNameSourceGenerator\McpServerManager.Desktop.Views.MainWindow.g.cs:line 34
-   at McpServerManager.Desktop.Views.MainWindow..ctor() in E:\github\McpServerManager\src\McpServerManager.Desktop\Views\MainWindow.axaml.cs:line 20
-   at McpServerManager.Desktop.App.OnFrameworkInitializationCompleted() in E:\github\McpServerManager\src\McpServerManager.Desktop\App.axaml.cs:line 30

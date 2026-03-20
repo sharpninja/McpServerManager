@@ -8,6 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
+using McpServer.UI.Core.Services;
 using McpServerManager.Android.Services;
 using McpServerManager.Core.ViewModels;
 using UiCoreMcpTodoFlatItem = McpServer.UI.Core.Models.McpTodoFlatItem;
@@ -104,9 +105,9 @@ public partial class PhoneTodoView : UserControl
 
     private void SyncTabContent(TodoListViewModel vm)
     {
-        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+        if (!UiDispatcherHost.CheckAccess())
         {
-            Avalonia.Threading.Dispatcher.UIThread.Post(() => SyncTabContent(vm));
+            UiDispatcherHost.Post(() => SyncTabContent(vm));
             return;
         }
 
@@ -137,10 +138,10 @@ public partial class PhoneTodoView : UserControl
     {
         if (e.PropertyName == nameof(EditorTab.Content) && sender is EditorTab tab && tab.IsMarkdown)
         {
-            if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+            if (UiDispatcherHost.CheckAccess())
                 MarkdownText.Text = tab.Content;
             else
-                Avalonia.Threading.Dispatcher.UIThread.Post(() => MarkdownText.Text = tab.Content);
+                UiDispatcherHost.Post(() => MarkdownText.Text = tab.Content);
         }
     }
 

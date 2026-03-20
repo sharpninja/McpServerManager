@@ -3,9 +3,9 @@ using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using McpServerManager.Core.Services;
+using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
 
 namespace McpServerManager.Android.Views;
 
@@ -66,7 +66,7 @@ public partial class AnimatedStatusBar : UserControl
         {
             if (!_animating) return;
             _hue = (_hue + 3) % 360;
-            Dispatcher.UIThread.Post(() =>
+            UiDispatcherHost.Post(() =>
             {
                 if (!_animating) return;
                 Background = new SolidColorBrush(HslToColor(_hue, 0.7, 0.55));

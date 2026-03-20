@@ -7,6 +7,7 @@
 @using McpServer.Web.ViewModels
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
+@inherits McpServer.Web.Components.UiDispatcherComponentBase
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
@@ -292,7 +293,7 @@
             return;
 
         this.panelWidthPx = clampedWidth;
-        await this.InvokeAsync(this.StateHasChanged);
+        await this.RefreshUiAsync();
     }
 
     private async Task ToggleSessionAsync()
@@ -304,13 +305,13 @@
             this.draftText = string.Empty;
             this.ViewModel.ClearDraft();
             await this.ViewModel.EndAgentChatAsync().ConfigureAwait(true);
-            await this.InvokeAsync(this.StateHasChanged);
+            await this.RefreshUiAsync();
             return;
         }
 
         this.ephemeralMessages.Clear();
         await this.ViewModel.StartOrResumeSessionAsync().ConfigureAwait(true);
-        await this.InvokeAsync(this.StateHasChanged);
+        await this.RefreshUiAsync();
     }
 
     private async Task SubmitAsync()
@@ -359,7 +360,7 @@
                         : "Agent · Completed";
                 }
 
-                await this.InvokeAsync(this.StateHasChanged);
+                await this.RefreshUiAsync();
             }
 
             if (completed)
@@ -385,7 +386,7 @@
             this.isStreamingTurn = false;
             this.activeStreamCts?.Dispose();
             this.activeStreamCts = null;
-            await this.InvokeAsync(this.StateHasChanged);
+            await this.RefreshUiAsync();
         }
     }
 
@@ -393,27 +394,27 @@
     {
         await this.ViewModel.RefreshChatAsync().ConfigureAwait(true);
         this.ephemeralMessages.Clear();
-        await this.InvokeAsync(this.StateHasChanged);
+        await this.RefreshUiAsync();
     }
 
     private async Task InterruptAsync()
     {
         await this.ViewModel.InterruptTurnAsync().ConfigureAwait(true);
         this.activeStreamCts?.Cancel();
-        await this.InvokeAsync(this.StateHasChanged);
+        await this.RefreshUiAsync();
     }
 
     private async Task SendEscapeAsync()
     {
         await this.ViewModel.SendEscapeToAgentAsync().ConfigureAwait(true);
-        await this.InvokeAsync(this.StateHasChanged);
+        await this.RefreshUiAsync();
     }
 
     private Task ClearDraftAsync()
     {
         this.draftText = string.Empty;
         this.ViewModel.ClearDraft();
-        return this.InvokeAsync(this.StateHasChanged);
+        return this.RefreshUiAsync();
     }
 
     private Task CloseAsync()
@@ -454,7 +455,7 @@
             _ => true,
         };
 
-        return this.InvokeAsync(this.StateHasChanged);
+        return this.RefreshUiAsync();
     }
 
     private Task OnResizeHandleKeyDownAsync(KeyboardEventArgs args)
@@ -514,10 +515,10 @@
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
-        => _ = this.InvokeAsync(this.StateHasChanged);
+        => _ = this.RefreshUiAsync();
 
     private void OnTranscriptItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        => _ = this.InvokeAsync(this.StateHasChanged);
+        => _ = this.RefreshUiAsync();
 
     private void Unsubscribe()
     {
@@ -578,7 +579,7 @@
     private async Task PersistPanelWidthAsync()
     {
         await this.JSRuntime.InvokeVoidAsync("agentChatFlyout.storeWidth", this.panelWidthPx);
-        await this.InvokeAsync(this.StateHasChanged);
+        await this.RefreshUiAsync();
     }
 
     private sealed class AgentChatMessage

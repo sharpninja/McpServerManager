@@ -5,12 +5,12 @@ namespace McpServerManager.ViewModels;
 public partial class MainWindowViewModel : McpServerManager.Core.ViewModels.MainWindowViewModel
 {
     public MainWindowViewModel()
-        : base(new ClipboardService())
+        : base(new ClipboardService(), new McpServerManager.Core.Services.AvaloniaUiDispatcherService())
     {
     }
 
     public MainWindowViewModel(IClipboardService clipboardService)
-        : base(clipboardService)
+        : base(clipboardService, new McpServerManager.Core.Services.AvaloniaUiDispatcherService())
     {
     }
 }

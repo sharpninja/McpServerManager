@@ -10,15 +10,16 @@ public partial class ConnectionViewModel : McpServer.UI.Core.ViewModels.Connecti
     private readonly CqrsDispatcher _dispatcher;
 
     public ConnectionViewModel()
-        : this(new ConnectionAuthServiceAdapter())
+        : this(new ConnectionAuthServiceAdapter(), uiDispatcher: new AvaloniaUiDispatcherService())
     {
     }
 
     public ConnectionViewModel(
         IConnectionAuthService connectionAuthService,
         ILogger<McpServer.UI.Core.ViewModels.ConnectionViewModel>? logger = null,
+        IUiDispatcherService? uiDispatcher = null,
         CqrsDispatcher? dispatcher = null)
-        : base(connectionAuthService, logger)
+        : base(connectionAuthService, logger, uiDispatcher ?? new AvaloniaUiDispatcherService())
     {
         _dispatcher = dispatcher ?? LocalCqrsDispatcher.Instance;
     }

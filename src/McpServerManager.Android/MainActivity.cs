@@ -4,7 +4,7 @@ using Android.Content.Res;
 using Android.OS;
 using Avalonia;
 using Avalonia.Android;
-using Avalonia.Threading;
+using McpServer.UI.Core.Services;
 using McpServerManager.Android.Services;
 
 namespace McpServerManager.Android;
@@ -95,15 +95,9 @@ public class MainActivity : AvaloniaMainActivity<App>
     {
         bool Core()
         {
-            bool handled;
-            if (Dispatcher.UIThread.CheckAccess())
-            {
-                handled = AndroidBackNavigationService.TryHandleBack();
-            }
-            else
-            {
-                handled = Dispatcher.UIThread.InvokeAsync(AndroidBackNavigationService.TryHandleBack).GetAwaiter().GetResult();
-            }
+            var handled = UiDispatcherHost.CheckAccess()
+                ? AndroidBackNavigationService.TryHandleBack()
+                : UiDispatcherHost.InvokeAsync(AndroidBackNavigationService.TryHandleBack).GetAwaiter().GetResult();
 
             if (handled)
                 return true;

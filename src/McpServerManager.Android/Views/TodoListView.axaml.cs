@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
+using McpServer.UI.Core.Services;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.ViewModels;
 using UiCoreTodoListEntry = McpServer.UI.Core.ViewModels.TodoListEntry;
@@ -64,9 +65,9 @@ public partial class TodoListView : UserControl
 
     private void SyncTabContent(TodoListViewModel vm)
     {
-        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+        if (!UiDispatcherHost.CheckAccess())
         {
-            Avalonia.Threading.Dispatcher.UIThread.Post(() => SyncTabContent(vm));
+            UiDispatcherHost.Post(() => SyncTabContent(vm));
             return;
         }
 
@@ -97,10 +98,10 @@ public partial class TodoListView : UserControl
     {
         if (e.PropertyName == nameof(EditorTab.Content) && sender is EditorTab tab && tab.IsMarkdown)
         {
-            if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+            if (UiDispatcherHost.CheckAccess())
                 MarkdownText.Text = tab.Content;
             else
-                Avalonia.Threading.Dispatcher.UIThread.Post(() => MarkdownText.Text = tab.Content);
+                UiDispatcherHost.Post(() => MarkdownText.Text = tab.Content);
         }
     }
 

@@ -28,14 +28,16 @@ public sealed class McpServerMcpTodoToolWindowPane : ToolWindowPane
 
         var client = new McpTodoClient(solutionDir: solutionDir);
         var editorService = TodoEditorService.Instance ?? new TodoEditorService(client);
+        var uiDispatcher = new VsixUiDispatcherService();
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<ITodoApiClient>(_ => new VsixTodoApiClientAdapter(client));
-        services.AddSingleton<IClipboardService, VsixClipboardService>();
-        services.AddSingleton<IUiDispatcherService, VsixUiDispatcherService>();
+        services.AddSingleton<IUiDispatcherService>(_ => uiDispatcher);
+        services.AddSingleton<IClipboardService>(sp => new VsixClipboardService(sp.GetRequiredService<IUiDispatcherService>()));
         services.AddSingleton<ITimerService, NoOpTimerService>();
         services.AddCqrsDispatcher();
         services.AddUiCore();
+        UiDispatcherHost.Configure(uiDispatcher);
 
         _serviceProvider = services.BuildServiceProvider();
 

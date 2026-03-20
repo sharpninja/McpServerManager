@@ -1,7 +1,7 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Threading;
+using McpServer.UI.Core.Services;
 using McpServerManager.Android.Services;
 
 namespace McpServerManager.Android.Views;
@@ -36,7 +36,7 @@ public partial class AdaptiveMainView : UserControl
 
     private void OnDisplayChanged()
     {
-        Dispatcher.UIThread.Post(EvaluateLayout);
+        UiDispatcherHost.Post(EvaluateLayout);
     }
 
     private void EvaluateLayout()

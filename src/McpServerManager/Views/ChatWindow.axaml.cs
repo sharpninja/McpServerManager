@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using McpServer.UI.Core.Services;
 using McpServerManager.Models;
 using ChatMessage = McpServer.UI.Core.Models.ChatMessage;
 using PromptTemplate = McpServer.UI.Core.Models.PromptTemplate;
@@ -56,7 +57,7 @@ public partial class ChatWindow : Window
         }
         else
         {
-            Dispatcher.UIThread.Post(() => ApplyTemplatePickerSplitterOnly(), DispatcherPriority.Loaded);
+            UiDispatcherHost.Post(ApplyTemplatePickerSplitterOnly);
         }
     }
 
@@ -229,11 +230,11 @@ public partial class ChatWindow : Window
 
     private void ScrollToEnd()
     {
-        Dispatcher.UIThread.Post(() =>
+        UiDispatcherHost.Post(() =>
         {
             if (MessageScroll != null)
                 MessageScroll.Offset = new Vector(MessageScroll.Offset.X, double.MaxValue);
-        }, DispatcherPriority.Background);
+        });
     }
 
     private void OnInputKeyDown(object? sender, KeyEventArgs e)

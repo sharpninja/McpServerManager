@@ -7,11 +7,13 @@ using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
 using McpServerManager.Desktop.Services;
 using McpServerManager.Desktop.Views;
+using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
 using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.IO;
 using System.Threading.Tasks;
 using StatusViewModel = McpServer.UI.Core.ViewModels.StatusViewModel;
 
@@ -35,7 +37,9 @@ public partial class App : Application
 
             try
             {
-                var connectionVm = new ConnectionViewModel();
+                var uiDispatcher = new AvaloniaUiDispatcherService();
+                UiDispatcherHost.Configure(uiDispatcher);
+                var connectionVm = new ConnectionViewModel(new ConnectionAuthServiceAdapter(), uiDispatcher: uiDispatcher);
                 connectionVm.Host = "localhost";
 
                 connectionVm.SetExternalUrlOpener(url =>
@@ -85,7 +89,7 @@ public partial class App : Application
 
                         var clipboardService = new DesktopClipboardService(desktop);
                         var notificationService = new DesktopSystemNotificationService();
-                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, notificationService);
+                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, notificationService, uiDispatcher);
                         vm.SaveWorkspaceKey = DesktopConnectionPreferencesService.SaveWorkspaceKey;
                         vm.LoadWorkspaceKey = DesktopConnectionPreferencesService.LoadWorkspaceKey;
                         var mainWindow = new MainWindow { DataContext = vm };
@@ -112,6 +116,7 @@ public partial class App : Application
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Connection failed");
+                        WriteConnectionFailureLog(ex);
                         connectionVm.ErrorMessage = $"Connection failed: {ex.Message}";
                         connectionVm.IsConnecting = false;
                     }
@@ -124,7 +129,7 @@ public partial class App : Application
                         connection.BaseUrl, !string.IsNullOrWhiteSpace(connection.ApiKey), !string.IsNullOrWhiteSpace(connection.BearerToken));
                     var shouldPersist = persistNextConnection;
                     persistNextConnection = true;
-                    OpenMainView(connection.BaseUrl, connection.ApiKey, connection.BearerToken, persistConnection: shouldPersist);
+                    uiDispatcher.Post(() => OpenMainView(connection.BaseUrl, connection.ApiKey, connection.BearerToken, persistConnection: shouldPersist));
                 };
 
                 connectionWindow.Show();
@@ -172,5 +177,22 @@ public partial class App : Application
             StatusViewModel.Instance.AddStatus(args.Exception.ToString());
             args.SetObserved();
         };
+    }
+
+    private static void WriteConnectionFailureLog(Exception ex)
+    {
+        try
+        {
+            var logDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "McpServerManager");
+            Directory.CreateDirectory(logDirectory);
+            var logPath = Path.Combine(logDirectory, "last-connection-failure.log");
+            File.WriteAllText(logPath, ex.ToString());
+        }
+        catch
+        {
+            // Do not mask the original connection failure with diagnostics logging errors.
+        }
     }
 }

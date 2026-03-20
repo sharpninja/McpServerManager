@@ -1,37 +1,33 @@
 using System;
 using System.Threading.Tasks;
-using Avalonia.Threading;
 using McpServer.UI.Core.Services;
+using Terminal.Gui;
 
-namespace McpServerManager.Core.Services;
+namespace McpServer.Director;
 
-/// <summary>
-/// UI dispatcher adapter that marshals callbacks to Avalonia UI thread.
-/// </summary>
-public sealed class AvaloniaUiDispatcherService : StrategyUiDispatcherService
+internal sealed class TuiUiDispatcherService : StrategyUiDispatcherService
 {
-    /// <summary>
-    /// Initializes the Avalonia dispatcher service.
-    /// </summary>
-    public AvaloniaUiDispatcherService()
-        : base(new AvaloniaUiDispatchStrategy())
+    public TuiUiDispatcherService()
+        : base(new TuiUiDispatchStrategy())
     {
     }
 }
 
-internal sealed class AvaloniaUiDispatchStrategy : IUiDispatchStrategy
+internal sealed class TuiUiDispatchStrategy : IUiDispatchStrategy
 {
-    public bool CheckAccess() => Dispatcher.UIThread.CheckAccess();
+    private readonly int _uiThreadId = Environment.CurrentManagedThreadId;
+
+    public bool CheckAccess() => Environment.CurrentManagedThreadId == _uiThreadId;
 
     public Task InvokeAsync(Func<Task> action)
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        if (Dispatcher.UIThread.CheckAccess())
+        if (CheckAccess())
             return action();
 
         var tcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        Dispatcher.UIThread.Post(async () =>
+        Application.Invoke(async () =>
         {
             try
             {
@@ -51,11 +47,11 @@ internal sealed class AvaloniaUiDispatchStrategy : IUiDispatchStrategy
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        if (Dispatcher.UIThread.CheckAccess())
+        if (CheckAccess())
             return Task.FromResult(action());
 
         var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
-        Dispatcher.UIThread.Post(() =>
+        Application.Invoke(() =>
         {
             try
             {
@@ -74,12 +70,12 @@ internal sealed class AvaloniaUiDispatchStrategy : IUiDispatchStrategy
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        if (Dispatcher.UIThread.CheckAccess())
+        if (CheckAccess())
         {
             action();
             return;
         }
 
-        Dispatcher.UIThread.Post(action);
+        Application.Invoke(action);
     }
 }

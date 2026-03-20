@@ -47,6 +47,18 @@ using var bootstrapLoggerFactory = LoggerFactory.Create(static logging =>
 });
 var bootstrapLogger = bootstrapLoggerFactory.CreateLogger("McpServer.Web.Bootstrap");
 bootstrapLogger.LogInformation("Bootstrap starting for McpServer.Web. PID {ProcessId}", Environment.ProcessId);
+var listenUrlSelection = WebListenUrlSelector.ResolveSelection(args);
+builder.WebHost.UseUrls(listenUrlSelection.Urls);
+if (listenUrlSelection.IsExplicit)
+{
+    bootstrapLogger.LogInformation("Using explicit listen URLs for McpServer.Web: {ListenUrls}", listenUrlSelection.Urls);
+}
+else
+{
+    bootstrapLogger.LogInformation(
+        "No explicit listen URL configured. Selected available loopback URL {ListenUrls} for McpServer.Web.",
+        listenUrlSelection.Urls);
+}
 
 builder.Services
     .AddRazorComponents()
@@ -88,7 +100,7 @@ var oidcAuthorityUsesHttps = Uri.TryCreate(oidcAuthority, UriKind.Absolute, out 
                              && parsedOidcAuthorityUri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
 var requireHttpsMetadata = requireHttpsMetadataOverride ?? oidcAuthorityUsesHttps;
 var enableHttpsRedirection = builder.Configuration.GetValue<bool?>("Web:EnableHttpsRedirection")
-                            ?? ShouldEnableHttpsRedirection(builder.Configuration);
+                            ?? ShouldEnableHttpsRedirection(builder.Configuration, listenUrlSelection.Urls);
 
 builder.Services.AddCascadingAuthenticationState();
 bootstrapLogger.LogInformation("Authentication state cascading configured.");
@@ -207,7 +219,7 @@ if (enableHttpsRedirection)
 }
 else
 {
-    app.Logger.LogInformation("HTTPS redirection middleware is disabled because no HTTPS endpoint/port is configured.");
+    bootstrapLogger.LogInformation("HTTPS redirection middleware is disabled because no HTTPS endpoint/port is configured.");
 }
 app.UseStaticFiles();
 app.UseAntiforgery();
@@ -218,26 +230,33 @@ app.MapRazorPages();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+Exception? runFailure = null;
+
 AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
 {
+    if (ReferenceEquals(eventArgs.ExceptionObject, runFailure))
+    {
+        return;
+    }
+
     if (eventArgs.ExceptionObject is Exception ex)
     {
-        app.Logger.LogCritical(ex, "Unhandled exception in McpServer.Web. IsTerminating: {IsTerminating}", eventArgs.IsTerminating);
+        bootstrapLogger.LogCritical(ex, "Unhandled exception in McpServer.Web. IsTerminating: {IsTerminating}", eventArgs.IsTerminating);
     }
     else
     {
-        app.Logger.LogCritical("Unhandled non-exception object in McpServer.Web. IsTerminating: {IsTerminating}", eventArgs.IsTerminating);
+        bootstrapLogger.LogCritical("Unhandled non-exception object in McpServer.Web. IsTerminating: {IsTerminating}", eventArgs.IsTerminating);
     }
 };
 
 TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
 {
-    app.Logger.LogError(eventArgs.Exception, "Unobserved task exception in McpServer.Web.");
+    bootstrapLogger.LogError(eventArgs.Exception, "Unobserved task exception in McpServer.Web.");
 };
 
 app.Lifetime.ApplicationStarted.Register(() =>
 {
-    app.Logger.LogInformation(
+    bootstrapLogger.LogInformation(
         "McpServer.Web started. URLs: {Urls}. StartupElapsedMs: {ElapsedMs}",
         string.Join(", ", app.Urls),
         startupStopwatch.ElapsedMilliseconds);
@@ -245,27 +264,35 @@ app.Lifetime.ApplicationStarted.Register(() =>
 
 app.Lifetime.ApplicationStopping.Register(() =>
 {
-    app.Logger.LogWarning("McpServer.Web is stopping.");
+    bootstrapLogger.LogWarning("McpServer.Web is stopping.");
 });
 
 app.Lifetime.ApplicationStopped.Register(() =>
 {
-    app.Logger.LogWarning("McpServer.Web stopped.");
+    bootstrapLogger.LogWarning("McpServer.Web stopped.");
 });
 
-app.Logger.LogInformation("Calling app.Run for McpServer.Web.");
+bootstrapLogger.LogInformation("Calling app.Run for McpServer.Web.");
 try
 {
     app.Run();
 }
 catch (Exception ex)
 {
-    app.Logger.LogCritical(ex, "McpServer.Web terminated with a startup/runtime exception.");
+    runFailure = ex;
+    bootstrapLogger.LogCritical(ex, "McpServer.Web terminated with a startup/runtime exception.");
+
+    var startupFailureHint = StartupFailureDiagnostics.BuildOperatorHint(ex, listenUrlSelection.Urls);
+    if (!string.IsNullOrWhiteSpace(startupFailureHint))
+    {
+        bootstrapLogger.LogError("{StartupFailureHint}", startupFailureHint);
+    }
+
     throw;
 }
 finally
 {
-    app.Logger.LogInformation("app.Run exited after {ElapsedMs}ms.", startupStopwatch.ElapsedMilliseconds);
+    bootstrapLogger.LogInformation("app.Run exited after {ElapsedMs}ms.", startupStopwatch.ElapsedMilliseconds);
 }
 
 static async Task<OidcDiscoveryConfigResponse?> TryDiscoverOidcConfigFromMcpAsync(
@@ -353,7 +380,7 @@ static bool IsPlaceholderOrEmpty(string? value)
            || trimmed.Equals("change-me-in-user-secrets", StringComparison.OrdinalIgnoreCase);
 }
 
-static bool ShouldEnableHttpsRedirection(IConfiguration configuration)
+static bool ShouldEnableHttpsRedirection(IConfiguration configuration, string? listenUrls)
 {
     if (configuration.GetValue<int?>("HttpsRedirection:HttpsPort").HasValue ||
         configuration.GetValue<int?>("ASPNETCORE_HTTPS_PORT").HasValue ||
@@ -362,13 +389,12 @@ static bool ShouldEnableHttpsRedirection(IConfiguration configuration)
         return true;
     }
 
-    var urls = configuration["ASPNETCORE_URLS"] ?? configuration["urls"];
-    if (string.IsNullOrWhiteSpace(urls))
+    if (string.IsNullOrWhiteSpace(listenUrls))
     {
         return false;
     }
 
-    return urls
+    return listenUrls
         .Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
         .Any(url => url.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
 }

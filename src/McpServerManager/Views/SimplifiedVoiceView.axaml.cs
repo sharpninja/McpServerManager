@@ -11,7 +11,6 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Threading;
 #if ANDROID
 using Android.App;
 using AndroidOS = Android.OS;
@@ -21,6 +20,7 @@ using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
 using McpServerManager.Core.Utilities;
 using Microsoft.Extensions.Logging;
+using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
 
 namespace McpServerManager.Android.Views;
 
@@ -253,7 +253,7 @@ public partial class SimplifiedVoiceView : UserControl
 
     private void OnVoiceChatSettingsChanged(VoiceChatSettings settings)
     {
-        Dispatcher.UIThread.Post(() =>
+        DispatchToUi(() =>
         {
             if (_isDisposed || _autoCheck == null)
                 return;
@@ -855,7 +855,7 @@ public partial class SimplifiedVoiceView : UserControl
 
     private void SetMicState(string state)
     {
-        Dispatcher.UIThread.Post(() =>
+        DispatchToUi(() =>
         {
             if (_isDisposed) return;
             string? notificationText = null;
@@ -896,14 +896,14 @@ public partial class SimplifiedVoiceView : UserControl
 
     private void SetStatus(string text)
     {
-        if (Dispatcher.UIThread.CheckAccess())
+        if (UiDispatcherHost.CheckAccess())
         {
             if (!_isDisposed && VM != null)
                 VM.StatusText = text;
             return;
         }
 
-        Dispatcher.UIThread.Post(() =>
+        DispatchToUi(() =>
         {
             if (!_isDisposed && VM != null)
                 VM.StatusText = text;
@@ -912,7 +912,7 @@ public partial class SimplifiedVoiceView : UserControl
 
     private void UpdateInputPreview(string? text)
     {
-        Dispatcher.UIThread.Post(() =>
+        DispatchToUi(() =>
         {
             if (_inputPreviewBorder != null)
                 _inputPreviewBorder.IsVisible = !string.IsNullOrEmpty(text);
@@ -1057,7 +1057,7 @@ public partial class SimplifiedVoiceView : UserControl
 
         try
         {
-            var heartbeatRequest = await Dispatcher.UIThread.InvokeAsync(() =>
+            var heartbeatRequest = await UiDispatcherHost.InvokeAsync(() =>
             {
                 if (_isDisposed || !_sessionReady)
                     return (SessionId: (string?)null, RefreshTask: (Task?)null);
@@ -1094,7 +1094,7 @@ public partial class SimplifiedVoiceView : UserControl
 
     private void UpdateButtons()
     {
-        Dispatcher.UIThread.Post(() =>
+        DispatchToUi(() =>
         {
             if (_pauseButton != null)
             {
@@ -1285,14 +1285,15 @@ public partial class SimplifiedVoiceView : UserControl
             return;
 
         // Double-post: first at Background lets markdown re-layout, second scrolls after.
-        Dispatcher.UIThread.Post(() =>
-            Dispatcher.UIThread.Post(() =>
+        DispatchToUi(() =>
+            DispatchToUi(() =>
             {
                 _chatScroller?.ScrollToEnd();
                 Interlocked.Exchange(ref _scrollPending, 0);
-            }, DispatcherPriority.Background),
-            DispatcherPriority.Background);
+            }));
     }
+
+    private static void DispatchToUi(Action action) => UiDispatcherHost.Post(action);
 
     private Task TrackOperationAsync(Task operation)
     {

@@ -3,8 +3,8 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
+using McpServer.UI.Core.Services;
 using McpServerManager.Android.Services;
 using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
@@ -303,7 +303,7 @@ public partial class VoiceConversationView : UserControl
         if (!e.ShouldStopSpeechPlayback)
             return;
 
-        Dispatcher.UIThread.Post(() =>
+        UiDispatcherHost.Post(() =>
         {
             if (_isDisposed || _playbackFocusLease == null)
                 return;
@@ -316,7 +316,7 @@ public partial class VoiceConversationView : UserControl
 
     private void OnWakeWordDetected(object? sender, AndroidWakeWordDetectedEventArgs e)
     {
-        Dispatcher.UIThread.Post(() => _ = HandleWakeWordDetectedOnUiAsync(e));
+        UiDispatcherHost.Post(() => _ = HandleWakeWordDetectedOnUiAsync(e));
     }
 
     private void StopAudioPlayback()
@@ -362,7 +362,7 @@ public partial class VoiceConversationView : UserControl
 
     private void OnVoiceChatSettingsChanged(VoiceChatSettings settings)
     {
-        Dispatcher.UIThread.Post(() => _ = ApplyVoiceChatSettingsAsync(settings));
+        UiDispatcherHost.Post(() => _ = ApplyVoiceChatSettingsAsync(settings));
     }
 
     private async Task ApplyVoiceChatSettingsAsync(VoiceChatSettings settings)

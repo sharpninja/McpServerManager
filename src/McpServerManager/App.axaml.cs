@@ -9,6 +9,7 @@ using McpServerManager.ViewModels;
 using McpServerManager.Views;
 using McpServerManager.Core.Services;
 using Microsoft.Extensions.Logging;
+using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
 
 namespace McpServerManager;
 
@@ -34,6 +35,7 @@ public partial class App : Application
             Avalonia.Controls.Window? window = null;
             try
             {
+                UiDispatcherHost.Configure(new AvaloniaUiDispatcherService());
                 window = new MainWindow();
                 try
                 {

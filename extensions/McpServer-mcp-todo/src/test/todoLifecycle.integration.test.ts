@@ -14,6 +14,8 @@
 import { describe, it, before, after } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as http from 'http';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Import the compiled markdown helpers (no vscode dependency)
 import {
@@ -24,7 +26,53 @@ import {
 } from '../todoMarkdown';
 import type { TodoFlatItem, TodoFlatTask, TodoUpdateBody } from '../mcpClient';
 
-const BASE_URL = process.env.MCP_BASE_URL ?? 'http://localhost:7147';
+const markerFileName = 'AGENTS-README-FIRST.yaml';
+
+interface MarkerConfig {
+  baseUrl?: string;
+  apiKey?: string;
+}
+
+function findMarkerPath(startDir: string): string | null {
+  let current = startDir;
+
+  while (true) {
+    const candidate = path.join(current, markerFileName);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return null;
+    }
+
+    current = parent;
+  }
+}
+
+function readMarkerConfig(): MarkerConfig {
+  const markerPath = findMarkerPath(process.cwd());
+  if (!markerPath) {
+    return {};
+  }
+
+  const content = fs.readFileSync(markerPath, 'utf8');
+  return {
+    baseUrl: /^baseUrl:\s*(.+)$/m.exec(content)?.[1]?.trim(),
+    apiKey: /^apiKey:\s*(.+)$/m.exec(content)?.[1]?.trim(),
+  };
+}
+
+const markerConfig = readMarkerConfig();
+const BASE_URL = process.env.MCP_BASE_URL ?? markerConfig.baseUrl ?? 'http://localhost:7147';
+const API_KEY = process.env.MCP_API_KEY ?? markerConfig.apiKey;
+let todoIdSeed = Number(Date.now() % 1000);
+
+function nextTodoId(area: string): string {
+  todoIdSeed = (todoIdSeed + 1) % 1000;
+  return `TEST-${area}-${todoIdSeed.toString().padStart(3, '0')}`;
+}
 
 // --- HTTP helper (mirrors mcpClient.ts but without vscode deps) ---
 
@@ -44,6 +92,7 @@ function httpRequest(
         method,
         headers: {
           Accept: 'application/json',
+          ...(API_KEY ? { 'X-Api-Key': API_KEY } : {}),
           ...(payload
             ? {
                 'Content-Type': 'application/json',
@@ -345,7 +394,7 @@ describe('Todo Lifecycle Integration Tests (VSCode extension paths)', () => {
 
   describe('Full lifecycle against MCP server', () => {
     it('create → serialize → parse → update → verify', async () => {
-      const id = `VSCODE-LC-${Date.now().toString(36).slice(-6)}`;
+      const id = nextTodoId('LC');
 
       // 1. Create via API
       await createTodo({
@@ -400,7 +449,7 @@ describe('Todo Lifecycle Integration Tests (VSCode extension paths)', () => {
     });
 
     it('list refresh reflects changes (simulates tree view refresh)', async () => {
-      const id = `VSCODE-LIST-${Date.now().toString(36).slice(-6)}`;
+      const id = nextTodoId('LIST');
 
       await createTodo({
         id,
@@ -429,7 +478,7 @@ describe('Todo Lifecycle Integration Tests (VSCode extension paths)', () => {
     });
 
     it('two-save lifecycle: create → save → modify → save → verify', async () => {
-      const id = `VSCODE-2S-${Date.now().toString(36).slice(-6)}`;
+      const id = nextTodoId('2S');
 
       await createTodo({
         id,
@@ -476,7 +525,7 @@ describe('Todo Lifecycle Integration Tests (VSCode extension paths)', () => {
     });
 
     it('FR/TR fields survive markdown round-trip through MCP', async () => {
-      const id = `VSCODE-FRTR-${Date.now().toString(36).slice(-6)}`;
+      const id = nextTodoId('FRTR');
 
       await createTodo({
         id,
@@ -509,7 +558,7 @@ describe('Todo Lifecycle Integration Tests (VSCode extension paths)', () => {
     });
 
     it('priority and section changes survive markdown round-trip through MCP', async () => {
-      const id = `VSCODE-PRIO-${Date.now().toString(36).slice(-6)}`;
+      const id = nextTodoId('PRIO');
 
       await createTodo({
         id,
@@ -547,7 +596,7 @@ describe('Todo Lifecycle Integration Tests (VSCode extension paths)', () => {
     });
 
     it('delete removes item from list', async () => {
-      const id = `VSCODE-DEL-${Date.now().toString(36).slice(-6)}`;
+      const id = nextTodoId('DEL');
 
       await createTodo({
         id,

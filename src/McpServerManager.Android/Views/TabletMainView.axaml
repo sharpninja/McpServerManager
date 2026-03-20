@@ -10,29 +10,72 @@
              x:DataType="vm:MainWindowViewModel">
 
     <Grid RowDefinitions="*,Auto" Background="{DynamicResource ThemeBackgroundBrush}">
-        <Border Grid.Row="0" Margin="6,6,6,4" Classes="phone-outline-card">
-            <TabControl Classes="shell-tabs">
-            <TabItem Header="Request Tracker" Classes="shell-tab">
-                <views:McpServerManagerTabletView/>
-            </TabItem>
-            <TabItem Header="Todos" Classes="shell-tab">
-                <views:TodoListView DataContext="{Binding TodoViewModel}"/>
-            </TabItem>
-            <TabItem Header="Voice" Classes="shell-tab">
-                <views:VoiceConversationView DataContext="{Binding VoiceConversationViewModel}"/>
-            </TabItem>
-            <TabItem Header="Workspaces" Classes="shell-tab">
-                <views:WorkspaceView DataContext="{Binding WorkspaceViewModel}"/>
-            </TabItem>
-            <TabItem Header="Logs" Classes="shell-tab">
-                <views:LogView DataContext="{Binding LogViewModel}"/>
-            </TabItem>
-        </TabControl>
-        </Border>
+        <Grid x:Name="ShellGrid" Grid.Row="0" Margin="6,6,6,4" RowDefinitions="*" ColumnDefinitions="*">
+            <Border x:Name="MainTabsBorder" Classes="phone-outline-card">
+                <TabControl x:Name="MainTabControl"
+                            Classes="shell-tabs"
+                            SelectionChanged="OnMainTabSelectionChanged">
+                <TabItem Header="Request Tracker" Classes="shell-tab">
+                    <views:McpServerManagerTabletView/>
+                </TabItem>
+                <TabItem Header="Todos" Classes="shell-tab">
+                    <views:TodoListView DataContext="{Binding TodoViewModel}"/>
+                </TabItem>
+                <TabItem Header="Workspaces" Classes="shell-tab">
+                    <views:WorkspaceView DataContext="{Binding WorkspaceViewModel}"/>
+                </TabItem>
+                <TabItem Header="Logs" Classes="shell-tab">
+                    <views:LogView DataContext="{Binding LogViewModel}"/>
+                </TabItem>
+            </TabControl>
+            </Border>
+
+            <GridSplitter x:Name="VoiceFlyoutSplitter"
+                          IsVisible="False"
+                          Classes="phone-splitter"
+                          ResizeDirection="Columns"
+                          PointerReleased="OnVoiceFlyoutSplitterPointerReleased"
+                          PointerCaptureLost="OnVoiceFlyoutSplitterPointerCaptureLost"/>
+
+            <Border x:Name="VoiceFlyoutBorder"
+                    IsVisible="False"
+                    Classes="phone-outline-card"
+                    MinWidth="320"
+                    MinHeight="240">
+                <Grid RowDefinitions="Auto,*">
+                    <Border Grid.Row="0" Classes="phone-toolbar-card" Padding="10,8">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Voice Chat" FontSize="18" FontWeight="Bold"/>
+                                <TextBlock Text="Pinned right in landscape, docked bottom in portrait."
+                                           Foreground="{DynamicResource SubtleForeground}"
+                                           FontSize="12"/>
+                            </StackPanel>
+                            <ToggleButton Grid.Column="1"
+                                          x:Name="VoicePinToggleButton"
+                                          Content="Pinned"
+                                          IsChecked="True"
+                                          Checked="OnVoicePinToggleChanged"
+                                          Unchecked="OnVoicePinToggleChanged"
+                                          Padding="10,4"/>
+                            <Button Grid.Column="2"
+                                    x:Name="VoiceFlyoutCloseButton"
+                                    Content="Close"
+                                    Click="OnVoiceFlyoutCloseClick"
+                                    Padding="10,4"/>
+                        </Grid>
+                    </Border>
+
+                    <views:VoiceConversationView x:Name="VoiceFlyoutView"
+                                                 Grid.Row="1"
+                                                 DataContext="{Binding VoiceConversationViewModel}"/>
+                </Grid>
+            </Border>
+        </Grid>
 
         <!-- Status Bar -->
         <views:AnimatedStatusBar Grid.Row="1" Margin="6,0,6,6" IsBusy="{Binding IsBusy}" IdleBrush="{DynamicResource StatusBarBrush}">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                 <ScrollViewer Grid.Column="0"
                               HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Disabled">
@@ -73,7 +116,14 @@
                                      Classes="subtle-text"
                                      Text="{Binding AppVersionDisplay}"
                                      VerticalAlignment="Center"/>
-                <Button Grid.Column="5"
+                <ToggleButton Grid.Column="5"
+                              x:Name="VoiceFlyoutToggleButton"
+                              Content="Voice"
+                              Checked="OnVoiceFlyoutToggleChanged"
+                              Unchecked="OnVoiceFlyoutToggleChanged"
+                              VerticalAlignment="Center"
+                              Padding="10,4"/>
+                <Button Grid.Column="6"
                         Content="Logout"
                         Command="{Binding LogoutCommand}"
                         VerticalAlignment="Center"

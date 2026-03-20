@@ -20,6 +20,7 @@ public partial class ConnectionViewModel : ViewModelBase
 {
     private readonly ILogger<ConnectionViewModel> _logger;
     private readonly IConnectionAuthService _connectionAuthService;
+    private readonly IUiDispatcherService _uiDispatcher;
 
     [ObservableProperty]
     private string _host = "10.0.2.2";
@@ -71,10 +72,12 @@ public partial class ConnectionViewModel : ViewModelBase
     /// </summary>
     public ConnectionViewModel(
         IConnectionAuthService connectionAuthService,
-        ILogger<ConnectionViewModel>? logger = null)
+        ILogger<ConnectionViewModel>? logger = null,
+        IUiDispatcherService? uiDispatcher = null)
     {
         _connectionAuthService = connectionAuthService ?? throw new ArgumentNullException(nameof(connectionAuthService));
         _logger = logger ?? NullLogger<ConnectionViewModel>.Instance;
+        _uiDispatcher = uiDispatcher ?? new ImmediateUiDispatcherService();
     }
 
     /// <summary>
@@ -83,7 +86,7 @@ public partial class ConnectionViewModel : ViewModelBase
     public void SetExternalUrlOpener(Func<string, bool>? externalUrlOpener)
     {
         _externalUrlOpener = externalUrlOpener;
-        OidcCanOpenBrowser = !string.IsNullOrWhiteSpace(OidcVerificationUrl) && _externalUrlOpener != null;
+        DispatchToUi(() => OidcCanOpenBrowser = !string.IsNullOrWhiteSpace(OidcVerificationUrl) && _externalUrlOpener != null);
         _logger.LogInformation("External URL opener set: {HasOpener}", _externalUrlOpener != null);
     }
 
@@ -117,7 +120,7 @@ public partial class ConnectionViewModel : ViewModelBase
     public void SetQrCodeScanner(Func<Task<string?>>? scanner)
     {
         _qrCodeScanner = scanner;
-        CanScanQrCode = scanner != null;
+        DispatchToUi(() => CanScanQrCode = scanner != null);
         _logger.LogInformation("QR code scanner configured: {HasScanner}", scanner != null);
     }
 
@@ -132,24 +135,34 @@ public partial class ConnectionViewModel : ViewModelBase
             var result = await _qrCodeScanner().ConfigureAwait(true);
             if (!string.IsNullOrWhiteSpace(result))
             {
+                string host;
+                string? port = null;
+
                 // If the scanned value is a URL, extract just the host
                 if (Uri.TryCreate(result, UriKind.Absolute, out var uri))
                 {
-                    Host = uri.Host;
+                    host = uri.Host;
                     if (uri.Port > 0 && uri.Port != 80 && uri.Port != 443)
-                        Port = uri.Port.ToString();
+                        port = uri.Port.ToString();
                 }
                 else
                 {
-                    Host = result.Trim();
+                    host = result.Trim();
                 }
-                ErrorMessage = "";
+
+                await DispatchToUiAsync(() =>
+                {
+                    Host = host;
+                    if (!string.IsNullOrWhiteSpace(port))
+                        Port = port;
+                    ErrorMessage = "";
+                }).ConfigureAwait(true);
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "QR code scan failed");
-            ErrorMessage = $"QR scan failed: {ex.Message}";
+            await DispatchToUiAsync(() => ErrorMessage = $"QR scan failed: {ex.Message}").ConfigureAwait(true);
         }
     }
 
@@ -180,15 +193,18 @@ public partial class ConnectionViewModel : ViewModelBase
         _logger.LogInformation("CancelConnect invoked — aborting in-progress OIDC flow");
         _connectCts?.Cancel();
         _connectCts = null;
-        IsConnecting = false;
-        IsOidcSignInRequired = false;
-        OidcStatusMessage = "";
+        DispatchToUi(() =>
+        {
+            IsConnecting = false;
+            IsOidcSignInRequired = false;
+            OidcStatusMessage = "";
+        });
         TryBringAppToForegroundAfterOidcTokenAcquired();
     }
 
     private async Task PerformOidcLogoutAsync()
     {
-        ErrorMessage = "";
+        await DispatchToUiAsync(() => ErrorMessage = "").ConfigureAwait(true);
         var token = _oidcBearerToken ?? TryReadCachedOidcToken();
 
         if (_lastMcpBaseUrl != null && _lastOidcAuthority != null)
@@ -218,23 +234,26 @@ public partial class ConnectionViewModel : ViewModelBase
     {
         _logger.LogInformation("ConnectAsync invoked. Host='{Host}', Port='{Port}', IsConnecting={IsConnecting}", Host, Port, IsConnecting);
 
-        ErrorMessage = "";
-        OidcStatusMessage = "";
-        OidcUserCode = "";
-        OidcVerificationUrl = "";
-        OidcCanOpenBrowser = false;
-        IsOidcSignInRequired = false;
+        await DispatchToUiAsync(() =>
+        {
+            ErrorMessage = "";
+            OidcStatusMessage = "";
+            OidcUserCode = "";
+            OidcVerificationUrl = "";
+            OidcCanOpenBrowser = false;
+            IsOidcSignInRequired = false;
+        }).ConfigureAwait(true);
 
         if (string.IsNullOrWhiteSpace(Host))
         {
-            ErrorMessage = "Host is required.";
+            await DispatchToUiAsync(() => ErrorMessage = "Host is required.").ConfigureAwait(true);
             _logger.LogWarning("ConnectAsync validation failed: host missing");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(Port) || !int.TryParse(Port.Trim(), out var portNumber) || portNumber < 1 || portNumber > 65535)
         {
-            ErrorMessage = "Port must be between 1 and 65535.";
+            await DispatchToUiAsync(() => ErrorMessage = "Port must be between 1 and 65535.").ConfigureAwait(true);
             _logger.LogWarning("ConnectAsync validation failed: invalid port '{Port}'", Port);
             return;
         }
@@ -248,7 +267,7 @@ public partial class ConnectionViewModel : ViewModelBase
         var url = $"{scheme}://{Host.Trim()}:{portNumber}";
         if (!Uri.TryCreate(url, UriKind.Absolute, out _))
         {
-            ErrorMessage = "Invalid host or port.";
+            await DispatchToUiAsync(() => ErrorMessage = "Invalid host or port.").ConfigureAwait(true);
             _logger.LogWarning("ConnectAsync validation failed: invalid URL '{Url}'", url);
             return;
         }
@@ -259,7 +278,7 @@ public partial class ConnectionViewModel : ViewModelBase
             return;
         }
 
-        IsConnecting = true;
+        await DispatchToUiAsync(() => IsConnecting = true).ConfigureAwait(true);
         _connectCts?.Cancel();
         _connectCts = new CancellationTokenSource();
         var ct = _connectCts.Token;
@@ -279,21 +298,27 @@ public partial class ConnectionViewModel : ViewModelBase
 
             var authToken = await TryAuthenticateWithOidcAsync(url, ct).ConfigureAwait(true);
             _logger.LogInformation("ConnectAsync auth stage complete for {Url}. TokenPresent={HasToken}, BearerTokenPresent={HasBearer}", url, !string.IsNullOrWhiteSpace(authToken), !string.IsNullOrWhiteSpace(_oidcBearerToken));
-            Connected?.Invoke(new ConnectionEstablishedInfo(url, authToken, _oidcBearerToken));
+            await DispatchToUiAsync(() => Connected?.Invoke(new ConnectionEstablishedInfo(url, authToken, _oidcBearerToken))).ConfigureAwait(true);
             _logger.LogInformation("ConnectAsync raised Connected event for {Url}", url);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             _logger.LogInformation("ConnectAsync cancelled by user for {Url}", url);
-            IsConnecting = false;
-            IsOidcSignInRequired = false;
+            await DispatchToUiAsync(() =>
+            {
+                IsConnecting = false;
+                IsOidcSignInRequired = false;
+            }).ConfigureAwait(true);
             TryBringAppToForegroundAfterOidcTokenAcquired();
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
-            IsConnecting = false;
-            IsOidcSignInRequired = false;
+            await DispatchToUiAsync(() =>
+            {
+                ErrorMessage = ex.Message;
+                IsConnecting = false;
+                IsOidcSignInRequired = false;
+            }).ConfigureAwait(true);
 
             // Close the OIDC WebView (if open) so the user returns to the connection screen.
             TryBringAppToForegroundAfterOidcTokenAcquired();
@@ -315,7 +340,7 @@ public partial class ConnectionViewModel : ViewModelBase
 
         if (_externalUrlOpener == null)
         {
-            ErrorMessage = "No browser launcher is available on this device.";
+            DispatchToUi(() => ErrorMessage = "No browser launcher is available on this device.");
             _logger.LogWarning("OpenOidcVerificationUrl failed: no browser launcher available");
             return;
         }
@@ -323,7 +348,7 @@ public partial class ConnectionViewModel : ViewModelBase
         _logger.LogInformation("Opening OIDC verification URL via external browser: {Url}", OidcVerificationUrl);
         if (!_externalUrlOpener.Invoke(OidcVerificationUrl))
         {
-            ErrorMessage = "Could not open the sign-in page.";
+            DispatchToUi(() => ErrorMessage = "Could not open the sign-in page.");
             _logger.LogWarning("OpenOidcVerificationUrl failed to launch browser");
         }
     }
@@ -349,7 +374,7 @@ public partial class ConnectionViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(cachedOidcToken) &&
             IsJwtExpiredOrNearExpiry(cachedOidcToken, CachedJwtExpirySkew, out var expiresAtUtc))
         {
-            OidcStatusMessage = "Session expired. Sign in again.";
+            await DispatchToUiAsync(() => OidcStatusMessage = "Session expired. Sign in again.").ConfigureAwait(true);
             _logger.LogWarning(
                 "Cached OIDC token is expired/near expiry (expUtc={ExpiresAtUtc}); clearing cache and requiring sign-in",
                 expiresAtUtc?.ToString("O") ?? "<unknown>");
@@ -360,7 +385,7 @@ public partial class ConnectionViewModel : ViewModelBase
 
         if (!string.IsNullOrWhiteSpace(cachedOidcToken))
         {
-            OidcStatusMessage = "Reusing previous sign-in…";
+            await DispatchToUiAsync(() => OidcStatusMessage = "Reusing previous sign-in…").ConfigureAwait(true);
             _logger.LogInformation("Attempting cached OIDC token reuse for {BaseUrl}", mcpBaseUrl);
 
             var cachedApiKeyResult = await _connectionAuthService
@@ -369,7 +394,7 @@ public partial class ConnectionViewModel : ViewModelBase
 
             if (cachedApiKeyResult.IsSuccess)
             {
-                OidcStatusMessage = "Opening MCP…";
+                await DispatchToUiAsync(() => OidcStatusMessage = "Opening MCP…").ConfigureAwait(true);
                 _logger.LogInformation("Cached OIDC token reuse succeeded; MCP API key acquired");
                 _oidcBearerToken = cachedOidcToken;
                 return cachedApiKeyResult.ApiKey;
@@ -377,7 +402,7 @@ public partial class ConnectionViewModel : ViewModelBase
 
             if (cachedApiKeyResult.WasRejected)
             {
-                OidcStatusMessage = "Session expired. Sign in again.";
+                await DispatchToUiAsync(() => OidcStatusMessage = "Session expired. Sign in again.").ConfigureAwait(true);
                 _logger.LogWarning("Cached OIDC token was rejected by server; clearing cache and falling back to interactive sign-in");
                 ClearCachedOidcToken();
             }
@@ -398,13 +423,18 @@ public partial class ConnectionViewModel : ViewModelBase
             .StartDeviceAuthorizationAsync(authConfig!, mcpBaseUrl, cancellationToken)
             .ConfigureAwait(true);
 
-        IsOidcSignInRequired = true;
-        OidcUserCode = prompt.UserCode;
-        OidcVerificationUrl = string.IsNullOrWhiteSpace(prompt.VerificationUriComplete)
+        var verificationUrl = string.IsNullOrWhiteSpace(prompt.VerificationUriComplete)
             ? prompt.VerificationUri
             : prompt.VerificationUriComplete!;
-        OidcCanOpenBrowser = !string.IsNullOrWhiteSpace(OidcVerificationUrl) && _externalUrlOpener != null;
-        OidcStatusMessage = "Sign in to the identity provider and approve this device.";
+        var canOpenBrowser = !string.IsNullOrWhiteSpace(verificationUrl) && _externalUrlOpener != null;
+        await DispatchToUiAsync(() =>
+        {
+            IsOidcSignInRequired = true;
+            OidcUserCode = prompt.UserCode;
+            OidcVerificationUrl = verificationUrl;
+            OidcCanOpenBrowser = canOpenBrowser;
+            OidcStatusMessage = "Sign in to the identity provider and approve this device.";
+        }).ConfigureAwait(true);
         _logger.LogInformation(
             "OIDC device prompt ready. UserCodePresent={HasUserCode}, VerificationUrl='{VerificationUrl}', CanOpenBrowser={CanOpenBrowser}",
             !string.IsNullOrWhiteSpace(OidcUserCode),
@@ -424,7 +454,7 @@ public partial class ConnectionViewModel : ViewModelBase
                 mcpBaseUrl,
                 status =>
                 {
-                    OidcStatusMessage = status;
+                    DispatchToUi(() => OidcStatusMessage = status);
                     _logger.LogInformation("OIDC status update: {Status}", status);
                 },
                 cancellationToken)
@@ -435,7 +465,7 @@ public partial class ConnectionViewModel : ViewModelBase
         WriteCachedOidcToken(token.AccessToken);
         TryBringAppToForegroundAfterOidcTokenAcquired();
 
-        OidcStatusMessage = "Sign-in complete. Acquiring MCP API key…";
+        await DispatchToUiAsync(() => OidcStatusMessage = "Sign-in complete. Acquiring MCP API key…").ConfigureAwait(true);
         _logger.LogInformation("Fetching MCP default API key from {BaseUrl}/api-key after OIDC sign-in", mcpBaseUrl);
         var mcpApiKeyResult = await _connectionAuthService
             .TryFetchMcpApiKeyAsync(mcpBaseUrl, token.AccessToken, cancellationToken)
@@ -443,7 +473,7 @@ public partial class ConnectionViewModel : ViewModelBase
 
         if (mcpApiKeyResult.IsSuccess)
         {
-            OidcStatusMessage = "Sign-in complete. Opening MCP…";
+            await DispatchToUiAsync(() => OidcStatusMessage = "Sign-in complete. Opening MCP…").ConfigureAwait(true);
             _logger.LogInformation("Fetched MCP default API key after OIDC sign-in; proceeding to main view");
             return mcpApiKeyResult.ApiKey;
         }
@@ -457,7 +487,7 @@ public partial class ConnectionViewModel : ViewModelBase
         // Bearer-authenticated key fetch failed. Try without bearer — the /api-key
         // endpoint is unprotected so this should succeed even when the OIDC token
         // is not accepted by the server for API key retrieval.
-        OidcStatusMessage = "Sign-in complete. Opening MCP…";
+        await DispatchToUiAsync(() => OidcStatusMessage = "Sign-in complete. Opening MCP…").ConfigureAwait(true);
         _logger.LogWarning("Bearer-authenticated /api-key fetch failed; trying default key without bearer token");
         var postOidcDefaultKey = await TryFetchDefaultApiKeyFallbackAsync(mcpBaseUrl, cancellationToken).ConfigureAwait(true);
         if (!string.IsNullOrWhiteSpace(postOidcDefaultKey))
@@ -546,8 +576,25 @@ public partial class ConnectionViewModel : ViewModelBase
 
         try
         {
-            var success = _oidcPostTokenForegroundActivator.Invoke();
-            _logger.LogInformation("Requested app foreground after OIDC token acquisition. Success={Success}", success);
+            if (_uiDispatcher.CheckAccess())
+            {
+                var success = _oidcPostTokenForegroundActivator.Invoke();
+                _logger.LogInformation("Requested app foreground after OIDC token acquisition. Success={Success}", success);
+                return;
+            }
+
+            _uiDispatcher.Post(() =>
+            {
+                try
+                {
+                    var success = _oidcPostTokenForegroundActivator.Invoke();
+                    _logger.LogInformation("Requested app foreground after OIDC token acquisition. Success={Success}", success);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed requesting app foreground after OIDC token acquisition");
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -565,5 +612,32 @@ public partial class ConnectionViewModel : ViewModelBase
             return true;
 
         return _connectionAuthService.IsJwtExpiredOrNearExpiry(jwtToken, skew, out expiresAtUtc);
+    }
+
+    private void DispatchToUi(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (_uiDispatcher.CheckAccess())
+            action();
+        else
+            _uiDispatcher.Post(action);
+    }
+
+    private Task DispatchToUiAsync(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (_uiDispatcher.CheckAccess())
+        {
+            action();
+            return Task.CompletedTask;
+        }
+
+        return _uiDispatcher.InvokeAsync(() =>
+        {
+            action();
+            return Task.CompletedTask;
+        });
     }
 }

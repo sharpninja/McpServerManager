@@ -38,9 +38,44 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const node_test_1 = require("node:test");
 const assert = __importStar(require("node:assert/strict"));
 const http = __importStar(require("http"));
+const fs = __importStar(require("fs"));
+const path_1 = __importStar(require("path"));
 // Import the compiled markdown helpers (no vscode dependency)
 const todoMarkdown_1 = require("../todoMarkdown");
-const BASE_URL = process.env.MCP_BASE_URL ?? 'http://localhost:7147';
+const markerFileName = 'AGENTS-README-FIRST.yaml';
+function findMarkerPath(startDir) {
+    let current = startDir;
+    while (true) {
+        const candidate = path_1.join(current, markerFileName);
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
+        const parent = path_1.dirname(current);
+        if (parent === current) {
+            return null;
+        }
+        current = parent;
+    }
+}
+function readMarkerConfig() {
+    const markerPath = findMarkerPath(process.cwd());
+    if (!markerPath) {
+        return {};
+    }
+    const content = fs.readFileSync(markerPath, 'utf8');
+    return {
+        baseUrl: /^baseUrl:\s*(.+)$/m.exec(content)?.[1]?.trim(),
+        apiKey: /^apiKey:\s*(.+)$/m.exec(content)?.[1]?.trim(),
+    };
+}
+const markerConfig = readMarkerConfig();
+const BASE_URL = process.env.MCP_BASE_URL ?? markerConfig.baseUrl ?? 'http://localhost:7147';
+const API_KEY = process.env.MCP_API_KEY ?? markerConfig.apiKey;
+let todoIdSeed = Number(Date.now() % 1000);
+function nextTodoId(area) {
+    todoIdSeed = (todoIdSeed + 1) % 1000;
+    return `TEST-${area}-${todoIdSeed.toString().padStart(3, '0')}`;
+}
 // --- HTTP helper (mirrors mcpClient.ts but without vscode deps) ---
 function httpRequest(method, path, body) {
     const url = new URL(path, BASE_URL);
@@ -53,6 +88,7 @@ function httpRequest(method, path, body) {
             method,
             headers: {
                 Accept: 'application/json',
+                ...(API_KEY ? { 'X-Api-Key': API_KEY } : {}),
                 ...(payload
                     ? {
                         'Content-Type': 'application/json',
@@ -304,7 +340,7 @@ async function listTodos(params) {
     });
     (0, node_test_1.describe)('Full lifecycle against MCP server', () => {
         (0, node_test_1.it)('create → serialize → parse → update → verify', async () => {
-            const id = `VSCODE-LC-${Date.now().toString(36).slice(-6)}`;
+            const id = nextTodoId('LC');
             // 1. Create via API
             await createTodo({
                 id,
@@ -348,7 +384,7 @@ async function listTodos(params) {
             assert.ok(updated.description.some((d) => d.includes('Modified description')), 'Description should contain modified text');
         });
         (0, node_test_1.it)('list refresh reflects changes (simulates tree view refresh)', async () => {
-            const id = `VSCODE-LIST-${Date.now().toString(36).slice(-6)}`;
+            const id = nextTodoId('LIST');
             await createTodo({
                 id,
                 title: 'List refresh test',
@@ -369,7 +405,7 @@ async function listTodos(params) {
                 found.Title === 'Updated list test', 'Title should be updated in list');
         });
         (0, node_test_1.it)('two-save lifecycle: create → save → modify → save → verify', async () => {
-            const id = `VSCODE-2S-${Date.now().toString(36).slice(-6)}`;
+            const id = nextTodoId('2S');
             await createTodo({
                 id,
                 title: 'Two-save test',
@@ -410,7 +446,7 @@ async function listTodos(params) {
             assert.ok(after2.description.some((d) => d.includes('After second save')));
         });
         (0, node_test_1.it)('FR/TR fields survive markdown round-trip through MCP', async () => {
-            const id = `VSCODE-FRTR-${Date.now().toString(36).slice(-6)}`;
+            const id = nextTodoId('FRTR');
             await createTodo({
                 id,
                 title: 'FR/TR round-trip via MCP',
@@ -437,7 +473,7 @@ async function listTodos(params) {
             assert.ok(verified.technicalRequirements.includes('TR-MOBILE-001'));
         });
         (0, node_test_1.it)('priority and section changes survive markdown round-trip through MCP', async () => {
-            const id = `VSCODE-PRIO-${Date.now().toString(36).slice(-6)}`;
+            const id = nextTodoId('PRIO');
             await createTodo({
                 id,
                 title: 'Priority/section round-trip via MCP',
@@ -467,7 +503,7 @@ async function listTodos(params) {
             assert.equal(verified.section, 'mvp-support', 'Section should be updated to mvp-support');
         });
         (0, node_test_1.it)('delete removes item from list', async () => {
-            const id = `VSCODE-DEL-${Date.now().toString(36).slice(-6)}`;
+            const id = nextTodoId('DEL');
             await createTodo({
                 id,
                 title: 'Delete test',

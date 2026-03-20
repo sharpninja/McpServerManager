@@ -18,35 +18,76 @@
         ShowInTaskbar="True">
 
     <Grid RowDefinitions="*,Auto" Background="{DynamicResource ThemeBackgroundBrush}">
-        <Border Grid.Row="0" Margin="8,8,8,4" Classes="phone-outline-card">
-            <TabControl x:Name="MainTabControl" Grid.Row="0" Classes="shell-tabs">
-            <TabItem Header="Request Tracker" Classes="shell-tab">
-                <views:McpServerManagerView x:Name="ContentView"/>
-            </TabItem>
-            <TabItem Header="Todos" Classes="shell-tab">
-                <views:TodoListView x:Name="TodoView" DataContext="{Binding TodoViewModel}"/>
-            </TabItem>
-            <TabItem Header="Voice" Classes="shell-tab">
-                <svoice:SimplifiedVoiceView x:Name="VoiceView" DataContext="{Binding VoiceConversationViewModel}"/>
-            </TabItem>
-            <TabItem Header="Workspaces" Classes="shell-tab">
-                <views:WorkspaceView x:Name="WorkspaceTabView" DataContext="{Binding WorkspaceViewModel}"/>
-            </TabItem>
-            <TabItem Header="Logs" Classes="shell-tab">
-                <views:LogView x:Name="LogView" DataContext="{Binding LogViewModel}"/>
-            </TabItem>
-            <TabItem Header="AGENTS" Classes="shell-tab">
-                <views:AgentsReadmeView x:Name="AgentsReadmeTabView" DataContext="{Binding}"/>
-            </TabItem>
-            <TabItem Header="Settings" Classes="shell-tab">
-                <views:SettingsView x:Name="SettingsTabView" DataContext="{Binding SettingsViewModel}"/>
-            </TabItem>
-        </TabControl>
-        </Border>
+        <Grid x:Name="ShellGrid" Grid.Row="0" Margin="8,8,8,4" RowDefinitions="*" ColumnDefinitions="*">
+            <Border x:Name="MainTabsBorder" Classes="phone-outline-card">
+                <TabControl x:Name="MainTabControl" Grid.Row="0" Classes="shell-tabs">
+                <TabItem Header="Request Tracker" Classes="shell-tab">
+                    <views:McpServerManagerView x:Name="ContentView"/>
+                </TabItem>
+                <TabItem Header="Todos" Classes="shell-tab">
+                    <views:TodoListView x:Name="TodoView" DataContext="{Binding TodoViewModel}"/>
+                </TabItem>
+                <TabItem Header="Workspaces" Classes="shell-tab">
+                    <views:WorkspaceView x:Name="WorkspaceTabView" DataContext="{Binding WorkspaceViewModel}"/>
+                </TabItem>
+                <TabItem Header="Logs" Classes="shell-tab">
+                    <views:LogView x:Name="LogView" DataContext="{Binding LogViewModel}"/>
+                </TabItem>
+                <TabItem Header="AGENTS" Classes="shell-tab">
+                    <views:AgentsReadmeView x:Name="AgentsReadmeTabView" DataContext="{Binding}"/>
+                </TabItem>
+                <TabItem Header="Settings" Classes="shell-tab">
+                    <views:SettingsView x:Name="SettingsTabView" DataContext="{Binding SettingsViewModel}"/>
+                </TabItem>
+            </TabControl>
+            </Border>
+
+            <GridSplitter x:Name="VoiceFlyoutSplitter"
+                          IsVisible="False"
+                          Classes="phone-splitter"
+                          ResizeDirection="Columns"
+                          PointerReleased="OnVoiceFlyoutSplitterPointerReleased"
+                          PointerCaptureLost="OnVoiceFlyoutSplitterPointerCaptureLost"/>
+
+            <Border x:Name="VoiceFlyoutBorder"
+                    IsVisible="False"
+                    Classes="phone-outline-card"
+                    MinWidth="320"
+                    MinHeight="240">
+                <Grid RowDefinitions="Auto,*">
+                    <Border Grid.Row="0" Classes="phone-toolbar-card" Padding="10,8">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Voice Chat" FontSize="18" FontWeight="Bold"/>
+                                <TextBlock Text="Pinned right in landscape, docked bottom in portrait."
+                                           FontSize="12"
+                                           Opacity="0.7"/>
+                            </StackPanel>
+                            <ToggleButton Grid.Column="1"
+                                          x:Name="VoicePinToggleButton"
+                                          Content="Pinned"
+                                          IsChecked="True"
+                                          Checked="OnVoicePinToggleChanged"
+                                          Unchecked="OnVoicePinToggleChanged"
+                                          Padding="10,4"/>
+                            <Button Grid.Column="2"
+                                    x:Name="VoiceFlyoutCloseButton"
+                                    Content="Close"
+                                    Click="OnVoiceFlyoutCloseClick"
+                                    Padding="10,4"/>
+                        </Grid>
+                    </Border>
+
+                    <svoice:SimplifiedVoiceView x:Name="VoiceFlyoutView"
+                                                Grid.Row="1"
+                                                DataContext="{Binding VoiceConversationViewModel}"/>
+                </Grid>
+            </Border>
+        </Grid>
 
         <!-- Status Bar -->
         <Border Grid.Row="1" Margin="8,0,8,8" Padding="8,6" Classes="phone-toolbar-card">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                 <ScrollViewer Grid.Column="0"
                               HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Disabled">
@@ -87,7 +128,14 @@
                            VerticalAlignment="Center"
                            HorizontalAlignment="Right"
                            Classes="subtle-text"/>
-                <Button Grid.Column="5"
+                <ToggleButton Grid.Column="5"
+                              x:Name="VoiceFlyoutToggleButton"
+                              Content="Voice"
+                              Checked="OnVoiceFlyoutToggleChanged"
+                              Unchecked="OnVoiceFlyoutToggleChanged"
+                              VerticalAlignment="Center"
+                              Padding="10,4"/>
+                <Button Grid.Column="6"
                         Content="Logout"
                         Command="{Binding LogoutCommand}"
                         VerticalAlignment="Center"

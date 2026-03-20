@@ -88,17 +88,32 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
     }
 
     public MainWindowViewModel(IClipboardService clipboardService)
-        : this(clipboardService, UiCoreAppSettings.ResolveMcpBaseUrl(), mcpApiKey: null, bearerToken: null, systemNotificationService: null)
+        : this(clipboardService, UiCoreAppSettings.ResolveMcpBaseUrl(), mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher: null)
+    {
+    }
+
+    public MainWindowViewModel(IClipboardService clipboardService, McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
+        : this(clipboardService, UiCoreAppSettings.ResolveMcpBaseUrl(), mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher)
     {
     }
 
     public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl)
-        : this(clipboardService, mcpBaseUrl, mcpApiKey: null, bearerToken: null, systemNotificationService: null)
+        : this(clipboardService, mcpBaseUrl, mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher: null)
+    {
+    }
+
+    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
+        : this(clipboardService, mcpBaseUrl, mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher)
     {
     }
 
     public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey)
-        : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null, systemNotificationService: null)
+        : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null, systemNotificationService: null, uiDispatcher: null)
+    {
+    }
+
+    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey, McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
+        : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null, systemNotificationService: null, uiDispatcher)
     {
     }
 
@@ -107,8 +122,9 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
         string mcpBaseUrl,
         string? mcpApiKey,
         string? bearerToken,
-        ISystemNotificationService? systemNotificationService = null)
-        : base(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, systemNotificationService)
+        ISystemNotificationService? systemNotificationService = null,
+        McpServer.UI.Core.Services.IUiDispatcherService? uiDispatcher = null)
+        : base(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, systemNotificationService, uiDispatcher ?? new AvaloniaUiDispatcherService())
     {
         _dispatcher = CqrsDispatcher;
         CloseRequestDetailsCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.CloseRequestDetailsCommand());

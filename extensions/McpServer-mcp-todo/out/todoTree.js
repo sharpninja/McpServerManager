@@ -30,6 +30,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TodoTreeDataProvider = void 0;
 const vscode = __importStar(require("vscode"));
+const filterExpr_1 = require("./filterExpr");
 const logger_1 = require("./logger");
 const PRIORITY_ORDER = ['high', 'medium', 'low'];
 function isPriorityNode(node) {
@@ -61,9 +62,8 @@ function searchableForScope(item, scope) {
 function matchesText(item, text, scope) {
     if (!text || !text.trim())
         return true;
-    const searchable = searchableForScope(item, scope).join(' ').toLowerCase();
-    const words = text.trim().toLowerCase().split(/\s+/);
-    return words.every((word) => searchable.includes(word));
+    const searchable = searchableForScope(item, scope).join(' ');
+    return (0, filterExpr_1.evaluate)((0, filterExpr_1.parseFilterText)(text), searchable);
 }
 function matchesPriority(item, filterPriority) {
     if (!filterPriority || !filterPriority.trim())

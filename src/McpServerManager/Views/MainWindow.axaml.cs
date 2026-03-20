@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using FileNode = McpServer.UI.Core.Models.FileNode;
 using JsonTreeNode = McpServer.UI.Core.Models.Json.JsonTreeNode;
 using SearchableTurn = McpServer.UI.Core.Models.Json.SearchableTurn;
+using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
 
 namespace McpServerManager.Views;
 
@@ -110,7 +111,7 @@ public partial class MainWindow : Window
             this.Position = new PixelPoint(sx, sy);
             await Task.Delay(100);
             // Apply again after a short delay in case the WM repositions on first frame
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await DispatchToUiAsync(() =>
             {
                 if (WindowState == WindowState.Normal)
                     this.Position = new PixelPoint(sx, sy);
@@ -132,11 +133,11 @@ public partial class MainWindow : Window
         {
             // WSLg: window may not get focus until fully mapped. Activate again after a short delay.
             await Task.Delay(150);
-            Dispatcher.UIThread.Post(() => Activate(), DispatcherPriority.Input);
+            DispatchToUi(Activate);
         }
 
         if (_layoutSettings.ChatWindowWasOpen)
-            Dispatcher.UIThread.Post(() => ShowChatWindowIfRequested(), DispatcherPriority.Loaded);
+            DispatchToUi(ShowChatWindowIfRequested);
     }
 
     /// <summary>Updates MarkdownViewer from ViewModel. If Markdown.Avalonia throws (e.g. StaticBinding), we switch to raw text and stop using the viewer.</summary>
@@ -160,9 +161,18 @@ public partial class MainWindow : Window
         vm.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(MainWindowViewModel.CurrentPreviewMarkdownText))
-                Dispatcher.UIThread.Post(UpdateMarkdown, DispatcherPriority.Normal);
+                DispatchToUi(UpdateMarkdown);
         };
     }
+
+    private static void DispatchToUi(Action action) => UiDispatcherHost.Post(action);
+
+    private static Task DispatchToUiAsync(Action action)
+        => UiDispatcherHost.InvokeAsync(() =>
+        {
+            action();
+            return Task.CompletedTask;
+        });
 
     private void LoadSettings()
     {

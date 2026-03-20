@@ -11,6 +11,7 @@ using McpServerManager.Core.ViewModels;
 using System;
 using System.Globalization;
 using System.Linq;
+using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
 
 namespace McpServerManager.Android;
 
@@ -40,7 +41,9 @@ public partial class App : Application
 
                 try
                 {
-                    var connectionVm = new ConnectionViewModel();
+                    var uiDispatcher = new AvaloniaUiDispatcherService();
+                    UiDispatcherHost.Configure(uiDispatcher);
+                    var connectionVm = new ConnectionViewModel(new ConnectionAuthServiceAdapter(), uiDispatcher: uiDispatcher);
                     connectionVm.SetExternalUrlOpener(AndroidBrowserService.TryOpenUrl);
                     connectionVm.SetOidcPostTokenForegroundActivator(AndroidBrowserService.TryBringAppToForeground);
                     connectionVm.SetQrCodeScanner(AndroidQrScannerService.ScanQrCodeAsync);
@@ -81,7 +84,7 @@ public partial class App : Application
 
                             var clipboardService = new AndroidClipboardService();
                             var systemNotificationService = new AndroidSystemNotificationService();
-                            var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, systemNotificationService);
+                            var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, systemNotificationService, uiDispatcher);
                             vm.SaveWorkspaceKey = AndroidConnectionPreferencesService.SaveWorkspaceKey;
                             vm.LoadWorkspaceKey = AndroidConnectionPreferencesService.LoadWorkspaceKey;
                             vm.LogoutRequested += (_, _) =>
@@ -112,7 +115,7 @@ public partial class App : Application
                     connectionVm.Connected += connection =>
                     {
                         _logger.LogInformation("Connected event fired for {McpBaseUrl}. TokenPresent={HasToken}, BearerPresent={HasBearer}", connection.BaseUrl, !string.IsNullOrWhiteSpace(connection.ApiKey), !string.IsNullOrWhiteSpace(connection.BearerToken));
-                        OpenMainView(connection.BaseUrl, connection.ApiKey, connection.BearerToken);
+                        uiDispatcher.Post(() => OpenMainView(connection.BaseUrl, connection.ApiKey, connection.BearerToken));
                     };
 
                     if (AndroidConnectionPreferencesService.TryLoad(out var savedHost, out var savedPort))

@@ -1,3 +1,5 @@
+@inherits McpServer.Web.Components.UiDispatcherComponentBase
+
 <PrimerDialog Visible="@this.Visible" Title="@this.Title" OnClose="this.OnCancelAsync">
     <ChildContent>
         <p class="mb-0">@this.Message</p>
@@ -36,7 +38,7 @@
         this.pendingConfirmation = new(TaskCreationOptions.RunContinuationsAsynchronously);
         this.Visible = true;
         _ = this.VisibleChanged.InvokeAsync(true);
-        _ = this.InvokeAsync(this.StateHasChanged);
+        _ = this.RefreshUiAsync();
         return this.pendingConfirmation.Task;
     }
 

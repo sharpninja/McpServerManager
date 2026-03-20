@@ -22,11 +22,13 @@ internal sealed class WebCommandTarget : ICommandTarget
 {
     private readonly Dispatcher _dispatcher;
     private readonly ILogger<WebCommandTarget> _logger;
+    private readonly IUiDispatcherService _uiDispatcher;
 
-    public WebCommandTarget(Dispatcher dispatcher, ILogger<WebCommandTarget> logger)
+    public WebCommandTarget(Dispatcher dispatcher, ILogger<WebCommandTarget> logger, IUiDispatcherService uiDispatcher)
     {
         _dispatcher = dispatcher;
         _logger = logger;
+        _uiDispatcher = uiDispatcher;
     }
 
     public string StatusMessage { get; set; } = string.Empty;
@@ -136,7 +138,7 @@ internal sealed class WebCommandTarget : ICommandTarget
 
     public void OpenPromptTemplates() => FireAndForget(DispatchUnsupportedAsync(nameof(OpenPromptTemplates)));
 
-    public void DispatchToUi(Action action) => action();
+    public void DispatchToUi(Action action) => _uiDispatcher.Post(action);
 
     public void TrackBackgroundWork(Task task)
         => FireAndForget(ObserveBackgroundWorkAsync(task));

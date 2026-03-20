@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
@@ -43,12 +44,16 @@ public sealed class DesktopVoiceStartupIntegrationTests
 
             await PumpUiAsync();
 
-            var tabControl = window.FindControl<TabControl>("MainTabControl");
-            Assert.NotNull(tabControl);
-            tabControl.SelectedIndex = 2; // Voice tab
+            var voiceToggle = window.FindControl<ToggleButton>("VoiceFlyoutToggleButton");
+            Assert.NotNull(voiceToggle);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                voiceToggle.IsChecked = true;
+            });
             await PumpUiAsync();
 
-            var voiceView = window.FindControl<UserControl>("VoiceView");
+            var voiceView = window.FindControl<UserControl>("VoiceFlyoutView");
             Assert.NotNull(voiceView);
 
             var startButton = voiceView.FindControl<Button>("ChatToggleButton");
@@ -72,6 +77,59 @@ public sealed class DesktopVoiceStartupIntegrationTests
                 || status.Contains("failed", StringComparison.OrdinalIgnoreCase)
                 || status.Contains("error", StringComparison.OrdinalIgnoreCase),
                 $"Unexpected voice status after Start click: '{status}'");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task DesktopVoiceFlyout_CloseButton_HidesFlyoutWithoutThrowing()
+    {
+        await EnsureHeadlessAppResourcesAsync();
+
+        var vm = new MainWindowViewModel(
+            new TestClipboardService(),
+            mcpBaseUrl: "http://127.0.0.1:1",
+            mcpApiKey: null,
+            bearerToken: null,
+            systemNotificationService: NoOpSystemNotificationService.Instance)
+        {
+            SaveWorkspaceKey = _ => { },
+            LoadWorkspaceKey = () => null
+        };
+
+        var window = new MainWindow { DataContext = vm };
+        try
+        {
+            window.Show();
+            vm.InitializeAfterWindowShown();
+            await PumpUiAsync();
+
+            var voiceToggle = window.FindControl<ToggleButton>("VoiceFlyoutToggleButton");
+            var voiceBorder = window.FindControl<Border>("VoiceFlyoutBorder");
+            var closeButton = window.FindControl<Button>("VoiceFlyoutCloseButton");
+
+            Assert.NotNull(voiceToggle);
+            Assert.NotNull(voiceBorder);
+            Assert.NotNull(closeButton);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                voiceToggle.IsChecked = true;
+            });
+            await PumpUiAsync();
+            Assert.True(voiceBorder.IsVisible);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                closeButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            });
+            await PumpUiAsync();
+
+            Assert.False(voiceBorder.IsVisible);
+            Assert.False(voiceToggle.IsChecked == true);
         }
         finally
         {

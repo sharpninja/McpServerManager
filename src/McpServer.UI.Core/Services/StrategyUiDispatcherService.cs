@@ -32,5 +32,8 @@ public class StrategyUiDispatcherService : IUiDispatcherService
     public Task InvokeAsync(Func<Task> action) => _strategy.InvokeAsync(action);
 
     /// <inheritdoc />
+    public Task<T> InvokeAsync<T>(Func<T> action) => _strategy.InvokeAsync(action);
+
+    /// <inheritdoc />
     public void Post(Action action) => _strategy.Post(action);
 }

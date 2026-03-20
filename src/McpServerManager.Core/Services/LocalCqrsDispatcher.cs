@@ -42,6 +42,12 @@ public static class LocalCqrsDispatcher
             return action();
         }
 
+        public Task<T> InvokeAsync<T>(Func<T> action)
+        {
+            ArgumentNullException.ThrowIfNull(action);
+            return Task.FromResult(action());
+        }
+
         public void Post(Action action)
         {
             ArgumentNullException.ThrowIfNull(action);

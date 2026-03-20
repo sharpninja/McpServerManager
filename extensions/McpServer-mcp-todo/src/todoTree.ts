@@ -6,6 +6,7 @@
 
 import * as vscode from 'vscode';
 import type { TodoFlatItem } from './mcpClient';
+import { evaluate, parseFilterText } from './filterExpr';
 import { log } from './logger';
 
 const PRIORITY_ORDER = ['high', 'medium', 'low'];
@@ -45,9 +46,8 @@ function searchableForScope(item: TodoFlatItem, scope: TextFilterScope): string[
 
 function matchesText(item: TodoFlatItem, text: string, scope: TextFilterScope): boolean {
   if (!text || !text.trim()) return true;
-  const searchable = searchableForScope(item, scope).join(' ').toLowerCase();
-  const words = text.trim().toLowerCase().split(/\s+/);
-  return words.every((word) => searchable.includes(word));
+  const searchable = searchableForScope(item, scope).join(' ');
+  return evaluate(parseFilterText(text), searchable);
 }
 
 function matchesPriority(item: TodoFlatItem, filterPriority: string): boolean {

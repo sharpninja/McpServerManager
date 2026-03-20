@@ -30,6 +30,16 @@ internal sealed class WpfUiDispatchStrategy : IUiDispatchStrategy
         return CurrentDispatcher.InvokeAsync(action).Task.Unwrap();
     }
 
+    public Task<T> InvokeAsync<T>(Func<T> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (CurrentDispatcher.CheckAccess())
+            return Task.FromResult(action());
+
+        return CurrentDispatcher.InvokeAsync(action).Task;
+    }
+
     public void Post(Action action)
     {
         ArgumentNullException.ThrowIfNull(action);

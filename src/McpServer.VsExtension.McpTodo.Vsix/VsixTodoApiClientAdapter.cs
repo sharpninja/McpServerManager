@@ -97,37 +97,36 @@ internal sealed class VsixTodoApiClientAdapter(McpTodoClient client) : ITodoApiC
 
         if (!string.IsNullOrWhiteSpace(query.Keyword))
         {
-            var keyword = query.Keyword.Trim();
-            filtered = filtered.Where(item => MatchesKeyword(item, keyword));
+            var matcher = BooleanSearchParser.Parse(query.Keyword.Trim());
+            filtered = filtered.Where(item => matcher(BuildKeywordSearchText(item)));
         }
 
         return filtered;
     }
 
-    private static bool MatchesKeyword(TodoFlatItem item, string keyword)
-    {
-        var values = new string?[]
-            {
-                item.Id,
-                item.Title,
-                item.Section,
-                item.Priority,
-                item.Note,
-                item.Estimate,
-                item.Remaining,
-                item.Reference,
-                item.CompletedDate,
-                item.DoneSummary
-            }
-            .Concat(item.Description ?? Array.Empty<string>())
-            .Concat(item.TechnicalDetails ?? Array.Empty<string>())
-            .Concat(item.DependsOn ?? Array.Empty<string>())
-            .Concat(item.FunctionalRequirements ?? Array.Empty<string>())
-            .Concat(item.TechnicalRequirements ?? Array.Empty<string>())
-            .OfType<string>();
-
-        return values.Any(value => value.Contains(keyword, StringComparison.OrdinalIgnoreCase));
-    }
+    private static string BuildKeywordSearchText(TodoFlatItem item)
+        => string.Join(
+            " ",
+            new string?[]
+                {
+                    item.Id,
+                    item.Title,
+                    item.Section,
+                    item.Priority,
+                    item.Note,
+                    item.Estimate,
+                    item.Remaining,
+                    item.Reference,
+                    item.CompletedDate,
+                    item.DoneSummary
+                }
+                .Where(static value => !string.IsNullOrWhiteSpace(value))
+                .Concat(item.Description ?? Array.Empty<string>())
+                .Concat(item.TechnicalDetails ?? Array.Empty<string>())
+                .Concat(item.DependsOn ?? Array.Empty<string>())
+                .Concat(item.FunctionalRequirements ?? Array.Empty<string>())
+                .Concat(item.TechnicalRequirements ?? Array.Empty<string>())
+                .Where(static value => !string.IsNullOrWhiteSpace(value)));
 
     private static TodoListItem MapListItem(TodoFlatItem item)
         => new(item.Id, item.Title, item.Section, item.Priority, item.Done, item.Estimate);

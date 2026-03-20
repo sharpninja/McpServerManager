@@ -32,6 +32,7 @@ internal static class DirectorServiceRegistration
     {
         services.AddDirectorLogging();
         services.AddCqrs(typeof(Program).Assembly);
+        services.TryAddSingleton<IUiDispatcherService, TuiUiDispatcherService>();
         services.AddUiCore();
 
         services.AddSingleton<IBrowserLauncher, BrowserLauncher>();

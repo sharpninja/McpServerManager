@@ -45,6 +45,18 @@ public class LayoutSettings
 
     /// <summary>Index of the last selected tab in MainTabControl.</summary>
     public int SelectedTabIndex { get; set; }
+
+    /// <summary>Desktop/tablet voice drawer width when docked on the right.</summary>
+    public GridLengthDto VoiceFlyoutLandscapeWidth { get; set; } = new(420, GridUnitType.Pixel);
+
+    /// <summary>Desktop/tablet voice drawer height when docked at the bottom.</summary>
+    public GridLengthDto VoiceFlyoutPortraitHeight { get; set; } = new(300, GridUnitType.Pixel);
+
+    /// <summary>True when the voice flyout is currently open.</summary>
+    public bool VoiceFlyoutIsOpen { get; set; }
+
+    /// <summary>True when the voice flyout should stay open while navigating between tabs.</summary>
+    public bool VoiceFlyoutIsPinned { get; set; } = true;
 }
 
 public class GridLengthDto
