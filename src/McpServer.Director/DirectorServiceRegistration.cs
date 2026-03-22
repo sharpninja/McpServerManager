@@ -3,8 +3,10 @@ using McpServer.Cqrs;
 using McpServer.Director.Auth;
 using McpServer.Director.Helpers;
 using McpServer.UI.Core;
+using McpServer.UI.Core.Auth;
 using McpServer.UI.Core.Authorization;
 using McpServer.UI.Core.Navigation;
+using McpServer.UI.Core.Hosting;
 using McpServer.UI.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -13,9 +15,8 @@ using Microsoft.Extensions.Logging;
 namespace McpServer.Director;
 
 /// <summary>
-/// TR-MCP-DRY-001: Shared DI registration for all Director entry points (exec CLI and interactive TUI).
-/// Eliminates duplicated service wiring between <see cref="Program"/> and
-/// <see cref="Commands.InteractiveCommand"/>.
+/// TR-MCP-DRY-001: Shared DI registration for all Director entry points.
+/// The provider itself is now owned by <see cref="DirectorHost"/>.
 /// </summary>
 internal static class DirectorServiceRegistration
 {
@@ -25,26 +26,11 @@ internal static class DirectorServiceRegistration
     /// <param name="services">The service collection to populate.</param>
     /// <param name="workspace">Optional workspace path override.</param>
     /// <returns>
-    /// The <see cref="DirectorMcpContext"/> created during registration, needed by callers
-    /// that wire up screens or resolve ViewModels before calling <see cref="BuildAndFinalize"/>.
+    /// The <see cref="DirectorMcpContext"/> created during registration so callers can
+    /// layer entry-point-specific services on top of the shared Director graph before build.
     /// </returns>
     public static DirectorMcpContext Configure(IServiceCollection services, string? workspace = null)
     {
-        services.AddDirectorLogging();
-        services.AddCqrs(typeof(Program).Assembly);
-        services.TryAddSingleton<IUiDispatcherService, TuiUiDispatcherService>();
-        services.AddUiCore();
-
-        services.AddSingleton<IBrowserLauncher, BrowserLauncher>();
-
-        // Override default permissive auth with Director-specific implementations
-        services.RemoveAll<IRoleContext>();
-        services.RemoveAll<IAuthorizationPolicyService>();
-        services.AddSingleton<IRoleContext, DirectorRoleContext>();
-        services.AddSingleton<IAuthorizationPolicyService, DirectorAuthorizationPolicyService>();
-        services.AddSingleton<ITabRegistry, DirectorTabRegistry>();
-
-        // Build HTTP clients for control-plane and active workspace
         var activeWorkspaceClient = McpHttpClient.FromMarkerOnly(workspace);
         activeWorkspaceClient?.TrySetCachedBearerToken();
 
@@ -52,19 +38,40 @@ internal static class DirectorServiceRegistration
         controlClient?.TrySetCachedBearerToken();
 
         var directorContext = new DirectorMcpContext(controlClient, activeWorkspaceClient);
+
+        services.AddMcpHost(options =>
+        {
+            options.Lifetime = McpHostLifetimeStrategy.Singleton;
+            options.HostIdentityProvider = new DirectorHostIdentityProvider(directorContext);
+            options.UiDispatcherService = new TuiUiDispatcherService();
+            options.HealthClient = new HealthApiClientAdapter(directorContext.ControlClient);
+            options.SessionLogClient = new SessionLogApiClientAdapter(directorContext);
+            options.WorkspaceClient = new WorkspaceApiClientAdapter(directorContext);
+            options.TodoClient = new TodoApiClientAdapter(directorContext);
+            options.VoiceClient = new VoiceApiClientAdapter(directorContext);
+            options.EventStreamClient = new EventStreamApiClientAdapter(directorContext);
+        });
+
+        services.AddDirectorLogging();
+        services.AddSingleton<IBrowserLauncher, BrowserLauncher>();
+
+        // Override default permissive auth with Director-specific implementations.
+        services.RemoveAll<IRoleContext>();
+        services.RemoveAll<IAuthorizationPolicyService>();
+        services.AddSingleton<IRoleContext, DirectorRoleContext>();
+        services.AddSingleton<IAuthorizationPolicyService, DirectorAuthorizationPolicyService>();
+        services.AddSingleton<ITabRegistry, DirectorTabRegistry>();
+
         services.AddSingleton(directorContext);
+        services.AddSingleton<IMcpHostContext>(directorContext);
         if (controlClient is not null)
             services.AddSingleton(controlClient);
 
-        // Register API client adapters — all delegate to DirectorMcpContext for workspace switching
-        services.AddSingleton<IHealthApiClient>(_ => new HealthApiClientAdapter(directorContext.ControlClient));
-        services.AddSingleton<ISessionLogApiClient>(_ => new SessionLogApiClientAdapter(directorContext));
-        services.AddSingleton<IWorkspaceApiClient>(_ => new WorkspaceApiClientAdapter(directorContext));
+        // Register Director-only API client adapters on top of the shared host graph.
         services.AddSingleton<IRepoApiClient>(_ => new RepoApiClientAdapter(directorContext));
         services.AddSingleton<IContextApiClient>(_ => new ContextApiClientAdapter(directorContext));
         services.AddSingleton<IAuthConfigApiClient>(_ => new AuthConfigApiClientAdapter(directorContext));
         services.AddSingleton<IDiagnosticApiClient>(_ => new DiagnosticApiClientAdapter(directorContext));
-        services.AddSingleton<ITodoApiClient>(_ => new TodoApiClientAdapter(directorContext));
         services.AddSingleton<ITunnelApiClient>(_ => new TunnelApiClientAdapter(directorContext));
         services.AddSingleton<ITemplateApiClient>(_ => new TemplateApiClientAdapter(directorContext));
         services.AddSingleton<IAgentApiClient>(_ => new AgentApiClientAdapter(directorContext));
@@ -72,27 +79,8 @@ internal static class DirectorServiceRegistration
         services.AddSingleton<IToolRegistryApiClient>(_ => new ToolRegistryApiClientAdapter(directorContext));
         services.AddSingleton<IGitHubApiClient>(_ => new GitHubApiClientAdapter(directorContext));
         services.AddSingleton<IRequirementsApiClient>(_ => new RequirementsApiClientAdapter(directorContext));
-        services.AddSingleton<IVoiceApiClient>(_ => new VoiceApiClientAdapter(directorContext));
-        services.AddSingleton<IEventStreamApiClient>(_ => new EventStreamApiClientAdapter(directorContext));
         services.AddSingleton<IConfigurationApiClient>(_ => new ConfigurationApiClientAdapter(directorContext));
 
         return directorContext;
-    }
-
-    /// <summary>
-    /// Builds the <see cref="ServiceProvider"/> and attaches the CQRS <see cref="Dispatcher"/>
-    /// as an <see cref="ILoggerProvider"/> post-construction to break the circular dependency.
-    /// </summary>
-    /// <param name="services">The fully configured service collection.</param>
-    /// <returns>The built service provider.</returns>
-    public static ServiceProvider BuildAndFinalize(IServiceCollection services)
-    {
-        var sp = services.BuildServiceProvider();
-
-        // Dispatcher implements ILoggerProvider but also needs ILogger<Dispatcher> —
-        // adding it post-construction breaks the circular dependency.
-        sp.GetRequiredService<ILoggerFactory>().AddProvider(sp.GetRequiredService<Dispatcher>());
-
-        return sp;
     }
 }

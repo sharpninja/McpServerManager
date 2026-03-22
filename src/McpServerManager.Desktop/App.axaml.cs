@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
@@ -22,6 +23,9 @@ namespace McpServerManager.Desktop;
 public partial class App : Application
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("App");
+    private ServiceProvider? _connectionServices;
+    private DesktopMainWindowSession? _mainWindowSession;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -34,12 +38,14 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             DisableAvaloniaDataAnnotationValidation();
+            desktop.Exit += (_, _) => DisposeDesktopServices();
 
             try
             {
                 var uiDispatcher = new AvaloniaUiDispatcherService();
                 UiDispatcherHost.Configure(uiDispatcher);
-                var connectionVm = new ConnectionViewModel(new ConnectionAuthServiceAdapter(), uiDispatcher: uiDispatcher);
+                _connectionServices ??= DesktopAppServiceFactory.BuildConnectionProvider(uiDispatcher);
+                var connectionVm = _connectionServices.GetRequiredService<ConnectionViewModel>();
                 connectionVm.Host = "localhost";
 
                 connectionVm.SetExternalUrlOpener(url =>
@@ -74,6 +80,7 @@ public partial class App : Application
 
                 void OpenMainView(string mcpBaseUrl, string? mcpApiKey, string? bearerToken, bool persistConnection)
                 {
+                    DesktopMainWindowSession? nextSession = null;
                     try
                     {
                         _logger.LogInformation(
@@ -87,15 +94,20 @@ public partial class App : Application
                                 uri.Port.ToString(CultureInfo.InvariantCulture));
                         }
 
-                        var clipboardService = new DesktopClipboardService(desktop);
-                        var notificationService = new DesktopSystemNotificationService();
-                        var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, notificationService, uiDispatcher);
+                        nextSession = DesktopAppServiceFactory.CreateMainWindowSession(desktop, uiDispatcher, mcpBaseUrl, mcpApiKey, bearerToken);
+                        var vm = nextSession.ViewModel;
                         vm.SaveWorkspaceKey = DesktopConnectionPreferencesService.SaveWorkspaceKey;
                         vm.LoadWorkspaceKey = DesktopConnectionPreferencesService.LoadWorkspaceKey;
-                        var mainWindow = new MainWindow { DataContext = vm };
+                        var mainWindow = new MainWindow
+                        {
+                            ChatWindowViewModelFactory = nextSession.Services.GetRequiredService<IChatWindowViewModelFactory>(),
+                            DataContext = vm
+                        };
 
                         vm.LogoutRequested += (_, _) =>
                         {
+                            var sessionToDispose = _mainWindowSession;
+                            _mainWindowSession = null;
                             _logger.LogInformation("Logout requested; returning to connection dialog");
                             connectionVm.LogoutCommand.Execute(null);
                             DesktopConnectionPreferencesService.ClearOidcJwt();
@@ -106,7 +118,12 @@ public partial class App : Application
                             desktop.MainWindow = newConnectionWindow;
                             newConnectionWindow.Show();
                             mainWindow.Close();
+                            sessionToDispose?.Dispose();
                         };
+
+                        _mainWindowSession?.Dispose();
+                        _mainWindowSession = nextSession;
+                        nextSession = null;
 
                         desktop.MainWindow = mainWindow;
                         mainWindow.Show();
@@ -115,6 +132,7 @@ public partial class App : Application
                     }
                     catch (Exception ex)
                     {
+                        nextSession?.Dispose();
                         _logger.LogError(ex, "Connection failed");
                         WriteConnectionFailureLog(ex);
                         connectionVm.ErrorMessage = $"Connection failed: {ex.Message}";
@@ -152,6 +170,14 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void DisposeDesktopServices()
+    {
+        _mainWindowSession?.Dispose();
+        _mainWindowSession = null;
+        _connectionServices?.Dispose();
+        _connectionServices = null;
     }
 
     private void DisableAvaloniaDataAnnotationValidation()

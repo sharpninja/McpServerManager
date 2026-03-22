@@ -31,7 +31,8 @@ public sealed record TodoListItem(
     string Section,
     string Priority,
     bool Done,
-    string? Estimate);
+    string? Estimate,
+    string? Phase = null);
 
 /// <summary>Query to load a single TODO item by ID.</summary>
 public sealed record GetTodoQuery(string TodoId) : IQuery<TodoDetail?>;
@@ -55,7 +56,8 @@ public sealed record TodoDetail(
     string? Reference,
     IReadOnlyList<string> DependsOn,
     IReadOnlyList<string> FunctionalRequirements,
-    IReadOnlyList<string> TechnicalRequirements);
+    IReadOnlyList<string> TechnicalRequirements,
+    string? Phase = null);
 
 /// <summary>Detail view of a TODO sub-task.</summary>
 public sealed record TodoTaskDetail(string Task, bool Done);
@@ -64,7 +66,19 @@ public sealed record TodoTaskDetail(string Task, bool Done);
 public sealed record TodoMutationOutcome(
     bool Success,
     string? Error,
-    TodoDetail? Item);
+    TodoDetail? Item,
+    TodoMutationFailureKind FailureKind = TodoMutationFailureKind.None);
+
+/// <summary>Classifies the failure mode of a TODO mutation.</summary>
+public enum TodoMutationFailureKind
+{
+    None = 0,
+    Validation = 1,
+    Conflict = 2,
+    NotFound = 3,
+    ProjectionFailed = 4,
+    ExternalSyncFailed = 5
+}
 
 /// <summary>Typed result of TODO requirements analysis.</summary>
 public sealed record TodoRequirementsAnalysis(
@@ -104,6 +118,9 @@ public sealed record CreateTodoCommand : ICommand<TodoMutationOutcome>
 
     /// <summary>Optional remaining-work note.</summary>
     public string? Remaining { get; init; }
+
+    /// <summary>Optional code-review phase label.</summary>
+    public string? Phase { get; init; }
 
     /// <summary>Optional description lines.</summary>
     public IReadOnlyList<string>? Description { get; init; }
@@ -156,6 +173,9 @@ public sealed record UpdateTodoCommand : ICommand<TodoMutationOutcome>
 
     /// <summary>Updated remaining-work note (null = no change).</summary>
     public string? Remaining { get; init; }
+
+    /// <summary>Updated code-review phase label (null = no change).</summary>
+    public string? Phase { get; init; }
 
     /// <summary>Updated description lines (null = no change).</summary>
     public IReadOnlyList<string>? Description { get; init; }

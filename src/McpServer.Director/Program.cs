@@ -49,13 +49,6 @@ internal static class Program
         return await rootCommand.InvokeAsync(args).ConfigureAwait(true);
     }
 
-    private static ServiceProvider BuildServiceProvider(string? workspace = null)
-    {
-        var services = new ServiceCollection();
-        DirectorServiceRegistration.Configure(services, workspace);
-        return DirectorServiceRegistration.BuildAndFinalize(services);
-    }
-
     private static Command BuildExecCommand()
     {
         var viewModelArg = new Argument<string>("viewmodel",
@@ -78,7 +71,7 @@ internal static class Program
 
         execCommand.SetHandler(async (string viewModelName, string? input) =>
         {
-            using var sp = BuildServiceProvider();
+            using var sp = DirectorHost.CreateProvider();
             var registry = sp.GetRequiredService<IViewModelRegistry>();
 
             try
@@ -138,7 +131,7 @@ internal static class Program
 
         listCommand.SetHandler((string? filter) =>
         {
-            using var sp = BuildServiceProvider();
+            using var sp = DirectorHost.CreateProvider();
             var registry = sp.GetRequiredService<IViewModelRegistry>();
 
             var table = new Table();

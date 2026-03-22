@@ -88,6 +88,15 @@ public sealed class McpTodoService
     public IAsyncEnumerable<string> StreamPlanPromptAsync(string id, CancellationToken cancellationToken = default)
         => _promptClient.Todo.StreamPlanAsync(id, cancellationToken);
 
+    public void ApplyPromptConnectionState(string? bearerToken, string? apiKey, string workspacePath)
+    {
+        McpServer.UI.Core.ViewModels.MainWindowViewModel.ApplyClientConnectionState(
+            _promptClient,
+            bearerToken,
+            apiKey,
+            workspacePath);
+    }
+
     private static McpTodoQueryResult Map(ClientModels.TodoQueryResult result)
     {
         return new McpTodoQueryResult
@@ -103,6 +112,7 @@ public sealed class McpTodoService
         {
             Success = result.Success,
             Error = result.Error,
+            FailureKind = MapFailureKind(result.FailureKind),
             Item = result.Item == null ? null : Map(result.Item)
         };
     }
@@ -126,6 +136,7 @@ public sealed class McpTodoService
             Remaining = item.Remaining,
             PriorityNote = item.PriorityNote,
             Reference = item.Reference,
+            Phase = item.Phase,
             DependsOn = item.DependsOn?.ToList(),
             FunctionalRequirements = item.FunctionalRequirements?.ToList(),
             TechnicalRequirements = item.TechnicalRequirements?.ToList()
@@ -152,6 +163,7 @@ public sealed class McpTodoService
             Estimate = request.Estimate,
             Note = request.Note,
             Remaining = request.Remaining,
+            Phase = request.Phase,
             Description = request.Description?.ToList(),
             TechnicalDetails = request.TechnicalDetails?.ToList(),
             ImplementationTasks = request.ImplementationTasks?.Select(Map).ToList(),
@@ -177,11 +189,23 @@ public sealed class McpTodoService
             CompletedDate = request.CompletedDate,
             DoneSummary = request.DoneSummary,
             Remaining = request.Remaining,
+            Phase = request.Phase,
             DependsOn = request.DependsOn?.ToList(),
             FunctionalRequirements = request.FunctionalRequirements?.ToList(),
             TechnicalRequirements = request.TechnicalRequirements?.ToList()
         };
     }
+
+    private static McpTodoMutationFailureKind MapFailureKind(ClientModels.TodoMutationFailureKind failureKind)
+        => failureKind switch
+        {
+            ClientModels.TodoMutationFailureKind.Validation => McpTodoMutationFailureKind.Validation,
+            ClientModels.TodoMutationFailureKind.Conflict => McpTodoMutationFailureKind.Conflict,
+            ClientModels.TodoMutationFailureKind.NotFound => McpTodoMutationFailureKind.NotFound,
+            ClientModels.TodoMutationFailureKind.ProjectionFailed => McpTodoMutationFailureKind.ProjectionFailed,
+            ClientModels.TodoMutationFailureKind.ExternalSyncFailed => McpTodoMutationFailureKind.ExternalSyncFailed,
+            _ => McpTodoMutationFailureKind.None
+        };
 
     private static ClientModels.TodoFlatTask Map(McpTodoFlatTask task)
     {
@@ -192,4 +216,3 @@ public sealed class McpTodoService
         };
     }
 }
-

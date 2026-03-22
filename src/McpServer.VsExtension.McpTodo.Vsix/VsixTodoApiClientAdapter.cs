@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using McpServer.UI.Core.Messages;
 using McpServer.UI.Core.Services;
 using McpServer.VsExtension.McpTodo.Models;
+using UiTodoMutationFailureKind = McpServer.UI.Core.Messages.TodoMutationFailureKind;
 
 namespace McpServer.VsExtension.McpTodo;
 
@@ -44,7 +45,11 @@ internal sealed class VsixTodoApiClientAdapter(McpTodoClient client) : ITodoApiC
     {
         ArgumentNullException.ThrowIfNull(command);
         var result = await _client.UpdateTodoAsync(command.TodoId, Map(command), cancellationToken).ConfigureAwait(true);
-        return new TodoMutationOutcome(result.Success, result.Error, result.Item is null ? null : MapDetail(result.Item));
+        return new TodoMutationOutcome(
+            result.Success,
+            result.Error,
+            result.Item is null ? null : MapDetail(result.Item),
+            MapFailureKind(result.FailureKind));
     }
 
     public Task<TodoMutationOutcome> CreateTodoAsync(CreateTodoCommand command, CancellationToken cancellationToken = default)
@@ -116,6 +121,7 @@ internal sealed class VsixTodoApiClientAdapter(McpTodoClient client) : ITodoApiC
                     item.Note,
                     item.Estimate,
                     item.Remaining,
+                    item.Phase,
                     item.Reference,
                     item.CompletedDate,
                     item.DoneSummary
@@ -129,7 +135,7 @@ internal sealed class VsixTodoApiClientAdapter(McpTodoClient client) : ITodoApiC
                 .Where(static value => !string.IsNullOrWhiteSpace(value)));
 
     private static TodoListItem MapListItem(TodoFlatItem item)
-        => new(item.Id, item.Title, item.Section, item.Priority, item.Done, item.Estimate);
+        => new(item.Id, item.Title, item.Section, item.Priority, item.Done, item.Estimate, item.Phase);
 
     private static TodoDetail MapDetail(TodoFlatItem item)
         => new(
@@ -150,7 +156,8 @@ internal sealed class VsixTodoApiClientAdapter(McpTodoClient client) : ITodoApiC
             item.Reference,
             item.DependsOn?.ToList() ?? [],
             item.FunctionalRequirements?.ToList() ?? [],
-            item.TechnicalRequirements?.ToList() ?? []);
+            item.TechnicalRequirements?.ToList() ?? [],
+            item.Phase);
 
     private static TodoUpdateBody Map(UpdateTodoCommand command)
         => new()
@@ -171,8 +178,20 @@ internal sealed class VsixTodoApiClientAdapter(McpTodoClient client) : ITodoApiC
             CompletedDate = command.CompletedDate,
             DoneSummary = command.DoneSummary,
             Remaining = command.Remaining,
+            Phase = command.Phase,
             DependsOn = command.DependsOn?.ToList(),
             FunctionalRequirements = command.FunctionalRequirements?.ToList(),
             TechnicalRequirements = command.TechnicalRequirements?.ToList(),
+        };
+
+    private static UiTodoMutationFailureKind MapFailureKind(Models.TodoMutationFailureKind failureKind)
+        => failureKind switch
+        {
+            Models.TodoMutationFailureKind.Validation => UiTodoMutationFailureKind.Validation,
+            Models.TodoMutationFailureKind.Conflict => UiTodoMutationFailureKind.Conflict,
+            Models.TodoMutationFailureKind.NotFound => UiTodoMutationFailureKind.NotFound,
+            Models.TodoMutationFailureKind.ProjectionFailed => UiTodoMutationFailureKind.ProjectionFailed,
+            Models.TodoMutationFailureKind.ExternalSyncFailed => UiTodoMutationFailureKind.ExternalSyncFailed,
+            _ => UiTodoMutationFailureKind.None
         };
 }

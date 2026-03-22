@@ -4,6 +4,7 @@ using McpServer.UI.Core.Messages;
 using McpServer.UI.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using UiTodoMutationFailureKind = McpServer.UI.Core.Messages.TodoMutationFailureKind;
 
 namespace McpServer.Web.Adapters;
 
@@ -38,7 +39,8 @@ internal sealed class TodoApiClientAdapter : ITodoApiClient
                 Section: item.Section,
                 Priority: item.Priority,
                 Done: item.Done,
-                Estimate: item.Estimate))
+                Estimate: item.Estimate,
+                Phase: item.Phase))
             .ToList();
 
         return new ListTodosResult(items, response.TotalCount);
@@ -73,6 +75,7 @@ internal sealed class TodoApiClientAdapter : ITodoApiClient
                         Section = command.Section,
                         Priority = command.Priority,
                         Estimate = command.Estimate,
+                        Phase = command.Phase,
                         Description = command.Description,
                         TechnicalDetails = command.TechnicalDetails,
                         ImplementationTasks = command.ImplementationTasks?.Select(t => new TodoFlatTask
@@ -89,12 +92,12 @@ internal sealed class TodoApiClientAdapter : ITodoApiClient
         catch (McpConflictException ex)
         {
             _logger.LogWarning("{ExceptionDetail}", ex.ToString());
-            return new TodoMutationOutcome(false, ex.Message, null);
+            return new TodoMutationOutcome(false, ex.Message, null, UiTodoMutationFailureKind.Conflict);
         }
         catch (McpValidationException ex)
         {
             _logger.LogWarning("{ExceptionDetail}", ex.ToString());
-            return new TodoMutationOutcome(false, ex.Message, null);
+            return new TodoMutationOutcome(false, ex.Message, null, UiTodoMutationFailureKind.Validation);
         }
     }
 
@@ -111,6 +114,7 @@ internal sealed class TodoApiClientAdapter : ITodoApiClient
                         Done = command.Done,
                         Estimate = command.Estimate,
                         Note = command.Note,
+                        Phase = command.Phase,
                         Description = command.Description,
                         TechnicalDetails = command.TechnicalDetails,
                         ImplementationTasks = command.ImplementationTasks?.Select(t => new TodoFlatTask
@@ -127,12 +131,12 @@ internal sealed class TodoApiClientAdapter : ITodoApiClient
         catch (McpNotFoundException ex)
         {
             _logger.LogWarning("{ExceptionDetail}", ex.ToString());
-            return new TodoMutationOutcome(false, ex.Message, null);
+            return new TodoMutationOutcome(false, ex.Message, null, UiTodoMutationFailureKind.NotFound);
         }
         catch (McpValidationException ex)
         {
             _logger.LogWarning("{ExceptionDetail}", ex.ToString());
-            return new TodoMutationOutcome(false, ex.Message, null);
+            return new TodoMutationOutcome(false, ex.Message, null, UiTodoMutationFailureKind.Validation);
         }
     }
 
@@ -149,7 +153,7 @@ internal sealed class TodoApiClientAdapter : ITodoApiClient
         catch (McpNotFoundException ex)
         {
             _logger.LogWarning("{ExceptionDetail}", ex.ToString());
-            return new TodoMutationOutcome(false, ex.Message, null);
+            return new TodoMutationOutcome(false, ex.Message, null, UiTodoMutationFailureKind.NotFound);
         }
     }
 
@@ -205,14 +209,27 @@ internal sealed class TodoApiClientAdapter : ITodoApiClient
             Reference: item.Reference,
             DependsOn: item.DependsOn?.ToList() ?? [],
             FunctionalRequirements: item.FunctionalRequirements?.ToList() ?? [],
-            TechnicalRequirements: item.TechnicalRequirements?.ToList() ?? []);
+            TechnicalRequirements: item.TechnicalRequirements?.ToList() ?? [],
+            Phase: item.Phase);
     }
 
     private static TodoMutationOutcome MapMutationOutcome(McpServer.Client.Models.TodoMutationResult result)
         => new(
             Success: result.Success,
             Error: result.Error,
-            Item: result.Item is null ? null : MapTodoDetail(result.Item));
+            Item: result.Item is null ? null : MapTodoDetail(result.Item),
+            FailureKind: MapFailureKind(result.FailureKind));
+
+    private static UiTodoMutationFailureKind MapFailureKind(McpServer.Client.Models.TodoMutationFailureKind failureKind)
+        => failureKind switch
+        {
+            McpServer.Client.Models.TodoMutationFailureKind.Validation => UiTodoMutationFailureKind.Validation,
+            McpServer.Client.Models.TodoMutationFailureKind.Conflict => UiTodoMutationFailureKind.Conflict,
+            McpServer.Client.Models.TodoMutationFailureKind.NotFound => UiTodoMutationFailureKind.NotFound,
+            McpServer.Client.Models.TodoMutationFailureKind.ProjectionFailed => UiTodoMutationFailureKind.ProjectionFailed,
+            McpServer.Client.Models.TodoMutationFailureKind.ExternalSyncFailed => UiTodoMutationFailureKind.ExternalSyncFailed,
+            _ => UiTodoMutationFailureKind.None
+        };
 
     private IAsyncEnumerable<string> GetPromptStreamAsync(
         Func<McpServerClient, IAsyncEnumerable<string>> getStream,

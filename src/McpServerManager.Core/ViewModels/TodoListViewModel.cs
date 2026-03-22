@@ -14,7 +14,7 @@ public partial class TodoListViewModel : McpServer.UI.Core.ViewModels.TodoListHo
 {
     private readonly CqrsDispatcher _dispatcher;
 
-    internal TodoListViewModel(IClipboardService clipboardService, McpServer.UI.Core.Services.UiCoreAppRuntime runtime)
+    internal TodoListViewModel(IClipboardService clipboardService, McpServer.UI.Core.Services.UiCoreHostRuntime runtime)
         : base(
             clipboardService,
             runtime.GetRequiredService<UiCoreTodoListViewModel>(),

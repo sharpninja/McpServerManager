@@ -29,6 +29,7 @@ public sealed partial class UpdateTodoViewModel : ObservableObject
     [ObservableProperty] private string? _completedDate;
     [ObservableProperty] private string? _doneSummary;
     [ObservableProperty] private string? _remaining;
+    [ObservableProperty] private string? _phase;
     [ObservableProperty] private IReadOnlyList<string>? _description;
     [ObservableProperty] private IReadOnlyList<string>? _technicalDetails;
     [ObservableProperty] private IReadOnlyList<TodoTaskDetail>? _implementationTasks;
@@ -57,6 +58,7 @@ public sealed partial class UpdateTodoViewModel : ObservableObject
         CompletedDate = CompletedDate,
         DoneSummary = DoneSummary,
         Remaining = Remaining,
+        Phase = Phase,
         Description = Description,
         TechnicalDetails = TechnicalDetails,
         ImplementationTasks = ImplementationTasks,

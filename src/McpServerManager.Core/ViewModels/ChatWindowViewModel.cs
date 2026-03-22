@@ -32,7 +32,7 @@ public partial class ChatWindowViewModel : McpServer.UI.Core.ViewModels.ChatWind
     }
 
     /// <summary>Parameterless constructor for design-time only.</summary>
-    public ChatWindowViewModel() : this(LocalCqrsDispatcher.Instance, () => string.Empty, null, null)
+    public ChatWindowViewModel() : this(ChatWindowViewModelFactory.CreateFallbackDispatcher(new OllamaLogAgentService()), () => string.Empty, null, null)
     {
     }
 

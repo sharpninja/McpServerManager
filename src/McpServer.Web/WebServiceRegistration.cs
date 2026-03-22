@@ -1,12 +1,15 @@
 using McpServer.Cqrs;
 using McpServer.UI.Core;
+using McpServer.UI.Core.Auth;
 using McpServer.UI.Core.Authorization;
 using McpServer.UI.Core.Commands;
+using McpServer.UI.Core.Hosting;
 using McpServer.UI.Core.Services;
 using McpServer.Web.Adapters;
 using McpServer.Web.Authorization;
 using McpServer.Web.Services;
 using McpServer.Web.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace McpServer.Web;
@@ -23,24 +26,24 @@ internal static class WebServiceRegistration
 
         // BearerTokenAccessor reads the OIDC access_token from the current HttpContext for API forwarding.
         services.AddScoped<BearerTokenAccessor>();
-
-        // Avoid registering Dispatcher as an ILoggerProvider (AddCqrs) to prevent startup DI/logger cycles.
-        // Web command dispatch needs the current scope so scoped CQRS behaviors can resolve correctly.
-        services.AddScoped<Dispatcher>();
-        services.TryAddScoped<IUiDispatcherService, BlazorUiDispatcherService>();
-        services.AddUiCore(typeof(WebServiceRegistration).Assembly);
-
         services.TryAddScoped<WebCommandTarget>();
-        services.TryAddScoped<ICommandTarget>(sp => sp.GetRequiredService<WebCommandTarget>());
-        services.TryAddScoped<INavigationTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddScoped<IRequestDetailsTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddScoped<IPreviewTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddScoped<IArchiveTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddScoped<ISessionDataTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddScoped<IClipboardTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddScoped<IConfigTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddScoped<IUiDispatchTarget>(sp => sp.GetRequiredService<ICommandTarget>());
-        services.TryAddScoped<ITodoCopilotTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+
+        services.AddMcpHost(options =>
+        {
+            options.Lifetime = McpHostLifetimeStrategy.Scoped;
+            options.AdditionalHandlerAssemblies = [typeof(WebServiceRegistration).Assembly];
+            options.CommandTargetFactory = static sp => sp.GetRequiredService<WebCommandTarget>();
+            options.HostIdentityProviderFactory = static sp => ActivatorUtilities.CreateInstance<WebHostIdentityProvider>(sp);
+            options.HealthClientFactory = static sp => ActivatorUtilities.CreateInstance<HealthApiClientAdapter>(sp);
+            options.SessionLogClientFactory = static sp => ActivatorUtilities.CreateInstance<SessionLogApiClientAdapter>(sp);
+            options.WorkspaceClientFactory = static sp => ActivatorUtilities.CreateInstance<WorkspaceApiClientAdapter>(sp);
+            options.TodoClientFactory = static sp => ActivatorUtilities.CreateInstance<TodoApiClientAdapter>(sp);
+            options.VoiceClientFactory = static sp => ActivatorUtilities.CreateInstance<VoiceApiClientAdapter>(sp);
+            options.EventStreamClientFactory = static sp => ActivatorUtilities.CreateInstance<EventStreamApiClientAdapter>(sp);
+        });
+
+        services.RemoveAll<IUiDispatcherService>();
+        services.AddScoped<IUiDispatcherService, BlazorUiDispatcherService>();
 
         services.RemoveAll<WorkspaceAutoSelector>();
         services.AddScoped<WorkspaceAutoSelector>();
@@ -49,10 +52,7 @@ internal static class WebServiceRegistration
         services.AddScoped<BackendConnectionMonitor>();
 
         services.AddScoped<WebMcpContext>();
-        services.AddScoped<ITodoApiClient, TodoApiClientAdapter>();
-        services.AddScoped<IWorkspaceApiClient, WorkspaceApiClientAdapter>();
-        services.AddScoped<ISessionLogApiClient, SessionLogApiClientAdapter>();
-        services.AddScoped<IHealthApiClient, HealthApiClientAdapter>();
+        services.AddScoped<IMcpHostContext>(sp => sp.GetRequiredService<WebMcpContext>());
         services.AddScoped<ITemplateApiClient, TemplateApiClientAdapter>();
         services.AddScoped<IContextApiClient, ContextApiClientAdapter>();
         services.AddScoped<IRepoApiClient, RepoApiClientAdapter>();

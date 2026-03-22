@@ -33,10 +33,8 @@ internal static class InteractiveCommand
 
         cmd.SetHandler((string? workspace) =>
         {
-            // Build DI container with shared registration
-            var services = new ServiceCollection();
-            var directorContext = DirectorServiceRegistration.Configure(services, workspace);
-            using var sp = DirectorServiceRegistration.BuildAndFinalize(services);
+            using var sp = DirectorHost.CreateProvider(workspace);
+            var directorContext = sp.GetRequiredService<DirectorMcpContext>();
 
             // Resolve ViewModels
             var workspaceListVm = sp.GetRequiredService<WorkspaceListViewModel>();

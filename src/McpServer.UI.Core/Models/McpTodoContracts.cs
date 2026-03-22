@@ -65,6 +65,9 @@ public sealed class McpTodoFlatItem
     [JsonPropertyName("reference")]
     public string? Reference { get; set; }
 
+    [JsonPropertyName("phase")]
+    public string? Phase { get; set; }
+
     [JsonPropertyName("dependsOn")]
     public List<string>? DependsOn { get; set; }
 
@@ -110,6 +113,9 @@ public sealed class McpTodoCreateRequest
 
     [JsonPropertyName("remaining")]
     public string? Remaining { get; set; }
+
+    [JsonPropertyName("phase")]
+    public string? Phase { get; set; }
 
     [JsonPropertyName("description")]
     public List<string>? Description { get; set; }
@@ -170,6 +176,9 @@ public sealed class McpTodoUpdateRequest
     [JsonPropertyName("remaining")]
     public string? Remaining { get; set; }
 
+    [JsonPropertyName("phase")]
+    public string? Phase { get; set; }
+
     [JsonPropertyName("dependsOn")]
     public List<string>? DependsOn { get; set; }
 
@@ -190,8 +199,22 @@ public sealed class McpTodoMutationResult
     [JsonPropertyName("error")]
     public string? Error { get; set; }
 
+    [JsonPropertyName("failureKind")]
+    public McpTodoMutationFailureKind FailureKind { get; set; }
+
     [JsonPropertyName("item")]
     public McpTodoFlatItem? Item { get; set; }
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum McpTodoMutationFailureKind
+{
+    None = 0,
+    Validation = 1,
+    Conflict = 2,
+    NotFound = 3,
+    ProjectionFailed = 4,
+    ExternalSyncFailed = 5
 }
 
 // ── Requirements analysis ───────────────────────────────────────────────────

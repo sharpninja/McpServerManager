@@ -1,0 +1,23 @@
+  McpServer.Cqrs -> E:\github\RequestTracker\lib\McpServer\src\McpServer.Cqrs\bin\Debug\net9.0\McpServer.Cqrs.dll
+  McpServer.Client -> E:\github\RequestTracker\lib\McpServer\src\McpServer.Client\bin\Debug\net9.0\McpServer.Client.dll
+  McpServer.Cqrs.Mvvm -> E:\github\RequestTracker\lib\McpServer\src\McpServer.Cqrs.Mvvm\bin\Debug\net9.0\McpServer.Cqrs.Mvvm.dll
+  Avalonia Accelerate Community requires telemetry. To opt out, please upgrade to a paid tier. Learn more: https://avaloniaui.net/accelerate/
+  McpServer.UI.Core -> E:\github\RequestTracker\src\McpServer.UI.Core\bin\Debug\net9.0\McpServer.UI.Core.dll
+  Avalonia Accelerate Community requires telemetry. To opt out, please upgrade to a paid tier. Learn more: https://avaloniaui.net/accelerate/
+  McpServer.UI.Core.Tests -> E:\github\RequestTracker\tests\McpServer.UI.Core.Tests\bin\Debug\net9.0\McpServer.UI.Core.Tests.dll
+Test run for E:\github\RequestTracker\tests\McpServer.UI.Core.Tests\bin\Debug\net9.0\McpServer.UI.Core.Tests.dll (.NETCoreApp,Version=v9.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:02.87]     McpServer.UI.Core.Tests.McpHostOptionsTests.Properties_CanCaptureScopedHostConfiguration [FAIL]
+  Failed McpServer.UI.Core.Tests.McpHostOptionsTests.Properties_CanCaptureScopedHostConfiguration [159 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+               Γåô (pos 3)
+Expected: "E:\\repo"
+Actual:   "E:\\\\repo"
+               Γåæ (pos 3)
+  Stack Trace:
+     at McpServer.UI.Core.Tests.McpHostOptionsTests.Properties_CanCaptureScopedHostConfiguration() in E:\github\RequestTracker\tests\McpServer.UI.Core.Tests\McpHostOptionsTests.cs:line 33
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:     1, Passed:     8, Skipped:     0, Total:     9, Duration: 298 ms - McpServer.UI.Core.Tests.dll (net9.0)

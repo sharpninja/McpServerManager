@@ -66,12 +66,12 @@ internal sealed class UiCoreTodoApiClientAdapter : ITodoApiClient
         catch (McpConflictException ex)
         {
             _logger.LogWarning("{ExceptionDetail}", ex.ToString());
-            return new TodoMutationOutcome(false, ex.Message, null);
+            return new TodoMutationOutcome(false, ex.Message, null, TodoMutationFailureKind.Conflict);
         }
         catch (McpValidationException ex)
         {
             _logger.LogWarning("{ExceptionDetail}", ex.ToString());
-            return new TodoMutationOutcome(false, ex.Message, null);
+            return new TodoMutationOutcome(false, ex.Message, null, TodoMutationFailureKind.Validation);
         }
     }
 
@@ -90,12 +90,12 @@ internal sealed class UiCoreTodoApiClientAdapter : ITodoApiClient
         catch (McpNotFoundException ex)
         {
             _logger.LogWarning("{ExceptionDetail}", ex.ToString());
-            return new TodoMutationOutcome(false, ex.Message, null);
+            return new TodoMutationOutcome(false, ex.Message, null, TodoMutationFailureKind.NotFound);
         }
         catch (McpValidationException ex)
         {
             _logger.LogWarning("{ExceptionDetail}", ex.ToString());
-            return new TodoMutationOutcome(false, ex.Message, null);
+            return new TodoMutationOutcome(false, ex.Message, null, TodoMutationFailureKind.Validation);
         }
     }
 
@@ -109,7 +109,7 @@ internal sealed class UiCoreTodoApiClientAdapter : ITodoApiClient
         catch (McpNotFoundException ex)
         {
             _logger.LogWarning("{ExceptionDetail}", ex.ToString());
-            return new TodoMutationOutcome(false, ex.Message, null);
+            return new TodoMutationOutcome(false, ex.Message, null, TodoMutationFailureKind.NotFound);
         }
     }
 

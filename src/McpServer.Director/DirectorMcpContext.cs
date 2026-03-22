@@ -1,5 +1,6 @@
 using McpServer.Client;
 using McpServer.Director.Auth;
+using McpServer.UI.Core.Hosting;
 using System.Text.Json;
 
 namespace McpServer.Director;
@@ -9,7 +10,7 @@ namespace McpServer.Director;
 /// - Control-plane connection (default URL / admin host) for workspace management and health.
 /// - Active workspace connection selected by the user for workspace-scoped tabs.
 /// </summary>
-internal sealed class DirectorMcpContext : IDisposable
+internal sealed class DirectorMcpContext : IMcpHostContext, IDisposable
 {
     private readonly object _gate = new();
     private McpHttpClient? _controlClient;
@@ -67,6 +68,10 @@ internal sealed class DirectorMcpContext : IDisposable
             ApplyCachedBearerTokenToTypedClients_NoLock();
         }
     }
+
+    /// <summary>Switches the active workspace context to the specified workspace root path.</summary>
+    public bool TrySetActiveWorkspace(string? workspacePath)
+        => TrySetActiveWorkspace(workspacePath ?? string.Empty, out _);
 
     /// <summary>Switches the active workspace context to the specified workspace root path.</summary>
     public bool TrySetActiveWorkspace(string workspacePath, out string? error)

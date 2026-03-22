@@ -1,6 +1,7 @@
 using System.IO;
 using System.Runtime.CompilerServices;
 using McpServer.Client;
+using McpServer.UI.Core.Hosting;
 using McpServer.UI.Core.ViewModels;
 using McpServer.Web.Authorization;
 using Microsoft.Extensions.Logging;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace McpServer.Web;
 
-internal sealed class WebMcpContext
+internal sealed class WebMcpContext : IMcpHostContext
 {
     private readonly object _gate = new();
     private readonly WorkspaceContextViewModel _workspaceContext;
@@ -56,6 +57,15 @@ internal sealed class WebMcpContext
     public Uri BaseUrl { get; }
 
     public string? ActiveWorkspacePath { get; private set; }
+
+    public void RefreshBearerTokens()
+    {
+        var bearerToken = _bearerTokenAccessor.GetAccessTokenAsync().GetAwaiter().GetResult();
+        AlignAuthenticationMode(bearerToken);
+    }
+
+    public bool TrySetActiveWorkspace(string? workspacePath)
+        => TrySetActiveWorkspace(workspacePath, updateViewModel: true);
 
     public bool TrySetActiveWorkspace(string? workspacePath, bool updateViewModel = true)
     {

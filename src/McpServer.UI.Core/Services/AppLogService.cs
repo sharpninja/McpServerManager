@@ -15,6 +15,7 @@ public sealed class AppLogService : ILoggerFactory, ILoggerProvider, McpServer.U
     public static AppLogService Instance => _instance.Value;
 
     private readonly List<LogEntry> _entries = new();
+    private readonly List<WeakReference<ILoggerProvider>> _providers = new();
     private readonly object _lock = new();
     private event Action<McpServer.UI.Core.Services.ILogEntry>? _entryAddedBridge;
 
@@ -46,9 +47,41 @@ public sealed class AppLogService : ILoggerFactory, ILoggerProvider, McpServer.U
         lock (_lock) _entries.Clear();
     }
 
+    public AppLogService ConfigureProviders(IEnumerable<ILoggerProvider> providers)
+    {
+        ArgumentNullException.ThrowIfNull(providers);
+
+        foreach (var provider in providers)
+            AddProvider(provider);
+
+        return this;
+    }
+
     // ILoggerFactory
     public ILogger CreateLogger(string categoryName) => new AppLogger(this, categoryName);
-    public void AddProvider(ILoggerProvider provider) { }
+    public void AddProvider(ILoggerProvider provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        if (ReferenceEquals(provider, this))
+            return;
+
+        lock (_lock)
+        {
+            for (var index = _providers.Count - 1; index >= 0; index--)
+            {
+                if (!_providers[index].TryGetTarget(out var existingProvider))
+                {
+                    _providers.RemoveAt(index);
+                    continue;
+                }
+
+                if (ReferenceEquals(existingProvider, provider))
+                    return;
+            }
+
+            _providers.Add(new WeakReference<ILoggerProvider>(provider));
+        }
+    }
 
     // ILoggerProvider
     ILogger ILoggerProvider.CreateLogger(string categoryName) => new AppLogger(this, categoryName);
@@ -56,6 +89,30 @@ public sealed class AppLogService : ILoggerFactory, ILoggerProvider, McpServer.U
     public void Dispose() { }
 
     private AppLogService() { }
+
+    internal ILoggerProvider[] GetProvidersSnapshot()
+    {
+        lock (_lock)
+        {
+            if (_providers.Count == 0)
+                return [];
+
+            var providers = new List<ILoggerProvider>(_providers.Count);
+            for (var index = _providers.Count - 1; index >= 0; index--)
+            {
+                if (_providers[index].TryGetTarget(out var provider))
+                {
+                    providers.Add(provider);
+                    continue;
+                }
+
+                _providers.RemoveAt(index);
+            }
+
+            providers.Reverse();
+            return providers.ToArray();
+        }
+    }
 }
 
 /// <summary>
@@ -73,7 +130,33 @@ internal sealed class AppLogger : ILogger
         _category = category;
     }
 
-    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+    {
+        List<IDisposable>? scopes = null;
+        foreach (var provider in _service.GetProvidersSnapshot())
+        {
+            try
+            {
+                var scope = provider.CreateLogger(_category).BeginScope(state);
+                if (scope is null)
+                    continue;
+
+                scopes ??= new List<IDisposable>();
+                scopes.Add(scope);
+            }
+            catch
+            {
+            }
+        }
+
+        return scopes switch
+        {
+            null => null,
+            { Count: 1 } => scopes[0],
+            _ => new CompositeScope(scopes),
+        };
+    }
+
     public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
 
     public void Log<TState>(
@@ -87,6 +170,33 @@ internal sealed class AppLogger : ILogger
         if (exception != null)
             message += Environment.NewLine + exception;
         _service.AddEntry(logLevel, _category, message);
+
+        foreach (var provider in _service.GetProvidersSnapshot())
+        {
+            try
+            {
+                provider.CreateLogger(_category).Log(logLevel, eventId, state, exception, formatter);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private sealed class CompositeScope : IDisposable
+    {
+        private readonly IReadOnlyList<IDisposable> _scopes;
+
+        public CompositeScope(IReadOnlyList<IDisposable> scopes)
+        {
+            _scopes = scopes;
+        }
+
+        public void Dispose()
+        {
+            for (var index = _scopes.Count - 1; index >= 0; index--)
+                _scopes[index].Dispose();
+        }
     }
 }
 
@@ -130,4 +240,3 @@ public sealed class LogEntry : McpServer.UI.Core.Services.ILogEntry
         Message = message;
     }
 }
-

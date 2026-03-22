@@ -101,6 +101,10 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
     [ObservableProperty]
     private string? _editorRemaining;
 
+    /// <summary>Editor code-review phase label.</summary>
+    [ObservableProperty]
+    private string? _editorPhase;
+
     /// <summary>Editor description lines as multi-line text.</summary>
     [ObservableProperty]
     private string? _editorDescriptionText;
@@ -234,6 +238,7 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         EditorCompletedDate = null;
         EditorDoneSummary = null;
         EditorRemaining = null;
+        EditorPhase = null;
         EditorDescriptionText = null;
         EditorTechnicalDetailsText = null;
         EditorImplementationTasksText = null;
@@ -517,6 +522,7 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         Estimate = Normalize(EditorEstimate),
         Note = Normalize(EditorNote),
         Remaining = Normalize(EditorRemaining),
+        Phase = Normalize(EditorPhase),
         Description = ParseLines(EditorDescriptionText),
         TechnicalDetails = ParseLines(EditorTechnicalDetailsText),
         ImplementationTasks = ParseTasks(EditorImplementationTasksText),
@@ -537,6 +543,7 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         CompletedDate = Normalize(EditorCompletedDate),
         DoneSummary = Normalize(EditorDoneSummary),
         Remaining = Normalize(EditorRemaining),
+        Phase = Normalize(EditorPhase),
         Description = ParseLines(EditorDescriptionText),
         TechnicalDetails = ParseLines(EditorTechnicalDetailsText),
         ImplementationTasks = ParseTasks(EditorImplementationTasksText),
@@ -568,6 +575,7 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         EditorCompletedDate = detail.CompletedDate;
         EditorDoneSummary = detail.DoneSummary;
         EditorRemaining = detail.Remaining;
+        EditorPhase = detail.Phase;
         EditorDescriptionText = FormatLines(detail.Description);
         EditorTechnicalDetailsText = FormatLines(detail.TechnicalDetails);
         EditorImplementationTasksText = FormatTasks(detail.ImplementationTasks);
@@ -591,6 +599,7 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         EditorDone = fields.Done;
         EditorEstimate = fields.Estimate;
         EditorNote = fields.Note;
+        EditorPhase = fields.Phase;
         EditorDescriptionText = fields.DescriptionText;
         EditorTechnicalDetailsText = fields.TechnicalDetailsText;
         EditorImplementationTasksText = fields.ImplementationTasksText;

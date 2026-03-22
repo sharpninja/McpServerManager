@@ -3,7 +3,9 @@ using System.Runtime.InteropServices;
 using McpServer.Cqrs;
 using McpServer.UI;
 using McpServer.UI.Core;
+using McpServer.UI.Core.Hosting;
 using McpServer.UI.Core.Services;
+using McpServer.UI.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Shell;
 
@@ -30,13 +32,20 @@ public sealed class McpServerMcpTodoToolWindowPane : ToolWindowPane
         var editorService = TodoEditorService.Instance ?? new TodoEditorService(client);
         var uiDispatcher = new VsixUiDispatcherService();
         var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton<ITodoApiClient>(_ => new VsixTodoApiClientAdapter(client));
-        services.AddSingleton<IUiDispatcherService>(_ => uiDispatcher);
-        services.AddSingleton<IClipboardService>(sp => new VsixClipboardService(sp.GetRequiredService<IUiDispatcherService>()));
-        services.AddSingleton<ITimerService, NoOpTimerService>();
-        services.AddCqrsDispatcher();
-        services.AddUiCore();
+        var workspaceContext = new WorkspaceContextViewModel
+        {
+            ActiveWorkspacePath = solutionDir ?? string.Empty
+        };
+
+        services.AddMcpHost(options =>
+        {
+            options.Lifetime = McpHostLifetimeStrategy.Singleton;
+            options.TodoClient = new VsixTodoApiClientAdapter(client);
+            options.UiDispatcherService = uiDispatcher;
+            options.ClipboardService = new VsixClipboardService(uiDispatcher);
+            options.TimerService = new NoOpTimerService();
+            options.WorkspaceContext = workspaceContext;
+        });
         UiDispatcherHost.Configure(uiDispatcher);
 
         _serviceProvider = services.BuildServiceProvider();

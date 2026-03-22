@@ -19,6 +19,7 @@ public sealed class TodoFlatItem
     public string? CompletedDate { get; set; }
     public string? DoneSummary { get; set; }
     public string? Remaining { get; set; }
+    public string? Phase { get; set; }
     public IReadOnlyList<string>? DependsOn { get; set; }
     public IReadOnlyList<string>? FunctionalRequirements { get; set; }
     public IReadOnlyList<string>? TechnicalRequirements { get; set; }
@@ -52,6 +53,7 @@ public sealed class TodoUpdateBody
     public string? CompletedDate { get; set; }
     public string? DoneSummary { get; set; }
     public string? Remaining { get; set; }
+    public string? Phase { get; set; }
     public IReadOnlyList<string>? DependsOn { get; set; }
     public IReadOnlyList<string>? FunctionalRequirements { get; set; }
     public IReadOnlyList<string>? TechnicalRequirements { get; set; }
@@ -61,5 +63,16 @@ public sealed class TodoMutationResult
 {
     public bool Success { get; set; }
     public string? Error { get; set; }
+    public TodoMutationFailureKind FailureKind { get; set; }
     public TodoFlatItem? Item { get; set; }
+}
+
+public enum TodoMutationFailureKind
+{
+    None = 0,
+    Validation = 1,
+    Conflict = 2,
+    NotFound = 3,
+    ProjectionFailed = 4,
+    ExternalSyncFailed = 5
 }

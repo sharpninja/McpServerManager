@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using McpServerManager.Core.Services;
@@ -34,11 +35,11 @@ public partial class SettingsViewModel : McpServer.UI.Core.ViewModels.SettingsVi
     public bool SupportsWakeWordSettings => _voiceChatSettingsService.SupportsWakeWordSettings;
 
     public SettingsViewModel(
-        CqrsDispatcher? dispatcher = null,
+        CqrsDispatcher dispatcher,
         McpServer.UI.Core.Services.ISpeechFilterService? speechFilterService = null)
         : base(speechFilterService ?? new SpeechFilterServiceAdapter())
     {
-        _dispatcher = dispatcher ?? LocalCqrsDispatcher.Instance;
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _voiceChatSettingsService = VoiceChatSettingsService.Instance;
         ApplyVoiceChatSettings(_voiceChatSettingsService.Load());
     }

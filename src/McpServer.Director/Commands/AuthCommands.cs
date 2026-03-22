@@ -72,9 +72,7 @@ internal static class AuthCommands
             using var authService = new OidcAuthService(options);
 
             // Resolve browser launcher from DI
-            var services = new ServiceCollection();
-            DirectorServiceRegistration.Configure(services);
-            using var sp = DirectorServiceRegistration.BuildAndFinalize(services);
+            using var sp = DirectorHost.CreateProvider();
             var browserLauncher = sp.GetRequiredService<IBrowserLauncher>();
 
             AnsiConsole.MarkupLine($"[blue]Authenticating with:[/] {Markup.Escape(options.Authority)}");

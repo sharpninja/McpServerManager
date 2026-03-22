@@ -45,7 +45,8 @@ public sealed class TodoViewModelTests
                         null,
                         command.DependsOn?.ToList() ?? [],
                         command.FunctionalRequirements?.ToList() ?? [],
-                        command.TechnicalRequirements?.ToList() ?? []));
+                        command.TechnicalRequirements?.ToList() ?? [],
+                        command.Phase));
             });
 
         using var sp = BuildProvider(apiClient);
@@ -58,6 +59,7 @@ public sealed class TodoViewModelTests
         vm.EditorEstimate = "2h";
         vm.EditorNote = "Note";
         vm.EditorRemaining = "Remaining";
+        vm.EditorPhase = "phase-4";
         vm.EditorDescriptionText = "Line one\nLine two";
         vm.EditorTechnicalDetailsText = "Detail one";
         vm.EditorImplementationTasksText = "[x] Finished task";
@@ -73,6 +75,7 @@ public sealed class TodoViewModelTests
                 cmd.Id == "TODO-123" &&
                 cmd.Note == "Note" &&
                 cmd.Remaining == "Remaining" &&
+                cmd.Phase == "phase-4" &&
                 cmd.DependsOn!.SequenceEqual(new[] { "TODO-001" }) &&
                 cmd.FunctionalRequirements!.SequenceEqual(new[] { "FR-001" }) &&
                 cmd.TechnicalRequirements!.SequenceEqual(new[] { "TR-001" })),
@@ -80,6 +83,7 @@ public sealed class TodoViewModelTests
 
         Assert.Null(vm.ErrorMessage);
         Assert.Equal("TODO-123", vm.Detail?.Id);
+        Assert.Equal("phase-4", vm.Detail?.Phase);
     }
 
     [Fact]
@@ -111,7 +115,8 @@ public sealed class TodoViewModelTests
                         null,
                         command.DependsOn?.ToList() ?? [],
                         command.FunctionalRequirements?.ToList() ?? [],
-                        command.TechnicalRequirements?.ToList() ?? []));
+                        command.TechnicalRequirements?.ToList() ?? [],
+                        command.Phase));
             });
 
         using var sp = BuildProvider(apiClient);
@@ -127,6 +132,7 @@ public sealed class TodoViewModelTests
         vm.EditorCompletedDate = "2026-03-03";
         vm.EditorDoneSummary = "Done";
         vm.EditorRemaining = "Remaining";
+        vm.EditorPhase = "phase-6";
         vm.EditorDescriptionText = "Line one\nLine two";
         vm.EditorTechnicalDetailsText = "Detail one";
         vm.EditorImplementationTasksText = "[x] Finished task";
@@ -143,6 +149,7 @@ public sealed class TodoViewModelTests
                 cmd.CompletedDate == "2026-03-03" &&
                 cmd.DoneSummary == "Done" &&
                 cmd.Remaining == "Remaining" &&
+                cmd.Phase == "phase-6" &&
                 cmd.DependsOn!.SequenceEqual(new[] { "TODO-001" }) &&
                 cmd.FunctionalRequirements!.SequenceEqual(new[] { "FR-001" }) &&
                 cmd.TechnicalRequirements!.SequenceEqual(new[] { "TR-001" })),
@@ -151,6 +158,7 @@ public sealed class TodoViewModelTests
         Assert.Null(vm.ErrorMessage);
         Assert.Equal("TODO-123", vm.Detail?.Id);
         Assert.Equal("2026-03-03", vm.EditorCompletedDate);
+        Assert.Equal("phase-6", vm.EditorPhase);
     }
 
     [Fact]

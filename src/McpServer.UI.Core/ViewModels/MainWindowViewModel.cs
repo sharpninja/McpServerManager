@@ -16,10 +16,13 @@ using System.Threading.Tasks;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using McpServer.Client;
 using McpServer.Cqrs.Mvvm;
+using McpServer.UI.Core.Auth;
 using McpServer.UI.Core.Converters;
+using McpServer.UI.Core.Hosting;
 using McpServer.UI.Core.Models;
 using McpServer.UI.Core.Models.Json;
 using McpServer.UI.Core.Services;
@@ -71,7 +74,8 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private McpTodoService _mcpTodoService = null!;
     private McpWorkspaceService _mcpWorkspaceService = null!;
     private McpVoiceConversationService _mcpVoiceService = null!;
-    private UiCoreAppRuntime _uiCoreRuntime = null!;
+    private UiCoreHostRuntime _uiCoreRuntime = null!;
+    private IMutableHostIdentityProvider? _hostIdentityProvider;
     private bool _suppressWorkspaceSelectionChanged;
     private bool _hasCompletedInitialSwitch;
     internal McpServer.Cqrs.Dispatcher _dispatcher = null!;
@@ -83,7 +87,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
 
     protected IClipboardService ClipboardService => _clipboardService;
-    protected UiCoreAppRuntime UiCoreRuntime => _uiCoreRuntime;
+    protected UiCoreHostRuntime UiCoreRuntime => _uiCoreRuntime;
     protected McpServerClient McpClient => _mcpClient;
     protected McpVoiceConversationService McpVoiceService => _mcpVoiceService;
     protected McpServer.Cqrs.Dispatcher CqrsDispatcher => _dispatcher;
@@ -364,70 +368,124 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         _uiDispatcher = uiDispatcher ?? new ImmediateUiDispatcherService();
         _systemNotificationService = systemNotificationService ?? NoOpSystemNotificationService.Instance;
         _activeBearerToken = string.IsNullOrWhiteSpace(bearerToken) ? null : bearerToken.Trim();
-        InitializeMcpEndpoint(mcpBaseUrl, mcpApiKey);
+        InitializeMcpEndpoint(CreateHostServices(mcpBaseUrl, mcpApiKey));
     }
 
-    private void InitializeMcpEndpoint(string mcpBaseUrl, string? initialApiKey = null)
+    protected MainWindowViewModel(
+        IClipboardService clipboardService,
+        MainWindowHostServices hostServices,
+        ISystemNotificationService? systemNotificationService = null,
+        IUiDispatcherService? uiDispatcher = null)
     {
-        _defaultMcpBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
-        _defaultMcpApiKey = string.IsNullOrWhiteSpace(initialApiKey)
-            ? McpServerRestClientFactory.TryResolveApiKey(_defaultMcpBaseUrl)
+        ArgumentNullException.ThrowIfNull(hostServices);
+
+        _clipboardService = clipboardService;
+        _uiDispatcher = uiDispatcher ?? new ImmediateUiDispatcherService();
+        _systemNotificationService = systemNotificationService ?? NoOpSystemNotificationService.Instance;
+        _hostIdentityProvider = hostServices.IdentityProvider as IMutableHostIdentityProvider;
+        _activeBearerToken = string.IsNullOrWhiteSpace(hostServices.BearerToken) ? null : hostServices.BearerToken.Trim();
+        InitializeMcpEndpoint(hostServices);
+    }
+
+    private MainWindowHostServices CreateHostServices(string mcpBaseUrl, string? initialApiKey = null)
+    {
+        var normalizedBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
+        var resolvedApiKey = string.IsNullOrWhiteSpace(initialApiKey)
+            ? McpServerRestClientFactory.TryResolveApiKey(normalizedBaseUrl)
             : initialApiKey.Trim();
-        _activeMcpApiKey = _defaultMcpApiKey;
-        _defaultMcpBaseUri = new Uri(_defaultMcpBaseUrl, UriKind.Absolute);
+        var defaultMcpBaseUri = new Uri(normalizedBaseUrl, UriKind.Absolute);
+        var workspaceContext = new WorkspaceContextViewModel
+        {
+            ActiveWorkspacePath = string.Empty
+        };
+        var hostIdentityProvider = new AvaloniaHostIdentityProvider(
+            resolvedApiKey,
+            _activeBearerToken,
+            ResolveActiveWorkspacePath);
 
         // Create shared pre-authenticated clients — used by ALL services for the session lifetime.
-        _mcpClient = McpServerRestClientFactory.Create(
-            _defaultMcpBaseUrl,
+        var client = McpServerRestClientFactory.Create(
+            normalizedBaseUrl,
             timeout: TimeSpan.FromSeconds(300),
-            apiKey: _activeMcpApiKey,
+            apiKey: resolvedApiKey,
             bearerToken: _activeBearerToken);
+        workspaceContext.ActiveWorkspacePath = client.WorkspacePath ?? string.Empty;
 
         _mcpPromptClient = McpServerRestClientFactory.Create(
-            _defaultMcpBaseUrl,
+            normalizedBaseUrl,
             timeout: TimeSpan.FromMinutes(15),
-            apiKey: _activeMcpApiKey,
+            apiKey: resolvedApiKey,
             bearerToken: _activeBearerToken);
 
         // Create services once via factory — they share the pre-authenticated clients.
-        McpSessionService = _serviceFactory.CreateSessionLogService(_mcpClient);
-        _mcpTodoService = _serviceFactory.CreateTodoService(_mcpClient, _mcpPromptClient);
-        _mcpWorkspaceService = _serviceFactory.CreateWorkspaceService(_mcpClient, _defaultMcpBaseUri);
-        _mcpVoiceService = _serviceFactory.CreateVoiceService(
-            _defaultMcpBaseUrl,
-            apiKey: _activeMcpApiKey,
+        var sessionLogService = _serviceFactory.CreateSessionLogService(client);
+        var todoService = _serviceFactory.CreateTodoService(client, _mcpPromptClient);
+        var workspaceService = _serviceFactory.CreateWorkspaceService(client, defaultMcpBaseUri);
+        var voiceService = _serviceFactory.CreateVoiceService(
+            normalizedBaseUrl,
+            apiKey: resolvedApiKey,
             bearerToken: _activeBearerToken,
             resolveBaseUrl: () => _activeMcpBaseUrl,
-            resolveBearerToken: () => _activeBearerToken,
-            resolveApiKey: () => _activeMcpApiKey,
-            resolveWorkspacePath: ResolveActiveWorkspacePath);
-        _activeMcpBaseUrl = _defaultMcpBaseUrl;
-        _agentEventStreamService = _serviceFactory.CreateEventStreamService(
-            _activeMcpBaseUrl,
-            apiKey: _activeMcpApiKey,
+            resolveBearerToken: hostIdentityProvider.GetBearerToken,
+            resolveApiKey: hostIdentityProvider.GetApiKey,
+            resolveWorkspacePath: hostIdentityProvider.GetWorkspacePath);
+        var eventStreamService = _serviceFactory.CreateEventStreamService(
+            normalizedBaseUrl,
+            apiKey: resolvedApiKey,
             bearerToken: _activeBearerToken,
             resolveBaseUrl: () => _activeMcpBaseUrl,
-            resolveBearerToken: () => _activeBearerToken,
-            resolveApiKey: () => _activeMcpApiKey,
-            resolveWorkspacePath: ResolveActiveWorkspacePath);
+            resolveBearerToken: hostIdentityProvider.GetBearerToken,
+            resolveApiKey: hostIdentityProvider.GetApiKey,
+            resolveWorkspacePath: hostIdentityProvider.GetWorkspacePath);
 
-        _uiCoreRuntime = new UiCoreAppRuntime(
-            commandTarget: this,
-            todoService: _mcpTodoService,
-            workspaceService: _mcpWorkspaceService,
-            voiceService: _mcpVoiceService,
-            sessionLogService: McpSessionService,
-            eventStreamService: _agentEventStreamService,
-            workspaceContext: new McpServer.UI.Core.ViewModels.WorkspaceContextViewModel
-            {
-                ActiveWorkspacePath = _mcpClient.WorkspacePath ?? string.Empty
-            });
-        _dispatcher = _uiCoreRuntime.GetRequiredService<McpServer.Cqrs.Dispatcher>();
+        var hostContext = new AvaloniaMcpContext(client, workspaceContext, hostIdentityProvider);
+        var services = new ServiceCollection();
+        services.AddMcpHost(options =>
+        {
+            options.Lifetime = McpHostLifetimeStrategy.Singleton;
+            options.CommandTarget = this;
+            options.HostIdentityProvider = hostIdentityProvider;
+            options.TodoClient = new UiCoreTodoApiClientAdapter(todoService);
+            options.WorkspaceClient = new UiCoreWorkspaceApiClientAdapter(workspaceService);
+            options.VoiceClient = new UiCoreVoiceApiClientAdapter(voiceService);
+            options.SessionLogClient = new UiCoreSessionLogApiClientAdapter(sessionLogService);
+            options.EventStreamClient = new UiCoreEventStreamApiClientAdapter(eventStreamService);
+            options.FileSystemService = _fs;
+            options.ProcessLauncherService = _processLauncher;
+            options.TimerService = _timerService;
+            options.JsonParsingService = _jsonParser;
+            options.FileSystemWatcherService = new Services.Infrastructure.FileSystemWatcherService();
+            options.ClipboardService = _clipboardService;
+            options.UiDispatcherService = _uiDispatcher;
+            options.ConnectionAuthService = new NoOpConnectionAuthService();
+            options.SpeechFilterService = new NoOpSpeechFilterService();
+            options.WorkspaceContext = workspaceContext;
+        });
+        var provider = services.BuildServiceProvider();
+        var runtime = new UiCoreHostRuntime(provider, workspaceContext, ownsServices: true);
 
-        // Pre-populate the workspace picker with a placeholder.
-        // No switch is triggered here — the real switch happens in LoadWorkspaceConnectionsAsync
-        // after the workspace catalog is fetched and the saved workspace key is resolved.
-        var defaultOption = WorkspaceConnectionOption.CreateDefault(_defaultMcpBaseUri, primaryWorkspaceRootPath: null, _defaultMcpApiKey);
+        return new MainWindowHostServices(
+            normalizedBaseUrl,
+            resolvedApiKey,
+            _activeBearerToken,
+            hostIdentityProvider,
+            hostContext,
+            client,
+            todoService,
+            workspaceService,
+            voiceService,
+            sessionLogService,
+            eventStreamService,
+            runtime);
+    }
+
+    private void InitializeDefaultWorkspaceSelection(string? primaryWorkspaceRootPath)
+    {
+        var defaultOption = WorkspaceConnectionOption.CreateDefault(
+            _defaultMcpBaseUri,
+            primaryWorkspaceRootPath,
+            _defaultMcpApiKey);
+
         WorkspaceConnections = new ObservableCollection<WorkspaceConnectionOption>(new[] { defaultOption });
         _suppressWorkspaceSelectionChanged = true;
         try
@@ -438,6 +496,34 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         {
             _suppressWorkspaceSelectionChanged = false;
         }
+    }
+
+    private void InitializeMcpEndpoint(MainWindowHostServices hostServices)
+    {
+        _hostIdentityProvider = hostServices.IdentityProvider as IMutableHostIdentityProvider;
+        _defaultMcpBaseUrl = NormalizeMcpBaseUrl(hostServices.BaseUrl);
+        _defaultMcpApiKey = string.IsNullOrWhiteSpace(hostServices.ApiKey)
+            ? McpServerRestClientFactory.TryResolveApiKey(_defaultMcpBaseUrl)
+            : hostServices.ApiKey.Trim();
+        _activeMcpApiKey = _defaultMcpApiKey;
+        _defaultMcpBaseUri = new Uri(_defaultMcpBaseUrl, UriKind.Absolute);
+
+        _mcpClient = hostServices.Client;
+        _mcpPromptClient = null!;
+        McpSessionService = hostServices.SessionLogService;
+        _mcpTodoService = hostServices.TodoService;
+        _mcpWorkspaceService = hostServices.WorkspaceService;
+        _mcpVoiceService = hostServices.VoiceService;
+        _activeMcpBaseUrl = _defaultMcpBaseUrl;
+        _agentEventStreamService = hostServices.EventStreamService;
+        _uiCoreRuntime = hostServices.Runtime;
+        _dispatcher = _uiCoreRuntime.GetRequiredService<McpServer.Cqrs.Dispatcher>();
+        SyncHostIdentityProvider();
+
+        // Pre-populate the workspace picker with a placeholder.
+        // No switch is triggered here — the real switch happens in LoadWorkspaceConnectionsAsync
+        // after the workspace catalog is fetched and the saved workspace key is resolved.
+        InitializeDefaultWorkspaceSelection(_mcpClient.WorkspacePath);
     }
 
     private static string NormalizeMcpBaseUrl(string mcpBaseUrl)
@@ -491,22 +577,52 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
             !string.IsNullOrWhiteSpace(_activeMcpApiKey) ? "set" : "null",
             workspaceRootPath ?? "(none)");
 
-        // Update auth/workspace routing on the shared clients — no service recreation needed.
-        _mcpClient.BearerToken = _activeBearerToken ?? string.Empty;
-        _mcpPromptClient.BearerToken = _activeBearerToken ?? string.Empty;
-        _mcpClient.ApiKey = _activeMcpApiKey ?? string.Empty;
-        _mcpPromptClient.ApiKey = _activeMcpApiKey ?? string.Empty;
-
         var resolvedPath = workspaceRootPath ?? string.Empty;
-        _mcpClient.WorkspacePath = resolvedPath;
-        _mcpPromptClient.WorkspacePath = resolvedPath;
+        ApplyClientConnectionState(_mcpClient, _activeBearerToken, _activeMcpApiKey, resolvedPath);
+        if (_mcpPromptClient is not null)
+            ApplyClientConnectionState(_mcpPromptClient, _activeBearerToken, _activeMcpApiKey, resolvedPath);
+        else
+            _mcpTodoService.ApplyPromptConnectionState(_activeBearerToken, _activeMcpApiKey, resolvedPath);
         _uiCoreRuntime.WorkspaceContext.ActiveWorkspacePath = resolvedPath;
 
         // Notify child VMs reactively — they self-refresh without imperative ordering.
         WorkspacePathChanged?.Invoke(resolvedPath);
 
+        SyncHostIdentityProvider();
+
         if (_agentEventListenerStarted)
             StartAgentEventListener(restart: true);
+    }
+
+    private void SyncHostIdentityProvider()
+    {
+        if (_hostIdentityProvider is null)
+            return;
+
+        _hostIdentityProvider.UpdateApiKey(_activeMcpApiKey);
+        _hostIdentityProvider.UpdateBearerToken(_activeBearerToken);
+        _hostIdentityProvider.UpdateWorkspacePathResolver(ResolveActiveWorkspacePath);
+    }
+
+    internal static void ApplyClientConnectionState(
+        McpServerClient client,
+        string? bearerToken,
+        string? apiKey,
+        string workspacePath)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+
+        client.Logout();
+        client.WorkspacePath = workspacePath ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(bearerToken))
+        {
+            client.BearerToken = bearerToken.Trim();
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(apiKey))
+            client.ApiKey = apiKey.Trim();
     }
 
     private async Task<string?> ResolveActiveConnectionApiKeyAsync(WorkspaceConnectionOption option, string baseUrl)

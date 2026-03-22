@@ -1,3 +1,4 @@
+using System;
 using McpServerManager.Core.Services;
 using CqrsDispatcher = McpServer.Cqrs.Dispatcher;
 
@@ -12,7 +13,7 @@ public partial class LogViewModel : McpServer.UI.Core.ViewModels.LogViewModel
 
     public LogViewModel(
         IClipboardService clipboardService,
-        CqrsDispatcher? dispatcher = null,
+        CqrsDispatcher dispatcher,
         McpServer.UI.Core.Services.IAppLogService? appLogService = null,
         McpServer.UI.Core.Services.IUiDispatcherService? uiDispatcherService = null)
         : base(
@@ -20,6 +21,6 @@ public partial class LogViewModel : McpServer.UI.Core.ViewModels.LogViewModel
             appLogService ?? AppLogService.Instance,
             uiDispatcherService ?? new AvaloniaUiDispatcherService())
     {
-        _dispatcher = dispatcher ?? LocalCqrsDispatcher.Instance;
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
     }
 }

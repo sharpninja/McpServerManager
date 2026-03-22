@@ -55,7 +55,9 @@ internal static class AgentHostCommand
             try
             {
                 var settings = DirectorAgentSettings.Resolve(workspace);
-                using var serviceProvider = BuildServiceProvider(settings);
+                using var serviceProvider = DirectorHost.CreateProvider(
+                    settings.WorkspacePath,
+                    (services, directorContext) => ConfigureHostedAgentServices(services, directorContext, settings));
                 application = new DirectorAgentConsoleApplication(
                     serviceProvider.GetRequiredService<IMcpHostedAgentFactory>().CreateHostedAgent(),
                     settings);
@@ -87,10 +89,11 @@ internal static class AgentHostCommand
         root.AddCommand(command);
     }
 
-    private static ServiceProvider BuildServiceProvider(DirectorAgentSettings settings)
+    private static void ConfigureHostedAgentServices(
+        IServiceCollection services,
+        DirectorMcpContext directorContext,
+        DirectorAgentSettings settings)
     {
-        var services = new ServiceCollection();
-        var directorContext = DirectorServiceRegistration.Configure(services, settings.WorkspacePath);
         directorContext.RefreshBearerTokens();
 
         var controlClient = directorContext.ControlClient
@@ -114,8 +117,6 @@ internal static class AgentHostCommand
             options.Description = settings.AgentDescription;
             options.SourceType = settings.SourceType;
         });
-
-        return DirectorServiceRegistration.BuildAndFinalize(services);
     }
 }
 

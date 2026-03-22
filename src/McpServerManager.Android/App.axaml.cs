@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using McpServerManager.Android.Services;
 using McpServerManager.Android.Views;
@@ -18,6 +19,9 @@ namespace McpServerManager.Android;
 public partial class App : Application
 {
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("App");
+    private ServiceProvider? _connectionServices;
+    private AndroidMainWindowSession? _mainWindowSession;
+
     public override void Initialize()
     {
         AndroidCrashDiagnostics.ExecuteFatal(
@@ -43,7 +47,8 @@ public partial class App : Application
                 {
                     var uiDispatcher = new AvaloniaUiDispatcherService();
                     UiDispatcherHost.Configure(uiDispatcher);
-                    var connectionVm = new ConnectionViewModel(new ConnectionAuthServiceAdapter(), uiDispatcher: uiDispatcher);
+                    _connectionServices ??= AndroidAppServiceFactory.BuildConnectionProvider(uiDispatcher);
+                    var connectionVm = _connectionServices.GetRequiredService<ConnectionViewModel>();
                     connectionVm.SetExternalUrlOpener(AndroidBrowserService.TryOpenUrl);
                     connectionVm.SetOidcPostTokenForegroundActivator(AndroidBrowserService.TryBringAppToForeground);
                     connectionVm.SetQrCodeScanner(AndroidQrScannerService.ScanQrCodeAsync);
@@ -66,6 +71,8 @@ public partial class App : Application
 
                     void OpenMainView(string mcpBaseUrl, string? mcpApiKey, string? bearerToken)
                     {
+                        AndroidMainWindowSession? nextSession = null;
+
                         try
                         {
                             _logger.LogInformation("OpenMainView: entered for {McpBaseUrl}. TokenPresent={HasToken}, BearerPresent={HasBearer}", mcpBaseUrl, !string.IsNullOrWhiteSpace(mcpApiKey), !string.IsNullOrWhiteSpace(bearerToken));
@@ -82,9 +89,8 @@ public partial class App : Application
                                 _logger.LogWarning("OpenMainView: Uri.TryCreate failed for '{McpBaseUrl}' — connection not saved", mcpBaseUrl);
                             }
 
-                            var clipboardService = new AndroidClipboardService();
-                            var systemNotificationService = new AndroidSystemNotificationService();
-                            var vm = new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, systemNotificationService, uiDispatcher);
+                            nextSession = AndroidAppServiceFactory.CreateMainWindowSession(uiDispatcher, mcpBaseUrl, mcpApiKey, bearerToken);
+                            var vm = nextSession.ViewModel;
                             vm.SaveWorkspaceKey = AndroidConnectionPreferencesService.SaveWorkspaceKey;
                             vm.LoadWorkspaceKey = AndroidConnectionPreferencesService.LoadWorkspaceKey;
                             vm.LogoutRequested += (_, _) =>
@@ -94,13 +100,20 @@ public partial class App : Application
                                 AndroidConnectionPreferencesService.ClearOidcJwt();
                                 connectionVm.IsConnecting = false;
                                 connectionVm.ErrorMessage = "";
+                                _mainWindowSession?.Dispose();
+                                _mainWindowSession = null;
                                 singleView.MainView = connectionView;
                             };
+
+                            _mainWindowSession?.Dispose();
+                            _mainWindowSession = nextSession;
+                            nextSession = null;
                             singleView.MainView = new AdaptiveMainView { DataContext = vm };
                             vm.InitializeAfterWindowShown();
                         }
                         catch (Exception ex)
                         {
+                            nextSession?.Dispose();
                             AndroidCrashDiagnostics.RecordDiagnosticEvent(
                                 "App.OpenMainView",
                                 ex,

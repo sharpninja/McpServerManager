@@ -1,0 +1,175 @@
+{
+  "id": "ARCH-REFACTOR-001",
+  "title": "Unify DI and Composition Roots across 4 Platforms",
+  "section": "Architecture",
+  "priority": "high",
+  "done": false,
+  "estimate": "8d",
+  "note": "Follow-on from ARCH-AUDIT-002. Audit output: docs/architecture/DI-Deviation-Matrix.md, docs/architecture/DI-Deviation-Diagram.md.",
+  "description": [
+    "Unify DI composition across 5 hosts (Desktop, Android, Web, Director, VS Extension) into a shared AddMcpHost registration contract, eliminating 12 provider-construction/composition sites in app code, 3 post-build Dispatcher hacks, 2 duplicate registration methods, 2 container leaks, and 305 lines of wrapper/factory code.",
+    "Each implementation task (IT-01 through IT-24) specifies exact source files, exact line numbers, exact current code patterns, and exact target code patterns. Technical details (TD1-TD26) provide the change-point catalog organized by phase.",
+    "New shared contract lives in src/McpServer.UI.Core/Hosting/ and must support two host modes: command-target hosts (Desktop, Android, Web, Director) and non-command-target hosts (VS Extension Todo host) plus early connection bootstrap for Avalonia before later auth/context unification phases.",
+    "Key design decisions: (1) logging refactor requires logger factories that actually honor AddProvider before AddCqrsLoggerProvider can replace post-build hacks; (2) McpHostLifetimeStrategy controls Singleton vs Scoped Dispatcher; (3) IHostIdentityProvider standardizes auth later, but Phase 1 must already carry enough connection bootstrap data for Desktop/Android migration.",
+    "Migration remains incremental (no flag day): Phase 0 validates + adds tests, Phase 1 adds shared contract + compat shim, Phases 2-5 migrate hosts one at a time, Phase 6 converges, Phase 7 deletes obsolete code.",
+    "Dependencies: ARCH-AUDIT-002 (completed). Estimate: 8 days."
+  ],
+  "technicalDetails": [
+    "TD1 INVENTORY — 12 provider-construction/composition sites in src/: 7 direct BuildServiceProvider invocations at (1) src/McpServerManager.Core/Services/UiCoreAppRuntime.cs L45, (2) src/McpServerManager.Core/Services/UiCoreServiceProviderFactory.cs L47, (3) src/McpServer.UI.Core/Services/UiCoreServiceProviderFactory.cs L81, (4) src/McpServerManager.Core/Services/ChatWindowViewModelFactory.cs L61, (5) src/McpServerManager.Core/Services/LocalCqrsDispatcher.cs L29, (6) src/McpServer.VsExtension.McpTodo.Vsix/McpServerMcpTodoToolWindowPane.cs L42, (7) src/McpServer.Director/DirectorServiceRegistration.cs L90 inside BuildAndFinalize(). Plus 5 wrapper/provider-entry sites that delegate to BuildAndFinalize: (8) src/McpServer.Director/Program.cs L47-50 BuildServiceProvider(), (9) src/McpServer.Director/Commands/InteractiveCommand.cs L37-39, (10) src/McpServer.Director/Commands/CommandHelpers.cs L51-56, (11) src/McpServer.Director/Commands/AuthCommands.cs L75-79, (12) src/McpServer.Director/Commands/AgentHostCommand.cs L90-118.",
+    "TD2 INVENTORY — 3 post-build Dispatcher-as-ILoggerProvider hack sites. All execute: sp.GetRequiredService<ILoggerFactory>().AddProvider(sp.GetRequiredService<Dispatcher>()). Sites: (1) src/McpServerManager.Core/Services/UiCoreAppRuntime.cs L46-47, (2) src/McpServer.UI.Core/Services/UiCoreServiceProviderFactory.cs L82-83, (3) src/McpServer.Director/DirectorServiceRegistration.cs L94-95. Web explicitly avoids this at src/McpServer.Web/WebServiceRegistration.cs L29-32 because scoped Dispatcher cannot be registered as a singleton logger provider.",
+    "TD3 INVENTORY — 2 duplicate registration methods with overlapping service sets: (A) src/McpServerManager.Core/ServiceCollectionExtensions.cs L43-130 AddMcpServerManagerUiCore — 14 nullable params, Avalonia-specific adapters at L94-96, IHealthApiClient at L88, ICommandTarget + 11 sub-interface registrations at L98-110. (B) src/McpServer.UI.Core/Services/UiCoreServiceProviderFactory.cs L12-93 Build — 12 nullable params, NoOp fallback defaults at L54-59, ICommandTarget + 9 sub-interfaces at L62-72. Both register AppLogService logging, conditional API adapters, infrastructure services, AddCqrsDispatcher, AddCqrsHandlers, and AddUiCore.",
+    "TD4 INVENTORY — 2 container leak sites: (1) src/McpServerManager.Core/Services/ChatWindowViewModelFactory.cs L57-61 builds a provider, resolves Dispatcher, and drops the provider reference without disposal. (2) src/McpServerManager.Core/Services/LocalCqrsDispatcher.cs L9-29 keeps a static Lazy<ServiceProvider> for process lifetime and never disposes it.",
+    "TD5 INVENTORY — 5 host composition roots with exact entry points: (1) Desktop: src/McpServerManager.Desktop/App.axaml.cs OnFrameworkInitializationCompleted L39+ constructs ConnectionViewModel and MainWindowViewModel manually. (2) Android: src/McpServerManager.Android/App.axaml.cs OnFrameworkInitializationCompleted L43+ does the same. (3) Web: src/McpServer.Web/WebServiceRegistration.cs L13-66 builds the Blazor scoped graph. (4) Director: src/McpServer.Director/DirectorServiceRegistration.cs L31-106 plus src/McpServer.Director/Program.cs L47-50 top-level provider wrapper. (5) VS Extension: src/McpServer.VsExtension.McpTodo.Vsix/McpServerMcpTodoToolWindowPane.cs constructor L15-48.",
+    "TD6 PHASE 1 NEW FILE — src/McpServer.UI.Core/Hosting/McpHostOptions.cs: Options class replacing nullable optional-service signatures. CommandTarget must be OPTIONAL, not required, because VSIX todo hosting uses Dispatcher directly from IServiceProvider and does not implement ICommandTarget. Required properties by scenario: (A) common: McpHostLifetimeStrategy Lifetime, WorkspaceContextViewModel? WorkspaceContext, Assembly[]? AdditionalHandlerAssemblies; (B) explicit service mode: ITodoApiClient? TodoClient, IWorkspaceApiClient? WorkspaceClient, IVoiceApiClient? VoiceClient, ISessionLogApiClient? SessionLogClient, IEventStreamApiClient? EventStreamClient, IHealthApiClient? HealthClient; (C) connection-bootstrap mode for Desktop/Android migration: Uri? McpBaseUrl, string? ApiKey, string? BearerToken, Func<string?>? ResolveWorkspacePath, Func<McpServerClient>? ClientFactoryOverride, Func<McpServerClient>? PromptClientFactoryOverride. Also carry infrastructure overrides: IFileSystemService, IProcessLauncherService, ITimerService, IJsonParsingService, IFileSystemWatcherService, IClipboardService, IUiDispatcherService, IConnectionAuthService, ISpeechFilterService.",
+    "TD7 PHASE 1 NEW FILE — src/McpServer.UI.Core/Hosting/McpHostLifetimeStrategy.cs: public enum McpHostLifetimeStrategy { Singleton, Scoped }. Singleton hosts (Desktop, Android, Director, most VSIX services) get AddCqrsDispatcher(); scoped hosts (Web per request) get AddScoped<Dispatcher>() + AddScoped<IDispatcher>(...). The shared contract must not force scoped-host code to emulate singleton logging or singleton hosts to emulate scopes.",
+    "TD8 PHASE 1 NEW FILE — src/McpServer.UI.Core/Hosting/McpHostBuilderExtensions.cs: public static IServiceCollection AddMcpHost(this IServiceCollection services, Action<McpHostOptions> configure). Body: (1) materialize options, (2) register logging infrastructure, (3) if explicit API clients were supplied register them; else if connection-bootstrap inputs were supplied create McpServerClient / prompt client and then register McpTodoService, McpWorkspaceService, McpSessionLogService, McpVoiceConversationService, McpAgentEventStreamService plus their API adapters, (4) register infrastructure services using provided-or-default values, (5) register ICommandTarget and granular sub-interfaces only when options.CommandTarget is not null, (6) if Lifetime=Singleton call AddCqrsDispatcher(); if Lifetime=Scoped register Dispatcher/IDispatcher as scoped, (7) call AddCqrsHandlers for UI.Core + AdditionalHandlerAssemblies, (8) call AddUiCore(additionalAssemblies), (9) register WorkspaceContext if provided. AddCqrsLoggerProvider is allowed only after the logger factory work in TD16 is complete.",
+    "TD9 PHASE 1 NO CHANGE — src/McpServer.UI.Core/ServiceCollectionExtensions.cs AddUiCore L24-88 remains the leaf registration API. It already encapsulates TryAdd fallbacks (IRoleContext/IAuthorizationPolicyService/IClipboardService/IAppLogService/ISpeechFilterService/IUiDispatcherService/IConnectionAuthService/IChatWindowService/IVoiceConversationService/ITimerService/IHealthApiClient), singleton WorkspaceContextViewModel, singleton WorkspaceAutoSelector, singleton BackendConnectionMonitor, and transient ViewModels. AddMcpHost should build on this rather than replace it.",
+    "TD10 PHASE 1 MODIFY — src/McpServerManager.Core/ServiceCollectionExtensions.cs L43-130 AddMcpServerManagerUiCore becomes an [Obsolete] compatibility shim. Replace the 80+ line manual registration body with delegation to services.AddMcpHost(options => { map existing todo/workspace/voice/session/event/health parameters; set Lifetime = Singleton; set CommandTarget = commandTarget; set Avalonia adapters for UiDispatcher, SpeechFilter, ConnectionAuth; forward additional handler assemblies }). Preserve current public signature until Phase 7 deletion.",
+    "TD11 PHASE 2A MODIFY — src/McpServerManager.Desktop/App.axaml.cs OnFrameworkInitializationCompleted. CURRENT: builds AvaloniaUiDispatcherService, UiDispatcherHost.Configure, ConnectionViewModel manually, then new MainWindowViewModel(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, notificationService, uiDispatcher) at L92. TARGET: one root ServiceCollection configured with AddMcpHost(connection-bootstrap mode, Lifetime=Singleton, CommandTarget supplied later for MainWindowViewModel) plus Desktop-specific adapters. App lifetime owns the ServiceProvider and resolves ConnectionViewModel and MainWindowViewModel from DI.",
+    "TD12 PHASE 2B MODIFY — src/McpServerManager.Android/App.axaml.cs mirrors TD11. CURRENT: constructs ConnectionViewModel and MainWindowViewModel directly with connection strings and Android services. TARGET: same AddMcpHost singleton bootstrap pattern, but with Android-specific adapter registrations (notifications, prefs, browser, wake-word/lifecycle integrations). Provider disposal is tied to Android app lifetime.",
+    "TD13 PHASE 2C MODIFY — src/McpServer.UI.Core/ViewModels/MainWindowViewModel.cs and src/McpServerManager.Core/ViewModels/MainWindowViewModel.cs. CURRENT UI.Core constructor block at L390-425 creates clients and services, then new UiCoreAppRuntime(...), then resolves Dispatcher. CURRENT Core wrapper constructor chain at L97-130 passes baseUrl/apiKey/bearerToken down. TARGET incremental migration: add a new DI-friendly constructor that accepts already-registered McpTodoService, McpWorkspaceService, McpVoiceConversationService, McpSessionLogService, McpAgentEventStreamService, WorkspaceContextViewModel, and Dispatcher from AddMcpHost connection-bootstrap mode. Preserve existing overloads as compatibility shims until all hosts migrate. Delete _uiCoreRuntime field/property and the new UiCoreAppRuntime block only after Desktop/Android stop using the legacy overloads.",
+    "TD14 PHASE 2D MODIFY — src/McpServerManager.Core/Services/ChatWindowViewModelFactory.cs L43-61 static CreateDispatcher: CURRENT builds ServiceCollection, registers chat services, AddCqrsDispatcher, AddCqrsHandlers(typeof(ChatOpenAgentConfigCommand).Assembly), then leaks the provider. TARGET: factory receives IServiceProvider, creates a scope per chat window, resolves Dispatcher from the scoped/root host graph, and keeps the scope alive with the window so disposal is explicit. Also register the chat handler assembly through AddMcpHost AdditionalHandlerAssemblies.",
+    "TD15 PHASE 2E DELETE — src/McpServerManager.Core/Services/LocalCqrsDispatcher.cs only after all direct consumers are migrated. Current consumers already include src/McpServerManager.Core/ViewModels/ConnectionViewModel.cs L22, src/McpServerManager.Core/ViewModels/ChatWindowViewModel.cs L35, src/McpServerManager.Core/ViewModels/LogViewModel.cs L23, src/McpServerManager.Core/ViewModels/SettingsViewModel.cs L41, and src/McpServerManager/ViewModels/ChatWindowViewModel.cs L14. The file cannot be deleted until each constructor accepts Dispatcher from DI or an explicit design-time fallback.",
+    "TD16 PHASE 3A — Logging refactor must fix the logger factories before removing post-build hooks. CURRENT blockers: src/McpServerManager.Core/Services/AppLogService.cs L45 and src/McpServer.UI.Core/Services/AppLogService.cs L45 implement AddProvider as a no-op, so AddCqrsLoggerProvider alone does nothing; src/McpServer.Director/DirectorLogging.cs L17-34 installs a prebuilt SerilogLoggerFactory instance, so DI-registered ILoggerProvider instances are not wired automatically. TARGET: (1) update both AppLogService implementations to retain added ILoggerProvider instances and return a composite logger that writes to AppLogService plus every attached provider logger; (2) introduce a DirectorCompositeLoggerFactory or equivalent wrapper in src/McpServer.Director/DirectorLogging.cs that delegates to Serilog but also honors AddProvider; (3) after those logger factories work, call AddCqrsLoggerProvider during service registration and delete the 3 post-build AddProvider hacks from UiCoreAppRuntime, UI.Core/UiCoreServiceProviderFactory, and DirectorServiceRegistration.",
+    "TD17 PHASE 3B — Web CQRS logging remains a separate path. src/McpServer.Web/WebServiceRegistration.cs correctly uses scoped Dispatcher because request services and bearer token access are scoped. Do not attempt to register Dispatcher as a singleton ILoggerProvider in Web. Add tests that verify DispatchLogRecord / RecentDispatches and any UI-facing log surfaces remain visible in scoped request contexts without introducing singleton/scoped DI cycles.",
+    "TD18 PHASE 4A NEW FILE — src/McpServer.UI.Core/Hosting/IMcpHostContext.cs: interface must match the current host shapes, so use read-oriented members plus operations rather than a settable ActiveWorkspacePath. Target shape: string? ActiveWorkspacePath { get; }, Task<McpServerClient> GetRequiredControlApiClientAsync(CancellationToken ct = default), Task<McpServerClient> GetRequiredActiveWorkspaceApiClientAsync(CancellationToken ct = default), bool TrySetActiveWorkspace(string? workspacePath), void RefreshBearerTokens(). Adapt existing implementations: src/McpServer.Director/DirectorMcpContext.cs already has equivalent control/workspace client accessors and refresh logic; src/McpServer.Web/WebMcpContext.cs already owns workspace sync and active/control clients but lives at src/McpServer.Web/WebMcpContext.cs (not under Services/). Desktop/Android need a new singleton AvaloniaMcpContext extracted from MainWindowViewModel state.",
+    "TD19 PHASE 4B MODIFY — src/McpServer.Director/DirectorServiceRegistration.cs Configure L31-86. CURRENT: manual logging, AddCqrs(typeof(Program).Assembly), AddUiCore, auth overrides, McpHttpClient creation, DirectorMcpContext registration, and 17 API client adapters. TARGET: delegate common graph creation to AddMcpHost (singleton, command-target mode) while preserving Director-specific auth overrides and DirectorMcpContext registration. BuildAndFinalize should collapse to a plain BuildServiceProvider only after TD16 logger-factory work lands.",
+    "TD20 PHASE 4C MODIFY — Consolidate 5 Director provider-entry sites, not 4: (1) src/McpServer.Director/Program.cs L47-50 BuildServiceProvider wrapper, (2) src/McpServer.Director/Commands/InteractiveCommand.cs L37-39, (3) src/McpServer.Director/Commands/CommandHelpers.cs L51-56, (4) src/McpServer.Director/Commands/AuthCommands.cs L75-79, (5) src/McpServer.Director/Commands/AgentHostCommand.cs L90-118. TARGET: central DirectorHost.CreateProvider(workspace, additionalConfig) factory used by Program, InteractiveCommand, CommandHelpers, AuthCommands, and AgentHostCommand so the composition root inventory is complete.",
+    "TD21 PHASE 4D MODIFY — src/McpServer.Web/WebServiceRegistration.cs L13-66 and src/McpServer.Web/WebMcpContext.cs. CURRENT: AddHttpContextAccessor, TryAddSingleton WebRoleContext, AddScoped BearerTokenAccessor, AddScoped<Dispatcher>, AddUiCore, scoped command-target chain, RemoveAll+AddScoped WorkspaceAutoSelector/BackendConnectionMonitor, scoped WebMcpContext, and scoped API adapters. TARGET: keep Web scoped but move the common graph to AddMcpHost(Lifetime=Scoped, command-target mode). Then layer the existing Web-specific overrides on top. File shrinks, but only after verifying WorkspaceContextViewModel and WebMcpContext behavior remain circuit-safe.",
+    "TD22 PHASE 5A NEW FILE — src/McpServer.UI.Core/Auth/IHostIdentityProvider.cs: public interface IHostIdentityProvider { string? GetBearerToken(); string? GetApiKey(); string? GetWorkspacePath(); }. Implementations: WebHostIdentityProvider wraps BearerTokenAccessor + current workspace context, DirectorHostIdentityProvider reads cached token state / active workspace from DirectorMcpContext, AvaloniaHostIdentityProvider reads the active connection model used by Desktop/Android. This phase standardizes identity; it should not be a prerequisite for the earlier connection-bootstrap work in TD6/TD8.",
+    "TD23 PHASE 5B MODIFY — src/McpServer.UI.Core/Hosting/McpHostOptions.cs adds optional IHostIdentityProvider or factory registration after TD22. This later phase replaces the interim host-specific credential lambdas/bootstrap fields introduced in TD6 with a unified abstraction. It should not remove the earlier bootstrap path until Desktop/Android and Web are already migrated and verified.",
+    "TD24 PHASE 6 CONVERGENCE TARGETS — After migration, each host composition file becomes a thin adapter, but the contract must support two shapes: command-target host shells (Desktop, Android, Web, Director) and service-provider-only hosts (VSIX Todo tool window). Size targets remain approximate: Desktop and Android reduce materially, WebServiceRegistration and DirectorServiceRegistration become declarative adapters, and VSIX shrinks without forcing an ICommandTarget implementation.",
+    "TD25 PHASE 7 FILES TO DELETE — 5 files, 305 total lines: (1) src/McpServerManager.Core/Services/UiCoreAppRuntime.cs, (2) src/McpServerManager.Core/Services/UiCoreServiceProviderFactory.cs, (3) src/McpServer.UI.Core/Services/UiCoreAppRuntime.cs, (4) src/McpServer.UI.Core/Services/UiCoreServiceProviderFactory.cs, (5) src/McpServerManager.Core/Services/LocalCqrsDispatcher.cs. Also remove the obsolete AddMcpServerManagerUiCore shim from src/McpServerManager.Core/ServiceCollectionExtensions.cs after all hosts are off it.",
+    "TD26 PHASE 7 VERIFICATION — 7 grep patterns, all must return 0 matches in src/ before closure: (1) grep -rn \"new UiCoreAppRuntime\" src/, (2) grep -rn \"UiCoreServiceProviderFactory\" src/, (3) grep -rn \"GetRequiredService<ILoggerFactory>().AddProvider\" src/, (4) grep -rn \"LocalCqrsDispatcher\" src/, (5) grep -rn \"ChatWindowViewModelFactory.CreateDispatcher\" src/, (6) grep -rn \"AddMcpServerManagerUiCore\" src/ (compat shim allowed only before Phase 7), (7) grep -rn \"BuildAndFinalize\\|BuildServiceProvider\" src/McpServer.Director/ to confirm only the final consolidated Director provider factory remains."
+  ],
+  "implementationTasks": [
+    {
+      "task": "IT-01 Phase 0A: Validate the 12 provider-construction/composition sites in TD1, not 10. Run grep -rn \"BuildServiceProvider\\|BuildAndFinalize\" src/ and explicitly include src/McpServer.Director/Program.cs L47-50 in the inventory because Program is a real Director provider-entry site. VERIFIED 2026-03-21: grep confirms the 12-site inventory and the 5 Director provider-entry sites listed in TD1/TD20.",
+      "done": true
+    },
+    {
+      "task": "IT-02 Phase 0B: Add pre-refactor DI smoke tests. Extend tests/McpServerManager.Core.Tests/Integration/DiContainerTests.cs to cover provider disposal and handler resolution; add scoped-host tests in tests/McpServer.Web.Tests/ for Dispatcher + WorkspaceContextViewModel + WebMcpContext; add logger-factory tests proving current AddProvider no-op behavior before the TD16 changes. VERIFIED 2026-03-21: focused Core and Web characterization slices pass from dedicated log captures (Core 15/15, Web 2/2).",
+      "done": true
+    },
+    {
+      "task": "IT-03 Phase 1A: Create src/McpServer.UI.Core/Hosting/McpHostLifetimeStrategy.cs per TD7 — public enum { Singleton, Scoped } and scoped IDispatcher registration helper for Web. VERIFIED 2026-03-21: shared helper now drives both singleton and scoped dispatcher registration paths; focused UI.Core, Web, and Core tests pass.",
+      "done": true
+    },
+    {
+      "task": "IT-04 Phase 1A: Create src/McpServer.UI.Core/Hosting/McpHostOptions.cs per TD6 with two activation modes: explicit service registrations and connection-bootstrap registrations. Keep CommandTarget optional so VSIX todo hosting can use AddMcpHost without implementing ICommandTarget. VERIFIED 2026-03-21: shared options contract now captures lifetime, optional command target, explicit API clients, connection-bootstrap fields, and host infrastructure overrides.",
+      "done": true
+    },
+    {
+      "task": "IT-05 Phase 1A: Create src/McpServer.UI.Core/Hosting/McpHostBuilderExtensions.cs per TD8 — AddMcpHost(Action<McpHostOptions>) extension. Support optional command-target registration, AddUiCore composition, connection-bootstrap creation of Mcp services for Avalonia, and defer AddCqrsLoggerProvider until TD16 logger-factory work is complete. VERIFIED 2026-03-21: shared builder composes explicit-client and connection-bootstrap modes, lifetime-aware dispatcher registration, optional command-target aliases, and adapter-backed MCP services; focused UI.Core hosting tests pass.",
+      "done": true
+    },
+    {
+      "task": "IT-06 Phase 1B: Convert src/McpServerManager.Core/ServiceCollectionExtensions.cs L43-130 AddMcpServerManagerUiCore into an [Obsolete] shim per TD10. Delegate to AddMcpHost with Avalonia adapters and existing signature compatibility. VERIFIED 2026-03-21: the legacy extension now delegates shared registrations to AddMcpHost, preserves Core logger plus command-target aliases, and focused DiContainerTests/CommandRoundTripTests pass.",
+      "done": true
+    },
+    {
+      "task": "IT-07 Phase 2A: Migrate src/McpServerManager.Desktop/App.axaml.cs per TD11 — replace manual ConnectionViewModel/MainWindowViewModel construction with DI resolution from a root provider built once for the app lifetime using AddMcpHost(connection-bootstrap mode, singleton lifetime). COMPLETED 2026-03-21: Desktop now resolves ConnectionViewModel from an app-lifetime provider and creates MainWindowViewModel from a per-connection AddMcpHost-backed session provider using provider-backed host services plus deferred command-target attachment, with Desktop build and Desktop headless tests passing.",
+      "done": true
+    },
+    {
+      "task": "IT-08 Phase 2B: Migrate src/McpServerManager.Android/App.axaml.cs per TD12 using the same AddMcpHost bootstrap pattern as Desktop while preserving Android lifecycle and SharedPreferences connection behavior. COMPLETED 2026-03-21: Android now resolves ConnectionViewModel from an app-lifetime provider and creates MainWindowViewModel from a per-connection AddMcpHost-backed session provider while preserving Android browser/QR/OIDC hooks, logout flow, and SharedPreferences-backed connection/workspace persistence; Android compile target succeeds.",
+      "done": true
+    },
+    {
+      "task": "IT-09 Phase 2C: Refactor src/McpServer.UI.Core/ViewModels/MainWindowViewModel.cs and src/McpServerManager.Core/ViewModels/MainWindowViewModel.cs per TD13. Add a new DI-friendly constructor that takes registered MCP services + Dispatcher + WorkspaceContextViewModel, keep legacy overloads as shims initially, and remove _uiCoreRuntime only after hosts stop calling legacy constructors. COMPLETED 2026-03-21: UI.Core legacy construction now shims through the same MainWindowHostServices-based initialization path used by migrated hosts, while Core preserves both constructor paths; legacy app build, Desktop build/tests, and Android compile all pass.",
+      "done": true
+    },
+    {
+      "task": "IT-10 Phase 2D: Fix src/McpServerManager.Core/Services/ChatWindowViewModelFactory.cs per TD14 — inject IServiceProvider, use a scope-per-window instead of static CreateDispatcher(), and register chat handler assemblies through AddMcpHost AdditionalHandlerAssemblies. COMPLETED 2026-03-21: ChatWindowViewModelFactory now creates a DI scope per chat window, Desktop resolves the factory from the host session provider, Desktop chat-window lifetime disposes the scope on close, and source grep confirms the old CreateDispatcher/new-factory patterns are gone.",
+      "done": true
+    },
+    {
+      "task": "IT-11 Phase 2E: Remove LocalCqrsDispatcher only after migrating every direct caller named in TD15, including ConnectionViewModel, Core ChatWindowViewModel, desktop-shell ChatWindowViewModel, LogViewModel, and SettingsViewModel. Delete src/McpServerManager.Core/Services/LocalCqrsDispatcher.cs only when grep -rn \"LocalCqrsDispatcher\" src/ returns 0. COMPLETED 2026-03-21: host-owned dispatcher paths now cover ConnectionViewModel, LogViewModel, SettingsViewModel, and managed Desktop chat; the remaining chat fallbacks were moved to a dedicated chat dispatcher bootstrap, LocalCqrsDispatcher.cs was deleted, legacy shell/Desktop/Android validations passed, and src/ grep for LocalCqrsDispatcher returns zero matches.",
+      "done": true
+    },
+    {
+      "task": "IT-12 Phase 3A: Implement TD16 before deleting any post-build hooks. Modify src/McpServerManager.Core/Services/AppLogService.cs and src/McpServer.UI.Core/Services/AppLogService.cs so AddProvider stores providers and composite loggers fan out to them; modify src/McpServer.Director/DirectorLogging.cs so the logger factory also honors AddProvider. Only then add AddCqrsLoggerProvider in registration and delete the 3 explicit AddProvider post-build calls.",
+      "done": false
+    },
+    {
+      "task": "IT-13 Phase 3B: Add Web logging tests per TD17. Verify scoped Dispatcher logging surfaces remain visible without registering Dispatcher as a singleton ILoggerProvider. No production change in Web should attempt to reintroduce that cycle.",
+      "done": false
+    },
+    {
+      "task": "IT-14 Phase 4A: Create src/McpServer.UI.Core/Hosting/IMcpHostContext.cs per TD18 with method-based workspace switching and async client accessors. Update src/McpServer.Director/DirectorMcpContext.cs and src/McpServer.Web/WebMcpContext.cs to implement it, then extract an AvaloniaMcpContext from Desktop/Android state.",
+      "done": false
+    },
+    {
+      "task": "IT-15 Phase 4B: Refactor src/McpServer.Director/DirectorServiceRegistration.cs per TD19 so common graph creation goes through AddMcpHost and Director-specific auth/context adapters remain layered on top. Do not simplify BuildAndFinalize until the TD16 logger-factory work is already in place.",
+      "done": false
+    },
+    {
+      "task": "IT-16 Phase 4C: Consolidate all 5 Director provider-entry sites listed in TD20 — Program, InteractiveCommand, CommandHelpers, AuthCommands, and AgentHostCommand — behind one DirectorHost.CreateProvider(workspace, additionalConfig) factory.",
+      "done": false
+    },
+    {
+      "task": "IT-17 Phase 4D: Refactor src/McpServer.Web/WebServiceRegistration.cs and src/McpServer.Web/WebMcpContext.cs per TD21 — move common registration to AddMcpHost(scoped, command-target mode) while keeping Web-specific scoped overrides, circuit-safe workspace behavior, and bearer-token forwarding.",
+      "done": false
+    },
+    {
+      "task": "IT-18 Phase 5A: Create src/McpServer.UI.Core/Auth/IHostIdentityProvider.cs per TD22 and implement Web, Director, and Avalonia variants. This phase standardizes identity after the earlier connection-bootstrap path is already working.",
+      "done": false
+    },
+    {
+      "task": "IT-19 Phase 5B: Replace the interim bootstrap credential fields in McpHostOptions with IHostIdentityProvider where possible, but only after all migrated hosts pass regression tests for JWT precedence, API-key fallback, and workspace resolution semantics.",
+      "done": false
+    },
+    {
+      "task": "IT-20 Phase 6: Converge host composition roots to thin adapters per TD24, preserving both command-target hosts and service-provider-only hosts. Verify Desktop, Android, Web, Director, and VSIX each still compile and run with their correct host shape.",
+      "done": false
+    },
+    {
+      "task": "IT-21 Phase 6D: Migrate src/McpServer.VsExtension.McpTodo.Vsix/McpServerMcpTodoToolWindowPane.cs per TD24 using AddMcpHost in non-command-target mode. Preserve the existing TodoListHostViewModel pattern that resolves Dispatcher from IServiceProvider and keep Dispose(bool) ownership intact.",
+      "done": false
+    },
+    {
+      "task": "IT-22 Phase 7A: Delete the 5 obsolete files in TD25 and remove the AddMcpServerManagerUiCore shim once all host code paths are off it and the LocalCqrsDispatcher grep is clean.",
+      "done": false
+    },
+    {
+      "task": "IT-23 Phase 7B: Update docs/architecture/DI-Deviation-Matrix.md and DI-Deviation-Diagram.md to match the corrected steady state, including the two host modes and the completed logger-factory refactor.",
+      "done": false
+    },
+    {
+      "task": "IT-24 Phase 7C: Final verification — run the 7 greps in TD26, build all affected projects, and run the DI/lifetime/logging test suites. Do not close the todo until Director Program is included in the consolidation verification and no legacy logger hook remains.",
+      "done": false
+    }
+  ],
+  "completedDate": null,
+  "doneSummary": null,
+  "remaining": "Current focus: IT-12 logger-factory refactor so AddProvider actually fans out to registered providers and the post-build dispatcher AddProvider calls can be removed.",
+  "priorityNote": null,
+  "reference": null,
+  "phase": null,
+  "dependsOn": [
+    "ARCH-AUDIT-002"
+  ],
+  "functionalRequirements": [
+    "FR1. All five hosts must continue to expose the same current end-user capabilities after the refactor: session browsing, workspace switching, todo management, voice interactions, preview/navigation actions, and configuration actions.",
+    "FR2. Web must preserve per-request/per-user isolation so no scoped state, bearer token, or workspace context can bleed between users.",
+    "FR3. Desktop and Android must preserve current single-user behavior, startup experience, saved connection behavior, clipboard interactions, notifications, and UI-thread dispatch behavior.",
+    "FR4. Director must preserve CLI/TUI workspace switching semantics and role-based authorization behavior driven by DirectorRoleContext and DirectorAuthorizationPolicyService.",
+    "FR5. CQRS-driven UI logging/status behavior must be available consistently across hosts; restoring Web parity is part of the remediation, not optional cleanup.",
+    "FR6. The shared registration path must remain extensible so future hosts can inject host-only adapters without forking the base graph.",
+    "FR7. VS Extension must continue to function as a self-contained tool window with proper ServiceProvider disposal, todo editing, and workspace-path resolution from the active solution.",
+    "FR8. Director commands that currently build isolated service providers (InteractiveCommand, AuthCommands, AgentHostCommand) must retain equivalent isolation semantics after consolidation - a failed command must not corrupt the parent session state."
+  ],
+  "technicalRequirements": [
+    "TR1. Introduce one canonical registration API in shared code that separates: base service registrations, host adapter registrations, lifetime strategy (singleton vs scoped), and post-build hooks.",
+    "TR2. Eliminate the need for host-specific manual BuildServiceProvider patterns inside UiCoreAppRuntime wrappers. Host code should rely on IServiceCollection plus Generic Host or ASP.NET Core builder where available.",
+    "TR3. Remove the Dispatcher/ILoggerFactory circular-dependency workaround (present in 4 files: UiCoreServiceProviderFactory.cs:49, UiCoreAppRuntime.cs:47, UI.Core/UiCoreServiceProviderFactory.cs:83, DirectorServiceRegistration.cs:94) by introducing an explicit CQRS event/log sink or deferred provider mechanism that works in singleton and scoped environments.",
+    "TR4. Make McpClient, WorkspaceContextViewModel, and API adapter registrations lifetime-safe by design. Scoped hosts must resolve scoped instances; singleton hosts must not require fake scopes.",
+    "TR5. Replace direct auth-shape knowledge in shared registrations with a host-facing identity abstraction that can represent bearer-token, API-key, cached-token, or file-backed role contexts. Preserve the existing TryAdd-first-wins override pattern for IRoleContext and IAuthorizationPolicyService.",
+    "TR6. The migration must land incrementally so each host can compile and run after each phase; avoid a flag day rewrite.",
+    "TR7. Preserve existing public APIs where practical. If signatures change, provide temporary compatibility shims until all hosts are migrated.",
+    "TR8. Add or update automated verification for service registration correctness, dispatcher logging behavior, and host-specific lifetime boundaries. Build on the existing test infrastructure in DiContainerTests.cs, ServiceCollectionExtensionsTests.cs, and UiCoreTestHost.cs.",
+    "TR9. All manually-created ServiceProvider instances must have a clear ownership and disposal path. Eliminate provider leaks in ChatWindowViewModelFactory, migrate LocalCqrsDispatcher static singleton to host-owned DI, and ensure Desktop/Android providers are disposed on app shutdown.",
+    "TR10. Consolidate Director command-level container construction (4+ separate BuildServiceProvider sites across InteractiveCommand, CommandHelpers, AuthCommands, AgentHostCommand) into a shared composition entry point that supports command-scoped lifetime without rebuilding the full container each time.",
+    "TR11. The shared composition contract must support both singleton Dispatcher (Desktop/Android/Director) and scoped Dispatcher (Web per-request) without requiring host-specific conditional registration logic in the shared code."
+  ]
+}

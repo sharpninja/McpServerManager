@@ -17,6 +17,7 @@ public static class TodoMarkdown
             "section: mvp-app",
             "priority: low",
             "estimate: ",
+            "phase: ",
             "depends-on: []",
             "---",
             "",
@@ -48,6 +49,7 @@ public static class TodoMarkdown
         if (!string.IsNullOrEmpty(item.CompletedDate)) fm.Add($"completed: {item.CompletedDate}");
         if (!string.IsNullOrEmpty(item.DoneSummary)) fm.Add($"done-summary: {YamlScalar(item.DoneSummary!)}");
         if (!string.IsNullOrEmpty(item.Remaining)) fm.Add($"remaining: {YamlScalar(item.Remaining!)}");
+        if (!string.IsNullOrEmpty(item.Phase)) fm.Add($"phase: {YamlScalar(item.Phase!)}");
         if (item.DependsOn?.Count > 0)
         {
             fm.Add("depends-on:");
@@ -258,6 +260,7 @@ public static class TodoMarkdown
             case "completed": req.CompletedDate = value; break;
             case "done-summary": req.DoneSummary = value; break;
             case "remaining": req.Remaining = value; break;
+            case "phase": req.Phase = value; break;
         }
     }
 

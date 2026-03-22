@@ -23,12 +23,14 @@ public partial class MainWindow : Window
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("MainWindow");
     private LayoutSettings _layoutSettings = new();
     private ChatWindow? _chatWindow;
+    private ChatWindowViewModelSession? _chatWindowSession;
     private bool? _chatWindowWasOpenOnClosing;
     private bool _isVoiceFlyoutOpen;
     private bool _isVoiceFlyoutPinned = true;
     private bool? _voiceFlyoutIsPortrait;
     private bool _isUpdatingVoiceFlyoutToggleState;
-    private readonly IChatWindowViewModelFactory _chatWindowViewModelFactory = new ChatWindowViewModelFactory();
+
+    public IChatWindowViewModelFactory? ChatWindowViewModelFactory { get; set; }
 
     public MainWindow()
     {
@@ -222,6 +224,8 @@ public partial class MainWindow : Window
         _chatWindowWasOpenOnClosing = _chatWindow != null;
         _chatWindow?.Close();
         _chatWindow = null;
+        _chatWindowSession?.Dispose();
+        _chatWindowSession = null;
 
         ContentView.SaveSettings();
         TodoView.SaveSettings();
@@ -314,20 +318,29 @@ public partial class MainWindow : Window
     {
         if (DataContext is not MainWindowViewModel mainVm)
             return;
+        if (ChatWindowViewModelFactory is null)
+        {
+            _logger.LogWarning("Chat window requested before a chat factory was configured.");
+            return;
+        }
         if (_chatWindow != null)
         {
             _chatWindow.Activate();
             return;
         }
-        var chatVm = _chatWindowViewModelFactory.Create(mainVm.GetLogContextForAgent);
+        var chatSession = ChatWindowViewModelFactory.Create(mainVm.GetLogContextForAgent);
+        var chatVm = chatSession.ViewModel;
         mainVm.SetContextConsumer(s => chatVm.NotifyContextChanged(s));
         mainVm.SetModelConsumer(m => { if (_chatWindow?.DataContext is ChatWindowViewModel cvm) cvm.SelectedModel = m; });
+        _chatWindowSession = chatSession;
         _chatWindow = new ChatWindow { DataContext = chatVm };
         _chatWindow.Closed += (_, _) =>
         {
             mainVm.SetContextConsumer(null);
             mainVm.SetModelConsumer(null);
             _chatWindow = null;
+            _chatWindowSession?.Dispose();
+            _chatWindowSession = null;
             PersistChatWindowClosed();
         };
         _chatWindow.Show();

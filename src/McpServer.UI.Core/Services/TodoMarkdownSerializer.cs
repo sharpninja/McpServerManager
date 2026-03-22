@@ -34,6 +34,7 @@ public static class TodoMarkdownSerializer
         sb.AppendLine(CultureInfo.InvariantCulture, $"| Status | {(detail.Done ? "Done" : "Open")} |");
         sb.AppendLine(CultureInfo.InvariantCulture, $"| Estimate | {detail.Estimate ?? ""} |");
         sb.AppendLine(CultureInfo.InvariantCulture, $"| Note | {detail.Note ?? ""} |");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"| Phase | {detail.Phase ?? ""} |");
         sb.AppendLine();
 
         AppendSection(sb, "Description", detail.Description);
@@ -168,6 +169,9 @@ public static class TodoMarkdownSerializer
             case "Note":
                 fields.Note = string.IsNullOrWhiteSpace(val) ? null : val;
                 break;
+            case "Phase":
+                fields.Phase = string.IsNullOrWhiteSpace(val) ? null : val;
+                break;
         }
     }
 
@@ -255,6 +259,9 @@ public sealed class TodoMarkdownFields
 
     /// <summary>Parsed note.</summary>
     public string? Note { get; set; }
+
+    /// <summary>Parsed phase label.</summary>
+    public string? Phase { get; set; }
 
     /// <summary>Parsed description as multi-line text.</summary>
     public string? DescriptionText { get; set; }

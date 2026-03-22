@@ -14,7 +14,7 @@ public partial class WorkspaceViewModel : McpServer.UI.Core.ViewModels.Workspace
 {
     private readonly CqrsDispatcher _dispatcher;
 
-    internal WorkspaceViewModel(IClipboardService clipboardService, McpServer.UI.Core.Services.UiCoreAppRuntime runtime)
+    internal WorkspaceViewModel(IClipboardService clipboardService, McpServer.UI.Core.Services.UiCoreHostRuntime runtime)
         : base(
             clipboardService,
             runtime.GetRequiredService<UiCoreWorkspaceListViewModel>(),

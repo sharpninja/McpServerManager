@@ -821,6 +821,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         viewModel.EditorCompletedDate = request.CompletedDate;
         viewModel.EditorDoneSummary = request.DoneSummary;
         viewModel.EditorRemaining = request.Remaining;
+        viewModel.EditorPhase = request.Phase;
         viewModel.EditorDescriptionText = FormatLines(request.Description);
         viewModel.EditorTechnicalDetailsText = FormatLines(request.TechnicalDetails);
         viewModel.EditorImplementationTasksText = FormatTasks(request.ImplementationTasks);

@@ -26,6 +26,7 @@ public sealed partial class CreateTodoViewModel : ObservableObject
     [ObservableProperty] private string? _estimate;
     [ObservableProperty] private string? _note;
     [ObservableProperty] private string? _remaining;
+    [ObservableProperty] private string? _phase;
     [ObservableProperty] private IReadOnlyList<string>? _description;
     [ObservableProperty] private IReadOnlyList<string>? _technicalDetails;
     [ObservableProperty] private IReadOnlyList<TodoTaskDetail>? _implementationTasks;
@@ -51,6 +52,7 @@ public sealed partial class CreateTodoViewModel : ObservableObject
         Estimate = Estimate,
         Note = Note,
         Remaining = Remaining,
+        Phase = Phase,
         Description = Description,
         TechnicalDetails = TechnicalDetails,
         ImplementationTasks = ImplementationTasks,

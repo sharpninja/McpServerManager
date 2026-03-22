@@ -29,7 +29,8 @@ internal static class UiCoreMessageMapper
             Section: item.Section,
             Priority: item.Priority,
             Done: item.Done,
-            Estimate: item.Estimate);
+            Estimate: item.Estimate,
+            Phase: item.Phase);
     }
 
     public static TodoDetail ToTodoDetail(McpTodoFlatItem item)
@@ -53,7 +54,8 @@ internal static class UiCoreMessageMapper
             Reference: item.Reference,
             DependsOn: item.DependsOn?.ToList() ?? [],
             FunctionalRequirements: item.FunctionalRequirements?.ToList() ?? [],
-            TechnicalRequirements: item.TechnicalRequirements?.ToList() ?? []);
+            TechnicalRequirements: item.TechnicalRequirements?.ToList() ?? [],
+            Phase: item.Phase);
     }
 
     public static McpTodoFlatItem ToMcpTodoFlatItem(TodoDetail detail)
@@ -76,6 +78,7 @@ internal static class UiCoreMessageMapper
             Remaining = detail.Remaining,
             PriorityNote = detail.PriorityNote,
             Reference = detail.Reference,
+            Phase = detail.Phase,
             DependsOn = detail.DependsOn.ToList(),
             FunctionalRequirements = detail.FunctionalRequirements.ToList(),
             TechnicalRequirements = detail.TechnicalRequirements.ToList()
@@ -88,7 +91,8 @@ internal static class UiCoreMessageMapper
         return new TodoMutationOutcome(
             Success: result.Success,
             Error: result.Error,
-            Item: result.Item is null ? null : ToTodoDetail(result.Item));
+            Item: result.Item is null ? null : ToTodoDetail(result.Item),
+            FailureKind: MapFailureKind(result.FailureKind));
     }
 
     public static TodoRequirementsAnalysis ToTodoRequirementsAnalysis(McpRequirementsAnalysisResult result)
@@ -114,6 +118,7 @@ internal static class UiCoreMessageMapper
             Estimate = command.Estimate,
             Note = command.Note,
             Remaining = command.Remaining,
+            Phase = command.Phase,
             Description = command.Description?.ToList(),
             TechnicalDetails = command.TechnicalDetails?.ToList(),
             ImplementationTasks = command.ImplementationTasks?.Select(ToMcpTodoFlatTask).ToList(),
@@ -137,6 +142,7 @@ internal static class UiCoreMessageMapper
             CompletedDate = command.CompletedDate,
             DoneSummary = command.DoneSummary,
             Remaining = command.Remaining,
+            Phase = command.Phase,
             Description = command.Description?.ToList(),
             TechnicalDetails = command.TechnicalDetails?.ToList(),
             ImplementationTasks = command.ImplementationTasks?.Select(ToMcpTodoFlatTask).ToList(),
@@ -145,6 +151,17 @@ internal static class UiCoreMessageMapper
             TechnicalRequirements = command.TechnicalRequirements?.ToList()
         };
     }
+
+    private static TodoMutationFailureKind MapFailureKind(McpTodoMutationFailureKind failureKind)
+        => failureKind switch
+        {
+            McpTodoMutationFailureKind.Validation => TodoMutationFailureKind.Validation,
+            McpTodoMutationFailureKind.Conflict => TodoMutationFailureKind.Conflict,
+            McpTodoMutationFailureKind.NotFound => TodoMutationFailureKind.NotFound,
+            McpTodoMutationFailureKind.ProjectionFailed => TodoMutationFailureKind.ProjectionFailed,
+            McpTodoMutationFailureKind.ExternalSyncFailed => TodoMutationFailureKind.ExternalSyncFailed,
+            _ => TodoMutationFailureKind.None
+        };
 
     public static ListWorkspacesResult ToListWorkspacesResult(McpWorkspaceQueryResult result)
     {

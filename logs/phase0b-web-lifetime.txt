@@ -1,0 +1,13 @@
+  McpServer.Client -> E:\github\RequestTracker\lib\McpServer\src\McpServer.Client\bin\Debug\net9.0\McpServer.Client.dll
+  McpServer.Cqrs -> E:\github\RequestTracker\lib\McpServer\src\McpServer.Cqrs\bin\Debug\net9.0\McpServer.Cqrs.dll
+  McpServer.Cqrs.Mvvm -> E:\github\RequestTracker\lib\McpServer\src\McpServer.Cqrs.Mvvm\bin\Debug\net9.0\McpServer.Cqrs.Mvvm.dll
+  Avalonia Accelerate Community requires telemetry. To opt out, please upgrade to a paid tier. Learn more: https://avaloniaui.net/accelerate/
+  McpServer.UI.Core -> E:\github\RequestTracker\src\McpServer.UI.Core\bin\Debug\net9.0\McpServer.UI.Core.dll
+  Avalonia Accelerate Community requires telemetry. To opt out, please upgrade to a paid tier. Learn more: https://avaloniaui.net/accelerate/
+  McpServer.Web -> E:\github\RequestTracker\src\McpServer.Web\bin\Debug\net9.0\McpServer.Web.dll
+  Avalonia Accelerate Community requires telemetry. To opt out, please upgrade to a paid tier. Learn more: https://avaloniaui.net/accelerate/
+  McpServer.Web.Tests -> E:\github\RequestTracker\tests\McpServer.Web.Tests\bin\Debug\net9.0\McpServer.Web.Tests.dll
+Test run for E:\github\RequestTracker\tests\McpServer.Web.Tests\bin\Debug\net9.0\McpServer.Web.Tests.dll (.NETCoreApp,Version=v9.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     2, Skipped:     0, Total:     2, Duration: 184 ms - McpServer.Web.Tests.dll (net9.0)

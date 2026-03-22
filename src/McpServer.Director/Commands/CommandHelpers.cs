@@ -48,9 +48,8 @@ internal static class CommandHelpers
         string? workspace,
         Func<ServiceProvider, Dispatcher, DirectorMcpContext, Task> action)
     {
-        var services = new ServiceCollection();
-        var directorContext = DirectorServiceRegistration.Configure(services, workspace);
-        using var sp = DirectorServiceRegistration.BuildAndFinalize(services);
+        using var sp = DirectorHost.CreateProvider(workspace);
+        var directorContext = sp.GetRequiredService<DirectorMcpContext>();
         var dispatcher = sp.GetRequiredService<Dispatcher>();
         await action(sp, dispatcher, directorContext).ConfigureAwait(true);
     }

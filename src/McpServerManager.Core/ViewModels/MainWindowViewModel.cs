@@ -1,8 +1,11 @@
 using System;
 using System.Threading.Tasks;
 using McpServer.Cqrs.Mvvm;
+using McpServer.UI.Core.Services;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
+using CoreClipboardService = McpServerManager.Core.Services.IClipboardService;
+using CoreSystemNotificationService = McpServerManager.Core.Services.ISystemNotificationService;
 using CqrsDispatcher = McpServer.Cqrs.Dispatcher;
 using UiCoreAppSettings = McpServer.UI.Core.AppSettings;
 using UiCoreMainWindowViewModel = McpServer.UI.Core.ViewModels.MainWindowViewModel;
@@ -12,19 +15,19 @@ namespace McpServerManager.Core.ViewModels;
 
 public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWindowViewModel, Commands.ICommandTarget
 {
-    private readonly CqrsDispatcher _dispatcher;
+    private CqrsDispatcher _dispatcher = null!;
 
     public static new System.Collections.Generic.List<McpServer.UI.Core.Models.Json.UnifiedSessionTurn> DeduplicateUnifiedTurns(
         System.Collections.Generic.IEnumerable<McpServer.UI.Core.Models.Json.UnifiedSessionTurn> entries)
         => UiCoreMainWindowViewModel.DeduplicateUnifiedTurns(entries);
 
-    private IClipboardService CoreClipboardService => (IClipboardService)ClipboardService;
+    private CoreClipboardService CoreClipboardService => (CoreClipboardService)ClipboardService;
 
-    public CqrsRelayCommand<bool> CloseRequestDetailsCommand { get; }
-    public CqrsRelayCommand<bool> OpenPreviewInBrowserCommand { get; }
-    public CqrsRelayCommand<bool> ToggleShowRawMarkdownCommand { get; }
-    public CqrsRelayCommand<bool> OpenAgentConfigCommand { get; }
-    public CqrsRelayCommand<bool> OpenPromptTemplatesCommand { get; }
+    public CqrsRelayCommand<bool> CloseRequestDetailsCommand { get; private set; } = null!;
+    public CqrsRelayCommand<bool> OpenPreviewInBrowserCommand { get; private set; } = null!;
+    public CqrsRelayCommand<bool> ToggleShowRawMarkdownCommand { get; private set; } = null!;
+    public CqrsRelayCommand<bool> OpenAgentConfigCommand { get; private set; } = null!;
+    public CqrsRelayCommand<bool> OpenPromptTemplatesCommand { get; private set; } = null!;
 
     /// <summary>ViewModel for the Todo tab. Created lazily on first access.</summary>
     public TodoListViewModel TodoViewModel => _todoViewModel ??= CreateTodoViewModel();
@@ -87,42 +90,57 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
         return vm;
     }
 
-    public MainWindowViewModel(IClipboardService clipboardService)
+    public MainWindowViewModel(CoreClipboardService clipboardService)
         : this(clipboardService, UiCoreAppSettings.ResolveMcpBaseUrl(), mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher: null)
     {
     }
 
-    public MainWindowViewModel(IClipboardService clipboardService, McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
+    public MainWindowViewModel(CoreClipboardService clipboardService, McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
         : this(clipboardService, UiCoreAppSettings.ResolveMcpBaseUrl(), mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher)
     {
     }
 
-    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl)
+    public MainWindowViewModel(CoreClipboardService clipboardService, string mcpBaseUrl)
         : this(clipboardService, mcpBaseUrl, mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher: null)
     {
     }
 
-    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
+    public MainWindowViewModel(CoreClipboardService clipboardService, string mcpBaseUrl, McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
         : this(clipboardService, mcpBaseUrl, mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher)
     {
     }
 
-    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey)
+    public MainWindowViewModel(CoreClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey)
         : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null, systemNotificationService: null, uiDispatcher: null)
     {
     }
 
-    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey, McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
+    public MainWindowViewModel(CoreClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey, McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
         : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null, systemNotificationService: null, uiDispatcher)
     {
     }
 
     public MainWindowViewModel(
-        IClipboardService clipboardService,
+        CoreClipboardService clipboardService,
+        MainWindowHostServices hostServices,
+        CoreSystemNotificationService? systemNotificationService = null,
+        McpServer.UI.Core.Services.IUiDispatcherService? uiDispatcher = null)
+        : base(clipboardService, hostServices, systemNotificationService, uiDispatcher ?? new AvaloniaUiDispatcherService())
+    {
+        _dispatcher = CqrsDispatcher;
+        CloseRequestDetailsCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.CloseRequestDetailsCommand());
+        OpenPreviewInBrowserCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.OpenPreviewInBrowserCommand());
+        ToggleShowRawMarkdownCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.ToggleShowRawMarkdownCommand());
+        OpenAgentConfigCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.OpenAgentConfigCommand());
+        OpenPromptTemplatesCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.OpenPromptTemplatesCommand());
+    }
+
+    public MainWindowViewModel(
+        CoreClipboardService clipboardService,
         string mcpBaseUrl,
         string? mcpApiKey,
         string? bearerToken,
-        ISystemNotificationService? systemNotificationService = null,
+        CoreSystemNotificationService? systemNotificationService = null,
         McpServer.UI.Core.Services.IUiDispatcherService? uiDispatcher = null)
         : base(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, systemNotificationService, uiDispatcher ?? new AvaloniaUiDispatcherService())
     {

@@ -1,6 +1,8 @@
 using FluentAssertions;
 using McpServer.Cqrs;
 using McpServer.Client;
+using McpServer.UI.Core.Hosting;
+using McpServer.UI.Core.Services;
 using McpServerManager.Core;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
@@ -8,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System.Threading.Tasks;
 using Xunit;
+using CoreMcpTodoService = McpServerManager.Core.Services.McpTodoService;
 
 namespace McpServerManager.Core.Tests.Integration;
 
@@ -22,16 +25,9 @@ public sealed class CommandRoundTripTests : IDisposable
         var http = new HttpClient();
         var options = new McpServerClientOptions { BaseUrl = new Uri("http://localhost:9999") };
         var client = new McpServerClient(http, options);
-        var todoService = new McpTodoService(client, client);
+        var todoService = new CoreMcpTodoService(client, client);
 
-        var services = new ServiceCollection();
-        services.AddMcpServerManagerUiCore(
-            _target.Object,
-            todoService: todoService,
-            mcpClient: client,
-            mcpBaseUrl: options.BaseUrl);
-
-        _provider = services.BuildServiceProvider();
+        _provider = CreateProvider(_target, todoService, client, options.BaseUrl);
         _provider.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>()
             .AddProvider(_provider.GetRequiredService<Dispatcher>());
 
@@ -148,4 +144,35 @@ public sealed class CommandRoundTripTests : IDisposable
     }
 
     public void Dispose() => _provider.Dispose();
+
+    private static ServiceProvider CreateProvider(
+        Mock<ICommandTarget> target,
+        CoreMcpTodoService todoService,
+        McpServerClient client,
+        Uri baseUri)
+    {
+        var uiTarget = target.As<McpServer.UI.Core.Commands.ICommandTarget>();
+        var services = new ServiceCollection();
+        services.AddMcpHost(options =>
+        {
+            options.Lifetime = McpHostLifetimeStrategy.Singleton;
+            options.CommandTarget = uiTarget.Object;
+            options.TodoClient = new UiCoreTodoApiClientAdapter(todoService);
+            options.HealthClient = new UiCoreHealthApiClientAdapter(client, baseUri);
+            options.AdditionalHandlerAssemblies = [typeof(NavigateBackCommand).Assembly];
+        });
+
+        services.AddSingleton<ICommandTarget>(target.Object);
+        services.AddSingleton<INavigationTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.AddSingleton<IRequestDetailsTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.AddSingleton<IPreviewTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.AddSingleton<IArchiveTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.AddSingleton<ISessionDataTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.AddSingleton<IClipboardTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.AddSingleton<IConfigTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.AddSingleton<IUiDispatchTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+        services.AddSingleton<ITodoCopilotTarget>(sp => sp.GetRequiredService<ICommandTarget>());
+
+        return services.BuildServiceProvider();
+    }
 }
