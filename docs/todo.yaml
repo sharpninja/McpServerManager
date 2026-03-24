@@ -633,7 +633,7 @@ Architecture:
   - id: ARCH-WORKSPACEEDIT-001
     title: Allow editing workspaces in Director and Web-UI
     estimate: 2d
-    note: Requested on 2026-03-22 to track editable workspaces across both Director and Web-UI.
+    note: Requested on 2026-03-22 to track editable workspaces across both Director and Web-UI. Detailed implementation plan tracked in PLAN-WORKSPACEEDIT-001.
     done: false
     description:
     - Enable workspace editing flows in both Director and the Web-UI instead of leaving workspace details as read-only experiences.
@@ -642,6 +642,8 @@ Architecture:
     technical-details:
     - Likely touch points include shared workspace view models plus the Director and Web host adapters/screens that currently expose workspace browsing without a complete edit/save flow.
     - Validation should cover host-specific command wiring, save/update behavior, and regression checks for workspace switching and authorization-sensitive actions.
+    depends-on:
+    - PLAN-WORKSPACEEDIT-001
     implementation-tasks:
     - task: Inventory the current shared workspace detail/edit support and identify the missing Director and Web host wiring needed for edit/save flows.
       done: false
@@ -650,6 +652,51 @@ Architecture:
     - task: Add or wire editable workspace detail and save behavior in Web-UI.
       done: false
     - task: Add focused regression tests for Director and Web-UI workspace editing flows.
+      done: false
+  - id: PLAN-WORKSPACEEDIT-001
+    title: Detailed implementation plan for editable workspaces in Director and Web-UI
+    estimate: 1d
+    note: Created on 2026-03-23 as the detailed execution plan for ARCH-WORKSPACEEDIT-001.
+    done: false
+    description:
+    - Implement editable workspace registration flows in Director and Web by building on the existing shared UI.Core workspace detail and policy surfaces instead of creating host-specific mutation logic.
+    - 'Close the parity gaps that remain today: Director still renders workspaces read-only, while Web only exposes a subset of editable workspace fields and does not provide a complete policy-edit experience.'
+    - Keep workspace-path identity stable while allowing metadata, prompt overrides, enabled/primary flags, and policy lists to be edited with consistent validation and save feedback across both hosts.
+    - Add focused regression coverage so future host refactors do not silently revert workspace editing back to a read-only or partially wired state.
+    technical-details:
+    - '`src/McpServer.UI.Core/ViewModels/WorkspaceDetailViewModel.cs` already owns shared editor state for workspace metadata and prompt overrides and dispatches `CreateWorkspaceCommand`, `UpdateWorkspaceCommand`, and `DeleteWorkspaceCommand` through CQRS.'
+    - '`src/McpServer.UI.Core/ViewModels/WorkspacePolicyViewModel.cs` currently supports save-only policy updates. Add shared hydration/reset helpers such as `LoadFromDetail(WorkspaceDetail detail)` and `ClearPolicy()` so Web and Director can populate existing ban lists before editing.'
+    - '`src/McpServer.Director/Screens/WorkspaceListScreen.cs` currently formats `WorkspaceDetail` into a read-only `TextView`. Refactor it toward the editable-screen pattern already used in `TodoScreen`, with explicit sync helpers between Terminal.Gui controls and the shared ViewModel state.'
+    - '`src/McpServer.Web/Pages/Workspaces/WorkspaceDetail.razor` already edits name, tunnel provider, todo path, data directory, run-as, enabled, and primary fields, but it still omits prompt override editors and exposes policy as read-only output.'
+    - Both host adapters already round-trip all required fields through `src/McpServer.Director/WorkspaceApiClientAdapter.cs` and `src/McpServer.Web/Adapters/WorkspaceApiClientAdapter.cs`, so the main work is host wiring, shared policy hydration, and regression coverage rather than new backend API contracts.
+    - When both metadata and policy change in one host session, save metadata and prompt overrides through `WorkspaceDetailViewModel.SaveAsync()`, save ban lists through `WorkspacePolicyViewModel.SaveAsync()`, and then reload detail so normalized server state is what the user sees.
+    - Keep the immutable workspace key on `WorkspacePath`; do not introduce in-place workspace-path renames in this slice. If create support is surfaced, treat it as a new-draft flow using `BeginNewDraft(...)` and `CreateAsync()`.
+    implementation-tasks:
+    - task: IT-01 Inventory the current workspace editing surface across `src/McpServer.UI.Core/ViewModels/WorkspaceDetailViewModel.cs`, `src/McpServer.UI.Core/ViewModels/WorkspacePolicyViewModel.cs`, `src/McpServer.Web/Pages/Workspaces/WorkspaceDetail.razor`, and `src/McpServer.Director/Screens/WorkspaceListScreen.cs`; capture which fields already round-trip and which host screens remain read-only or partial.
+      done: false
+    - task: IT-02 Extend `WorkspacePolicyViewModel` with shared hydration/reset APIs such as `LoadFromDetail(WorkspaceDetail detail)` and `ClearPolicy()` so ban-list editors can be seeded from the currently loaded workspace instead of starting empty after every selection change.
+      done: false
+    - task: IT-03 Add UI.Core tests in `tests/McpServer.UI.Core.Tests/WorkspaceViewModelTests.cs` covering policy hydration/reset behavior plus `WorkspaceDetailViewModel.SaveAsync()` sending prompt override fields (`PromptTemplate`, `StatusPrompt`, `ImplementPrompt`, `PlanPrompt`) into `UpdateWorkspaceCommand`.
+      done: false
+    - task: IT-04 Refactor `src/McpServer.Director/Screens/WorkspaceListScreen.cs` so the lower pane becomes an editable form instead of a read-only `TextView`, with controls for `EditorName`, `EditorTodoPath`, `EditorDataDirectory`, `EditorTunnelProvider`, `EditorRunAs`, `EditorIsPrimary`, `EditorIsEnabled`, `EditorPromptTemplateText`, `EditorStatusPromptText`, `EditorImplementPromptText`, and `EditorPlanPromptText`.
+      done: false
+    - task: 'IT-05 In `WorkspaceListScreen`, add helper methods similar to the existing `TodoScreen` pattern: `SyncEditorFieldsFromViewModel()`, `SyncEditorFieldsToViewModel()`, `LoadSelectedDetailAsync(...)`, `SaveSelectedWorkspaceAsync()`, `DeleteSelectedWorkspaceAsync()`, and `BeginNewWorkspaceDraft()`, so Terminal.Gui state and `WorkspaceDetailViewModel` stay in sync.'
+      done: false
+    - task: 'IT-06 Decide and implement Director policy-edit integration using shared UI.Core surfaces: either add inline multiline ban-list editors to `WorkspaceListScreen` backed by `WorkspacePolicyViewModel`, or keep editing on `WorkspacePolicyScreen` but auto-hydrate/save it from the selected workspace detail so the policy tab is no longer blind-edit only.'
+      done: false
+    - task: IT-07 Update Director composition in `src/McpServer.Director/Screens/MainScreen.cs` and, if needed, `src/McpServer.Director/Commands/InteractiveCommand.cs` so the workspace screen receives any additional shared collaborators it needs, including `WorkspacePolicyViewModel` and action-level authorization decisions for `workspace.create`, `workspace.update`, `workspace.update-policy`, and `workspace.delete`.
+      done: false
+    - task: IT-08 Expand `src/McpServer.Web/Pages/Workspaces/WorkspaceDetail.razor` to render editable prompt override fields bound to `ViewModel.EditorPromptTemplateText`, `ViewModel.EditorStatusPromptText`, `ViewModel.EditorImplementPromptText`, and `ViewModel.EditorPlanPromptText`, while preserving the existing query-string navigation and authorization-gated save/delete actions.
+      done: false
+    - task: IT-09 Add a Web policy editor section backed by `WorkspacePolicyViewModel`, using host-level textareas or other repo-consistent inputs for banned licenses, countries, organizations, and individuals; seed the editor from the loaded `WorkspaceDetail` and persist through `WorkspacePolicyViewModel.SaveAsync()`.
+      done: false
+    - task: IT-10 Surface an explicit new-workspace draft flow in Web, most likely from `src/McpServer.Web/Pages/Workspaces/WorkspaceList.razor` or `WorkspaceDetail.razor`, by calling `ViewModel.BeginNewDraft(...)`, showing a `Create` action when `ViewModel.IsNewDraft` is true, and keeping the existing `/workspaces/detail?path=...` route stable for existing records.
+      done: false
+    - task: IT-11 Add or extend bUnit coverage in `tests/McpServer.Web.Tests` so workspace detail tests prove prompt fields render, save operations call `IWorkspaceApiClient.UpdateWorkspaceAsync(...)`, policy edits call `UpdateWorkspacePolicyAsync(...)`, and toolbar/query-string behavior still works after the new editable sections are added.
+      done: false
+    - task: IT-12 Add focused Director tests in `tests/McpServer.Director.Tests` by extracting any non-visual helper logic needed from `WorkspaceListScreen` (for example field-sync or state-transition helpers) so xUnit can verify selected-workspace loading, editor synchronization, and create/update/delete orchestration without relying on a full Terminal.Gui end-to-end harness.
+      done: false
+    - task: IT-13 Validate the completed slice with `dotnet test tests\\McpServer.UI.Core.Tests\\McpServer.UI.Core.Tests.csproj`, `dotnet test tests\\McpServer.Web.Tests\\McpServer.Web.Tests.csproj`, and `dotnet test tests\\McpServer.Director.Tests\\McpServer.Director.Tests.csproj`, then perform a manual smoke pass for Director `interactive` workspace editing and Web `/workspaces` -> `/workspaces/detail` save behavior.
       done: false
 Features:
   high-priority:

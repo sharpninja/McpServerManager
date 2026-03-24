@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.Text;
+using System.Text.Json;
 using McpServer.Client;
 using McpServer.Client.Models;
 using McpServer.Director.Auth;
@@ -134,6 +135,9 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
     private string _powerShellCurrentLocation;
     private string _verbosity;
     private bool _shouldInjectSystemPrompt = true;
+    private readonly List<string> _inputHistory = new();
+    private int _historyBrowseIndex = -1;
+    private string _historyScratchLine = "";
 
     public DirectorAgentConsoleApplication(IMcpHostedAgent hostedAgent, DirectorAgentSettings settings)
     {
@@ -144,12 +148,14 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
         _runOptions = hostedAgent.CreateRunOptions();
         _powerShellCurrentLocation = settings.WorkspacePath;
         _verbosity = settings.Verbosity;
+        LoadConsoleStateFromDisk();
     }
 
     public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
     {
         WriteBanner();
         Console.WriteLine("Type /help for commands. Prefix a line with ! to run it directly in the local PowerShell session.");
+        Console.WriteLine("Use ↑ and ↓ to recall previous inputs.");
         Console.WriteLine();
 
         EnsurePowerShellSession();
@@ -168,7 +174,7 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
 
             while (!cancellationToken.IsCancellationRequested)
             {
-                var input = ReadConsoleLine(BuildConsolePrompt(), cancellationToken);
+                var input = ReadConsoleLine(BuildConsolePrompt(), cancellationToken, useChatHistory: true);
                 if (input is null)
                     break;
 
@@ -314,6 +320,7 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
                 {
                     _verbosity = verbosity;
                     _shouldInjectSystemPrompt = true;
+                    PersistConsoleStateToDisk();
                     Console.WriteLine($"Verbosity set to {_verbosity}.");
                     Console.WriteLine();
                     return Task.CompletedTask;
@@ -342,7 +349,7 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
             var result = await _hostedAgent.PowerShellSessions.ExecuteInteractiveCommandAsync(
                     _powerShellSessionId!,
                     command,
-                    static token => ReadConsoleLine(string.Empty, token),
+                    token => ReadConsoleLine(string.Empty, token, useChatHistory: false),
                     Console.Out,
                     Console.Error,
                     directCommandCancellationSource.Token)
@@ -625,6 +632,9 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
             NetworkTimeout = settings.ModelNetworkTimeout,
             RetryPolicy = new ClientRetryPolicy(settings.ModelMaxRetries),
         };
+        if (settings.ModelEndpoint is not null)
+            options.Endpoint = settings.ModelEndpoint;
+
         var chatClient = new OpenAIChatClient(
             settings.ModelId,
             new ApiKeyCredential(settings.ModelApiKey),
@@ -668,15 +678,15 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
 
     private string BuildConsolePrompt() => $"{BuildConsolePromptLabel()} {_powerShellCurrentLocation}> ";
 
-    private string BuildConsolePromptLabel() => $"{BuildConsolePromptAgentName()} [{_verbosity}]";
+    private string BuildConsolePromptLabel() => $"{BuildConsolePromptLeadSegment()} [{_verbosity}]";
 
-    private string BuildConsolePromptAgentName()
+    private string BuildConsolePromptLeadSegment()
     {
-        if (!string.IsNullOrWhiteSpace(_settings.AgentName))
-            return _settings.AgentName.Trim();
-
         if (!string.IsNullOrWhiteSpace(_settings.ModelId))
             return _settings.ModelId.Trim();
+
+        if (!string.IsNullOrWhiteSpace(_settings.AgentName))
+            return _settings.AgentName.Trim();
 
         return "PS";
     }
@@ -716,7 +726,137 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
         _powerShellCurrentLocation = session.CurrentLocation ?? _settings.WorkspacePath;
     }
 
-    private static string? ReadConsoleLine(string prompt, CancellationToken cancellationToken)
+    private const int MaxInputHistoryEntries = 500;
+    private const string ConsoleStateFileName = "director-agent-console-state.json";
+    private const string LegacyChatHistoryFileName = "director-agent-chat-history.json";
+
+    private static readonly JsonSerializerOptions s_consoleStateJsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
+    private string GetMcpServerDirectoryPath() =>
+        Path.Combine(Path.GetFullPath(_settings.WorkspacePath), ".mcpServer");
+
+    private string GetConsoleStateStoragePath() =>
+        Path.Combine(GetMcpServerDirectoryPath(), ConsoleStateFileName);
+
+    private string GetLegacyChatHistoryStoragePath() =>
+        Path.Combine(GetMcpServerDirectoryPath(), LegacyChatHistoryFileName);
+
+    private static bool IsValidPersistedVerbosity(string value) =>
+        value is "concise" or "balanced" or "detailed";
+
+    private void ApplyHistoryEntries(IEnumerable<string> lines)
+    {
+        _inputHistory.Clear();
+        foreach (var line in lines)
+        {
+            if (!string.IsNullOrWhiteSpace(line))
+                _inputHistory.Add(line);
+        }
+
+        while (_inputHistory.Count > MaxInputHistoryEntries)
+            _inputHistory.RemoveAt(0);
+    }
+
+    private void LoadConsoleStateFromDisk()
+    {
+        var statePath = GetConsoleStateStoragePath();
+        if (File.Exists(statePath))
+        {
+            try
+            {
+                var json = File.ReadAllText(statePath);
+                if (string.IsNullOrWhiteSpace(json))
+                    return;
+
+                var state = JsonSerializer.Deserialize<DirectorAgentConsoleState>(json, s_consoleStateJsonOptions);
+                if (state is null)
+                    return;
+
+                if (!string.IsNullOrWhiteSpace(state.Verbosity) && IsValidPersistedVerbosity(state.Verbosity))
+                    _verbosity = state.Verbosity;
+
+                ApplyHistoryEntries(state.Entries ?? []);
+            }
+            catch (JsonException)
+            {
+                // Ignore corrupt state file.
+            }
+            catch (IOException)
+            {
+            }
+
+            return;
+        }
+
+        var legacyPath = GetLegacyChatHistoryStoragePath();
+        if (!File.Exists(legacyPath))
+            return;
+
+        try
+        {
+            var json = File.ReadAllText(legacyPath);
+            if (string.IsNullOrWhiteSpace(json))
+                return;
+
+            var list = JsonSerializer.Deserialize<List<string>>(json, s_consoleStateJsonOptions);
+            if (list is null)
+                return;
+
+            ApplyHistoryEntries(list);
+        }
+        catch (JsonException)
+        {
+        }
+        catch (IOException)
+        {
+        }
+    }
+
+    private void PersistConsoleStateToDisk()
+    {
+        try
+        {
+            var directory = GetMcpServerDirectoryPath();
+            Directory.CreateDirectory(directory);
+
+            var state = new DirectorAgentConsoleState
+            {
+                Verbosity = _verbosity,
+                Entries = [.._inputHistory],
+            };
+
+            var path = GetConsoleStateStoragePath();
+            var json = JsonSerializer.Serialize(state, s_consoleStateJsonOptions);
+            File.WriteAllText(path, json);
+
+            var legacyPath = GetLegacyChatHistoryStoragePath();
+            if (File.Exists(legacyPath))
+            {
+                try
+                {
+                    File.Delete(legacyPath);
+                }
+                catch (IOException)
+                {
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private string? ReadConsoleLine(string prompt, CancellationToken cancellationToken, bool useChatHistory)
     {
         ArgumentNullException.ThrowIfNull(prompt);
 
@@ -725,6 +865,7 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
             return Console.ReadLine();
 
         var buffer = new StringBuilder();
+        var previousRenderedLength = prompt.Length;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -734,7 +875,19 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
             {
                 case ConsoleKey.Enter:
                     Console.WriteLine();
-                    return buffer.ToString();
+                    var line = buffer.ToString();
+                    if (useChatHistory && !string.IsNullOrWhiteSpace(line))
+                    {
+                        if (_inputHistory.Count == 0 || _inputHistory[^1] != line)
+                            _inputHistory.Add(line);
+                        while (_inputHistory.Count > MaxInputHistoryEntries)
+                            _inputHistory.RemoveAt(0);
+                        PersistConsoleStateToDisk();
+                    }
+
+                    _historyBrowseIndex = -1;
+                    _historyScratchLine = "";
+                    return line;
 
                 case ConsoleKey.Backspace:
                     if (buffer.Length == 0)
@@ -742,17 +895,83 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
 
                     buffer.Length--;
                     Console.Write("\b \b");
+                    previousRenderedLength = prompt.Length + buffer.Length;
+                    continue;
+
+                case ConsoleKey.UpArrow when useChatHistory && _inputHistory.Count > 0:
+                    if (_historyBrowseIndex == -1)
+                        _historyScratchLine = buffer.ToString();
+
+                    if (_historyBrowseIndex < 0)
+                        _historyBrowseIndex = _inputHistory.Count - 1;
+                    else if (_historyBrowseIndex > 0)
+                        _historyBrowseIndex--;
+
+                    buffer.Clear();
+                    buffer.Append(_inputHistory[_historyBrowseIndex]);
+                    RewritePromptInputLine(prompt, buffer, ref previousRenderedLength);
+                    continue;
+
+                case ConsoleKey.DownArrow when useChatHistory && _inputHistory.Count > 0:
+                    if (_historyBrowseIndex < 0)
+                        continue;
+
+                    if (_historyBrowseIndex < _inputHistory.Count - 1)
+                    {
+                        _historyBrowseIndex++;
+                        buffer.Clear();
+                        buffer.Append(_inputHistory[_historyBrowseIndex]);
+                    }
+                    else
+                    {
+                        _historyBrowseIndex = -1;
+                        buffer.Clear();
+                        buffer.Append(_historyScratchLine);
+                    }
+
+                    RewritePromptInputLine(prompt, buffer, ref previousRenderedLength);
                     continue;
 
                 default:
                     if (char.IsControl(key.KeyChar))
                         continue;
 
+                    if (useChatHistory && _historyBrowseIndex >= 0)
+                    {
+                        _historyBrowseIndex = -1;
+                        _historyScratchLine = "";
+                    }
+
                     buffer.Append(key.KeyChar);
                     Console.Write(key.KeyChar);
+                    previousRenderedLength = prompt.Length + buffer.Length;
                     continue;
             }
         }
+    }
+
+    private static void RewritePromptInputLine(string prompt, StringBuilder buffer, ref int previousTotalLength)
+    {
+        var text = buffer.ToString();
+        var totalLen = prompt.Length + text.Length;
+        Console.Write('\r');
+        var clearCount = Math.Max(Math.Max(previousTotalLength, totalLen), 1);
+        try
+        {
+            var windowWidth = Console.WindowWidth;
+            if (windowWidth > 1)
+                clearCount = Math.Min(clearCount, windowWidth - 1);
+        }
+        catch (IOException)
+        {
+            // Best effort if the console has no window buffer (e.g. some hosted terminals).
+        }
+
+        Console.Write(new string(' ', clearCount));
+        Console.Write('\r');
+        Console.Write(prompt);
+        Console.Write(text);
+        previousTotalLength = totalLen;
     }
 
     private static bool TryGetDirectPowerShellCommand(string input, out string command)
@@ -799,6 +1018,8 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
         Console.WriteLine($"MCP server : {_settings.BaseUrl}");
         Console.WriteLine($"Workspace  : {_settings.WorkspacePath}");
         Console.WriteLine($"Model      : {_settings.ModelId}");
+        if (_settings.ModelEndpoint is not null)
+            Console.WriteLine($"Model URL  : {_settings.ModelEndpoint}");
         Console.WriteLine($"SourceType : {_settings.SourceType}");
         Console.WriteLine($"Tools      : {string.Join(", ", _hostedAgent.Registration.Tools.Select(static tool => tool.Name))}");
         Console.WriteLine();
@@ -815,7 +1036,8 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
         Console.WriteLine("  /exit    Exit the Director agent host.");
         Console.WriteLine();
         Console.WriteLine("Prompt behavior:");
-        Console.WriteLine("  - The prompt shows AgentName [verbosity] <location>>");
+        Console.WriteLine("  - The prompt shows model [verbosity] <location>> (model id from MCP_AGENT_MODEL_NAME or default).");
+        Console.WriteLine("  - ↑ / ↓ recall previous inputs; history and verbosity persist in .mcpServer/director-agent-console-state.json.");
         Console.WriteLine("  - Prefix a line with ! to run it directly in the local PowerShell session.");
         Console.WriteLine("  - Any line without ! is sent to the hosted agent as a normal chat prompt.");
         Console.WriteLine();
@@ -879,6 +1101,13 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
     }
 }
 
+file sealed class DirectorAgentConsoleState
+{
+    public string Verbosity { get; set; } = "";
+
+    public List<string> Entries { get; set; } = new();
+}
+
 internal sealed record DirectorAgentSettings(
     Uri BaseUrl,
     string? ApiKey,
@@ -890,6 +1119,7 @@ internal sealed record DirectorAgentSettings(
     string AgentDescription,
     string SourceType,
     string ModelId,
+    Uri? ModelEndpoint,
     string ModelApiKey,
     TimeSpan ModelNetworkTimeout,
     int ModelMaxRetries,
@@ -904,11 +1134,10 @@ internal sealed record DirectorAgentSettings(
     private const string AgentNameEnvironmentVariable = "MCP_AGENT_NAME";
     private const string AgentDescriptionEnvironmentVariable = "MCP_AGENT_DESCRIPTION";
     private const string SourceTypeEnvironmentVariable = "MCP_AGENT_SOURCE_TYPE";
-    private const string ModelIdEnvironmentVariable = "OPENAI_MODEL";
-    private const string ModelApiKeyEnvironmentVariable = "OPENAI_API_KEY";
-    private const string ModelNetworkTimeoutSecondsEnvironmentVariable = "OPENAI_NETWORK_TIMEOUT_SECONDS";
+    private const string ModelNameEnvironmentVariable = "MCP_AGENT_MODEL_NAME";
+    private const string ModelUrlEnvironmentVariable = "MCP_AGENT_MODEL_URL";
+    private const string ModelApiKeyEnvironmentVariable = "MCP_AGENT_API_KEY";
     private const string ModelMaxRetriesEnvironmentVariable = "OPENAI_MAX_RETRIES";
-    private const string AlternateModelIdEnvironmentVariable = "MCP_AGENT_MODEL";
     private const string VerbosityEnvironmentVariable = "MCP_AGENT_VERBOSITY";
     private const string SystemPromptEnvironmentVariable = "MCP_AGENT_SYSTEM_PROMPT";
 
@@ -946,14 +1175,17 @@ internal sealed record DirectorAgentSettings(
             explicitWorkspace)!;
 
         var modelId = FirstNonEmpty(
-            ReadEnvironmentVariable(ModelIdEnvironmentVariable),
-            ReadEnvironmentVariable(AlternateModelIdEnvironmentVariable),
+            ReadEnvironmentVariable(ModelNameEnvironmentVariable),
             "gpt-5.4")!;
+        var modelEndpoint = ResolveOptionalModelEndpoint(
+            FirstNonEmpty(
+                ReadEnvironmentVariable(ModelUrlEnvironmentVariable),
+                ReadEnvironmentVariable("OPENAI_BASE_URL")));
         var modelApiKey = ReadEnvironmentVariable(ModelApiKeyEnvironmentVariable);
         if (string.IsNullOrWhiteSpace(modelApiKey))
         {
             throw new InvalidOperationException(
-                "Configure OPENAI_API_KEY before running `director agent`.");
+                $"Configure {ModelApiKeyEnvironmentVariable} before running `director agent`.");
         }
 
         return new DirectorAgentSettings(
@@ -967,9 +1199,10 @@ internal sealed record DirectorAgentSettings(
             FirstNonEmpty(ReadEnvironmentVariable(AgentDescriptionEnvironmentVariable), "Interactive console chat host for McpServer.McpAgent inside Director.")!,
             FirstNonEmpty(ReadEnvironmentVariable(SourceTypeEnvironmentVariable), McpHostedAgentDefaults.DefaultSourceType)!,
             modelId,
+            modelEndpoint,
             modelApiKey,
             ResolvePositiveTimeSpanSeconds(
-                ReadEnvironmentVariable(ModelNetworkTimeoutSecondsEnvironmentVariable),
+                ReadEnvironmentVariable("OPENAI_NETWORK_TIMEOUT_SECONDS"),
                 100,
                 "OpenAI network timeout"),
             ResolveNonNegativeInt(
@@ -1002,6 +1235,24 @@ internal sealed record DirectorAgentSettings(
         });
 
         return sb.ToString();
+    }
+
+    private static Uri? ResolveOptionalModelEndpoint(string? rawUrl)
+    {
+        if (string.IsNullOrWhiteSpace(rawUrl))
+            return null;
+
+        if (!Uri.TryCreate(rawUrl.Trim(), UriKind.Absolute, out var uri)
+            || string.IsNullOrWhiteSpace(uri.Scheme)
+            || (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException(
+                $"Model API base URL must be an absolute http or https URI, but was '{rawUrl}'. " +
+                $"Set {ModelUrlEnvironmentVariable} or OPENAI_BASE_URL.");
+        }
+
+        return uri;
     }
 
     private static string ResolveVerbosity()
