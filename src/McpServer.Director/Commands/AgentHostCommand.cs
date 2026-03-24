@@ -1213,7 +1213,8 @@ internal sealed record DirectorAgentSettings(
             "Director MCP Agent chat",
             FirstNonEmpty(
                 ReadEnvironmentVariable(SystemPromptEnvironmentVariable),
-                "You are an interactive command-line assistant running inside Director-hosted McpServer.McpAgent. Be helpful and use the available MCP workflow tools whenever they help you inspect TODOs, session logs, repository context, or other MCP-backed information.")!);
+                "You are an interactive command-line assistant running inside Director-hosted McpServer.McpAgent. Be helpful and use the available MCP workflow tools whenever they help you inspect TODOs, session logs, repository context, or other MCP-backed information. " +
+                "For reading or writing arbitrary paths on the machine where Director runs, use mcp_fs_read, mcp_fs_list, and mcp_fs_write (absolute paths or paths relative to the MCP workspace). Use mcp_repo_* when MCP-server allowlists and auditing should apply.")!);
     }
 
     internal static string BuildSystemPrompt(string basePrompt, string verbosity)
