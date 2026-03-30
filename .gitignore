@@ -36,3 +36,16 @@ testResults.xml
 .vscode/mcp.json
 /logs/web-ui-startup
 /TestResults/run-all-tests
+
+# Node.js
+package-lock.json
+yarn.lock
+.npm
+.yarn
+dist/
+
+# .NET
+TestResults/
+*.trx
+.dotnet/
+.tools/
