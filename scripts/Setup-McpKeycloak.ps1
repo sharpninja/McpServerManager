@@ -4,9 +4,10 @@
     Automates Keycloak realm and client setup for McpServer OIDC authentication.
 
 .DESCRIPTION
-    Creates the mcpserver realm, configures mcp-director (public client for Device Flow)
-    and mcp-web (confidential client for web UI) clients with appropriate protocol mappers,
-    redirect URIs, and audience claims. Displays client secrets in the setup summary.
+    Creates the mcpserver realm, configures mcp-server-api (confidential client for JWT validation),
+    mcp-director (public client for Device Flow), and mcp-web (confidential client for web UI)
+    clients with appropriate protocol mappers, redirect URIs, and audience claims.
+    Displays client secrets in the setup summary.
 
 .PARAMETER KeycloakUrl
     Base URL of the Keycloak server (default: http://localhost:7080)
@@ -85,7 +86,7 @@ function Invoke-KeycloakApi {
     }
 }
 
-Write-Host "[1/9] Authenticating with Keycloak..." -ForegroundColor Yellow
+Write-Host "[1/10] Authenticating with Keycloak..." -ForegroundColor Yellow
 
 $tokenResponse = Invoke-RestMethod -Uri "$KeycloakUrl/realms/master/protocol/openid-connect/token" -Method Post -Body @{
     grant_type = "password"
@@ -97,7 +98,7 @@ $tokenResponse = Invoke-RestMethod -Uri "$KeycloakUrl/realms/master/protocol/ope
 $token = $tokenResponse.access_token
 Write-Host "  ✓ Authenticated as $AdminUser" -ForegroundColor Green
 
-Write-Host "[2/9] Creating realm '$RealmName'..." -ForegroundColor Yellow
+Write-Host "[2/10] Creating realm '$RealmName'..." -ForegroundColor Yellow
 
 $existingRealm = try {
     Invoke-KeycloakApi -Method Get -Path "/admin/realms/$RealmName" -Token $token
@@ -120,7 +121,32 @@ if ($existingRealm) {
     Write-Host "  ✓ Realm '$RealmName' created" -ForegroundColor Green
 }
 
-Write-Host "[3/9] Creating mcp-director client (public, Device Flow)..." -ForegroundColor Yellow
+Write-Host "[3/10] Creating mcp-server-api client (confidential, JWT validation)..." -ForegroundColor Yellow
+
+$apiClientConfig = @{
+    clientId = "mcp-server-api"
+    publicClient = $false
+    serviceAccountsEnabled = $true
+    standardFlowEnabled = $false
+    directAccessGrantsEnabled = $false
+    attributes = @{
+        "oauth2.device.authorization.grant.enabled" = "false"
+    }
+}
+
+$apiClient = Invoke-KeycloakApi -Method Post -Path "/admin/realms/$RealmName/clients" -Token $token -Body $apiClientConfig
+Write-Host "  ✓ Client 'mcp-server-api' created" -ForegroundColor Green
+
+$apiClients = Invoke-KeycloakApi -Method Get -Path "/admin/realms/$RealmName/clients?clientId=mcp-server-api" -Token $token
+$apiClientId = $apiClients[0].id
+
+Write-Host "[4/10] Retrieving mcp-server-api client secret..." -ForegroundColor Yellow
+
+$apiClientSecret = Invoke-KeycloakApi -Method Get -Path "/admin/realms/$RealmName/clients/$apiClientId/client-secret" -Token $token
+$apiSecretValue = $apiClientSecret.value
+Write-Host "  ✓ Client secret retrieved" -ForegroundColor Green
+
+Write-Host "[5/10] Creating mcp-director client (public, Device Flow)..." -ForegroundColor Yellow
 
 $directorClientConfig = @{
     clientId = "mcp-director"
@@ -140,7 +166,7 @@ Write-Host "  ✓ Client 'mcp-director' created" -ForegroundColor Green
 $directorClients = Invoke-KeycloakApi -Method Get -Path "/admin/realms/$RealmName/clients?clientId=mcp-director" -Token $token
 $directorClientId = $directorClients[0].id
 
-Write-Host "[4/9] Adding protocol mappers to mcp-director..." -ForegroundColor Yellow
+Write-Host "[6/10] Adding protocol mappers to mcp-director..." -ForegroundColor Yellow
 
 $audienceMapper = @{
     name = "mcp-server-api-audience"
@@ -173,7 +199,7 @@ $realmRolesMapper = @{
 Invoke-KeycloakApi -Method Post -Path "/admin/realms/$RealmName/clients/$directorClientId/protocol-mappers/models" -Token $token -Body $realmRolesMapper
 Write-Host "  ✓ Added realm-roles mapper" -ForegroundColor Green
 
-Write-Host "[5/9] Creating mcp-web client (confidential, Standard Flow)..." -ForegroundColor Yellow
+Write-Host "[7/10] Creating mcp-web client (confidential, Standard Flow)..." -ForegroundColor Yellow
 
 $webClientConfig = @{
     clientId = "mcp-web"
@@ -197,13 +223,13 @@ Write-Host "  ✓ Client 'mcp-web' created" -ForegroundColor Green
 $webClients = Invoke-KeycloakApi -Method Get -Path "/admin/realms/$RealmName/clients?clientId=mcp-web" -Token $token
 $webClientId = $webClients[0].id
 
-Write-Host "[6/9] Retrieving mcp-web client secret..." -ForegroundColor Yellow
+Write-Host "[8/10] Retrieving mcp-web client secret..." -ForegroundColor Yellow
 
 $webClientSecret = Invoke-KeycloakApi -Method Get -Path "/admin/realms/$RealmName/clients/$webClientId/client-secret" -Token $token
 $webSecretValue = $webClientSecret.value
 Write-Host "  ✓ Client secret retrieved" -ForegroundColor Green
 
-Write-Host "[7/9] Adding protocol mappers to mcp-web..." -ForegroundColor Yellow
+Write-Host "[9/10] Adding protocol mappers to mcp-web..." -ForegroundColor Yellow
 
 $webAudienceMapper = @{
     name = "mcp-server-api-audience"
@@ -236,7 +262,7 @@ $webRealmRolesMapper = @{
 Invoke-KeycloakApi -Method Post -Path "/admin/realms/$RealmName/clients/$webClientId/protocol-mappers/models" -Token $token -Body $webRealmRolesMapper
 Write-Host "  ✓ Added realm-roles mapper" -ForegroundColor Green
 
-Write-Host "[8/9] Creating realm roles..." -ForegroundColor Yellow
+Write-Host "[10/10] Creating realm roles..." -ForegroundColor Yellow
 
 $roles = @("admin", "agent-manager", "viewer")
 
@@ -256,7 +282,7 @@ foreach ($role in $roles) {
     }
 }
 
-Write-Host "[9/9] Setup complete!" -ForegroundColor Green
+Write-Host "[10/10] Setup complete!" -ForegroundColor Green
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Setup Summary" -ForegroundColor Cyan
@@ -266,8 +292,12 @@ Write-Host "Realm: $RealmName" -ForegroundColor White
 Write-Host "Authority: $KeycloakUrl/realms/$RealmName" -ForegroundColor White
 Write-Host ""
 Write-Host "Clients configured:" -ForegroundColor White
+Write-Host "  • mcp-server-api (confidential, JWT validation)" -ForegroundColor White
 Write-Host "  • mcp-director (public, Device Flow)" -ForegroundColor White
 Write-Host "  • mcp-web (confidential, Standard Flow)" -ForegroundColor White
+Write-Host ""
+Write-Host "mcp-server-api client secret:" -ForegroundColor Yellow
+Write-Host "  $apiSecretValue" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "mcp-web client secret:" -ForegroundColor Yellow
 Write-Host "  $webSecretValue" -ForegroundColor Cyan
@@ -291,6 +321,7 @@ Write-Host '     "Mcp": {' -ForegroundColor DarkGray
 Write-Host '       "Auth": {' -ForegroundColor DarkGray
 Write-Host "         `"Authority`": `"$KeycloakUrl/realms/$RealmName`"," -ForegroundColor DarkGray
 Write-Host '         "Audience": "mcp-server-api",' -ForegroundColor DarkGray
+Write-Host "         `"ClientSecret`": `"$apiSecretValue`"," -ForegroundColor DarkGray
 Write-Host '         "RequireHttpsMetadata": false,' -ForegroundColor DarkGray
 Write-Host '         "DirectorClientId": "mcp-director"' -ForegroundColor DarkGray
 Write-Host '       }' -ForegroundColor DarkGray

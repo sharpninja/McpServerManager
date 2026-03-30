@@ -3,6 +3,9 @@ set -euo pipefail
 
 # McpServer Keycloak Setup Script
 # Automates Keycloak realm and client setup for McpServer OIDC authentication.
+# Creates the mcpserver realm, configures mcp-server-api (confidential client for JWT validation),
+# mcp-director (public client for Device Flow), and mcp-web (confidential client for web UI)
+# clients with appropriate protocol mappers, redirect URIs, and audience claims.
 
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:7080}"
 ADMIN_USER="${ADMIN_USER:-admin}"
@@ -41,7 +44,7 @@ keycloak_api() {
     fi
 }
 
-echo "[1/9] Authenticating with Keycloak..."
+echo "[1/10] Authenticating with Keycloak..."
 
 TOKEN_RESPONSE=$(curl -s -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \
@@ -59,7 +62,7 @@ fi
 
 echo "  ✓ Authenticated as $ADMIN_USER"
 
-echo "[2/9] Creating realm '$REALM_NAME'..."
+echo "[2/10] Creating realm '$REALM_NAME'..."
 
 EXISTING_REALM=$(keycloak_api GET "/admin/realms/$REALM_NAME" "$TOKEN" 2>/dev/null || echo "")
 
@@ -83,7 +86,35 @@ EOF
     echo "  ✓ Realm '$REALM_NAME' created"
 fi
 
-echo "[3/9] Creating mcp-director client (public, Device Flow)..."
+echo "[3/10] Creating mcp-server-api client (confidential, JWT validation)..."
+
+API_CLIENT_CONFIG=$(cat <<EOF
+{
+    "clientId": "mcp-server-api",
+    "publicClient": false,
+    "serviceAccountsEnabled": true,
+    "standardFlowEnabled": false,
+    "directAccessGrantsEnabled": false,
+    "attributes": {
+        "oauth2.device.authorization.grant.enabled": "false"
+    }
+}
+EOF
+)
+
+keycloak_api POST "/admin/realms/$REALM_NAME/clients" "$TOKEN" "$API_CLIENT_CONFIG" > /dev/null
+echo "  ✓ Client 'mcp-server-api' created"
+
+API_CLIENTS=$(keycloak_api GET "/admin/realms/$REALM_NAME/clients?clientId=mcp-server-api" "$TOKEN")
+API_CLIENT_ID=$(echo "$API_CLIENTS" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+echo "[4/10] Retrieving mcp-server-api client secret..."
+
+API_CLIENT_SECRET=$(keycloak_api GET "/admin/realms/$REALM_NAME/clients/$API_CLIENT_ID/client-secret" "$TOKEN")
+API_SECRET_VALUE=$(echo "$API_CLIENT_SECRET" | grep -o '"value":"[^"]*"' | cut -d'"' -f4)
+echo "  ✓ Client secret retrieved"
+
+echo "[5/10] Creating mcp-director client (public, Device Flow)..."
 
 DIRECTOR_CLIENT_CONFIG=$(cat <<EOF
 {
@@ -106,7 +137,7 @@ echo "  ✓ Client 'mcp-director' created"
 DIRECTOR_CLIENTS=$(keycloak_api GET "/admin/realms/$REALM_NAME/clients?clientId=mcp-director" "$TOKEN")
 DIRECTOR_CLIENT_ID=$(echo "$DIRECTOR_CLIENTS" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 
-echo "[4/9] Adding protocol mappers to mcp-director..."
+echo "[6/10] Adding protocol mappers to mcp-director..."
 
 AUDIENCE_MAPPER=$(cat <<EOF
 {
@@ -145,7 +176,7 @@ EOF
 keycloak_api POST "/admin/realms/$REALM_NAME/clients/$DIRECTOR_CLIENT_ID/protocol-mappers/models" "$TOKEN" "$REALM_ROLES_MAPPER" > /dev/null
 echo "  ✓ Added realm-roles mapper"
 
-echo "[5/9] Creating mcp-web client (confidential, Standard Flow)..."
+echo "[7/10] Creating mcp-web client (confidential, Standard Flow)..."
 
 WEB_CLIENT_CONFIG=$(cat <<EOF
 {
@@ -172,13 +203,13 @@ echo "  ✓ Client 'mcp-web' created"
 WEB_CLIENTS=$(keycloak_api GET "/admin/realms/$REALM_NAME/clients?clientId=mcp-web" "$TOKEN")
 WEB_CLIENT_ID=$(echo "$WEB_CLIENTS" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 
-echo "[6/9] Retrieving mcp-web client secret..."
+echo "[8/10] Retrieving mcp-web client secret..."
 
 WEB_CLIENT_SECRET=$(keycloak_api GET "/admin/realms/$REALM_NAME/clients/$WEB_CLIENT_ID/client-secret" "$TOKEN")
 WEB_SECRET_VALUE=$(echo "$WEB_CLIENT_SECRET" | grep -o '"value":"[^"]*"' | cut -d'"' -f4)
 echo "  ✓ Client secret retrieved"
 
-echo "[7/9] Adding protocol mappers to mcp-web..."
+echo "[9/10] Adding protocol mappers to mcp-web..."
 
 WEB_AUDIENCE_MAPPER=$(cat <<EOF
 {
@@ -217,7 +248,7 @@ EOF
 keycloak_api POST "/admin/realms/$REALM_NAME/clients/$WEB_CLIENT_ID/protocol-mappers/models" "$TOKEN" "$WEB_REALM_ROLES_MAPPER" > /dev/null
 echo "  ✓ Added realm-roles mapper"
 
-echo "[8/9] Creating realm roles..."
+echo "[10/10] Creating realm roles..."
 
 for role in admin agent-manager viewer; do
     EXISTING_ROLE=$(keycloak_api GET "/admin/realms/$REALM_NAME/roles/$role" "$TOKEN" 2>/dev/null || echo "")
@@ -236,7 +267,7 @@ EOF
     fi
 done
 
-echo "[9/9] Setup complete!"
+echo "[10/10] Setup complete!"
 echo ""
 echo "========================================"
 echo "Setup Summary"
@@ -246,8 +277,12 @@ echo "Realm: $REALM_NAME"
 echo "Authority: $KEYCLOAK_URL/realms/$REALM_NAME"
 echo ""
 echo "Clients configured:"
+echo "  • mcp-server-api (confidential, JWT validation)"
 echo "  • mcp-director (public, Device Flow)"
 echo "  • mcp-web (confidential, Standard Flow)"
+echo ""
+echo "mcp-server-api client secret:"
+echo "  $API_SECRET_VALUE"
 echo ""
 echo "mcp-web client secret:"
 echo "  $WEB_SECRET_VALUE"
@@ -271,6 +306,7 @@ echo '     "Mcp": {'
 echo '       "Auth": {'
 echo "         \"Authority\": \"$KEYCLOAK_URL/realms/$REALM_NAME\","
 echo '         "Audience": "mcp-server-api",'
+echo "         \"ClientSecret\": \"$API_SECRET_VALUE\","
 echo '         "RequireHttpsMetadata": false,'
 echo '         "DirectorClientId": "mcp-director"'
 echo '       }'
