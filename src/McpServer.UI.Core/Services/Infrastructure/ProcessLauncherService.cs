@@ -2,9 +2,9 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.UI.Core.Services.Infrastructure;
+namespace McpServerManager.UI.Core.Services.Infrastructure;
 
 /// <summary>
 /// Host implementation of <see cref="IProcessLauncherService"/> backed by <see cref="Process"/>.

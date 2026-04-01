@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http;
 using System.Text.Json;
-using McpServer.Web;
+using McpServerManager.Web;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using NetEscapades.Configuration.Yaml;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -45,18 +45,18 @@ using var bootstrapLoggerFactory = LoggerFactory.Create(static logging =>
         options.TimestampFormat = "HH:mm:ss.fff ";
     });
 });
-var bootstrapLogger = bootstrapLoggerFactory.CreateLogger("McpServer.Web.Bootstrap");
-bootstrapLogger.LogInformation("Bootstrap starting for McpServer.Web. PID {ProcessId}", Environment.ProcessId);
+var bootstrapLogger = bootstrapLoggerFactory.CreateLogger("McpServerManager.Web.Bootstrap");
+bootstrapLogger.LogInformation("Bootstrap starting for McpServerManager.Web. PID {ProcessId}", Environment.ProcessId);
 var listenUrlSelection = WebListenUrlSelector.ResolveSelection(args);
 builder.WebHost.UseUrls(listenUrlSelection.Urls);
 if (listenUrlSelection.IsExplicit)
 {
-    bootstrapLogger.LogInformation("Using explicit listen URLs for McpServer.Web: {ListenUrls}", listenUrlSelection.Urls);
+    bootstrapLogger.LogInformation("Using explicit listen URLs for McpServerManager.Web: {ListenUrls}", listenUrlSelection.Urls);
 }
 else
 {
     bootstrapLogger.LogInformation(
-        "No explicit listen URL configured. Selected available loopback URL {ListenUrls} for McpServer.Web.",
+        "No explicit listen URL configured. Selected available loopback URL {ListenUrls} for McpServerManager.Web.",
         listenUrlSelection.Urls);
 }
 
@@ -118,7 +118,7 @@ var authenticationBuilder = builder.Services
 authenticationBuilder
     .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
     {
-        options.Cookie.Name = cookieSection["CookieName"] ?? "McpServer.Web.Auth";
+        options.Cookie.Name = cookieSection["CookieName"] ?? "McpServerManager.Web.Auth";
         options.LoginPath = cookieSection["LoginPath"] ?? "/login";
         options.LogoutPath = cookieSection["LogoutPath"] ?? "/logout";
         options.AccessDeniedPath = cookieSection["AccessDeniedPath"] ?? "/access-denied";
@@ -241,38 +241,38 @@ AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
 
     if (eventArgs.ExceptionObject is Exception ex)
     {
-        bootstrapLogger.LogCritical(ex, "Unhandled exception in McpServer.Web. IsTerminating: {IsTerminating}", eventArgs.IsTerminating);
+        bootstrapLogger.LogCritical(ex, "Unhandled exception in McpServerManager.Web. IsTerminating: {IsTerminating}", eventArgs.IsTerminating);
     }
     else
     {
-        bootstrapLogger.LogCritical("Unhandled non-exception object in McpServer.Web. IsTerminating: {IsTerminating}", eventArgs.IsTerminating);
+        bootstrapLogger.LogCritical("Unhandled non-exception object in McpServerManager.Web. IsTerminating: {IsTerminating}", eventArgs.IsTerminating);
     }
 };
 
 TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
 {
-    bootstrapLogger.LogError(eventArgs.Exception, "Unobserved task exception in McpServer.Web.");
+    bootstrapLogger.LogError(eventArgs.Exception, "Unobserved task exception in McpServerManager.Web.");
 };
 
 app.Lifetime.ApplicationStarted.Register(() =>
 {
     bootstrapLogger.LogInformation(
-        "McpServer.Web started. URLs: {Urls}. StartupElapsedMs: {ElapsedMs}",
+        "McpServerManager.Web started. URLs: {Urls}. StartupElapsedMs: {ElapsedMs}",
         string.Join(", ", app.Urls),
         startupStopwatch.ElapsedMilliseconds);
 });
 
 app.Lifetime.ApplicationStopping.Register(() =>
 {
-    bootstrapLogger.LogWarning("McpServer.Web is stopping.");
+    bootstrapLogger.LogWarning("McpServerManager.Web is stopping.");
 });
 
 app.Lifetime.ApplicationStopped.Register(() =>
 {
-    bootstrapLogger.LogWarning("McpServer.Web stopped.");
+    bootstrapLogger.LogWarning("McpServerManager.Web stopped.");
 });
 
-bootstrapLogger.LogInformation("Calling app.Run for McpServer.Web.");
+bootstrapLogger.LogInformation("Calling app.Run for McpServerManager.Web.");
 try
 {
     app.Run();
@@ -280,7 +280,7 @@ try
 catch (Exception ex)
 {
     runFailure = ex;
-    bootstrapLogger.LogCritical(ex, "McpServer.Web terminated with a startup/runtime exception.");
+    bootstrapLogger.LogCritical(ex, "McpServerManager.Web terminated with a startup/runtime exception.");
 
     var startupFailureHint = StartupFailureDiagnostics.BuildOperatorHint(ex, listenUrlSelection.Urls);
     if (!string.IsNullOrWhiteSpace(startupFailureHint))

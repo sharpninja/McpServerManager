@@ -1,11 +1,11 @@
 using System;
 using System.Threading.Tasks;
-using McpServer.UI.Core.Commands;
+using McpServerManager.UI.Core.Commands;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace McpServer.Web.Tests;
+namespace McpServerManager.Web.Tests;
 
 public sealed class WebCommandTargetTests
 {

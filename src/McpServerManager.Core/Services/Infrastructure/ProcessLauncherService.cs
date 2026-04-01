@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 
 namespace McpServerManager.Core.Services.Infrastructure;
 

@@ -2,7 +2,7 @@ using McpServer.Cqrs;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
 
-namespace McpServer.Director.Commands;
+namespace McpServerManager.Director.Commands;
 
 /// <summary>Shared helpers for Director CLI commands.</summary>
 internal static class CommandHelpers

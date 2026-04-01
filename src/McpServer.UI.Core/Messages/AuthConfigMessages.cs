@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query for <c>/auth/config</c>.</summary>
 public sealed record GetAuthConfigQuery : IQuery<AuthConfigSnapshot>;

@@ -6,10 +6,10 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.ViewModels;
-using UiCoreTodoListEntry = McpServer.UI.Core.ViewModels.TodoListEntry;
+using UiCoreTodoListEntry = McpServerManager.UI.Core.ViewModels.TodoListEntry;
 
 namespace McpServerManager.Desktop.Views;
 

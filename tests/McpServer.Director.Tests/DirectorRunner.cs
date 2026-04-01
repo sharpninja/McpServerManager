@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 /// <summary>
 /// Helper that invokes the Director CLI executable via <c>dotnet exec</c>
@@ -14,7 +14,7 @@ internal static class DirectorRunner
 
     /// <summary>Path to the built <c>director.dll</c>.</summary>
     private static readonly string DirectorDll = Path.GetFullPath(
-        Path.Combine(RepoRoot, "src", "McpServer.Director", "bin", "Debug", "net9.0", "director.dll"));
+        Path.Combine(RepoRoot, "src", "McpServerManager.Director", "bin", "Debug", "net9.0", "director.dll"));
 
     /// <summary>Default per-command timeout in milliseconds.</summary>
     private const int DefaultTimeoutMs = 30_000;

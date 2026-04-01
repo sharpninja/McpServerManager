@@ -1,9 +1,9 @@
 using System;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.Web.ViewModels;
+namespace McpServerManager.Web.ViewModels;
 
 public sealed class WebVoiceConversationViewModel : VoiceConversationViewModel
 {

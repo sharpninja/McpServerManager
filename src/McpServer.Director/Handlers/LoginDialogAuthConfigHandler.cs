@@ -1,4 +1,4 @@
-namespace McpServer.Director.Handlers;
+namespace McpServerManager.Director.Handlers;
 
 /// <summary>
 /// Handles auth-config discovery for the login dialog so the screen only applies UI updates.

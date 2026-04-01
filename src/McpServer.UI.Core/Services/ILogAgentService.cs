@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>Service that sends a user message and current log context to a local/remote LLM and returns the assistant reply.</summary>
 public interface ILogAgentService

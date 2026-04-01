@@ -7,17 +7,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using McpServer.Cqrs.Mvvm;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Models;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using UiCoreTodoDetailViewModel = McpServer.UI.Core.ViewModels.TodoDetailViewModel;
-using UiCoreTodoListViewModel = McpServer.UI.Core.ViewModels.TodoListViewModel;
-using UiCoreWorkspaceContextViewModel = McpServer.UI.Core.ViewModels.WorkspaceContextViewModel;
+using UiCoreTodoDetailViewModel = McpServerManager.UI.Core.ViewModels.TodoDetailViewModel;
+using UiCoreTodoListViewModel = McpServerManager.UI.Core.ViewModels.TodoListViewModel;
+using UiCoreWorkspaceContextViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceContextViewModel;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 #pragma warning disable CS1591
 

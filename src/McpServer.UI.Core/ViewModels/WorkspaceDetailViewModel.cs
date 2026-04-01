@@ -2,12 +2,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using McpServer.Cqrs;
 using McpServer.Cqrs.Mvvm;
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.ViewModels.Base;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.ViewModels.Base;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 /// <summary>
 /// ViewModel for loading, creating, editing, and deleting workspace registrations.

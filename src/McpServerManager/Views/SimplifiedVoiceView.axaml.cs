@@ -20,7 +20,7 @@ using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
 using McpServerManager.Core.Utilities;
 using Microsoft.Extensions.Logging;
-using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
+using UiDispatcherHost = McpServerManager.UI.Core.Services.UiDispatcherHost;
 
 namespace McpServerManager.Android.Views;
 

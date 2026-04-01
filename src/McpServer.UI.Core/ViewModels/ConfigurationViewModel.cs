@@ -1,9 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using McpServer.Cqrs;
-using McpServer.UI.Core.Messages;
+using McpServerManager.UI.Core.Messages;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 /// <summary>ViewModel for the server configuration management screen.</summary>
 public sealed partial class ConfigurationViewModel : ObservableObject

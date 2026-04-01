@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace McpServer.UI.Core.Models;
+namespace McpServerManager.UI.Core.Models;
 
 #pragma warning disable CS1591
 

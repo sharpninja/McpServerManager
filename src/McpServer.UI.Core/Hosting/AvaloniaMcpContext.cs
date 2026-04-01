@@ -1,8 +1,8 @@
 using McpServer.Client;
-using McpServer.UI.Core.Auth;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.ViewModels;
 
-namespace McpServer.UI.Core.Hosting;
+namespace McpServerManager.UI.Core.Hosting;
 
 public sealed class AvaloniaMcpContext : IMcpHostContext
 {

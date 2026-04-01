@@ -7,7 +7,7 @@ using CqrsDispatcher = McpServer.Cqrs.Dispatcher;
 namespace McpServerManager.Core.ViewModels;
 
 /// <summary>App wrapper for UI.Core settings ViewModel.</summary>
-public partial class SettingsViewModel : McpServer.UI.Core.ViewModels.SettingsViewModel
+public partial class SettingsViewModel : McpServerManager.UI.Core.ViewModels.SettingsViewModel
 {
     private readonly CqrsDispatcher _dispatcher;
     private readonly VoiceChatSettingsService _voiceChatSettingsService;
@@ -36,7 +36,7 @@ public partial class SettingsViewModel : McpServer.UI.Core.ViewModels.SettingsVi
 
     public SettingsViewModel(
         CqrsDispatcher dispatcher,
-        McpServer.UI.Core.Services.ISpeechFilterService? speechFilterService = null)
+        McpServerManager.UI.Core.Services.ISpeechFilterService? speechFilterService = null)
         : base(speechFilterService ?? new SpeechFilterServiceAdapter())
     {
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));

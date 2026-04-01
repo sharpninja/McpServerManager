@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Strategy for marshaling work onto a host UI thread or synchronization context.

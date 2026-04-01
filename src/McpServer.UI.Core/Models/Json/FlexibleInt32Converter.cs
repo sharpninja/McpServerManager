@@ -2,7 +2,7 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace McpServer.UI.Core.Models.Json;
+namespace McpServerManager.UI.Core.Models.Json;
 
 /// <summary>
 /// Deserializes an int from JSON number (int/long/double), string, or null (→ 0).

@@ -1,6 +1,6 @@
-using McpServer.UI.Core.Authorization;
+using McpServerManager.UI.Core.Authorization;
 
-namespace McpServer.UI.Core.Navigation;
+namespace McpServerManager.UI.Core.Navigation;
 
 /// <summary>
 /// Placement groups used to keep workspace-scoped tabs first and move global tabs to the end.

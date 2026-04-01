@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace McpServer.UI.Core.Models.Json
+namespace McpServerManager.UI.Core.Models.Json
 {
     // Copilot Session Log
     public class CopilotSessionLog

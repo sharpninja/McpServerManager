@@ -1,4 +1,4 @@
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 /// <summary>
 /// Tests for agent mutation commands: <c>add</c>, <c>ban</c>, <c>unban</c>, <c>delete</c>.

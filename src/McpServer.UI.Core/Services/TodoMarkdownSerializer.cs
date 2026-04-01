@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using McpServer.UI.Core.Messages;
+using McpServerManager.UI.Core.Messages;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Converts <see cref="TodoDetail"/> to/from a structured Markdown representation.

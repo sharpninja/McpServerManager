@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace McpServer.UI.Core.Models.Json
+namespace McpServerManager.UI.Core.Models.Json
 {
     public partial class JsonTreeNode : ObservableObject
     {

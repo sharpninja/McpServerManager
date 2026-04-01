@@ -4,10 +4,10 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.ViewModels;
-using UiChatMessage = McpServer.UI.Core.Models.ChatMessage;
+using UiChatMessage = McpServerManager.UI.Core.Models.ChatMessage;
 
 namespace McpServerManager.Desktop.Views;
 

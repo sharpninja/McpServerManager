@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query to list GitHub issues.</summary>
 public sealed record ListIssuesQuery(string? State = null, int Limit = 30) : IQuery<GitHubIssueListResult>;

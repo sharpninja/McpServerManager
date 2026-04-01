@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace McpServer.UI.Core.Models;
+namespace McpServerManager.UI.Core.Models;
 
 public class LayoutSettings
 {

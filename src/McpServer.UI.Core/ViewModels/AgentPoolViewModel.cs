@@ -1,11 +1,11 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using McpServer.Cqrs;
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Messages;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Messages;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 /// <summary>
 /// ViewModel for the Agent Pool tab.

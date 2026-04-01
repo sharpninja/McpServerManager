@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
-namespace McpServer.UI.Core.Models;
+namespace McpServerManager.UI.Core.Models;
 
 /// <summary>Path and content for the agent config file (instructions/context fed to the AI assistant on startup and with context updates). Supports YAML front matter for settings like model.</summary>
 public static class AgentConfigIo

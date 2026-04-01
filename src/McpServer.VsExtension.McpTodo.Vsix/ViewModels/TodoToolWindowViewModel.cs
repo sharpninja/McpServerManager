@@ -6,17 +6,17 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
-using McpServer.UI.Core.Services;
-using McpServer.VsExtension.McpTodo;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.VsExtension.McpTodo;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Shell;
-using UiCoreTodoDetailViewModel = McpServer.UI.Core.ViewModels.TodoDetailViewModel;
-using UiCoreTodoListEntry = McpServer.UI.Core.ViewModels.TodoListEntry;
-using UiCoreTodoListHostViewModel = McpServer.UI.Core.ViewModels.TodoListHostViewModel;
-using UiCoreTodoListViewModel = McpServer.UI.Core.ViewModels.TodoListViewModel;
-using UiCoreWorkspaceContextViewModel = McpServer.UI.Core.ViewModels.WorkspaceContextViewModel;
+using UiCoreTodoDetailViewModel = McpServerManager.UI.Core.ViewModels.TodoDetailViewModel;
+using UiCoreTodoListEntry = McpServerManager.UI.Core.ViewModels.TodoListEntry;
+using UiCoreTodoListHostViewModel = McpServerManager.UI.Core.ViewModels.TodoListHostViewModel;
+using UiCoreTodoListViewModel = McpServerManager.UI.Core.ViewModels.TodoListViewModel;
+using UiCoreWorkspaceContextViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceContextViewModel;
 
-namespace McpServer.UI;
+namespace McpServerManager.UI;
 
 internal sealed class TodoToolWindowViewModel : UiCoreTodoListHostViewModel
 {
@@ -33,7 +33,7 @@ internal sealed class TodoToolWindowViewModel : UiCoreTodoListHostViewModel
         UiCoreWorkspaceContextViewModel workspaceContext,
         IServiceProvider serviceProvider,
         ITimerService timerService,
-        ILogger<McpServer.UI.Core.ViewModels.TodoListHostViewModel> logger,
+        ILogger<McpServerManager.UI.Core.ViewModels.TodoListHostViewModel> logger,
         Action<string>? openFileInEditor = null,
         Action<string, string>? showCompletionInfoBar = null)
         : base(clipboardService, listVm, detailVm, workspaceContext, serviceProvider, timerService, logger)

@@ -1,4 +1,4 @@
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 /// <summary>
 /// Tests for <c>interactive</c> (with aliases <c>tui</c> and <c>ui</c>)

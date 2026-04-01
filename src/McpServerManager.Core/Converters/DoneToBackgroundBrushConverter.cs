@@ -3,7 +3,7 @@ using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 using CoreTodoItem = McpServerManager.Core.Models.McpTodoFlatItem;
-using UiCoreTodoItem = McpServer.UI.Core.Models.McpTodoFlatItem;
+using UiCoreTodoItem = McpServerManager.UI.Core.Models.McpTodoFlatItem;
 
 namespace McpServerManager.Core.Converters;
 

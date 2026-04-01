@@ -4,8 +4,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServer.UI.Core.Models;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Services;
 using CoreModels = McpServerManager.Core.Models;
 
 namespace McpServerManager.Core.Services;

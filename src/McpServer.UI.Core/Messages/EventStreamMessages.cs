@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query to subscribe to workspace change events via SSE.</summary>
 public sealed record SubscribeToEventsQuery(string? Category = null) : IQuery<IAsyncEnumerable<ChangeEventItem>>;

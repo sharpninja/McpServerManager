@@ -1,6 +1,6 @@
-using McpServer.UI.Core.Messages;
+using McpServerManager.UI.Core.Messages;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Default no-op health client used when a host does not provide an implementation.

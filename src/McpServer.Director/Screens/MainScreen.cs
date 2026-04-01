@@ -1,15 +1,15 @@
 using System.Collections.ObjectModel;
 using McpServer.Cqrs;
-using McpServer.Director.Auth;
-using McpServer.Director.Helpers;
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Navigation;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.Director.Auth;
+using McpServerManager.Director.Helpers;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Navigation;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
 using Terminal.Gui;
 
-namespace McpServer.Director.Screens;
+namespace McpServerManager.Director.Screens;
 
 /// <summary>
 /// Main Terminal.Gui window with tab navigation between all Director screens.

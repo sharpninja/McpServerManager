@@ -1,8 +1,8 @@
 using System;
 using McpServer.Client;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Factory for creating MCP service instances. Extracts service construction

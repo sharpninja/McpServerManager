@@ -1,10 +1,10 @@
-using McpServer.UI.Core.Commands;
-using McpServer.UI.Core.Auth;
-using McpServer.UI.Core.Hosting;
+using McpServerManager.UI.Core.Commands;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.Hosting;
 using NSubstitute;
 using Xunit;
 
-namespace McpServer.UI.Core.Tests;
+namespace McpServerManager.UI.Core.Tests;
 
 public sealed class McpHostOptionsTests
 {

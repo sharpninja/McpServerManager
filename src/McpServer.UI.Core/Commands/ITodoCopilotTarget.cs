@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace McpServer.UI.Core.Commands;
+namespace McpServerManager.UI.Core.Commands;
 
 /// <summary>
 /// Target interface for TODO Copilot prompt commands.

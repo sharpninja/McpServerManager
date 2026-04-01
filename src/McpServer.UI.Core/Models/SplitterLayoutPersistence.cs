@@ -1,7 +1,7 @@
 using System;
 using Avalonia.Controls;
 
-namespace McpServer.UI.Core.Models;
+namespace McpServerManager.UI.Core.Models;
 
 /// <summary>Shared helpers for applying and saving grid row/column sizes that are controlled by GridSplitters.</summary>
 public static class SplitterLayoutPersistence

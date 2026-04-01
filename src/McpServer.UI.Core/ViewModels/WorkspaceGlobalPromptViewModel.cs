@@ -3,9 +3,9 @@ using CommunityToolkit.Mvvm.Input;
 using McpServer.Cqrs;
 using McpServer.Cqrs.Mvvm;
 using Microsoft.Extensions.Logging;
-using McpServer.UI.Core.Messages;
+using McpServerManager.UI.Core.Messages;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 /// <summary>
 /// ViewModel for loading, editing, saving, and resetting the shared workspace global prompt.

@@ -1,11 +1,11 @@
 using Bunit;
-using McpServer.Web.Pages.Auth;
+using McpServerManager.Web.Pages.Auth;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
-namespace McpServer.Web.Tests.Auth;
+namespace McpServerManager.Web.Tests.Auth;
 
 public class AccessDeniedComponentTests
 {

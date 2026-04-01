@@ -1,10 +1,10 @@
 using System.Security.Claims;
-using McpServer.Web.Authorization;
+using McpServerManager.Web.Authorization;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Xunit;
 
-namespace McpServer.Web.Tests.Authorization;
+namespace McpServerManager.Web.Tests.Authorization;
 
 /// <summary>
 /// Unit tests for <see cref="WebRoleContext"/>.

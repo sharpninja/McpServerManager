@@ -1,4 +1,4 @@
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,7 +12,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Typed SSE client for incoming MCP change events from <c>/mcpserver/events</c>.

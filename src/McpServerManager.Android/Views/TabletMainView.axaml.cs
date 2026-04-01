@@ -4,7 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Models;
 using McpServerManager.Core.ViewModels;
 
 namespace McpServerManager.Android.Views;

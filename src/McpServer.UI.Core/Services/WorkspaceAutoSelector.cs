@@ -1,11 +1,11 @@
 // Copyright (c) 2025 McpServer Contributors. All rights reserved.
 
 using McpServer.Cqrs;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Shared workspace auto-selection logic used by both Director and Web hosts.

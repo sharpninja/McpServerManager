@@ -3,7 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace McpServer.Director.Auth;
+namespace McpServerManager.Director.Auth;
 
 /// <summary>
 /// Result of a login attempt via the Device Authorization Flow.

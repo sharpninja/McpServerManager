@@ -1,12 +1,12 @@
 // Copyright (c) 2025 McpServer Contributors. All rights reserved.
 
 using McpServer.Cqrs;
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.UI.Core.Handlers;
+namespace McpServerManager.UI.Core.Handlers;
 
 /// <summary>Handles <see cref="GetTemplateQuery"/> via the template API client.</summary>
 internal sealed class GetTemplateQueryHandler : IQueryHandler<GetTemplateQuery, TemplateDetail?>

@@ -3,7 +3,8 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>McpServer.UI.Core</RootNamespace>
+    <RootNamespace>McpServerManager.UI.Core</RootNamespace>
+    <AssemblyName>McpServerManager.UI.Core</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1515;CA1849;CA1031;CS1591</NoWarn>
     <PackageId>SharpNinja.McpServer.UI.Core</PackageId>
@@ -26,7 +27,7 @@
   </ItemGroup>
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>McpServer.UI.Core.Tests</_Parameter1>
+      <_Parameter1>McpServerManager.UI.Core.Tests</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
 </Project>

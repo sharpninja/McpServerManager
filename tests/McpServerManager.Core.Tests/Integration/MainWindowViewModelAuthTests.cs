@@ -56,7 +56,7 @@ public sealed class MainWindowViewModelAuthTests
         string? apiKey,
         string workspacePath)
     {
-        var method = typeof(McpServer.UI.Core.ViewModels.MainWindowViewModel)
+        var method = typeof(McpServerManager.UI.Core.ViewModels.MainWindowViewModel)
             .GetMethod("ApplyClientConnectionState", BindingFlags.Static | BindingFlags.NonPublic);
 
         Assert.NotNull(method);

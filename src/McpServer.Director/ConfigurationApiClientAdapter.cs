@@ -1,6 +1,6 @@
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.Director;
+namespace McpServerManager.Director;
 
 /// <summary>Director adapter for <see cref="IConfigurationApiClient"/>.</summary>
 internal sealed class ConfigurationApiClientAdapter : IConfigurationApiClient

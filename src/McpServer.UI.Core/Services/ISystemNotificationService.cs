@@ -1,9 +1,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Models;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Abstraction for delivering system-level notifications from actionable agent events.

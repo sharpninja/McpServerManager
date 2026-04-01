@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>McpServerManager.Director.Tests</AssemblyName>
     <NoWarn>$(NoWarn);CS8632;xUnit1051;NU1608</NoWarn>
   </PropertyGroup>
   <ItemGroup>

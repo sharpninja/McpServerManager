@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
-namespace McpServer.VsExtension.McpTodo;
+namespace McpServerManager.VsExtension.McpTodo;
 
 internal static class FilterMruStorage
 {
@@ -15,7 +15,7 @@ internal static class FilterMruStorage
     {
         var dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "McpServer.VsExtension.McpTodo");
+            "McpServerManager.VsExtension.McpTodo");
         Directory.CreateDirectory(dir);
         return Path.Combine(dir, "filter-mru.json");
     }

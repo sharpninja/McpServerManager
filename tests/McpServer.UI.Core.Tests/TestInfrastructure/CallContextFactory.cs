@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Tests.TestInfrastructure;
+namespace McpServerManager.UI.Core.Tests.TestInfrastructure;
 
 /// <summary>
 /// Shared factory for creating CQRS call contexts in tests.

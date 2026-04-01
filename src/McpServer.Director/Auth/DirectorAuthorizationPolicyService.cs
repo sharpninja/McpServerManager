@@ -1,6 +1,6 @@
-using McpServer.UI.Core.Authorization;
+using McpServerManager.UI.Core.Authorization;
 
-namespace McpServer.Director.Auth;
+namespace McpServerManager.Director.Auth;
 
 /// <summary>
 /// Director RBAC policy implementation for tab visibility and command authorization.

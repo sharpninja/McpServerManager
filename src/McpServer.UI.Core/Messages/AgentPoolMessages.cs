@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query to list pooled runtime agents.</summary>
 public sealed record ListAgentPoolAgentsQuery : IQuery<ListAgentPoolAgentsResult>;

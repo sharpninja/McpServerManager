@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
-using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
+using UiDispatcherHost = McpServerManager.UI.Core.Services.UiDispatcherHost;
 
 namespace McpServerManager.Desktop.Views;
 

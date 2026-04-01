@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
-             xmlns:models="using:McpServer.UI.Core.Models"
+             xmlns:models="using:McpServerManager.UI.Core.Models"
              mc:Ignorable="d"
              x:Class="McpServerManager.Android.Views.VoiceConversationView"
              x:DataType="vm:VoiceConversationViewModel"

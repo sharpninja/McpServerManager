@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Commands;
+namespace McpServerManager.UI.Core.Commands;
 
 // --- Copilot Status Prompt ---
 

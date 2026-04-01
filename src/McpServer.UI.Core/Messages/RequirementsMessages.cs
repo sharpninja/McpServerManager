@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query to list functional requirements.</summary>
 public sealed record ListFunctionalRequirementsQuery : IQuery<FunctionalRequirementListResult>;

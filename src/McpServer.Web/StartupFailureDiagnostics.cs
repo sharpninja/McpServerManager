@@ -1,6 +1,6 @@
 using System.Net.Sockets;
 
-namespace McpServer.Web;
+namespace McpServerManager.Web;
 
 internal static class StartupFailureDiagnostics
 {

@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query for <c>/mcpserver/repo/list</c>.</summary>
 public sealed record ListRepoEntriesQuery : IQuery<RepoListResultView>

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace McpServer.Director.Auth;
+namespace McpServerManager.Director.Auth;
 
 /// <summary>
 /// Cached OAuth token data, persisted to <c>~/.mcpserver/tokens.json</c>.

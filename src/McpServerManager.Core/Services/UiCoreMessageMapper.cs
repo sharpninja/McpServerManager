@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using McpServer.UI.Core.Messages;
+using McpServerManager.UI.Core.Messages;
 using McpServerManager.Core.Models;
 using ClientModels = McpServer.Client.Models;
 

@@ -1,13 +1,13 @@
 using Bunit;
 using Bunit.JSInterop;
 using System.Security.Claims;
-using McpServer.UI.Core.Models;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.ViewModels;
-using McpServer.Web.Components.Layout;
-using McpServer.Web.Components.Shared;
-using McpServer.Web.Tests.TestInfrastructure;
-using McpServer.Web.ViewModels;
+using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
+using McpServerManager.Web.Components.Layout;
+using McpServerManager.Web.Components.Shared;
+using McpServerManager.Web.Tests.TestInfrastructure;
+using McpServerManager.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -18,7 +18,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
-namespace McpServer.Web.Tests;
+namespace McpServerManager.Web.Tests;
 
 public sealed class AgentChatFlyoutTests
 {

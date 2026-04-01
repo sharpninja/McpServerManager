@@ -1,6 +1,6 @@
 using System;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Builds configured <see cref="McpAgentEventStreamService"/> instances outside ViewModel composition.

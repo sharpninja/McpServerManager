@@ -1,6 +1,6 @@
 using McpServer.Client;
 
-namespace McpServer.UI.Core.Hosting;
+namespace McpServerManager.UI.Core.Hosting;
 
 public interface IMcpHostContext
 {

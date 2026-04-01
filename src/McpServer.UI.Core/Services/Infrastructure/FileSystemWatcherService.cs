@@ -1,8 +1,8 @@
 using System;
 using System.IO;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.UI.Core.Services.Infrastructure;
+namespace McpServerManager.UI.Core.Services.Infrastructure;
 
 /// <summary>
 /// Host implementation of <see cref="IFileSystemWatcherService"/> backed by <see cref="FileSystemWatcher"/>.

@@ -1,6 +1,6 @@
 using McpServer.Client;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
 using System;
 using System.Text.Json;
 using System.Threading;

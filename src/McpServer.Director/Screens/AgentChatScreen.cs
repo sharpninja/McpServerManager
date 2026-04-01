@@ -4,7 +4,7 @@ using System.Text.Json;
 using McpServer.Client.Models;
 using Terminal.Gui;
 
-namespace McpServer.Director.Screens;
+namespace McpServerManager.Director.Screens;
 
 /// <summary>
 /// Terminal chat surface for connecting to an agent session and streaming interactive turns.
@@ -184,7 +184,7 @@ internal sealed class AgentChatScreen : View
                 new VoiceSessionCreateRequestDto
                 {
                     AgentName = GetAgentNameOrNull(),
-                    ClientName = "McpServer.Director",
+                    ClientName = "McpServerManager.Director",
                     DeviceId = Environment.MachineName,
                     WorkspacePath = _directorContext.ActiveWorkspacePath,
                 }).ConfigureAwait(true);

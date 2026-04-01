@@ -1,17 +1,17 @@
 using System.Reflection;
 using McpServer.Cqrs;
 using McpServer.Cqrs.Mvvm;
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Behaviors;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Behaviors;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace McpServer.UI.Core;
+namespace McpServerManager.UI.Core;
 
 /// <summary>
-/// DI registration extensions for McpServer.UI.Core.
+/// DI registration extensions for McpServerManager.UI.Core.
 /// Registers ViewModels, CQRS handlers, and the <see cref="IViewModelRegistry"/>.
 /// </summary>
 public static class ServiceCollectionExtensions

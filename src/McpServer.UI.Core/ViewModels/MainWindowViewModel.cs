@@ -20,18 +20,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using McpServer.Client;
 using McpServer.Cqrs.Mvvm;
-using McpServer.UI.Core.Auth;
-using McpServer.UI.Core.Converters;
-using McpServer.UI.Core.Hosting;
-using McpServer.UI.Core.Models;
-using McpServer.UI.Core.Models.Json;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.Commands;
-using StatusViewModel = McpServer.UI.Core.ViewModels.StatusViewModel;
-using UiCoreWorkspaceCatalogChangeEvent = McpServer.UI.Core.ViewModels.WorkspaceCatalogChangeEvent;
-using UiCoreWorkspaceCatalogChangeKind = McpServer.UI.Core.ViewModels.WorkspaceCatalogChangeKind;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.Converters;
+using McpServerManager.UI.Core.Hosting;
+using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Models.Json;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.Commands;
+using StatusViewModel = McpServerManager.UI.Core.ViewModels.StatusViewModel;
+using UiCoreWorkspaceCatalogChangeEvent = McpServerManager.UI.Core.ViewModels.WorkspaceCatalogChangeEvent;
+using UiCoreWorkspaceCatalogChangeKind = McpServerManager.UI.Core.ViewModels.WorkspaceCatalogChangeKind;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
 {
@@ -80,10 +80,10 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private bool _hasCompletedInitialSwitch;
     internal McpServer.Cqrs.Dispatcher _dispatcher = null!;
     private readonly McpServiceFactory _serviceFactory = new();
-    private readonly McpServer.UI.Core.Services.IFileSystemService _fs = new Services.Infrastructure.FileSystemService();
-    private readonly McpServer.UI.Core.Services.IProcessLauncherService _processLauncher = new Services.Infrastructure.ProcessLauncherService();
-    private readonly McpServer.UI.Core.Services.ITimerService _timerService = new Services.Infrastructure.TimerService();
-    private readonly McpServer.UI.Core.Services.IJsonParsingService _jsonParser = new Services.Infrastructure.JsonParsingService();
+    private readonly McpServerManager.UI.Core.Services.IFileSystemService _fs = new Services.Infrastructure.FileSystemService();
+    private readonly McpServerManager.UI.Core.Services.IProcessLauncherService _processLauncher = new Services.Infrastructure.ProcessLauncherService();
+    private readonly McpServerManager.UI.Core.Services.ITimerService _timerService = new Services.Infrastructure.TimerService();
+    private readonly McpServerManager.UI.Core.Services.IJsonParsingService _jsonParser = new Services.Infrastructure.JsonParsingService();
     private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
 
     protected IClipboardService ClipboardService => _clipboardService;
@@ -119,12 +119,12 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private bool _restoreRequestDetailsAfterRefresh;
     private string? _pendingDetailRequestId;
     private string? _pendingDetailSourcePath;
-    private McpServer.UI.Core.Services.ITimerHandle? _mcpAutoRefreshTimer;
+    private McpServerManager.UI.Core.Services.ITimerHandle? _mcpAutoRefreshTimer;
     private bool _isRefreshing;
-    private McpServer.UI.Core.Services.ITimerHandle? _workspaceHealthTimer;
+    private McpServerManager.UI.Core.Services.ITimerHandle? _workspaceHealthTimer;
     private bool _isWorkspaceHealthCheckRunning;
     private bool _pendingWorkspaceHealthRefresh;
-    private McpServer.UI.Core.Services.IWatcherHandle? _agentsReadmeWatcher;
+    private McpServerManager.UI.Core.Services.IWatcherHandle? _agentsReadmeWatcher;
     private string? _agentsReadmeWatchedFilePath;
     private int _agentsReadmeReloadVersion;
 

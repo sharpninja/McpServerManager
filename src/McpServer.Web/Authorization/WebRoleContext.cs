@@ -1,6 +1,6 @@
-using McpServer.UI.Core.Authorization;
+using McpServerManager.UI.Core.Authorization;
 
-namespace McpServer.Web.Authorization;
+namespace McpServerManager.Web.Authorization;
 
 /// <summary>
 /// Blazor Server implementation of <see cref="IRoleContext"/> that reads authentication state

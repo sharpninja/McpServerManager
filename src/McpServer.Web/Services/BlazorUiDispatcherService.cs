@@ -1,9 +1,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.Web.Services;
+namespace McpServerManager.Web.Services;
 
 internal sealed class BlazorUiDispatcherService : StrategyUiDispatcherService
 {

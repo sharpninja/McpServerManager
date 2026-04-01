@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query to list session logs with optional filters and pagination.</summary>
 public sealed record ListSessionLogsQuery : IQuery<ListSessionLogsResult>

@@ -5,17 +5,17 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using McpServer.UI.Core.Messages;
+using McpServerManager.UI.Core.Messages;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using McpServer.UI.Core.Models;
-using McpServer.UI.Core.Services;
-using UiCoreWorkspaceDetailViewModel = McpServer.UI.Core.ViewModels.WorkspaceDetailViewModel;
-using UiCoreWorkspaceGlobalPromptViewModel = McpServer.UI.Core.ViewModels.WorkspaceGlobalPromptViewModel;
-using UiCoreWorkspaceHealthProbeViewModel = McpServer.UI.Core.ViewModels.WorkspaceHealthProbeViewModel;
-using UiCoreWorkspaceListViewModel = McpServer.UI.Core.ViewModels.WorkspaceListViewModel;
+using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Services;
+using UiCoreWorkspaceDetailViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceDetailViewModel;
+using UiCoreWorkspaceGlobalPromptViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceGlobalPromptViewModel;
+using UiCoreWorkspaceHealthProbeViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceHealthProbeViewModel;
+using UiCoreWorkspaceListViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceListViewModel;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 #pragma warning disable CS1591
 
@@ -32,7 +32,7 @@ public partial class WorkspaceViewModel : ViewModelBase
     private readonly UiCoreWorkspaceHealthProbeViewModel _healthVm;
     private readonly List<WorkspaceListEntry> _allEntries = [];
     private string? _editingWorkspaceKey;
-    private McpServer.UI.Core.Services.ITimerHandle? _healthTimer;
+    private McpServerManager.UI.Core.Services.ITimerHandle? _healthTimer;
     private bool _isHealthCheckRunning;
     private bool _hasLoadedGlobalPrompt;
     private long _selectionDetailsLoadSequence;

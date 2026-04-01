@@ -1,9 +1,9 @@
-using McpServer.Director.Auth;
-using McpServer.Director.Screens;
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Navigation;
+using McpServerManager.Director.Auth;
+using McpServerManager.Director.Screens;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Navigation;
 
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 public sealed class MainScreenTabOrderingTests
 {

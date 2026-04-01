@@ -1,5 +1,5 @@
 namespace McpServerManager.Core.ViewModels;
 
-public class ViewModelBase : McpServer.UI.Core.ViewModels.ViewModelBase
+public class ViewModelBase : McpServerManager.UI.Core.ViewModels.ViewModelBase
 {
 }

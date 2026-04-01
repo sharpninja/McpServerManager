@@ -1,15 +1,15 @@
 using System.CommandLine;
 using McpServer.Cqrs;
 using McpServer.Cqrs.Mvvm;
-using McpServer.Director.Helpers;
-using McpServer.Director.Screens;
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Navigation;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.Director.Helpers;
+using McpServerManager.Director.Screens;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Navigation;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.Director.Commands;
+namespace McpServerManager.Director.Commands;
 
 /// <summary>
 /// FR-MCP-030: Interactive TUI command that launches Terminal.Gui with ViewModel-bound screens.

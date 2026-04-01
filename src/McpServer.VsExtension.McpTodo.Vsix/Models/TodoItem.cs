@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace McpServer.VsExtension.McpTodo.Models;
+namespace McpServerManager.VsExtension.McpTodo.Models;
 
 /// <summary>Flat TODO item from MCP GET /mcpserver/todo.</summary>
 public sealed class TodoFlatItem

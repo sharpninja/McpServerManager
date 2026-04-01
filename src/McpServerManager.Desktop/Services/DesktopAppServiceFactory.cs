@@ -1,10 +1,10 @@
 using System;
 using McpServer.Cqrs;
 using Avalonia.Controls.ApplicationLifetimes;
-using McpServer.UI.Core.Auth;
-using McpServer.UI.Core.Hosting;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.Hosting;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using McpServerManager.Core.Commands;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,7 +18,7 @@ namespace McpServerManager.Desktop.Services;
 
 internal static class DesktopAppServiceFactory
 {
-    public static ServiceProvider BuildConnectionProvider(McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
+    public static ServiceProvider BuildConnectionProvider(McpServerManager.UI.Core.Services.IUiDispatcherService uiDispatcher)
     {
         ArgumentNullException.ThrowIfNull(uiDispatcher);
 
@@ -28,15 +28,15 @@ internal static class DesktopAppServiceFactory
         services.AddCqrsDispatcher();
         services.AddCqrsLoggerProvider();
         services.AddCqrsHandlers(typeof(NavigateBackCommand).Assembly);
-        services.AddCqrsHandlers(typeof(McpServer.UI.Core.Commands.InvokeUiActionHandler).Assembly);
-        services.AddSingleton<McpServer.UI.Core.Services.IConnectionAuthService>(_ => new CoreConnectionAuthServiceAdapter());
+        services.AddCqrsHandlers(typeof(McpServerManager.UI.Core.Commands.InvokeUiActionHandler).Assembly);
+        services.AddSingleton<McpServerManager.UI.Core.Services.IConnectionAuthService>(_ => new CoreConnectionAuthServiceAdapter());
         services.AddSingleton<CoreConnectionViewModel>();
         return services.BuildServiceProvider();
     }
 
     public static DesktopMainWindowSession CreateMainWindowSession(
         IClassicDesktopStyleApplicationLifetime desktop,
-        McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher,
+        McpServerManager.UI.Core.Services.IUiDispatcherService uiDispatcher,
         string mcpBaseUrl,
         string? mcpApiKey,
         string? bearerToken)
@@ -70,7 +70,7 @@ internal static class DesktopAppServiceFactory
 
         services.AddSingleton(commandTargetAccessor);
         services.AddSingleton<McpServerManager.Core.Services.IClipboardService>(clipboardService);
-        services.AddSingleton<McpServer.UI.Core.Services.IClipboardService>(sp => sp.GetRequiredService<McpServerManager.Core.Services.IClipboardService>());
+        services.AddSingleton<McpServerManager.UI.Core.Services.IClipboardService>(sp => sp.GetRequiredService<McpServerManager.Core.Services.IClipboardService>());
         services.AddSingleton<McpServerManager.Core.Services.ISystemNotificationService, DesktopSystemNotificationService>();
         RegisterChatServices(services);
         RegisterUiCoreCommandTargets(services);
@@ -117,16 +117,16 @@ internal static class DesktopAppServiceFactory
 
     private static void RegisterUiCoreCommandTargets(IServiceCollection services)
     {
-        services.TryAddSingleton<McpServer.UI.Core.Commands.ICommandTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.INavigationTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.IRequestDetailsTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.IPreviewTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.IArchiveTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.ISessionDataTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.IClipboardTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.IConfigTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.IUiDispatchTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.ITodoCopilotTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.ICommandTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.INavigationTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IRequestDetailsTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IPreviewTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IArchiveTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.ISessionDataTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IClipboardTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IConfigTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IUiDispatchTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.ITodoCopilotTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
     }
 
     private static void RegisterCoreCommandTargets(IServiceCollection services)
@@ -171,7 +171,7 @@ internal sealed class DeferredCommandTargetAccessor
         }
     }
 
-    public McpServer.UI.Core.Commands.ICommandTarget RequireUiCoreTarget()
+    public McpServerManager.UI.Core.Commands.ICommandTarget RequireUiCoreTarget()
     {
         lock (_sync)
         {

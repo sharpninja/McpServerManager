@@ -4,10 +4,10 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using McpServer.UI.Core.Models;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 /// <summary>
 /// ViewModel for chat assistant window interactions.

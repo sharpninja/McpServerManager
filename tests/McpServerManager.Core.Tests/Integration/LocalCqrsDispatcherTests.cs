@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 using FluentAssertions;
-using McpServer.UI.Core.Commands;
+using McpServerManager.UI.Core.Commands;
 using McpServerManager.Core.Services;
 using Xunit;
 

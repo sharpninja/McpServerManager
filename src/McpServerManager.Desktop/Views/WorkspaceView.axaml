@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
-             xmlns:uicorevm="using:McpServer.UI.Core.ViewModels"
+             xmlns:uicorevm="using:McpServerManager.UI.Core.ViewModels"
              xmlns:avedit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
              x:Class="McpServerManager.Desktop.Views.WorkspaceView"

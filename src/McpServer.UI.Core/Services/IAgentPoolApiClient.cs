@@ -1,8 +1,8 @@
 using System.Threading;
 using System.Threading.Tasks;
-using McpServer.UI.Core.Messages;
+using McpServerManager.UI.Core.Messages;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Abstraction over pooled-runtime endpoints used by UI.Core CQRS handlers.

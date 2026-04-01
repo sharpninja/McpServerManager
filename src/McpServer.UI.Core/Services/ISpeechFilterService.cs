@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Persists and parses speech filter phrases used by settings UI.

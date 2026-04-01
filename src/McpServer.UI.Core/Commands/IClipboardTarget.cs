@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
-using McpServer.UI.Core.Models.Json;
+using McpServerManager.UI.Core.Models.Json;
 
-namespace McpServer.UI.Core.Commands;
+namespace McpServerManager.UI.Core.Commands;
 
 /// <summary>
 /// Clipboard copy operations.

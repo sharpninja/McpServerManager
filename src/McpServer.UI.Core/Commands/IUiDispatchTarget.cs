@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace McpServer.UI.Core.Commands;
+namespace McpServerManager.UI.Core.Commands;
 
 /// <summary>
 /// UI thread dispatching and background work tracking.

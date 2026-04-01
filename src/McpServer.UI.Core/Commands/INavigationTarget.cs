@@ -1,8 +1,8 @@
 using System.Threading.Tasks;
-using McpServer.UI.Core.Models;
-using McpServer.UI.Core.Models.Json;
+using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Models.Json;
 
-namespace McpServer.UI.Core.Commands;
+namespace McpServerManager.UI.Core.Commands;
 
 /// <summary>
 /// Navigation operations: back/forward, refresh, tree item navigation.

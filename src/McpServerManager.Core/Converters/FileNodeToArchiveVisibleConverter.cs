@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using Avalonia.Data.Converters;
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Models;
 
 namespace McpServerManager.Core.Converters;
 

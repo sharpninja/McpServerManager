@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.Director.Helpers;
+namespace McpServerManager.Director.Helpers;
 
 /// <summary>
 /// Cross-platform service that opens a URL in the user's default browser.

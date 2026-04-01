@@ -2,14 +2,14 @@ using System;
 using System.Reflection;
 using McpServer.Client;
 using McpServer.Cqrs;
-using McpServer.UI.Core.Auth;
-using McpServer.UI.Core.Commands;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.Services.Infrastructure;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.Commands;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.Services.Infrastructure;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace McpServer.UI.Core.Hosting;
+namespace McpServerManager.UI.Core.Hosting;
 
 public static class McpHostBuilderExtensions
 {

@@ -1,12 +1,12 @@
 using McpServer.Cqrs;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.Tests.TestInfrastructure;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.Tests.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
 
-namespace McpServer.UI.Core.Tests.Handlers;
+namespace McpServerManager.UI.Core.Tests.Handlers;
 
 public sealed class WebUiHandlerApiDispatchMappingTests
 {

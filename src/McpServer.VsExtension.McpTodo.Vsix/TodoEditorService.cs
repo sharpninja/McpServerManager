@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using McpServer.VsExtension.McpTodo.Models;
+using McpServerManager.VsExtension.McpTodo.Models;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 
-namespace McpServer.VsExtension.McpTodo;
+namespace McpServerManager.VsExtension.McpTodo;
 
 /// <summary>
 /// Opens TODO items in VS editor document windows (temp .md files) instead of a TextBox.

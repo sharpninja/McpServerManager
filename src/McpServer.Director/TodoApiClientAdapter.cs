@@ -1,12 +1,12 @@
 using McpServer.Client;
 using McpServer.Client.Models;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using UiTodoMutationFailureKind = McpServer.UI.Core.Messages.TodoMutationFailureKind;
+using UiTodoMutationFailureKind = McpServerManager.UI.Core.Messages.TodoMutationFailureKind;
 
-namespace McpServer.Director;
+namespace McpServerManager.Director;
 
 /// <summary>
 /// Director adapter for <see cref="ITodoApiClient"/> backed by <see cref="McpServerClient"/>.
