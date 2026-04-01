@@ -10,52 +10,52 @@ public sealed class UiCoreHostWrapperInheritanceTests
         yield return
         [
             typeof(McpServerManager.Core.ViewModels.MainWindowViewModel),
-            typeof(McpServer.UI.Core.ViewModels.MainWindowViewModel)
+            typeof(McpServerManager.UI.Core.ViewModels.MainWindowViewModel)
         ];
         yield return
         [
             typeof(McpServerManager.Core.ViewModels.WorkspaceViewModel),
-            typeof(McpServer.UI.Core.ViewModels.WorkspaceViewModel)
+            typeof(McpServerManager.UI.Core.ViewModels.WorkspaceViewModel)
         ];
         yield return
         [
             typeof(McpServerManager.Core.ViewModels.TodoListViewModel),
-            typeof(McpServer.UI.Core.ViewModels.TodoListHostViewModel)
+            typeof(McpServerManager.UI.Core.ViewModels.TodoListHostViewModel)
         ];
         yield return
         [
             typeof(McpServerManager.Core.ViewModels.ConnectionViewModel),
-            typeof(McpServer.UI.Core.ViewModels.ConnectionViewModel)
+            typeof(McpServerManager.UI.Core.ViewModels.ConnectionViewModel)
         ];
         yield return
         [
             typeof(McpServerManager.Core.ViewModels.SettingsViewModel),
-            typeof(McpServer.UI.Core.ViewModels.SettingsViewModel)
+            typeof(McpServerManager.UI.Core.ViewModels.SettingsViewModel)
         ];
         yield return
         [
             typeof(McpServerManager.Core.ViewModels.LogViewModel),
-            typeof(McpServer.UI.Core.ViewModels.LogViewModel)
+            typeof(McpServerManager.UI.Core.ViewModels.LogViewModel)
         ];
         yield return
         [
             typeof(McpServerManager.Core.ViewModels.VoiceConversationViewModel),
-            typeof(McpServer.UI.Core.ViewModels.VoiceConversationViewModel)
+            typeof(McpServerManager.UI.Core.ViewModels.VoiceConversationViewModel)
         ];
         yield return
         [
             typeof(McpServerManager.Core.ViewModels.ChatWindowViewModel),
-            typeof(McpServer.UI.Core.ViewModels.ChatWindowViewModel)
+            typeof(McpServerManager.UI.Core.ViewModels.ChatWindowViewModel)
         ];
         yield return
         [
             typeof(McpServerManager.Core.ViewModels.ViewModelBase),
-            typeof(McpServer.UI.Core.ViewModels.ViewModelBase)
+            typeof(McpServerManager.UI.Core.ViewModels.ViewModelBase)
         ];
         yield return
         [
             typeof(McpServerManager.Core.ViewModels.EditorTab),
-            typeof(McpServer.UI.Core.ViewModels.EditorTab)
+            typeof(McpServerManager.UI.Core.ViewModels.EditorTab)
         ];
     }
 

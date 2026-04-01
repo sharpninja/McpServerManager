@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query to check the MCP server health endpoint.</summary>
 public sealed record CheckHealthQuery : IQuery<HealthSnapshot>;

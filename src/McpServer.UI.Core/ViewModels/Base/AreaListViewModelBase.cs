@@ -1,8 +1,8 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using McpServer.UI.Core.Authorization;
+using McpServerManager.UI.Core.Authorization;
 
-namespace McpServer.UI.Core.ViewModels.Base;
+namespace McpServerManager.UI.Core.ViewModels.Base;
 
 /// <summary>
 /// Shared base class for area list/grid ViewModels.

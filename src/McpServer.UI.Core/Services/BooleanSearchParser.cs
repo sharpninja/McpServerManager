@@ -1,6 +1,6 @@
 using System;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Parses boolean search expressions with || (OR), &amp;&amp; (AND), ! (NOT), and parentheses.

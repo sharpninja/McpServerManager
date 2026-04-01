@@ -1,7 +1,7 @@
 using McpServer.Cqrs.Mvvm;
 using McpServerManager.Core.Commands;
-using McpServer.UI.Core.Models;
-using McpServer.UI.Core.Models.Json;
+using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Models.Json;
 
 namespace McpServerManager.Core.ViewModels;
 

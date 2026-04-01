@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Host UI dispatcher abstraction for marshaling state updates to UI thread/context.

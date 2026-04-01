@@ -1,6 +1,6 @@
 using Microsoft.JSInterop;
 
-namespace McpServer.Web.Services;
+namespace McpServerManager.Web.Services;
 
 internal interface ISseSubscriptionService
 {

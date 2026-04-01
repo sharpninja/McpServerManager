@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Host-provided abstraction for filesystem operations used by UI.Core ViewModels.

@@ -1,4 +1,4 @@
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 /// <summary>
 /// Tests for the <c>agents</c> command and its subcommands:

@@ -1,7 +1,7 @@
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.ViewModels;
 using Xunit;
 
-namespace McpServer.UI.Core.Tests.ViewModels;
+namespace McpServerManager.UI.Core.Tests.ViewModels;
 
 public sealed class MainWindowViewModelVersionTests
 {

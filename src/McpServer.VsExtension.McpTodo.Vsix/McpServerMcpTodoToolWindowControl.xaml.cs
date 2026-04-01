@@ -3,10 +3,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using McpServer.UI;
+using McpServerManager.UI;
 using Microsoft.VisualStudio.Shell;
 
-namespace McpServer.VsExtension.McpTodo;
+namespace McpServerManager.VsExtension.McpTodo;
 
 /// <summary>
 /// Thin WPF code-behind for the MCP TODO tool window.

@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Authorization;
+namespace McpServerManager.UI.Core.Authorization;
 
 /// <summary>
 /// Provides the current user's authentication and role information for UI authorization checks.

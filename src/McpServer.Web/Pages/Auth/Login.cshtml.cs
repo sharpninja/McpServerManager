@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.Web.Pages.Auth;
+namespace McpServerManager.Web.Pages.Auth;
 
 /// <summary>
 /// Non-interactive Razor Page that issues an OIDC challenge redirect.

@@ -10,7 +10,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 #pragma warning disable VSTHRD110 // Observe result of async calls
 #pragma warning disable VSSDK007 // Await/join JoinableTaskFactory.RunAsync
 
-namespace McpServer.VsExtension.McpTodo;
+namespace McpServerManager.VsExtension.McpTodo;
 
 [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true, RegisterUsing = RegistrationMethod.CodeBase)]
 [Guid("E8F0A1B2-3C4D-4E5F-8A9B-0C1D2E3F4A5B")]

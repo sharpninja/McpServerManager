@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Authorization;
+namespace McpServerManager.UI.Core.Authorization;
 
 /// <summary>
 /// Evaluates UI authorization rules for areas and actions using the current role context.

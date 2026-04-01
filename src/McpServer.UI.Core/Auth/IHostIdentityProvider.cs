@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Auth;
+namespace McpServerManager.UI.Core.Auth;
 
 public interface IHostIdentityProvider
 {

@@ -6,10 +6,10 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 using McpServerManager.Models;
-using ChatMessage = McpServer.UI.Core.Models.ChatMessage;
-using PromptTemplate = McpServer.UI.Core.Models.PromptTemplate;
+using ChatMessage = McpServerManager.UI.Core.Models.ChatMessage;
+using PromptTemplate = McpServerManager.UI.Core.Models.PromptTemplate;
 
 namespace McpServerManager.Views;
 

@@ -4,7 +4,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using CoreAppLogService = McpServerManager.Core.Services.AppLogService;
-using UiCoreAppLogService = McpServer.UI.Core.Services.AppLogService;
+using UiCoreAppLogService = McpServerManager.UI.Core.Services.AppLogService;
 
 namespace McpServerManager.Core.Tests.Integration;
 

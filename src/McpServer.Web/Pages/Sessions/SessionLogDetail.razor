@@ -72,7 +72,7 @@
                     <div class="Box-header">
                         <h3 class="h4 mb-0">Turns</h3>
                     </div>
-                    <PrimerDataTable TItem="McpServer.UI.Core.Messages.SessionLogTurnDetail"
+                    <PrimerDataTable TItem="McpServerManager.UI.Core.Messages.SessionLogTurnDetail"
                                      Items="ViewModel.Detail.Turns"
                                      ColumnCount="6"
                                      Class="Table--full-width"
@@ -227,7 +227,7 @@
                                 }
                                 else
                                 {
-                                    <PrimerDataTable TItem="McpServer.UI.Core.Messages.SessionLogDialogDetail"
+                                    <PrimerDataTable TItem="McpServerManager.UI.Core.Messages.SessionLogDialogDetail"
                                                      Items="SelectedTurn.ProcessingDialog"
                                                      ColumnCount="4"
                                                      Class="Table--full-width"
@@ -271,7 +271,7 @@
                                 }
                                 else
                                 {
-                                    <PrimerDataTable TItem="McpServer.UI.Core.Messages.SessionLogActionDetail"
+                                    <PrimerDataTable TItem="McpServerManager.UI.Core.Messages.SessionLogActionDetail"
                                                      Items="SelectedTurn.Actions"
                                                      ColumnCount="5"
                                                      Class="Table--full-width"
@@ -357,10 +357,10 @@
         ResetExpandedTurnSections();
     }
 
-    private static string GetTurnHeading(McpServer.UI.Core.Messages.SessionLogTurnDetail turn)
+    private static string GetTurnHeading(McpServerManager.UI.Core.Messages.SessionLogTurnDetail turn)
         => string.IsNullOrWhiteSpace(turn.QueryTitle) ? "Turn" : turn.QueryTitle;
 
-    private McpServer.UI.Core.Messages.SessionLogTurnDetail? SelectedTurn
+    private McpServerManager.UI.Core.Messages.SessionLogTurnDetail? SelectedTurn
         => ViewModel.Detail is null || ViewModel.Detail.Turns.Count == 0 || _selectedTurnIndex < 0 || _selectedTurnIndex >= ViewModel.Detail.Turns.Count
             ? null
             : ViewModel.Detail.Turns[_selectedTurnIndex];
@@ -396,7 +396,7 @@
         ResetExpandedTurnSections();
     }
 
-    private int GetTurnIndex(McpServer.UI.Core.Messages.SessionLogTurnDetail turn)
+    private int GetTurnIndex(McpServerManager.UI.Core.Messages.SessionLogTurnDetail turn)
     {
         if (ViewModel.Detail is null)
             return -1;
@@ -410,7 +410,7 @@
         return -1;
     }
 
-    private string? GetTurnRowClass(McpServer.UI.Core.Messages.SessionLogTurnDetail turn)
+    private string? GetTurnRowClass(McpServerManager.UI.Core.Messages.SessionLogTurnDetail turn)
         => GetTurnIndex(turn) == _selectedTurnIndex ? "session-turn-row-selected" : null;
 
     private bool IsTurnSectionExpanded(string section)

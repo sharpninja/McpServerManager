@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 
-namespace McpServer.Web.Authorization;
+namespace McpServerManager.Web.Authorization;
 
 /// <summary>
 /// Retrieves the OIDC access token saved in the current user's authentication session.

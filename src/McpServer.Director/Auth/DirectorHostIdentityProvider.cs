@@ -1,6 +1,6 @@
-using McpServer.UI.Core.Auth;
+using McpServerManager.UI.Core.Auth;
 
-namespace McpServer.Director.Auth;
+namespace McpServerManager.Director.Auth;
 
 internal sealed class DirectorHostIdentityProvider : IHostIdentityProvider
 {

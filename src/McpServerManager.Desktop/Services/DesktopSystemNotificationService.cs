@@ -4,7 +4,7 @@ using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Models;
 using McpServerManager.Core.Services;
 
 namespace McpServerManager.Desktop.Services;

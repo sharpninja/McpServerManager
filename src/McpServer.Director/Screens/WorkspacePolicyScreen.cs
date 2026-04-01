@@ -1,7 +1,7 @@
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.ViewModels;
 using Terminal.Gui;
 
-namespace McpServer.Director.Screens;
+namespace McpServerManager.Director.Screens;
 
 /// <summary>
 /// Terminal.Gui screen that binds to <see cref="WorkspacePolicyViewModel"/>.

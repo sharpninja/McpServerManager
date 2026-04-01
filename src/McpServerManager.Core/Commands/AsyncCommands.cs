@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using McpServer.Cqrs;
 using Microsoft.Extensions.Logging;
-using McpServer.UI.Core.Models;
-using McpServer.UI.Core.Models.Json;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Models.Json;
+using McpServerManager.UI.Core.Services;
 using McpServerManager.Core.ViewModels;
 
 namespace McpServerManager.Core.Commands;

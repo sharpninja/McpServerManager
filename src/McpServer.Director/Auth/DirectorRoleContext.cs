@@ -1,6 +1,6 @@
-using McpServer.UI.Core.Authorization;
+using McpServerManager.UI.Core.Authorization;
 
-namespace McpServer.Director.Auth;
+namespace McpServerManager.Director.Auth;
 
 /// <summary>
 /// Director implementation of <see cref="IRoleContext"/>, sourced from the cached OIDC token.

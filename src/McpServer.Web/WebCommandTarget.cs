@@ -6,13 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using McpServer.Cqrs;
 using McpServer.Cqrs.Mvvm;
-using McpServer.UI.Core.Commands;
-using McpServer.UI.Core.Models;
-using McpServer.UI.Core.Models.Json;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Commands;
+using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Models.Json;
+using McpServerManager.UI.Core.Services;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.Web;
+namespace McpServerManager.Web;
 
 /// <summary>
 /// Web-host command target that routes page actions through <see cref="CqrsRelayCommand{TResult}"/>

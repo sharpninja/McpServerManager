@@ -1,10 +1,10 @@
 using System.CommandLine;
 using McpServer.Cqrs;
-using McpServer.UI.Core.Messages;
+using McpServerManager.UI.Core.Messages;
 using Spectre.Console;
-using static McpServer.Director.Commands.CommandHelpers;
+using static McpServerManager.Director.Commands.CommandHelpers;
 
-namespace McpServer.Director.Commands;
+namespace McpServerManager.Director.Commands;
 
 /// <summary>
 /// FR-MCP-030: Director CLI commands for health, workspace/agent operations, TODO, and session logs.

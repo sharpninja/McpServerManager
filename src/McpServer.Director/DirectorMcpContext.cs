@@ -1,9 +1,9 @@
 using McpServer.Client;
-using McpServer.Director.Auth;
-using McpServer.UI.Core.Hosting;
+using McpServerManager.Director.Auth;
+using McpServerManager.UI.Core.Hosting;
 using System.Text.Json;
 
-namespace McpServer.Director;
+namespace McpServerManager.Director;
 
 /// <summary>
 /// Director runtime connection context:

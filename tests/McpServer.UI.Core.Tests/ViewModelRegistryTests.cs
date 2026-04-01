@@ -1,13 +1,13 @@
 using System.Text.Json;
 using McpServer.Cqrs;
 using McpServer.Cqrs.Mvvm;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
-namespace McpServer.UI.Core.Tests;
+namespace McpServerManager.UI.Core.Tests;
 
 /// <summary>Tests for <see cref="ViewModelRegistry"/> and <see cref="ViewModelCommandAttribute"/>.</summary>
 public class ViewModelRegistryTests

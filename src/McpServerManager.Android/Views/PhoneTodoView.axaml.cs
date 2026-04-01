@@ -8,12 +8,12 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 using McpServerManager.Android.Services;
 using McpServerManager.Core.ViewModels;
-using UiCoreMcpTodoFlatItem = McpServer.UI.Core.Models.McpTodoFlatItem;
-using UiCoreMcpTodoFlatTask = McpServer.UI.Core.Models.McpTodoFlatTask;
-using UiCoreTodoListEntry = McpServer.UI.Core.ViewModels.TodoListEntry;
+using UiCoreMcpTodoFlatItem = McpServerManager.UI.Core.Models.McpTodoFlatItem;
+using UiCoreMcpTodoFlatTask = McpServerManager.UI.Core.Models.McpTodoFlatTask;
+using UiCoreTodoListEntry = McpServerManager.UI.Core.ViewModels.TodoListEntry;
 
 namespace McpServerManager.Android.Views;
 

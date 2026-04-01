@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Authorization;
+namespace McpServerManager.UI.Core.Authorization;
 
 /// <summary>
 /// Default permissive authorization policy used when a host shell does not register a custom policy.

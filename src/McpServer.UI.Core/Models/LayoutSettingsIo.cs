@@ -2,10 +2,10 @@ using System;
 using System.IO;
 using System.Text.Json;
 using Avalonia.Controls;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.UI.Core.Models;
+namespace McpServerManager.UI.Core.Models;
 
 /// <summary>Load/save LayoutSettings from the app's settings file (shared by main and chat window).</summary>
 public static class LayoutSettingsIo

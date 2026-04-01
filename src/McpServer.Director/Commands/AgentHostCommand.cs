@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using McpServer.Client;
 using McpServer.Client.Models;
-using McpServer.Director.Auth;
+using McpServerManager.Director.Auth;
 using McpServer.McpAgent;
 using McpServer.McpAgent.Hosting;
 using McpServer.McpAgent.PowerShellSessions;
@@ -16,7 +16,7 @@ using System.ClientModel.Primitives;
 using OpenAIChatClient = OpenAI.Chat.ChatClient;
 using OpenAIClientOptions = OpenAI.OpenAIClientOptions;
 
-namespace McpServer.Director.Commands;
+namespace McpServerManager.Director.Commands;
 
 internal static class AgentHostCommand
 {

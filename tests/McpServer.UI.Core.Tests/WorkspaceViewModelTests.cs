@@ -1,16 +1,16 @@
-using McpServer.UI.Core;
+using McpServerManager.UI.Core;
 using McpServer.Cqrs;
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
-namespace McpServer.UI.Core.Tests;
+namespace McpServerManager.UI.Core.Tests;
 
 /// <summary>Focused ViewModel tests for the shared workspace relay surfaces.</summary>
 public sealed class WorkspaceViewModelTests

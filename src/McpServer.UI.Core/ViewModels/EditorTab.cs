@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 /// <summary>
 /// Represents an editor tab for TODO content or Copilot markdown output.

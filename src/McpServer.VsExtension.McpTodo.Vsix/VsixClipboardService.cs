@@ -1,10 +1,10 @@
 using System.Threading.Tasks;
 using System.Windows;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.VsExtension.McpTodo;
+namespace McpServerManager.VsExtension.McpTodo;
 
-internal sealed class VsixClipboardService : McpServer.UI.Core.Services.IClipboardService
+internal sealed class VsixClipboardService : McpServerManager.UI.Core.Services.IClipboardService
 {
     private readonly IUiDispatcherService _uiDispatcher;
 

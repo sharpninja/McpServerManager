@@ -4,7 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>McpServer.Director</RootNamespace>
+    <RootNamespace>McpServerManager.Director</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1515;CA1849;CA1031;NU1608</NoWarn>
     <AssemblyName>director</AssemblyName>
@@ -46,7 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>McpServer.Director.Tests</_Parameter1>
+      <_Parameter1>McpServerManager.Director.Tests</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
 </Project>

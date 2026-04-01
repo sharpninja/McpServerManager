@@ -1,6 +1,6 @@
-using McpServer.UI.Core.Authorization;
+using McpServerManager.UI.Core.Authorization;
 
-namespace McpServer.UI.Core.Tests.TestInfrastructure;
+namespace McpServerManager.UI.Core.Tests.TestInfrastructure;
 
 /// <summary>
 /// Test authorization policy that can allow/deny specific areas and actions.

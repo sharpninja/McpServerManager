@@ -1,9 +1,9 @@
 using System.IO;
 using System.Net.Sockets;
-using McpServer.Web;
+using McpServerManager.Web;
 using Xunit;
 
-namespace McpServer.Web.Tests;
+namespace McpServerManager.Web.Tests;
 
 public sealed class StartupFailureDiagnosticsTests
 {

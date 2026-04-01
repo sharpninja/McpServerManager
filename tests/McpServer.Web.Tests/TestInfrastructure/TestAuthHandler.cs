@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace McpServer.Web.Tests.TestInfrastructure;
+namespace McpServerManager.Web.Tests.TestInfrastructure;
 
 /// <summary>
 /// Custom authentication handler that resolves a pre-configured <see cref="ClaimsPrincipal"/>

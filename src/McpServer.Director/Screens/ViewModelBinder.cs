@@ -3,7 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using Terminal.Gui;
 
-namespace McpServer.Director.Screens;
+namespace McpServerManager.Director.Screens;
 
 /// <summary>
 /// Lightweight binding helper that connects CommunityToolkit.Mvvm ViewModels

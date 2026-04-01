@@ -1,4 +1,4 @@
-namespace McpServer.Director.Auth;
+namespace McpServerManager.Director.Auth;
 
 /// <summary>
 /// Configuration options for Director CLI Keycloak OIDC authentication.

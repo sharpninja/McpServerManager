@@ -1,6 +1,6 @@
 using System;
 using McpServer.Client;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 
 namespace McpServerManager.Core.Services;
 

@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Authorization;
+namespace McpServerManager.UI.Core.Authorization;
 
 /// <summary>
 /// Standard role names used by Director/UI RBAC checks.

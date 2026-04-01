@@ -1,18 +1,18 @@
 using McpServer.Cqrs;
-using McpServer.UI.Core;
-using McpServer.UI.Core.Auth;
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Commands;
-using McpServer.UI.Core.Hosting;
-using McpServer.UI.Core.Services;
-using McpServer.Web.Adapters;
-using McpServer.Web.Authorization;
-using McpServer.Web.Services;
-using McpServer.Web.ViewModels;
+using McpServerManager.UI.Core;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Commands;
+using McpServerManager.UI.Core.Hosting;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.Web.Adapters;
+using McpServerManager.Web.Authorization;
+using McpServerManager.Web.Services;
+using McpServerManager.Web.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace McpServer.Web;
+namespace McpServerManager.Web;
 
 internal static class WebServiceRegistration
 {

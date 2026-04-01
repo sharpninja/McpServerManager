@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Auth/probe service abstraction used by connection UI flows.

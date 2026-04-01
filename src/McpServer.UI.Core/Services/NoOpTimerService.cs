@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Default no-op timer service used when host does not provide implementation.

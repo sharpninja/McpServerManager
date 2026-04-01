@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Host-provided abstraction for JSON parsing and validation used by UI.Core ViewModels.

@@ -1,12 +1,12 @@
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.Tests.TestInfrastructure;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.Tests.TestInfrastructure;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
 
-namespace McpServer.UI.Core.Tests.ViewModels;
+namespace McpServerManager.UI.Core.Tests.ViewModels;
 
 public sealed class VoiceViewModelTests
 {

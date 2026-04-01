@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.UI.Core.Models.Json
+namespace McpServerManager.UI.Core.Models.Json
 {
     public class UnifiedSessionLog
     {

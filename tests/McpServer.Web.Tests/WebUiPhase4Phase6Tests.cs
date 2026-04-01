@@ -1,12 +1,12 @@
 using Bunit;
 using McpServer.Cqrs;
-using McpServer.UI.Core;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.ViewModels;
-using McpServer.Web;
-using McpServer.Web.Authorization;
-using McpServer.Web.Components.Shared;
+using McpServerManager.UI.Core;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
+using McpServerManager.Web;
+using McpServerManager.Web.Authorization;
+using McpServerManager.Web.Components.Shared;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
-namespace McpServer.Web.Tests;
+namespace McpServerManager.Web.Tests;
 
 public sealed class WebUiPhase4Phase6Tests
 {
@@ -58,7 +58,7 @@ public sealed class WebUiPhase4Phase6Tests
         };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoList>();
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoList>();
 
         cut.WaitForAssertion(() => Assert.Contains("Loading todos...", cut.Markup, StringComparison.Ordinal));
         gate.SetResult(new ListTodosResult([], 0));
@@ -73,7 +73,7 @@ public sealed class WebUiPhase4Phase6Tests
         };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ISessionLogApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Sessions.SessionLogList>();
+        var cut = ctx.Render<McpServerManager.Web.Pages.Sessions.SessionLogList>();
 
         cut.WaitForAssertion(() => Assert.Contains("Failed to load session logs", cut.Markup, StringComparison.Ordinal));
     }
@@ -87,7 +87,7 @@ public sealed class WebUiPhase4Phase6Tests
         };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITemplateApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Templates.TemplateList>();
+        var cut = ctx.Render<McpServerManager.Web.Pages.Templates.TemplateList>();
 
         cut.WaitForAssertion(() => Assert.Contains("No templates found", cut.Markup, StringComparison.Ordinal));
     }
@@ -126,13 +126,13 @@ public sealed class WebUiPhase4Phase6Tests
             services.AddSingleton<ITemplateApiClient>(templateApi);
         });
 
-        var todoCut = ctx.Render<McpServer.Web.Pages.Todos.TodoList>();
+        var todoCut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoList>();
         todoCut.WaitForAssertion(() => Assert.Contains("TODO-001", todoCut.Markup, StringComparison.Ordinal));
 
-        var sessionCut = ctx.Render<McpServer.Web.Pages.Sessions.SessionLogList>();
+        var sessionCut = ctx.Render<McpServerManager.Web.Pages.Sessions.SessionLogList>();
         sessionCut.WaitForAssertion(() => Assert.Contains("session-1", sessionCut.Markup, StringComparison.Ordinal));
 
-        var templateCut = ctx.Render<McpServer.Web.Pages.Templates.TemplateList>();
+        var templateCut = ctx.Render<McpServerManager.Web.Pages.Templates.TemplateList>();
         templateCut.WaitForAssertion(() => Assert.Contains("tpl-1", templateCut.Markup, StringComparison.Ordinal));
     }
 

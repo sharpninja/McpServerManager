@@ -1,11 +1,11 @@
 using McpServer.Client;
 using McpServer.Client.Models;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace McpServer.Web.Adapters;
+namespace McpServerManager.Web.Adapters;
 
 internal sealed class VoiceApiClientAdapter : IVoiceApiClient
 {

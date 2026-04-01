@@ -4,7 +4,7 @@ using Android.Content.Res;
 using Android.OS;
 using Avalonia;
 using Avalonia.Android;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 using McpServerManager.Android.Services;
 
 namespace McpServerManager.Android;

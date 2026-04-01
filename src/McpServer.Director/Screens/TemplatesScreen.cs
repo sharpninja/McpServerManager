@@ -1,10 +1,10 @@
 // Copyright (c) 2025 McpServer Contributors. All rights reserved.
 
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.ViewModels;
 using Terminal.Gui;
 
-namespace McpServer.Director.Screens;
+namespace McpServerManager.Director.Screens;
 
 /// <summary>
 /// Terminal.Gui screen for prompt template management.

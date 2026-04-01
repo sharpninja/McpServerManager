@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Command to create a voice session.</summary>
 public sealed record CreateVoiceSessionCommand : ICommand<VoiceSessionInfo>

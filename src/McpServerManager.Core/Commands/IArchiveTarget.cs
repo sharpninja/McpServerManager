@@ -1,4 +1,4 @@
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Models;
 
 namespace McpServerManager.Core.Commands;
 

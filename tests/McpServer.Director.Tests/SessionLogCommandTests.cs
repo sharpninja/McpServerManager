@@ -1,4 +1,4 @@
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 /// <summary>
 /// Tests for <c>session-log list</c> command (and <c>sl</c> alias).

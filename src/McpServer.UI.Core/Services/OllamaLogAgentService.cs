@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>Log agent that uses a local Ollama server (http://localhost:11434).</summary>
 public sealed class OllamaLogAgentService : ILogAgentService

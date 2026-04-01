@@ -1,7 +1,7 @@
-using McpServer.Director.Screens;
-using McpServer.UI.Core.Messages;
+using McpServerManager.Director.Screens;
+using McpServerManager.UI.Core.Messages;
 
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 public sealed class RepoScreenTests
 {
@@ -59,7 +59,7 @@ public sealed class RepoScreenTests
             new RepoEntrySummary("appsettings.json", false),
         };
 
-        var displayEntries = RepoScreen.BuildEntriesForDisplay("src/McpServer.Director", entries);
+        var displayEntries = RepoScreen.BuildEntriesForDisplay("src/McpServerManager.Director", entries);
 
         Assert.Equal(3, displayEntries.Count);
         Assert.Equal("..", displayEntries[0].Name);

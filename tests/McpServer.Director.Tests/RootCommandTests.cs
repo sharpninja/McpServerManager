@@ -1,4 +1,4 @@
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 /// <summary>
 /// Tests that the Director root command and <c>--help</c> work correctly.

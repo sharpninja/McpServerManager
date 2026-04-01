@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query to list global agent definitions.</summary>
 public sealed record ListAgentDefinitionsQuery : IQuery<ListAgentDefinitionsResult>;

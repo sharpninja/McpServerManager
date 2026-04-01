@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query for <c>POST /mcpserver/context/search</c>.</summary>
 public sealed record SearchContextQuery : IQuery<ContextSearchPayload>

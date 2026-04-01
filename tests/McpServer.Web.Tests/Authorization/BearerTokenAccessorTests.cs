@@ -1,12 +1,12 @@
 using System.Security.Claims;
-using McpServer.Web.Authorization;
+using McpServerManager.Web.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
 
-namespace McpServer.Web.Tests.Authorization;
+namespace McpServerManager.Web.Tests.Authorization;
 
 /// <summary>
 /// Unit tests for <see cref="BearerTokenAccessor"/>.

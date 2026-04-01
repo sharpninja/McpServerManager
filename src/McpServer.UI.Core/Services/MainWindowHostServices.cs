@@ -1,9 +1,9 @@
 using System;
 using McpServer.Client;
-using McpServer.UI.Core.Auth;
-using McpServer.UI.Core.Hosting;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.Hosting;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 public sealed class MainWindowHostServices
 {

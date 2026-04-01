@@ -1,4 +1,4 @@
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 /// <summary>
 /// Smoke tests for Director sync workflows exposed through the shared GitHub sync ViewModel alias.

@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace McpServer.UI.Core.ViewModels.Base;
+namespace McpServerManager.UI.Core.ViewModels.Base;
 
 /// <summary>
 /// Shared operation-state model for async UI workflows (load/save/run/etc.).

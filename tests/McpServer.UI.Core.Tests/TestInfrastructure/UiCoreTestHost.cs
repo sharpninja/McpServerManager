@@ -1,13 +1,13 @@
 using McpServer.Cqrs;
-using McpServer.UI.Core;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
-namespace McpServer.UI.Core.Tests.TestInfrastructure;
+namespace McpServerManager.UI.Core.Tests.TestInfrastructure;
 
 /// <summary>
 /// Shared test host factory for UI.Core dispatcher, handlers, and ViewModels.

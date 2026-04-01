@@ -1,8 +1,8 @@
-using McpServer.UI.Core.Auth;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Configuration;
 
-namespace McpServer.Web.Authorization;
+namespace McpServerManager.Web.Authorization;
 
 internal sealed class WebHostIdentityProvider : IHostIdentityProvider
 {

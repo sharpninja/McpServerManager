@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Models;
 using ClientModels = McpServer.Client.Models;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 internal static class UiCoreMessageMapper
 {

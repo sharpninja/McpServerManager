@@ -12,7 +12,7 @@ using McpServerManager.Core.ViewModels;
 using System;
 using System.Globalization;
 using System.Linq;
-using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
+using UiDispatcherHost = McpServerManager.UI.Core.Services.UiDispatcherHost;
 
 namespace McpServerManager.Android;
 

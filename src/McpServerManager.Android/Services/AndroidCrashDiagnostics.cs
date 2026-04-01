@@ -13,7 +13,7 @@ using Android.Runtime;
 using Microsoft.Extensions.Logging;
 using McpServerManager.Core.Services;
 using JThread = Java.Lang.Thread;
-using StatusViewModel = McpServer.UI.Core.ViewModels.StatusViewModel;
+using StatusViewModel = McpServerManager.UI.Core.ViewModels.StatusViewModel;
 using SysEnvironment = System.Environment;
 using Throwable = Java.Lang.Throwable;
 

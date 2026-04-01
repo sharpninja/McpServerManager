@@ -4,10 +4,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using McpServer.Client;
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Models;
 using ClientModels = McpServer.Client.Models;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 public sealed class McpTodoService
 {
@@ -90,7 +90,7 @@ public sealed class McpTodoService
 
     public void ApplyPromptConnectionState(string? bearerToken, string? apiKey, string workspacePath)
     {
-        McpServer.UI.Core.ViewModels.MainWindowViewModel.ApplyClientConnectionState(
+        McpServerManager.UI.Core.ViewModels.MainWindowViewModel.ApplyClientConnectionState(
             _promptClient,
             bearerToken,
             apiKey,

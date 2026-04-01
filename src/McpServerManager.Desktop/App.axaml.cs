@@ -8,7 +8,7 @@ using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
 using McpServerManager.Desktop.Services;
 using McpServerManager.Desktop.Views;
-using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
+using UiDispatcherHost = McpServerManager.UI.Core.Services.UiDispatcherHost;
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -16,7 +16,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.IO;
 using System.Threading.Tasks;
-using StatusViewModel = McpServer.UI.Core.ViewModels.StatusViewModel;
+using StatusViewModel = McpServerManager.UI.Core.ViewModels.StatusViewModel;
 
 namespace McpServerManager.Desktop;
 

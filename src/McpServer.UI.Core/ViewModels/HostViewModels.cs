@@ -1,2 +1,2 @@
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 

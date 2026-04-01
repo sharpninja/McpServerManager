@@ -1,4 +1,4 @@
-namespace McpServer.Web.Components.Shared;
+namespace McpServerManager.Web.Components.Shared;
 
 public sealed record DetailNavigationItem(
     string Key,

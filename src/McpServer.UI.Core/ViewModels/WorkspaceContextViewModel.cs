@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 /// <summary>
 /// Singleton ViewModel that holds the active workspace path.

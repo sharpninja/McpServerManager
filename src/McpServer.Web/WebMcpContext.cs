@@ -1,13 +1,13 @@
 using System.IO;
 using System.Runtime.CompilerServices;
 using McpServer.Client;
-using McpServer.UI.Core.Hosting;
-using McpServer.UI.Core.ViewModels;
-using McpServer.Web.Authorization;
+using McpServerManager.UI.Core.Hosting;
+using McpServerManager.UI.Core.ViewModels;
+using McpServerManager.Web.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace McpServer.Web;
+namespace McpServerManager.Web;
 
 internal sealed class WebMcpContext : IMcpHostContext
 {

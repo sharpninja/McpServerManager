@@ -2,9 +2,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using McpServer.Cqrs;
 using McpServer.Cqrs.Mvvm;
-using McpServer.UI.Core.Messages;
+using McpServerManager.UI.Core.Messages;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 /// <summary>CLI/exec-oriented ViewModel for appsettings-path diagnostics.</summary>
 [ViewModelCommand("diagnostic-appsettings-path", Description = "Get diagnostic appsettings path")]

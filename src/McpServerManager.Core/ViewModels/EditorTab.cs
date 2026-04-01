@@ -1,6 +1,6 @@
 namespace McpServerManager.Core.ViewModels;
 
-public class EditorTab : McpServer.UI.Core.ViewModels.EditorTab
+public class EditorTab : McpServerManager.UI.Core.ViewModels.EditorTab
 {
     public static new EditorTab CreateEditorTab(string todoId, string content)
         => new() { Header = todoId, Content = content, IsMarkdown = false };

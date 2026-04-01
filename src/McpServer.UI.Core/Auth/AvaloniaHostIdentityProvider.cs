@@ -1,6 +1,6 @@
 using System;
 
-namespace McpServer.UI.Core.Auth;
+namespace McpServerManager.UI.Core.Auth;
 
 public sealed class AvaloniaHostIdentityProvider : IMutableHostIdentityProvider
 {

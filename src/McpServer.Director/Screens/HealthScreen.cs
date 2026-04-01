@@ -1,9 +1,9 @@
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.ViewModels;
 using Terminal.Gui;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace McpServer.Director.Screens;
+namespace McpServerManager.Director.Screens;
 
 /// <summary>
 /// Terminal.Gui screen showing server health status and workspace initialization.

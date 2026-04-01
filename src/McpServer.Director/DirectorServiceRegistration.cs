@@ -1,18 +1,18 @@
 using McpServer.Client;
 using McpServer.Cqrs;
-using McpServer.Director.Auth;
-using McpServer.Director.Helpers;
-using McpServer.UI.Core;
-using McpServer.UI.Core.Auth;
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Navigation;
-using McpServer.UI.Core.Hosting;
-using McpServer.UI.Core.Services;
+using McpServerManager.Director.Auth;
+using McpServerManager.Director.Helpers;
+using McpServerManager.UI.Core;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Navigation;
+using McpServerManager.UI.Core.Hosting;
+using McpServerManager.UI.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.Director;
+namespace McpServerManager.Director;
 
 /// <summary>
 /// TR-MCP-DRY-001: Shared DI registration for all Director entry points.

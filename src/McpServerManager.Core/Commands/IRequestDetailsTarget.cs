@@ -1,4 +1,4 @@
-using McpServer.UI.Core.Models.Json;
+using McpServerManager.UI.Core.Models.Json;
 
 namespace McpServerManager.Core.Commands;
 

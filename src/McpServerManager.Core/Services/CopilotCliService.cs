@@ -11,7 +11,7 @@ namespace McpServerManager.Core.Services;
 
 /// <summary>
 /// Invokes the GitHub Copilot CLI agent with a prompt, streaming stdout line-by-line.
-/// Ported from the VS2026 extension (McpServer.VsExtension.McpTodo.Vsix/CopilotCliHelper.cs).
+/// Ported from the VS2026 extension (McpServerManager.VsExtension.McpTodo.Vsix/CopilotCliHelper.cs).
 /// </summary>
 public static class CopilotCliService
 {

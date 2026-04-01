@@ -83,12 +83,12 @@ public sealed class ChatWindowViewModelFactory : IChatWindowViewModelFactory, ID
         services.AddSingleton<IChatConfigFilesService>(new LocalChatConfigFilesService());
         services.AddSingleton<IChatModelDiscoveryService>(new OllamaChatModelDiscoveryService());
         services.AddSingleton<IChatSendOrchestrationService>(new LogAgentChatSendOrchestrationService(agentService));
-            services.AddSingleton<McpServer.UI.Core.Services.IUiDispatcherService, McpServer.UI.Core.Services.ImmediateUiDispatcherService>();
+            services.AddSingleton<McpServerManager.UI.Core.Services.IUiDispatcherService, McpServerManager.UI.Core.Services.ImmediateUiDispatcherService>();
 
         services.AddCqrsDispatcher();
         services.AddCqrsLoggerProvider();
         services.AddCqrsHandlers(typeof(ChatOpenAgentConfigCommand).Assembly);
-        services.AddCqrsHandlers(typeof(McpServer.UI.Core.Commands.InvokeUiActionHandler).Assembly);
+        services.AddCqrsHandlers(typeof(McpServerManager.UI.Core.Commands.InvokeUiActionHandler).Assembly);
 
         return services.BuildServiceProvider();
     }

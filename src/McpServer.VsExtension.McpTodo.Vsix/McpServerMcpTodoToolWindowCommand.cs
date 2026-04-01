@@ -3,7 +3,7 @@ using System.ComponentModel.Design;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 
-namespace McpServer.VsExtension.McpTodo;
+namespace McpServerManager.VsExtension.McpTodo;
 
 internal static class McpServerMcpTodoToolWindowCommand
 {

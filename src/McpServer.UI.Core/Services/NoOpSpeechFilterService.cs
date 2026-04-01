@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Default no-op speech filter service used when host does not supply one.

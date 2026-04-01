@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
   <metadata>
     <id>SharpNinja.McpServer.Web</id>
-    <version>0.5.1-37</version>
+    <version>0.5.1</version>
     <authors>SharpNinja</authors>
     <description>SharpNinja.McpServer.Web</description>
     <packageTypes>
@@ -10,6 +10,6 @@
     </packageTypes>
   </metadata>
   <files>
-    <file src="E:\github\RequestTracker\src\McpServer.Web\bin\Release\net9.0\publish\**" target="tools/net9.0/any" />
+    <file src="F:\GitHub\McpServerManager\.claude\worktrees\magical-ritchie\src\McpServer.Web\bin\Release\net9.0\publish\**" target="tools/net9.0/any" />
   </files>
 </package>

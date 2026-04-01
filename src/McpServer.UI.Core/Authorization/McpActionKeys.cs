@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Authorization;
+namespace McpServerManager.UI.Core.Authorization;
 
 /// <summary>
 /// Shared action-key constants for UI/Core authorization checks.

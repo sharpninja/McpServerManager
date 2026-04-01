@@ -1,8 +1,8 @@
-using McpServer.Director.Auth;
-using McpServer.UI.Core.Authorization;
+using McpServerManager.Director.Auth;
+using McpServerManager.UI.Core.Authorization;
 using Xunit;
 
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 public sealed class DirectorAuthorizationPolicyServiceTests
 {

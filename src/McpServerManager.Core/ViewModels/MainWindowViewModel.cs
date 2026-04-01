@@ -1,24 +1,24 @@
 using System;
 using System.Threading.Tasks;
 using McpServer.Cqrs.Mvvm;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
 using CoreClipboardService = McpServerManager.Core.Services.IClipboardService;
 using CoreSystemNotificationService = McpServerManager.Core.Services.ISystemNotificationService;
 using CqrsDispatcher = McpServer.Cqrs.Dispatcher;
-using UiCoreAppSettings = McpServer.UI.Core.AppSettings;
-using UiCoreMainWindowViewModel = McpServer.UI.Core.ViewModels.MainWindowViewModel;
-using UiCoreStatusViewModel = McpServer.UI.Core.ViewModels.StatusViewModel;
+using UiCoreAppSettings = McpServerManager.UI.Core.AppSettings;
+using UiCoreMainWindowViewModel = McpServerManager.UI.Core.ViewModels.MainWindowViewModel;
+using UiCoreStatusViewModel = McpServerManager.UI.Core.ViewModels.StatusViewModel;
 
 namespace McpServerManager.Core.ViewModels;
 
-public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWindowViewModel, Commands.ICommandTarget
+public partial class MainWindowViewModel : McpServerManager.UI.Core.ViewModels.MainWindowViewModel, Commands.ICommandTarget
 {
     private CqrsDispatcher _dispatcher = null!;
 
-    public static new System.Collections.Generic.List<McpServer.UI.Core.Models.Json.UnifiedSessionTurn> DeduplicateUnifiedTurns(
-        System.Collections.Generic.IEnumerable<McpServer.UI.Core.Models.Json.UnifiedSessionTurn> entries)
+    public static new System.Collections.Generic.List<McpServerManager.UI.Core.Models.Json.UnifiedSessionTurn> DeduplicateUnifiedTurns(
+        System.Collections.Generic.IEnumerable<McpServerManager.UI.Core.Models.Json.UnifiedSessionTurn> entries)
         => UiCoreMainWindowViewModel.DeduplicateUnifiedTurns(entries);
 
     private CoreClipboardService CoreClipboardService => (CoreClipboardService)ClipboardService;
@@ -95,7 +95,7 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
     {
     }
 
-    public MainWindowViewModel(CoreClipboardService clipboardService, McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
+    public MainWindowViewModel(CoreClipboardService clipboardService, McpServerManager.UI.Core.Services.IUiDispatcherService uiDispatcher)
         : this(clipboardService, UiCoreAppSettings.ResolveMcpBaseUrl(), mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher)
     {
     }
@@ -105,7 +105,7 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
     {
     }
 
-    public MainWindowViewModel(CoreClipboardService clipboardService, string mcpBaseUrl, McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
+    public MainWindowViewModel(CoreClipboardService clipboardService, string mcpBaseUrl, McpServerManager.UI.Core.Services.IUiDispatcherService uiDispatcher)
         : this(clipboardService, mcpBaseUrl, mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher)
     {
     }
@@ -115,7 +115,7 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
     {
     }
 
-    public MainWindowViewModel(CoreClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey, McpServer.UI.Core.Services.IUiDispatcherService uiDispatcher)
+    public MainWindowViewModel(CoreClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey, McpServerManager.UI.Core.Services.IUiDispatcherService uiDispatcher)
         : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null, systemNotificationService: null, uiDispatcher)
     {
     }
@@ -124,7 +124,7 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
         CoreClipboardService clipboardService,
         MainWindowHostServices hostServices,
         CoreSystemNotificationService? systemNotificationService = null,
-        McpServer.UI.Core.Services.IUiDispatcherService? uiDispatcher = null)
+        McpServerManager.UI.Core.Services.IUiDispatcherService? uiDispatcher = null)
         : base(clipboardService, hostServices, systemNotificationService, uiDispatcher ?? new AvaloniaUiDispatcherService())
     {
         _dispatcher = CqrsDispatcher;
@@ -141,7 +141,7 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
         string? mcpApiKey,
         string? bearerToken,
         CoreSystemNotificationService? systemNotificationService = null,
-        McpServer.UI.Core.Services.IUiDispatcherService? uiDispatcher = null)
+        McpServerManager.UI.Core.Services.IUiDispatcherService? uiDispatcher = null)
         : base(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, systemNotificationService, uiDispatcher ?? new AvaloniaUiDispatcherService())
     {
         _dispatcher = CqrsDispatcher;
@@ -178,67 +178,67 @@ public partial class MainWindowViewModel : McpServer.UI.Core.ViewModels.MainWind
     public override Task CopilotPlanAsync() => TodoViewModel.CopilotPlanAsync();
     public override Task CopilotImplementAsync() => TodoViewModel.CopilotImplementAsync();
 
-    void Commands.INavigationTarget.NavigateBack() => ((McpServer.UI.Core.Commands.INavigationTarget)this).NavigateBack();
-    void Commands.INavigationTarget.NavigateForward() => ((McpServer.UI.Core.Commands.INavigationTarget)this).NavigateForward();
-    Task Commands.INavigationTarget.RefreshAsync() => ((McpServer.UI.Core.Commands.INavigationTarget)this).RefreshAsync();
-    void Commands.INavigationTarget.PhoneNavigateSection(string? sectionKey) => ((McpServer.UI.Core.Commands.INavigationTarget)this).PhoneNavigateSection(sectionKey);
-    void Commands.INavigationTarget.GenerateAndNavigate(McpServer.UI.Core.Models.FileNode? node) => ((McpServer.UI.Core.Commands.INavigationTarget)this).GenerateAndNavigate(node);
-    void Commands.INavigationTarget.OpenTreeItem(McpServer.UI.Core.Models.FileNode? node) => ((McpServer.UI.Core.Commands.INavigationTarget)this).OpenTreeItem(node);
-    void Commands.INavigationTarget.TreeItemTapped(McpServer.UI.Core.Models.FileNode? node) => ((McpServer.UI.Core.Commands.INavigationTarget)this).TreeItemTapped(node);
-    void Commands.INavigationTarget.JsonNodeDoubleTapped(McpServer.UI.Core.Models.Json.JsonTreeNode? node) => ((McpServer.UI.Core.Commands.INavigationTarget)this).JsonNodeDoubleTapped(node);
+    void Commands.INavigationTarget.NavigateBack() => ((McpServerManager.UI.Core.Commands.INavigationTarget)this).NavigateBack();
+    void Commands.INavigationTarget.NavigateForward() => ((McpServerManager.UI.Core.Commands.INavigationTarget)this).NavigateForward();
+    Task Commands.INavigationTarget.RefreshAsync() => ((McpServerManager.UI.Core.Commands.INavigationTarget)this).RefreshAsync();
+    void Commands.INavigationTarget.PhoneNavigateSection(string? sectionKey) => ((McpServerManager.UI.Core.Commands.INavigationTarget)this).PhoneNavigateSection(sectionKey);
+    void Commands.INavigationTarget.GenerateAndNavigate(McpServerManager.UI.Core.Models.FileNode? node) => ((McpServerManager.UI.Core.Commands.INavigationTarget)this).GenerateAndNavigate(node);
+    void Commands.INavigationTarget.OpenTreeItem(McpServerManager.UI.Core.Models.FileNode? node) => ((McpServerManager.UI.Core.Commands.INavigationTarget)this).OpenTreeItem(node);
+    void Commands.INavigationTarget.TreeItemTapped(McpServerManager.UI.Core.Models.FileNode? node) => ((McpServerManager.UI.Core.Commands.INavigationTarget)this).TreeItemTapped(node);
+    void Commands.INavigationTarget.JsonNodeDoubleTapped(McpServerManager.UI.Core.Models.Json.JsonTreeNode? node) => ((McpServerManager.UI.Core.Commands.INavigationTarget)this).JsonNodeDoubleTapped(node);
 
-    void Commands.IRequestDetailsTarget.ShowRequestDetails(McpServer.UI.Core.Models.Json.SearchableTurn entry) => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).ShowRequestDetails(entry);
-    void Commands.IRequestDetailsTarget.CloseRequestDetails() => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).CloseRequestDetails();
-    void Commands.IRequestDetailsTarget.NavigateToPreviousRequest() => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).NavigateToPreviousRequest();
-    void Commands.IRequestDetailsTarget.NavigateToNextRequest() => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).NavigateToNextRequest();
-    void Commands.IRequestDetailsTarget.SelectSearchTurn(McpServer.UI.Core.Models.Json.SearchableTurn entry) => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).SelectSearchTurn(entry);
-    void Commands.IRequestDetailsTarget.SearchRowTapped(McpServer.UI.Core.Models.Json.SearchableTurn? entry) => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).SearchRowTapped(entry);
-    void Commands.IRequestDetailsTarget.SearchRowDoubleTapped(McpServer.UI.Core.Models.Json.SearchableTurn? entry) => ((McpServer.UI.Core.Commands.IRequestDetailsTarget)this).SearchRowDoubleTapped(entry);
+    void Commands.IRequestDetailsTarget.ShowRequestDetails(McpServerManager.UI.Core.Models.Json.SearchableTurn entry) => ((McpServerManager.UI.Core.Commands.IRequestDetailsTarget)this).ShowRequestDetails(entry);
+    void Commands.IRequestDetailsTarget.CloseRequestDetails() => ((McpServerManager.UI.Core.Commands.IRequestDetailsTarget)this).CloseRequestDetails();
+    void Commands.IRequestDetailsTarget.NavigateToPreviousRequest() => ((McpServerManager.UI.Core.Commands.IRequestDetailsTarget)this).NavigateToPreviousRequest();
+    void Commands.IRequestDetailsTarget.NavigateToNextRequest() => ((McpServerManager.UI.Core.Commands.IRequestDetailsTarget)this).NavigateToNextRequest();
+    void Commands.IRequestDetailsTarget.SelectSearchTurn(McpServerManager.UI.Core.Models.Json.SearchableTurn entry) => ((McpServerManager.UI.Core.Commands.IRequestDetailsTarget)this).SelectSearchTurn(entry);
+    void Commands.IRequestDetailsTarget.SearchRowTapped(McpServerManager.UI.Core.Models.Json.SearchableTurn? entry) => ((McpServerManager.UI.Core.Commands.IRequestDetailsTarget)this).SearchRowTapped(entry);
+    void Commands.IRequestDetailsTarget.SearchRowDoubleTapped(McpServerManager.UI.Core.Models.Json.SearchableTurn? entry) => ((McpServerManager.UI.Core.Commands.IRequestDetailsTarget)this).SearchRowDoubleTapped(entry);
 
-    void Commands.IPreviewTarget.OpenPreviewInBrowser() => ((McpServer.UI.Core.Commands.IPreviewTarget)this).OpenPreviewInBrowser();
-    void Commands.IPreviewTarget.ToggleShowRawMarkdown() => ((McpServer.UI.Core.Commands.IPreviewTarget)this).ToggleShowRawMarkdown();
+    void Commands.IPreviewTarget.OpenPreviewInBrowser() => ((McpServerManager.UI.Core.Commands.IPreviewTarget)this).OpenPreviewInBrowser();
+    void Commands.IPreviewTarget.ToggleShowRawMarkdown() => ((McpServerManager.UI.Core.Commands.IPreviewTarget)this).ToggleShowRawMarkdown();
 
-    void Commands.IArchiveTarget.Archive() => ((McpServer.UI.Core.Commands.IArchiveTarget)this).Archive();
-    void Commands.IArchiveTarget.ArchiveTreeItem(McpServer.UI.Core.Models.FileNode? node) => ((McpServer.UI.Core.Commands.IArchiveTarget)this).ArchiveTreeItem(node);
+    void Commands.IArchiveTarget.Archive() => ((McpServerManager.UI.Core.Commands.IArchiveTarget)this).Archive();
+    void Commands.IArchiveTarget.ArchiveTreeItem(McpServerManager.UI.Core.Models.FileNode? node) => ((McpServerManager.UI.Core.Commands.IArchiveTarget)this).ArchiveTreeItem(node);
 
-    Task Commands.IClipboardTarget.CopyText(string text) => ((McpServer.UI.Core.Commands.IClipboardTarget)this).CopyText(text);
-    Task Commands.IClipboardTarget.CopyOriginalJson(McpServer.UI.Core.Models.Json.UnifiedSessionTurn? entry) => ((McpServer.UI.Core.Commands.IClipboardTarget)this).CopyOriginalJson(entry);
+    Task Commands.IClipboardTarget.CopyText(string text) => ((McpServerManager.UI.Core.Commands.IClipboardTarget)this).CopyText(text);
+    Task Commands.IClipboardTarget.CopyOriginalJson(McpServerManager.UI.Core.Models.Json.UnifiedSessionTurn? entry) => ((McpServerManager.UI.Core.Commands.IClipboardTarget)this).CopyOriginalJson(entry);
 
-    void Commands.IConfigTarget.OpenAgentConfig() => ((McpServer.UI.Core.Commands.IConfigTarget)this).OpenAgentConfig();
-    void Commands.IConfigTarget.OpenPromptTemplates() => ((McpServer.UI.Core.Commands.IConfigTarget)this).OpenPromptTemplates();
+    void Commands.IConfigTarget.OpenAgentConfig() => ((McpServerManager.UI.Core.Commands.IConfigTarget)this).OpenAgentConfig();
+    void Commands.IConfigTarget.OpenPromptTemplates() => ((McpServerManager.UI.Core.Commands.IConfigTarget)this).OpenPromptTemplates();
 
-    Task Commands.ISessionDataTarget.ReloadFromMcpAsync() => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).ReloadFromMcpAsync();
-    void Commands.ISessionDataTarget.BuildUnifiedSummaryAndIndex(McpServer.UI.Core.Models.Json.UnifiedSessionLog session, McpServer.UI.Core.Models.Json.JsonLogSummary summary) => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).BuildUnifiedSummaryAndIndex(session, summary);
-    void Commands.ISessionDataTarget.BuildJsonTree(System.Text.Json.Nodes.JsonNode? node, McpServer.UI.Core.Models.Json.JsonTreeNode root, string? pathPrefix) => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).BuildJsonTree(node, root, pathPrefix);
-    void Commands.ISessionDataTarget.LoadJson(string filePath) => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).LoadJson(filePath);
-    void Commands.ISessionDataTarget.LoadMarkdownFile(McpServer.UI.Core.Models.FileNode node) => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).LoadMarkdownFile(node);
-    void Commands.ISessionDataTarget.LoadSourceFile(McpServer.UI.Core.Models.FileNode node) => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).LoadSourceFile(node);
-    void Commands.ISessionDataTarget.UpdateFilteredSearchTurns() => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).UpdateFilteredSearchTurns();
-    McpServer.UI.Core.Services.McpSessionLogService Commands.ISessionDataTarget.McpSessionService => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).McpSessionService;
-    McpServer.UI.Core.Models.Json.JsonLogSummary Commands.ISessionDataTarget.JsonLogSummary
+    Task Commands.ISessionDataTarget.ReloadFromMcpAsync() => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).ReloadFromMcpAsync();
+    void Commands.ISessionDataTarget.BuildUnifiedSummaryAndIndex(McpServerManager.UI.Core.Models.Json.UnifiedSessionLog session, McpServerManager.UI.Core.Models.Json.JsonLogSummary summary) => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).BuildUnifiedSummaryAndIndex(session, summary);
+    void Commands.ISessionDataTarget.BuildJsonTree(System.Text.Json.Nodes.JsonNode? node, McpServerManager.UI.Core.Models.Json.JsonTreeNode root, string? pathPrefix) => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).BuildJsonTree(node, root, pathPrefix);
+    void Commands.ISessionDataTarget.LoadJson(string filePath) => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).LoadJson(filePath);
+    void Commands.ISessionDataTarget.LoadMarkdownFile(McpServerManager.UI.Core.Models.FileNode node) => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).LoadMarkdownFile(node);
+    void Commands.ISessionDataTarget.LoadSourceFile(McpServerManager.UI.Core.Models.FileNode node) => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).LoadSourceFile(node);
+    void Commands.ISessionDataTarget.UpdateFilteredSearchTurns() => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).UpdateFilteredSearchTurns();
+    McpServerManager.UI.Core.Services.McpSessionLogService Commands.ISessionDataTarget.McpSessionService => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).McpSessionService;
+    McpServerManager.UI.Core.Models.Json.JsonLogSummary Commands.ISessionDataTarget.JsonLogSummary
     {
-        get => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).JsonLogSummary;
-        set => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).JsonLogSummary = value;
+        get => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).JsonLogSummary;
+        set => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).JsonLogSummary = value;
     }
-    System.Collections.ObjectModel.ObservableCollection<McpServer.UI.Core.Models.Json.JsonTreeNode> Commands.ISessionDataTarget.JsonTree => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).JsonTree;
+    System.Collections.ObjectModel.ObservableCollection<McpServerManager.UI.Core.Models.Json.JsonTreeNode> Commands.ISessionDataTarget.JsonTree => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).JsonTree;
     string Commands.ISessionDataTarget.AgentFilter
     {
-        get => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).AgentFilter;
-        set => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).AgentFilter = value;
+        get => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).AgentFilter;
+        set => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).AgentFilter = value;
     }
-    System.Collections.Generic.Dictionary<string, McpServer.UI.Core.Models.Json.UnifiedSessionLog> Commands.ISessionDataTarget.BuildSessionsByPathDict(System.Collections.Generic.IReadOnlyList<McpServer.UI.Core.Models.Json.UnifiedSessionLog> sessions)
-        => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).BuildSessionsByPathDict(sessions);
-    System.Collections.Generic.List<McpServer.UI.Core.Models.Json.UnifiedSessionLog> Commands.ISessionDataTarget.OrderAndDeduplicateSessions(System.Collections.Generic.Dictionary<string, McpServer.UI.Core.Models.Json.UnifiedSessionLog> byPath)
-        => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).OrderAndDeduplicateSessions(byPath);
-    void Commands.ISessionDataTarget.SetMcpSessionState(System.Collections.Generic.List<McpServer.UI.Core.Models.Json.UnifiedSessionLog> sessions, System.Collections.Generic.Dictionary<string, McpServer.UI.Core.Models.Json.UnifiedSessionLog> byPath)
-        => ((McpServer.UI.Core.Commands.ISessionDataTarget)this).SetMcpSessionState(sessions, byPath);
+    System.Collections.Generic.Dictionary<string, McpServerManager.UI.Core.Models.Json.UnifiedSessionLog> Commands.ISessionDataTarget.BuildSessionsByPathDict(System.Collections.Generic.IReadOnlyList<McpServerManager.UI.Core.Models.Json.UnifiedSessionLog> sessions)
+        => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).BuildSessionsByPathDict(sessions);
+    System.Collections.Generic.List<McpServerManager.UI.Core.Models.Json.UnifiedSessionLog> Commands.ISessionDataTarget.OrderAndDeduplicateSessions(System.Collections.Generic.Dictionary<string, McpServerManager.UI.Core.Models.Json.UnifiedSessionLog> byPath)
+        => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).OrderAndDeduplicateSessions(byPath);
+    void Commands.ISessionDataTarget.SetMcpSessionState(System.Collections.Generic.List<McpServerManager.UI.Core.Models.Json.UnifiedSessionLog> sessions, System.Collections.Generic.Dictionary<string, McpServerManager.UI.Core.Models.Json.UnifiedSessionLog> byPath)
+        => ((McpServerManager.UI.Core.Commands.ISessionDataTarget)this).SetMcpSessionState(sessions, byPath);
 
-    void Commands.IUiDispatchTarget.TrackBackgroundWork(Task task) => ((McpServer.UI.Core.Commands.IUiDispatchTarget)this).TrackBackgroundWork(task);
-    void Commands.IUiDispatchTarget.DispatchToUi(Action action) => ((McpServer.UI.Core.Commands.IUiDispatchTarget)this).DispatchToUi(action);
+    void Commands.IUiDispatchTarget.TrackBackgroundWork(Task task) => ((McpServerManager.UI.Core.Commands.IUiDispatchTarget)this).TrackBackgroundWork(task);
+    void Commands.IUiDispatchTarget.DispatchToUi(Action action) => ((McpServerManager.UI.Core.Commands.IUiDispatchTarget)this).DispatchToUi(action);
     string Commands.IUiDispatchTarget.StatusMessage
     {
-        get => ((McpServer.UI.Core.Commands.IUiDispatchTarget)this).StatusMessage;
-        set => ((McpServer.UI.Core.Commands.IUiDispatchTarget)this).StatusMessage = value;
+        get => ((McpServerManager.UI.Core.Commands.IUiDispatchTarget)this).StatusMessage;
+        set => ((McpServerManager.UI.Core.Commands.IUiDispatchTarget)this).StatusMessage = value;
     }
 
     Task Commands.ITodoCopilotTarget.CopilotStatusAsync() => CopilotStatusAsync();

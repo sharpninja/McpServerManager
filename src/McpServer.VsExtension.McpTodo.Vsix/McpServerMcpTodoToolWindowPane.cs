@@ -1,15 +1,15 @@
 using System;
 using System.Runtime.InteropServices;
 using McpServer.Cqrs;
-using McpServer.UI;
-using McpServer.UI.Core;
-using McpServer.UI.Core.Hosting;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI;
+using McpServerManager.UI.Core;
+using McpServerManager.UI.Core.Hosting;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Shell;
 
-namespace McpServer.VsExtension.McpTodo;
+namespace McpServerManager.VsExtension.McpTodo;
 
 [Guid("A1B2C3D4-E5F6-7890-ABCD-EF1234567890")]
 public sealed class McpServerMcpTodoToolWindowPane : ToolWindowPane

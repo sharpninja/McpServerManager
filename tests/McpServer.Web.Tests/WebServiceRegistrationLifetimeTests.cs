@@ -1,13 +1,13 @@
 using McpServer.Cqrs;
-using McpServer.UI.Core.Auth;
-using McpServer.UI.Core.Hosting;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.Hosting;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
-namespace McpServer.Web.Tests;
+namespace McpServerManager.Web.Tests;
 
 public sealed class WebServiceRegistrationLifetimeTests
 {
@@ -23,7 +23,7 @@ public sealed class WebServiceRegistrationLifetimeTests
         var dispatcherB = scopeB.ServiceProvider.GetRequiredService<Dispatcher>();
 
         var commandTargetA1 = scopeA.ServiceProvider.GetRequiredService<WebCommandTarget>();
-        var commandTargetA2 = scopeA.ServiceProvider.GetRequiredService<McpServer.UI.Core.Commands.ICommandTarget>();
+        var commandTargetA2 = scopeA.ServiceProvider.GetRequiredService<McpServerManager.UI.Core.Commands.ICommandTarget>();
         var commandTargetB = scopeB.ServiceProvider.GetRequiredService<WebCommandTarget>();
 
         var hostContextA = scopeA.ServiceProvider.GetRequiredService<IMcpHostContext>();
@@ -51,8 +51,8 @@ public sealed class WebServiceRegistrationLifetimeTests
         using var scopeA = rootProvider.CreateScope();
         using var scopeB = rootProvider.CreateScope();
 
-        var workspaceContextA = scopeA.ServiceProvider.GetRequiredService<McpServer.UI.Core.ViewModels.WorkspaceContextViewModel>();
-        var workspaceContextB = scopeB.ServiceProvider.GetRequiredService<McpServer.UI.Core.ViewModels.WorkspaceContextViewModel>();
+        var workspaceContextA = scopeA.ServiceProvider.GetRequiredService<McpServerManager.UI.Core.ViewModels.WorkspaceContextViewModel>();
+        var workspaceContextB = scopeB.ServiceProvider.GetRequiredService<McpServerManager.UI.Core.ViewModels.WorkspaceContextViewModel>();
 
         Assert.Same(workspaceContextA, workspaceContextB);
     }
@@ -76,7 +76,7 @@ public sealed class WebServiceRegistrationLifetimeTests
 
         var identityProvider = scope.ServiceProvider.GetRequiredService<IHostIdentityProvider>();
 
-        Assert.IsType<McpServer.Web.Authorization.WebHostIdentityProvider>(identityProvider);
+        Assert.IsType<McpServerManager.Web.Authorization.WebHostIdentityProvider>(identityProvider);
         Assert.Equal(@"E:\\repo", identityProvider.GetWorkspacePath());
         Assert.Null(identityProvider.GetBearerToken());
     }

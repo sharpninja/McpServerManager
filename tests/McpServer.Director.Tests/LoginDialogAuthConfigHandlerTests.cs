@@ -1,6 +1,6 @@
-using McpServer.Director.Handlers;
+using McpServerManager.Director.Handlers;
 
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 /// <summary>
 /// Tests for <see cref="LoginDialogAuthConfigHandler"/> auth-config discovery behavior.

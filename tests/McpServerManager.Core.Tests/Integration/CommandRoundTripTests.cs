@@ -1,8 +1,8 @@
 using FluentAssertions;
 using McpServer.Cqrs;
 using McpServer.Client;
-using McpServer.UI.Core.Hosting;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Hosting;
+using McpServerManager.UI.Core.Services;
 using McpServerManager.Core;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
@@ -100,10 +100,10 @@ public sealed class CommandRoundTripTests : IDisposable
     [Fact]
     public async Task CopilotPlanCommand_DispatchesThroughDispatcher()
     {
-        var uiCoreTarget = _target.As<McpServer.UI.Core.Commands.ITodoCopilotTarget>();
+        var uiCoreTarget = _target.As<McpServerManager.UI.Core.Commands.ITodoCopilotTarget>();
         uiCoreTarget.Setup(t => t.CopilotPlanAsync()).Returns(Task.CompletedTask);
 
-        var result = await _dispatcher.SendAsync(new McpServer.UI.Core.Commands.CopilotPlanCommand());
+        var result = await _dispatcher.SendAsync(new McpServerManager.UI.Core.Commands.CopilotPlanCommand());
 
         result.IsSuccess.Should().BeTrue();
         uiCoreTarget.Verify(t => t.CopilotPlanAsync(), Times.Once);
@@ -137,7 +137,7 @@ public sealed class CommandRoundTripTests : IDisposable
     public async Task InvokeUiActionCommand_WhenActionThrows_ReturnsFailureResult()
     {
         var result = await _dispatcher.SendAsync(
-            new McpServer.UI.Core.Commands.InvokeUiActionCommand(() => throw new InvalidOperationException("boom")));
+            new McpServerManager.UI.Core.Commands.InvokeUiActionCommand(() => throw new InvalidOperationException("boom")));
 
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Contain("boom");
@@ -151,7 +151,7 @@ public sealed class CommandRoundTripTests : IDisposable
         McpServerClient client,
         Uri baseUri)
     {
-        var uiTarget = target.As<McpServer.UI.Core.Commands.ICommandTarget>();
+        var uiTarget = target.As<McpServerManager.UI.Core.Commands.ICommandTarget>();
         var services = new ServiceCollection();
         services.AddMcpHost(options =>
         {

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace McpServer.Director;
+namespace McpServerManager.Director;
 
 /// <summary>
 /// Persists Director CLI defaults (for non-workspace usage) under the user's profile.

@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 
 namespace McpServerManager.Core.Services.Infrastructure;
 
