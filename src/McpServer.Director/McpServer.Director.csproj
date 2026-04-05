@@ -39,6 +39,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Client\McpServer.Client.csproj" />
     <ProjectReference Include="..\..\lib\McpServer\src\McpServer.McpAgent\McpServer.McpAgent.csproj" />
+    <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Repl.Core\McpServer.Repl.Core.csproj" />
     <ProjectReference Include="..\McpServer.UI.Core\McpServer.UI.Core.csproj" />
   </ItemGroup>
   <ItemGroup>

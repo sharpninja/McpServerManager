@@ -361,7 +361,7 @@ partial class Build
             return;
         }
 
-        var devices = InvokeProcess("adb", new List<string> { "devices", "-l" }, RepoRootPath, true);
+        var devices = InvokeProcess(ResolveAdbPath(), new List<string> { "devices", "-l" }, RepoRootPath, true);
         foreach (var line in devices.StandardOutputLines)
         {
             Info(line);
@@ -662,9 +662,9 @@ partial class Build
     {
         try
         {
-            if (!CommandExists("adb"))
+            if (!CommandExists("adb") && ResolveAdbPath() == "adb")
             {
-                return CreateDeploymentResult(targetName, "Skipped", "adb was not found in PATH.");
+                return CreateDeploymentResult(targetName, "Skipped", "adb was not found in PATH or Android SDK.");
             }
 
             var resolution = ResolveAndroidDevice(expectEmulator, requestedSerial);

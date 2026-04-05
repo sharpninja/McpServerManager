@@ -551,7 +551,7 @@ partial class Build
         {
             var commandArguments = new List<string> { "-s", serial };
             commandArguments.AddRange(arguments);
-            var result = InvokeProcess("adb", commandArguments, RepoRootPath, false);
+            var result = InvokeProcess(ResolveAdbPath(), commandArguments, RepoRootPath, false);
             if (!allowFailure && result.ExitCode != 0)
             {
                 throw new InvalidOperationException($"adb {string.Join(" ", commandArguments)} failed.{Environment.NewLine}{result.GetCombinedOutput()}");
@@ -573,7 +573,7 @@ partial class Build
         }
 
         EnsureDirectoryExists(effectiveOutputRoot);
-        InvokeProcess("adb", new List<string> { "devices" }, RepoRootPath, true);
+        InvokeProcess(ResolveAdbPath(), new List<string> { "devices" }, RepoRootPath, true);
 
         WriteArtifact("session-metadata.json", JsonSerializer.Serialize(new
         {
@@ -584,7 +584,7 @@ partial class Build
             capturedAtUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)
         }, new JsonSerializerOptions { WriteIndented = true }));
 
-        WriteArtifact("adb-devices.txt", InvokeProcess("adb", new List<string> { "devices", "-l" }, RepoRootPath, false).GetCombinedOutput());
+        WriteArtifact("adb-devices.txt", InvokeProcess(ResolveAdbPath(), new List<string> { "devices", "-l" }, RepoRootPath, false).GetCombinedOutput());
         WriteArtifact("device-getprop.txt", InvokeAdbCapture(new List<string> { "shell", "getprop" }, true));
         WriteArtifact("device-build.txt", InvokeAdbCapture(new List<string> { "shell", "dumpsys", "package", PackageName }, true));
 
@@ -646,7 +646,7 @@ partial class Build
         if (IncludeBugreport)
         {
             var bugreportBase = Path.Combine(effectiveOutputRoot, "bugreport");
-            var bugreportResult = InvokeProcess("adb", new List<string> { "-s", serial, "bugreport", bugreportBase }, RepoRootPath, false);
+            var bugreportResult = InvokeProcess(ResolveAdbPath(), new List<string> { "-s", serial, "bugreport", bugreportBase }, RepoRootPath, false);
             WriteArtifact("bugreport-command-output.txt", bugreportResult.GetCombinedOutput());
         }
     }

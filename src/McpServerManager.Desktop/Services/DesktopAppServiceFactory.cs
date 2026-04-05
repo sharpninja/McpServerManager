@@ -47,8 +47,14 @@ internal static class DesktopAppServiceFactory
         var services = new ServiceCollection();
         var clipboardService = new DesktopClipboardService(desktop);
         var workspaceContext = new WorkspaceContextViewModel();
+
+        // Attempt to resolve a full-access workspace API key from the AGENTS-README-FIRST.yaml
+        // marker file. The default key from /api-key is read-only, which causes voice session
+        // creation and workspace listing to fail.
+        var effectiveApiKey = McpServerManager.Core.Services.McpServerRestClientFactory.TryResolveApiKey(mcpBaseUrl) ?? mcpApiKey;
+
         var hostIdentityProvider = new AvaloniaHostIdentityProvider(
-            mcpApiKey,
+            effectiveApiKey,
             bearerToken,
             () => workspaceContext.ActiveWorkspacePath);
         var commandTargetAccessor = new DeferredCommandTargetAccessor();
@@ -57,7 +63,7 @@ internal static class DesktopAppServiceFactory
         {
             options.Lifetime = McpHostLifetimeStrategy.Singleton;
             options.McpBaseUrl = new Uri(mcpBaseUrl, UriKind.Absolute);
-            options.ApiKey = mcpApiKey;
+            options.ApiKey = effectiveApiKey;
             options.BearerToken = bearerToken;
             options.ClipboardService = clipboardService;
             options.UiDispatcherService = uiDispatcher;
@@ -85,7 +91,7 @@ internal static class DesktopAppServiceFactory
 
             var hostServices = new MainWindowHostServices(
                 mcpBaseUrl,
-                mcpApiKey,
+                effectiveApiKey,
                 bearerToken,
                 hostIdentityProvider,
                 provider.GetRequiredService<IMcpHostContext>(),

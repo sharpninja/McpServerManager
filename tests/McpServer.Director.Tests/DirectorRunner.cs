@@ -14,7 +14,7 @@ internal static class DirectorRunner
 
     /// <summary>Path to the built <c>director.dll</c>.</summary>
     private static readonly string DirectorDll = Path.GetFullPath(
-        Path.Combine(RepoRoot, "src", "McpServerManager.Director", "bin", "Debug", "net9.0", "director.dll"));
+        Path.Combine(RepoRoot, "src", "McpServer.Director", "bin", "Debug", "net9.0", "director.dll"));
 
     /// <summary>Default per-command timeout in milliseconds.</summary>
     private const int DefaultTimeoutMs = 30_000;
@@ -23,13 +23,19 @@ internal static class DirectorRunner
     /// Runs the Director CLI with the given arguments and returns the exit code,
     /// captured stdout, and captured stderr.
     /// </summary>
-    internal static async Task<CliResult> RunAsync(string args, int timeoutMs = DefaultTimeoutMs)
+    internal static Task<CliResult> RunAsync(string args, int timeoutMs = DefaultTimeoutMs)
+        => RunAsync(args, workingDirectory: RepoRoot, timeoutMs: timeoutMs);
+
+    /// <summary>
+    /// Runs the Director CLI with the given arguments and a custom working directory.
+    /// </summary>
+    internal static async Task<CliResult> RunAsync(string args, string workingDirectory, int timeoutMs = DefaultTimeoutMs)
     {
         var psi = new ProcessStartInfo
         {
             FileName = "dotnet",
             Arguments = $"exec \"{DirectorDll}\" {args}",
-            WorkingDirectory = RepoRoot,
+            WorkingDirectory = workingDirectory,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
