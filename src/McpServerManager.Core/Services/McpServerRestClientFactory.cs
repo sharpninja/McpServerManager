@@ -7,7 +7,7 @@ using McpServer.Client;
 
 namespace McpServerManager.Core.Services;
 
-internal static class McpServerRestClientFactory
+public static class McpServerRestClientFactory
 {
     private const string MarkerFileName = "AGENTS-README-FIRST.yaml";
 

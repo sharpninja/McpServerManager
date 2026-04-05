@@ -29,7 +29,8 @@
       "Bash(grep -n \"BuildDesktopDebCore\" /f/GitHub/McpServerManager/build/*.cs)",
       "Bash(grep -n \"BuildDesktopMsixCore\" /f/GitHub/McpServerManager/build/*.cs)",
       "Bash(dotnet run:*)",
-      "Bash(find F:GitHubMcpServerManager -type f -name *.yaml -o -name *.yml)"
+      "Bash(find F:GitHubMcpServerManager -type f -name *.yaml -o -name *.yml)",
+      "Bash(git submodule:*)"
     ]
   }
 }
