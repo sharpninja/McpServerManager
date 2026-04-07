@@ -4,8 +4,8 @@
  * When no operators are present, space-separated terms are treated as an AND chain.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.evaluate = evaluate;
 exports.parseFilterText = parseFilterText;
+exports.evaluate = evaluate;
 function tokenize(input) {
     const tokens = [];
     let index = 0;
@@ -47,7 +47,13 @@ function tokenize(input) {
             continue;
         }
         const start = index;
-        while (index < input.length && !/\s/.test(input[index] ?? '') && input.slice(index, index + 2) !== '&&' && input.slice(index, index + 2) !== '||' && input[index] !== '!' && input[index] !== '(' && input[index] !== ')') {
+        while (index < input.length &&
+            !/\s/.test(input[index] ?? '') &&
+            input.slice(index, index + 2) !== '&&' &&
+            input.slice(index, index + 2) !== '||' &&
+            input[index] !== '!' &&
+            input[index] !== '(' &&
+            input[index] !== ')') {
             index += 1;
         }
         tokens.push({ type: 'term', value: input.slice(start, index) });
@@ -125,15 +131,15 @@ function parseFilterText(input) {
         return null;
     }
     if (!hasExplicitOperators(tokens)) {
-        const terms = tokens.filter((token) => token.type === 'term').map((token) => token.value);
+        const terms = tokens
+            .filter((token) => token.type === 'term')
+            .map((token) => token.value);
         if (terms.length === 0) {
             return null;
         }
-        let expr = { kind: 'term', value: terms[0] };
-        for (let i = 1; i < terms.length; i++) {
-            expr = { kind: 'and', left: expr, right: { kind: 'term', value: terms[i] } };
-        }
-        return expr;
+        return terms
+            .slice(1)
+            .reduce((expr, term) => ({ kind: 'and', left: expr, right: { kind: 'term', value: term } }), { kind: 'term', value: terms[0] });
     }
     return parseOr(tokens, { i: 0 });
 }
@@ -153,3 +159,4 @@ function evaluate(expr, searchable) {
             return evaluate(expr.left, searchable) || evaluate(expr.right, searchable);
     }
 }
+//# sourceMappingURL=filterExpr.js.map

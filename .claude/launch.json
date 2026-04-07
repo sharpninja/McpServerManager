@@ -17,6 +17,12 @@
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "src/McpServerManager.Desktop"],
       "autoPort": true
+    },
+    {
+      "name": "McpServerManager.Desktop (WSL)",
+      "runtimeExecutable": "wsl",
+      "runtimeArgs": ["dotnet", "run", "--project", "src/McpServerManager.Desktop"],
+      "autoPort": true
     }
   ]
 }
