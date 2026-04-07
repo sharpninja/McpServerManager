@@ -21,6 +21,7 @@ artifacts/
 
 AGENTS-README-FIRST.yaml
 *.nupkg
+*.vsix
 *.py
 /.codex/session-log-buffer.backfilled-20260306T184008Z.md
 /.codex/session-log-buffer.md

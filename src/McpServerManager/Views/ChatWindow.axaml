@@ -68,6 +68,7 @@
                                 <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="16"
                                            IsVisible="{Binding Role, Converter={StaticResource RoleToVisibility}, ConverterParameter=user}"/>
                                 <md:MarkdownScrollViewer Markdown="{Binding Text}" Margin="0"
+                                           SelectionEnabled="True"
                                            IsVisible="{Binding Role, Converter={StaticResource RoleToVisibility}, ConverterParameter=assistant}"/>
                             </StackPanel>
                         </Border>
