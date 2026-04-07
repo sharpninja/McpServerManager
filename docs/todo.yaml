@@ -1154,7 +1154,6 @@ mvp-mcp:
       done: true
     - task: Audit the completed implementation against the MCP TODO scope and rerun non-destructive validation before closing the item.
       done: true
-  medium-priority: []
 director:
   medium-priority:
   - id: DIR-UI-001
