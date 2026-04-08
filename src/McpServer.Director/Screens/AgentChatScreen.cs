@@ -1,8 +1,12 @@
+extern alias MarkdigSigned;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using McpServer.Client.Models;
 using Terminal.Gui;
+
+using MarkdigSigned::Markdig;
+using MarkdigSigned::Markdig.Syntax;
 
 namespace McpServer.Director.Screens;
 
