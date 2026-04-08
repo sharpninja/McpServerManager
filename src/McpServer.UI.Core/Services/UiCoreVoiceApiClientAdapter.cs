@@ -2,12 +2,12 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Bridges <see cref="McpVoiceConversationService"/> to UI.Core's <see cref="IVoiceApiClient"/>

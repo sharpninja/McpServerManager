@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using McpServer.Client;
 using McpServer.Client.Models;
-using McpServer.Director.Auth;
+using McpServerManager.Director.Auth;
 using McpServer.McpAgent;
 using McpServer.McpAgent.Hosting;
 using McpServer.McpAgent.PowerShellSessions;
@@ -16,7 +16,7 @@ using System.ClientModel.Primitives;
 using OpenAIChatClient = OpenAI.Chat.ChatClient;
 using OpenAIClientOptions = OpenAI.OpenAIClientOptions;
 
-namespace McpServer.Director.Commands;
+namespace McpServerManager.Director.Commands;
 
 internal static class AgentHostCommand
 {
@@ -61,7 +61,11 @@ internal static class AgentHostCommand
                     (services, directorContext) => ConfigureHostedAgentServices(services, directorContext, settings));
                 application = new DirectorAgentConsoleApplication(
                     serviceProvider.GetRequiredService<IMcpHostedAgentFactory>().CreateHostedAgent(),
-                    settings);
+                    settings,
+                    serviceProvider.GetRequiredService<ReplWorkflowToolAdapter>(),
+                    serviceProvider.GetRequiredService<McpServer.Repl.Core.ITodoWorkflow>(),
+                    serviceProvider.GetRequiredService<McpServer.Repl.Core.IRequirementsWorkflow>(),
+                    serviceProvider.GetRequiredService<McpServer.Repl.Core.IGenericClientPassthrough>());
                 using (application)
                 {
                     var args = prompt.Length == 0
@@ -118,6 +122,22 @@ internal static class AgentHostCommand
             options.Description = settings.AgentDescription;
             options.SourceType = settings.SourceType;
         });
+
+        // Register REPL workflow services for richer TODO, requirements, and client passthrough tools.
+        services.AddSingleton<McpServer.Repl.Core.ISessionLogWorkflow>(sp =>
+            new McpServer.Repl.Core.SessionLogWorkflow(
+                sp.GetRequiredService<McpServer.Client.McpServerClient>().SessionLog,
+                TimeProvider.System));
+        services.AddSingleton<McpServer.Repl.Core.ITodoWorkflow>(sp =>
+            new McpServer.Repl.Core.TodoWorkflow(
+                sp.GetRequiredService<McpServer.Client.McpServerClient>().Todo));
+        services.AddSingleton<McpServer.Repl.Core.IRequirementsWorkflow>(sp =>
+            new McpServer.Repl.Core.RequirementsWorkflow(
+                sp.GetRequiredService<McpServer.Client.McpServerClient>().Requirements));
+        services.AddSingleton<McpServer.Repl.Core.IGenericClientPassthrough>(sp =>
+            new McpServer.Repl.Core.GenericClientPassthrough(
+                sp.GetRequiredService<McpServer.Client.McpServerClient>()));
+        services.AddSingleton<ReplWorkflowToolAdapter>();
     }
 }
 
@@ -129,6 +149,9 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
     private readonly ChatClientAgent _chatAgent;
     private readonly object _powerShellCommandSync = new();
     private readonly ChatClientAgentRunOptions _runOptions;
+    private readonly McpServer.Repl.Core.ITodoWorkflow _replTodo;
+    private readonly McpServer.Repl.Core.IRequirementsWorkflow _replRequirements;
+    private readonly McpServer.Repl.Core.IGenericClientPassthrough _replPassthrough;
     private CancellationTokenSource? _activePowerShellCommandCancellationSource;
     private AgentSession? _agentSession;
     private string? _powerShellSessionId;
@@ -139,13 +162,29 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
     private int _historyBrowseIndex = -1;
     private string _historyScratchLine = "";
 
-    public DirectorAgentConsoleApplication(IMcpHostedAgent hostedAgent, DirectorAgentSettings settings)
+    public DirectorAgentConsoleApplication(
+        IMcpHostedAgent hostedAgent,
+        DirectorAgentSettings settings,
+        ReplWorkflowToolAdapter replAdapter,
+        McpServer.Repl.Core.ITodoWorkflow replTodo,
+        McpServer.Repl.Core.IRequirementsWorkflow replRequirements,
+        McpServer.Repl.Core.IGenericClientPassthrough replPassthrough)
     {
         _hostedAgent = hostedAgent ?? throw new ArgumentNullException(nameof(hostedAgent));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _replTodo = replTodo ?? throw new ArgumentNullException(nameof(replTodo));
+        _replRequirements = replRequirements ?? throw new ArgumentNullException(nameof(replRequirements));
+        _replPassthrough = replPassthrough ?? throw new ArgumentNullException(nameof(replPassthrough));
         _chatClient = CreateChatClient(settings);
         _chatAgent = hostedAgent.CreateChatClientAgent(_chatClient);
         _runOptions = hostedAgent.CreateRunOptions();
+
+        // Merge REPL workflow tools into the agent's tool set
+        var chatOptions = _runOptions.ChatOptions ??= new Microsoft.Extensions.AI.ChatOptions();
+        chatOptions.Tools ??= new List<AITool>();
+        foreach (var tool in replAdapter.CreateTools())
+            chatOptions.Tools.Add(tool);
+
         _powerShellCurrentLocation = settings.WorkspacePath;
         _verbosity = settings.Verbosity;
         LoadConsoleStateFromDisk();
@@ -325,6 +364,16 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
                     Console.WriteLine();
                     return Task.CompletedTask;
                 };
+                return true;
+            case "/todo":
+                commandAction = ct => HandleTodoCommandAsync(input, ct);
+                return true;
+            case "/requirements":
+            case "/reqs":
+                commandAction = ct => HandleRequirementsCommandAsync(input, ct);
+                return true;
+            case "/client":
+                commandAction = ct => HandleClientCommandAsync(input, ct);
                 return true;
             default:
                 commandAction = _ =>
@@ -1028,12 +1077,21 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
     private void WriteHelp()
     {
         Console.WriteLine("Commands:");
-        Console.WriteLine("  /help    Show this help text.");
-        Console.WriteLine("  /tools   List the MCP-backed tools attached to the hosted agent.");
-        Console.WriteLine("  /session Show the current MCP session-log identifier.");
-        Console.WriteLine("  /v N     Set verbosity level (1=concise, 2=balanced, 3=detailed).");
-        Console.WriteLine("  /new     Start a fresh conversation and session log.");
-        Console.WriteLine("  /exit    Exit the Director agent host.");
+        Console.WriteLine("  /help              Show this help text.");
+        Console.WriteLine("  /tools             List the MCP-backed tools attached to the hosted agent.");
+        Console.WriteLine("  /session           Show the current MCP session-log identifier.");
+        Console.WriteLine("  /v N               Set verbosity level (1=concise, 2=balanced, 3=detailed).");
+        Console.WriteLine("  /new               Start a fresh conversation and session log.");
+        Console.WriteLine("  /exit              Exit the Director agent host.");
+        Console.WriteLine();
+        Console.WriteLine("REPL workflow commands:");
+        Console.WriteLine("  /todo              List all TODO items.");
+        Console.WriteLine("  /todo <keyword>    Search TODOs by keyword.");
+        Console.WriteLine("  /todo select <id>  Select a TODO as the active context.");
+        Console.WriteLine("  /todo get <id>     Show TODO details.");
+        Console.WriteLine("  /requirements      List functional requirements summary.");
+        Console.WriteLine("  /reqs              Alias for /requirements.");
+        Console.WriteLine("  /client <c>.<m>    Invoke McpServerClient sub-client method (e.g. /client context.SearchAsync).");
         Console.WriteLine();
         Console.WriteLine("Prompt behavior:");
         Console.WriteLine("  - The prompt shows model [verbosity] <location>> (model id from MCP_AGENT_MODEL_NAME or default).");
@@ -1052,6 +1110,91 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
         Console.WriteLine("Attached MCP tools:");
         foreach (var tool in _hostedAgent.Registration.Tools)
             Console.WriteLine($"  - {tool.Name}");
+
+        var replTools = _runOptions.ChatOptions?.Tools?
+            .Where(t => t.Name.StartsWith("repl_", StringComparison.Ordinal))
+            .ToList();
+        if (replTools is { Count: > 0 })
+        {
+            Console.WriteLine();
+            Console.WriteLine("REPL workflow tools:");
+            foreach (var tool in replTools)
+                Console.WriteLine($"  - {tool.Name}");
+        }
+
+        Console.WriteLine();
+    }
+
+    private async Task HandleTodoCommandAsync(string input, CancellationToken cancellationToken)
+    {
+        var parts = input.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var subCommand = parts.Length > 1 ? parts[1] : null;
+
+        if (string.Equals(subCommand, "select", StringComparison.OrdinalIgnoreCase) && parts.Length > 2)
+        {
+            await _replTodo.SelectAsync(parts[2], cancellationToken).ConfigureAwait(false);
+            var sel = _replTodo.CurrentSelection();
+            Console.WriteLine($"Selected: {sel?.Id} — {sel?.Title} [{sel?.Priority}]");
+            Console.WriteLine();
+            return;
+        }
+
+        if (string.Equals(subCommand, "get", StringComparison.OrdinalIgnoreCase) && parts.Length > 2)
+        {
+            var item = await _replTodo.GetAsync(parts[2], cancellationToken).ConfigureAwait(false);
+            Console.WriteLine($"{item.Id}  {item.Title}");
+            Console.WriteLine($"  Section: {item.Section}  Priority: {item.Priority}  Done: {item.Done}");
+            if (!string.IsNullOrWhiteSpace(item.Estimate)) Console.WriteLine($"  Estimate: {item.Estimate}");
+            if (item.Description.Count > 0) Console.WriteLine($"  Description: {string.Join(" ", item.Description)}");
+            Console.WriteLine();
+            return;
+        }
+
+        // Default: query with optional keyword
+        var keyword = parts.Length > 1 ? string.Join(' ', parts.Skip(1)) : null;
+        var result = await _replTodo.QueryAsync(keyword: keyword, cancellationToken: cancellationToken).ConfigureAwait(false);
+        Console.WriteLine($"TODOs ({result.TotalCount} total):");
+        foreach (var todo in result.Items)
+        {
+            var done = todo.Done ? "[x]" : "[ ]";
+            Console.WriteLine($"  {done} {todo.Id,-25} {todo.Priority,-8} {todo.Title}");
+        }
+        Console.WriteLine();
+    }
+
+    private async Task HandleRequirementsCommandAsync(string input, CancellationToken cancellationToken)
+    {
+        var result = await _replRequirements.ListFrAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+        Console.WriteLine($"Functional Requirements ({result.TotalCount} total):");
+        foreach (var fr in result.Items)
+            Console.WriteLine($"  {fr.Id,-20} {fr.Status,-12} {fr.Title}");
+        Console.WriteLine();
+    }
+
+    private async Task HandleClientCommandAsync(string input, CancellationToken cancellationToken)
+    {
+        // Format: /client <clientName>.<methodName> [json-args]
+        var parts = input.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length < 2 || !parts[1].Contains('.'))
+        {
+            Console.Error.WriteLine("Usage: /client <clientName>.<methodName> [json-args]");
+            Console.Error.WriteLine("Example: /client context.SearchAsync {\"query\":\"auth\"}");
+            Console.Error.WriteLine();
+            return;
+        }
+
+        var dotIndex = parts[1].IndexOf('.');
+        var clientName = parts[1][..dotIndex];
+        var methodName = parts[1][(dotIndex + 1)..];
+        var argsJson = parts.Length > 2 ? parts[2] : null;
+
+        var arguments = string.IsNullOrWhiteSpace(argsJson)
+            ? new Dictionary<string, object?>()
+            : JsonSerializer.Deserialize<Dictionary<string, object?>>(argsJson) ?? new Dictionary<string, object?>();
+
+        var result = await _replPassthrough.InvokeAsync(clientName, methodName, arguments, cancellationToken).ConfigureAwait(false);
+        var json = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        Console.WriteLine(json);
         Console.WriteLine();
     }
 

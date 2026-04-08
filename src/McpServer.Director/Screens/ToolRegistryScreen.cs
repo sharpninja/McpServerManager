@@ -1,11 +1,11 @@
 using System.Text;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Terminal.Gui;
 
-namespace McpServer.Director.Screens;
+namespace McpServerManager.Director.Screens;
 
 /// <summary>
 /// Terminal.Gui screen for Tool Registry tool and bucket management.

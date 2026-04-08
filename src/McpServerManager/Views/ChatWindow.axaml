@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:McpServerManager.ViewModels"
-        xmlns:models="using:McpServer.UI.Core.Models"
+        xmlns:models="using:McpServerManager.UI.Core.Models"
         xmlns:conv="using:McpServerManager.Converters"
         xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
         x:Class="McpServerManager.Views.ChatWindow"
@@ -68,6 +68,7 @@
                                 <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="16"
                                            IsVisible="{Binding Role, Converter={StaticResource RoleToVisibility}, ConverterParameter=user}"/>
                                 <md:MarkdownScrollViewer Markdown="{Binding Text}" Margin="0"
+                                           SelectionEnabled="True"
                                            IsVisible="{Binding Role, Converter={StaticResource RoleToVisibility}, ConverterParameter=assistant}"/>
                             </StackPanel>
                         </Border>
@@ -77,7 +78,7 @@
         </ScrollViewer>
         <Border Grid.Row="4" Background="#f0f0f0" Padding="8" BorderBrush="#ddd" BorderThickness="0,1,0,0">
             <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
-                <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding CurrentInput}" Watermark="Ask about your logs..."
+                <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding CurrentInput}" PlaceholderText="Ask about your logs..."
                          MinHeight="36" Margin="0,0,8,0" KeyDown="OnInputKeyDown" FontSize="14"/>
                 <Button Grid.Row="0" Grid.Column="1" Content="Send" Command="{Binding SendCommand}"
                         IsEnabled="{Binding !IsLoading}" MinWidth="70" FontSize="14"/>

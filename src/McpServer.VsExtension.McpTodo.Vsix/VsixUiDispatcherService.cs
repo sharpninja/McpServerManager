@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.VsExtension.McpTodo;
+namespace McpServerManager.VsExtension.McpTodo;
 
 internal sealed class VsixUiDispatcherService : StrategyUiDispatcherService
 {

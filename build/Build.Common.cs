@@ -472,10 +472,41 @@ partial class Build
         File.WriteAllText(propsPath, updated);
     }
 
+    private string ResolveAdbPath()
+    {
+        // Check if adb is already on the system PATH.
+        if (CommandExists("adb"))
+            return "adb";
+
+        // Try ANDROID_HOME / ANDROID_SDK_ROOT environment variables.
+        foreach (var envVar in new[] { "ANDROID_HOME", "ANDROID_SDK_ROOT" })
+        {
+            var sdkRoot = Environment.GetEnvironmentVariable(envVar);
+            if (!string.IsNullOrWhiteSpace(sdkRoot))
+            {
+                var candidate = Path.Combine(sdkRoot, "platform-tools", "adb.exe");
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+        }
+
+        // Try the default Windows SDK install location.
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrWhiteSpace(localAppData))
+        {
+            var candidate = Path.Combine(localAppData, "Android", "Sdk", "platform-tools", "adb.exe");
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        // Fallback — let the caller handle the missing-adb error.
+        return "adb";
+    }
+
     private List<AndroidDeviceInfo> GetAndroidDevicesCore()
     {
         var devices = new List<AndroidDeviceInfo>();
-        var adbCheck = InvokeProcess("adb", new List<string> { "devices", "-l" }, RepoRootPath, false);
+        var adbCheck = InvokeProcess(ResolveAdbPath(), new List<string> { "devices", "-l" }, RepoRootPath, false);
         if (adbCheck.ExitCode != 0)
         {
             return devices;

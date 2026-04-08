@@ -6,7 +6,7 @@ using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Microsoft.Extensions.Logging;
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Models;
 using McpServerManager.Core.Services;
 
 namespace McpServerManager.Android.Services;

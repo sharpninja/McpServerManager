@@ -1,7 +1,7 @@
-using McpServer.Director.Helpers;
+using McpServerManager.Director.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 /// <summary>
 /// Unit tests for <see cref="BrowserLauncher"/> guard-clause behavior.

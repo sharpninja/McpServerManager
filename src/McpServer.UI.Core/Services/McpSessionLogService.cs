@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using McpServer.Client;
-using McpServer.UI.Core.Models.Json;
+using McpServerManager.UI.Core.Models.Json;
 using ClientModels = McpServer.Client.Models;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 public sealed class McpSessionLogService
 {

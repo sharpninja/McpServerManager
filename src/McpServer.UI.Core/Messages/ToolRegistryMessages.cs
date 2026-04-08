@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query to list all tool definitions.</summary>
 public sealed record ListToolsQuery(string? WorkspacePath = null) : IQuery<ListToolsResult>;

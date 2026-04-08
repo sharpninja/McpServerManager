@@ -1,9 +1,9 @@
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Terminal.Gui;
 
-namespace McpServer.Director.Screens;
+namespace McpServerManager.Director.Screens;
 
 /// <summary>
 /// Terminal.Gui screen for viewing and editing server configuration key/value pairs.

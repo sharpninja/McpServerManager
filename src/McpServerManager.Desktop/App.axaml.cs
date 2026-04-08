@@ -1,6 +1,6 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core.Plugins;
+
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -8,7 +8,7 @@ using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
 using McpServerManager.Desktop.Services;
 using McpServerManager.Desktop.Views;
-using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
+using UiDispatcherHost = McpServerManager.UI.Core.Services.UiDispatcherHost;
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -16,7 +16,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.IO;
 using System.Threading.Tasks;
-using StatusViewModel = McpServer.UI.Core.ViewModels.StatusViewModel;
+using StatusViewModel = McpServerManager.UI.Core.ViewModels.StatusViewModel;
 
 namespace McpServerManager.Desktop;
 
@@ -37,7 +37,6 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            DisableAvaloniaDataAnnotationValidation();
             desktop.Exit += (_, _) => DisposeDesktopServices();
 
             try
@@ -178,14 +177,6 @@ public partial class App : Application
         _mainWindowSession = null;
         _connectionServices?.Dispose();
         _connectionServices = null;
-    }
-
-    private void DisableAvaloniaDataAnnotationValidation()
-    {
-        var dataValidationPluginsToRemove =
-            BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
-        foreach (var plugin in dataValidationPluginsToRemove)
-            BindingPlugins.DataValidators.Remove(plugin);
     }
 
     private static void WireGlobalExceptionHandlers()

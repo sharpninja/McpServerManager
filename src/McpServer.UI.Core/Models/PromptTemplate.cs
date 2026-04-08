@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Models;
+namespace McpServerManager.UI.Core.Models;
 
 /// <summary>
 /// Prompt template with display name and prompt content.

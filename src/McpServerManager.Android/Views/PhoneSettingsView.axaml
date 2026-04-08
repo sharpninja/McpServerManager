@@ -13,7 +13,7 @@
                      TextWrapping="Wrap" Opacity="0.7" FontSize="18"/>
           <TextBlock Text="Default language" FontSize="18" FontWeight="SemiBold"/>
           <TextBox Text="{Binding VoiceLanguage, Mode=TwoWay}"
-                   Watermark="en-US"
+                   PlaceholderText="en-US"
                    FontSize="20"/>
           <CheckBox Content="Auto-continue voice chat after each response"
                     IsChecked="{Binding AutoContinueEnabled, Mode=TwoWay}"
@@ -39,7 +39,7 @@
                     FontSize="19"/>
           <TextBlock Text="Picovoice access key" FontSize="18" FontWeight="SemiBold"/>
           <TextBox Text="{Binding PicovoiceAccessKey, Mode=TwoWay}"
-                   Watermark="Optional when already set by environment or metadata"
+                   PlaceholderText="Optional when already set by environment or metadata"
                    FontSize="19"/>
         </StackPanel>
       </Border>
@@ -52,7 +52,7 @@
           <TextBox Text="{Binding SpeechFilterWords, Mode=TwoWay}"
                    AcceptsReturn="True"
                    TextWrapping="Wrap"
-                   Watermark="Enter filter phrases, one per line..."
+                   PlaceholderText="Enter filter phrases, one per line..."
                    FontSize="20"
                    MinHeight="200"
                    VerticalContentAlignment="Top"/>

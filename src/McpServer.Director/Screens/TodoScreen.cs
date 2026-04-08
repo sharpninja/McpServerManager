@@ -1,9 +1,9 @@
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.ViewModels;
 using Terminal.Gui;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace McpServer.Director.Screens;
+namespace McpServerManager.Director.Screens;
 
 /// <summary>Terminal.Gui screen for TODO item management.</summary>
 internal sealed class TodoScreen : View
@@ -729,7 +729,7 @@ internal sealed class TodoScreen : View
 
         var closeButton = new Button { Text = "Close" };
         var cts = new CancellationTokenSource();
-        McpServer.UI.Core.Messages.TodoPromptOutput? finalOutput = null;
+        McpServerManager.UI.Core.Messages.TodoPromptOutput? finalOutput = null;
         string? finalError = null;
         var dialogClosed = 0;
 
@@ -779,7 +779,7 @@ internal sealed class TodoScreen : View
                 }
 
                 var text = string.Join(Environment.NewLine, lines);
-                finalOutput = new McpServer.UI.Core.Messages.TodoPromptOutput(
+                finalOutput = new McpServerManager.UI.Core.Messages.TodoPromptOutput(
                     TodoId: todoId,
                     PromptType: promptType,
                     Lines: lines,
@@ -1133,7 +1133,7 @@ internal sealed class TodoScreen : View
         });
     }
 
-    private void ShowRequirementsInDetailPane(string todoId, McpServer.UI.Core.Messages.TodoRequirementsAnalysis analysis)
+    private void ShowRequirementsInDetailPane(string todoId, McpServerManager.UI.Core.Messages.TodoRequirementsAnalysis analysis)
     {
         var lines = new List<string>
         {
@@ -1172,7 +1172,7 @@ internal sealed class TodoScreen : View
         });
     }
 
-    private void ShowPromptInDetailPane(McpServer.UI.Core.Messages.TodoPromptOutput output)
+    private void ShowPromptInDetailPane(McpServerManager.UI.Core.Messages.TodoPromptOutput output)
     {
         Application.Invoke(() =>
         {
@@ -1183,7 +1183,7 @@ internal sealed class TodoScreen : View
         });
     }
 
-    private static string FormatDetail(McpServer.UI.Core.Messages.TodoDetail detail)
+    private static string FormatDetail(McpServerManager.UI.Core.Messages.TodoDetail detail)
     {
         var lines = new List<string>
         {

@@ -4,10 +4,10 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using McpServer.Client;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.ViewModels;
-using McpServer.Web.Adapters;
-using McpServer.Web.Authorization;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.ViewModels;
+using McpServerManager.Web.Adapters;
+using McpServerManager.Web.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -15,7 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
 
-namespace McpServer.Web.Tests;
+namespace McpServerManager.Web.Tests;
 
 public sealed class WebMcpContextAuthRecoveryTests
 {

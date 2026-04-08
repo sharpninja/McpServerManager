@@ -1,20 +1,20 @@
 using System.Collections;
 using System.Reflection;
 using McpServer.Cqrs;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.Tests.TestInfrastructure;
-using McpServer.UI.Core.ViewModels;
-using McpServer.UI.Core.ViewModels.Base;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.Tests.TestInfrastructure;
+using McpServerManager.UI.Core.ViewModels;
+using McpServerManager.UI.Core.ViewModels.Base;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
 
-namespace McpServer.UI.Core.Tests.ViewModels;
+namespace McpServerManager.UI.Core.Tests.ViewModels;
 
 public sealed class AreaViewModelBehaviorTests
 {
-    private static readonly Assembly UiCoreAssembly = typeof(McpServer.UI.Core.ServiceCollectionExtensions).Assembly;
+    private static readonly Assembly UiCoreAssembly = typeof(McpServerManager.UI.Core.ServiceCollectionExtensions).Assembly;
     private static readonly Type AreaListBaseType = typeof(AreaListViewModelBase<>);
     private static readonly Type AreaDetailBaseType = typeof(AreaDetailViewModelBase<>);
 
@@ -148,7 +148,7 @@ public sealed class AreaViewModelBehaviorTests
             .GetTypes()
             .Where(t =>
                 t is { IsInterface: true } &&
-                t.Namespace == "McpServer.UI.Core.Services" &&
+                t.Namespace == "McpServerManager.UI.Core.Services" &&
                 t.Name.EndsWith("ApiClient", StringComparison.Ordinal))
             .OrderBy(t => t.FullName, StringComparer.Ordinal);
 

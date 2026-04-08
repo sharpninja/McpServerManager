@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query for <c>/mcpserver/tunnel/list</c>.</summary>
 public sealed record ListTunnelsQuery : IQuery<TunnelListSnapshot>;

@@ -1,0 +1,28 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "McpServer.Web",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/McpServer.Web"],
+      "port": 39984
+    },
+    {
+      "name": "McpServer.Director",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/McpServer.Director"]
+    },
+    {
+      "name": "McpServerManager.Desktop",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/McpServerManager.Desktop"],
+      "autoPort": true
+    },
+    {
+      "name": "McpServerManager.Desktop (WSL)",
+      "runtimeExecutable": "wsl",
+      "runtimeArgs": ["dotnet", "run", "--project", "src/McpServerManager.Desktop"],
+      "autoPort": true
+    }
+  ]
+}

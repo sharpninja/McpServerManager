@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
-             xmlns:models="using:McpServer.UI.Core.Models"
+             xmlns:models="using:McpServerManager.UI.Core.Models"
              mc:Ignorable="d"
              x:Class="McpServerManager.Desktop.Views.VoiceConversationView"
              x:DataType="vm:VoiceConversationViewModel"
@@ -21,7 +21,7 @@
                         <Button Grid.Column="0" Content="Start Session" Command="{Binding CreateSessionCommand}"/>
                         <Button Grid.Column="1" Content="Refresh Status" Command="{Binding RefreshStatusCommand}"/>
                         <Button Grid.Column="2" Content="End Session" Command="{Binding EndSessionCommand}"/>
-                        <TextBox Grid.Column="4" Width="110" Text="{Binding Language, Mode=TwoWay}" Watermark="en-US"/>
+                        <TextBox Grid.Column="4" Width="110" Text="{Binding Language, Mode=TwoWay}" PlaceholderText="en-US"/>
                     </Grid>
                     <SelectableTextBlock Text="{Binding LastTurnId}" Classes="subtle-text" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
@@ -35,7 +35,7 @@
                              MaxHeight="160"
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
-                             Watermark="Type a message to submit..."/>
+                             PlaceholderText="Type a message to submit..."/>
                     <WrapPanel Orientation="Horizontal" ItemWidth="148">
                         <WrapPanel.Styles>
                             <Style Selector="Button">

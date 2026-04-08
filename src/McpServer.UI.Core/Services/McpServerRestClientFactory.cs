@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using McpServer.Client;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 internal static class McpServerRestClientFactory
 {

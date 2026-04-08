@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Commands;
+namespace McpServerManager.UI.Core.Commands;
 
 /// <summary>
 /// Preview and markdown toggle operations.

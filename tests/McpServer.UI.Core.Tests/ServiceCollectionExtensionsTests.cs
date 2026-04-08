@@ -1,14 +1,14 @@
 using McpServer.Cqrs.Mvvm;
 using McpServer.Cqrs;
-using McpServer.UI.Core.Hosting;
-using McpServer.UI.Core.Tests.TestInfrastructure;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Hosting;
+using McpServerManager.UI.Core.Tests.TestInfrastructure;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
-namespace McpServer.UI.Core.Tests;
+namespace McpServerManager.UI.Core.Tests;
 
 public sealed class ServiceCollectionExtensionsTests
 {
@@ -44,7 +44,7 @@ public sealed class ServiceCollectionExtensionsTests
         services.AddUiCore();
 
         using var sp = services.BuildServiceProvider();
-        var monitor = sp.GetRequiredService<McpServer.UI.Core.Services.BackendConnectionMonitor>();
+        var monitor = sp.GetRequiredService<McpServerManager.UI.Core.Services.BackendConnectionMonitor>();
 
         Assert.NotNull(monitor);
     }

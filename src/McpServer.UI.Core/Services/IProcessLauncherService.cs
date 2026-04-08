@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Host-provided abstraction for launching external processes from UI.Core ViewModels.

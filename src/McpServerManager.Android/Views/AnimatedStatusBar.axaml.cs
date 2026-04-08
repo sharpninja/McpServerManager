@@ -5,7 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Microsoft.Extensions.Logging;
 using McpServerManager.Core.Services;
-using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
+using UiDispatcherHost = McpServerManager.UI.Core.Services.UiDispatcherHost;
 
 namespace McpServerManager.Android.Views;
 

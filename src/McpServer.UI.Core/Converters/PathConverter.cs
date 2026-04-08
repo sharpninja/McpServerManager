@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using Avalonia.Data.Converters;
 
-namespace McpServer.UI.Core.Converters;
+namespace McpServerManager.UI.Core.Converters;
 
 /// <summary>
 /// Converts between Windows paths and WSL-style paths under /mnt (e.g. E:\github\foo → /mnt/e/github/foo).

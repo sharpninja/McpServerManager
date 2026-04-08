@@ -1,4 +1,4 @@
-namespace McpServer.Director.Helpers;
+namespace McpServerManager.Director.Helpers;
 
 /// <summary>
 /// Abstraction for launching URLs in the user's default browser.

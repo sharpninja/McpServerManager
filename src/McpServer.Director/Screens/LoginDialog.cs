@@ -1,9 +1,9 @@
-using McpServer.Director.Auth;
-using McpServer.Director.Handlers;
-using McpServer.Director.Helpers;
+using McpServerManager.Director.Auth;
+using McpServerManager.Director.Handlers;
+using McpServerManager.Director.Helpers;
 using Terminal.Gui;
 
-namespace McpServer.Director.Screens;
+namespace McpServerManager.Director.Screens;
 
 /// <summary>
 /// Terminal.Gui dialog for Keycloak Device Authorization Flow login.

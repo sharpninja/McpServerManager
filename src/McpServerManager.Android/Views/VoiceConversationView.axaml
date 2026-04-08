@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
-             xmlns:models="using:McpServer.UI.Core.Models"
+             xmlns:models="using:McpServerManager.UI.Core.Models"
              mc:Ignorable="d"
              x:Class="McpServerManager.Android.Views.VoiceConversationView"
              x:DataType="vm:VoiceConversationViewModel"
@@ -32,7 +32,7 @@
         <Border Classes="phone-outline-card" Padding="10">
             <Grid ColumnDefinitions="Auto,100,Auto,*,Auto" ColumnSpacing="8">
                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Language"/>
-                <TextBox Grid.Column="1" Text="{Binding Language, Mode=TwoWay}" Watermark="en-US"/>
+                <TextBox Grid.Column="1" Text="{Binding Language, Mode=TwoWay}" PlaceholderText="en-US"/>
                 <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="Last Turn"/>
                 <SelectableTextBlock Grid.Column="3"
                                      Text="{Binding LastTurnId}"
@@ -67,7 +67,7 @@
                          AcceptsReturn="True"
                          TextWrapping="Wrap"
                          Text="{Binding TranscriptInput, Mode=TwoWay}"
-                         Watermark="Type transcript text here..."/>
+                         PlaceholderText="Type transcript text here..."/>
 
                 <!-- Action buttons: 4-column grid -->
                 <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="4" RowSpacing="4">

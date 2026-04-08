@@ -1,16 +1,16 @@
 using Bunit;
 using McpServer.Cqrs;
-using McpServer.UI.Core;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
-namespace McpServer.Web.Tests;
+namespace McpServerManager.Web.Tests;
 
 /// <summary>
 /// Bunit tests covering the Copilot Status / Plan / Implementation prompt buttons and inline output panel
@@ -52,7 +52,7 @@ public sealed class TodoDetailPromptTests
         var api = new TodoApiClientStub { OnGetTodoAsync = (_, _) => Task.FromResult<TodoDetail?>(SampleTodo) };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
         Assert.Contains("Copilot Status", cut.Markup, StringComparison.Ordinal);
@@ -66,7 +66,7 @@ public sealed class TodoDetailPromptTests
         var api = new TodoApiClientStub { OnGetTodoAsync = (_, _) => Task.FromResult<TodoDetail?>(SampleTodo) };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
         Assert.Contains("> Done", cut.Markup, StringComparison.Ordinal);
@@ -94,7 +94,7 @@ public sealed class TodoDetailPromptTests
         };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
         cut.FindAll("button").First(b => b.TextContent.Contains("Done", StringComparison.Ordinal)).Click();
@@ -112,7 +112,7 @@ public sealed class TodoDetailPromptTests
         var api = new TodoApiClientStub();
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, string.Empty));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, string.Empty));
 
         // Should show blank-slate, not the buttons
         cut.WaitForAssertion(() => Assert.Contains("No todo selected", cut.Markup, StringComparison.Ordinal));
@@ -139,7 +139,7 @@ public sealed class TodoDetailPromptTests
         };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
 
         // Wait for detail to load
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
@@ -174,7 +174,7 @@ public sealed class TodoDetailPromptTests
         };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
 
@@ -202,7 +202,7 @@ public sealed class TodoDetailPromptTests
         };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
 
@@ -229,7 +229,7 @@ public sealed class TodoDetailPromptTests
         };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
 
@@ -259,7 +259,7 @@ public sealed class TodoDetailPromptTests
         };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
 
@@ -288,7 +288,7 @@ public sealed class TodoDetailPromptTests
         };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
 

@@ -1,8 +1,8 @@
 using System.CommandLine;
 using Spectre.Console;
-using static McpServer.Director.Commands.CommandHelpers;
+using static McpServerManager.Director.Commands.CommandHelpers;
 
-namespace McpServer.Director.Commands;
+namespace McpServerManager.Director.Commands;
 
 /// <summary>
 /// CLI configuration commands for Director defaults (e.g., default MCP server URL).

@@ -1,12 +1,12 @@
 using System.CommandLine;
-using McpServer.Director.Auth;
-using McpServer.Director.Helpers;
-using McpServer.UI.Core.Messages;
+using McpServerManager.Director.Auth;
+using McpServerManager.Director.Helpers;
+using McpServerManager.UI.Core.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
-using static McpServer.Director.Commands.CommandHelpers;
+using static McpServerManager.Director.Commands.CommandHelpers;
 
-namespace McpServer.Director.Commands;
+namespace McpServerManager.Director.Commands;
 
 /// <summary>
 /// FR-MCP-030: Authentication commands for the Director CLI.

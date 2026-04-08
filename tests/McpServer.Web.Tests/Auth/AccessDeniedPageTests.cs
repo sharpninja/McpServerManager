@@ -1,7 +1,7 @@
-using McpServer.Web.Tests.TestInfrastructure;
+using McpServerManager.Web.Tests.TestInfrastructure;
 using Xunit;
 
-namespace McpServer.Web.Tests.Auth;
+namespace McpServerManager.Web.Tests.Auth;
 
 /// <summary>
 /// Integration tests for the <c>/access-denied</c> Blazor page.

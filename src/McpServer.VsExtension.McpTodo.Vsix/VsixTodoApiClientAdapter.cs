@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
-using McpServer.VsExtension.McpTodo.Models;
-using UiTodoMutationFailureKind = McpServer.UI.Core.Messages.TodoMutationFailureKind;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.VsExtension.McpTodo.Models;
+using UiTodoMutationFailureKind = McpServerManager.UI.Core.Messages.TodoMutationFailureKind;
 
-namespace McpServer.VsExtension.McpTodo;
+namespace McpServerManager.VsExtension.McpTodo;
 
 internal sealed class VsixTodoApiClientAdapter(McpTodoClient client) : ITodoApiClient
 {

@@ -84,7 +84,7 @@
                             ToolTip.Tip="Clear">
                         <TextBlock Text="✕" FontSize="20"/>
                     </Button>
-                    <TextBox Grid.Column="1" x:Name="TextInputBox" Watermark="Type a message..."
+                    <TextBox Grid.Column="1" x:Name="TextInputBox" PlaceholderText="Type a message..."
                              AcceptsReturn="False" TextWrapping="Wrap" FontSize="22"
                              Margin="6,0" MinHeight="38" VerticalContentAlignment="Center"
                              KeyDown="OnTextInputKeyDown"/>

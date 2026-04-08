@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Commands;
+namespace McpServerManager.UI.Core.Commands;
 
 /// <summary>
 /// Union interface for all ViewModel operations invoked by CQRS command handlers.

@@ -1,17 +1,17 @@
 using Bunit;
 using McpServer.Cqrs;
-using McpServer.UI.Core;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.ViewModels;
-using McpServer.Web.Pages.Agents;
+using McpServerManager.UI.Core;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
+using McpServerManager.Web.Pages.Agents;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
-namespace McpServer.Web.Tests;
+namespace McpServerManager.Web.Tests;
 
 public sealed class AgentListPageTests
 {

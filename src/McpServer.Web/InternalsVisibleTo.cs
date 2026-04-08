@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("McpServer.Web.Tests")]
+[assembly: InternalsVisibleTo("McpServerManager.Web.Tests")]

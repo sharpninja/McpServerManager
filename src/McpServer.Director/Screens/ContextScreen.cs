@@ -1,9 +1,9 @@
 using System.Text;
 using McpServer.Cqrs;
-using McpServer.UI.Core.Messages;
+using McpServerManager.UI.Core.Messages;
 using Terminal.Gui;
 
-namespace McpServer.Director.Screens;
+namespace McpServerManager.Director.Screens;
 
 /// <summary>
 /// Terminal.Gui screen for context search, pack, source listing, and index rebuild actions.

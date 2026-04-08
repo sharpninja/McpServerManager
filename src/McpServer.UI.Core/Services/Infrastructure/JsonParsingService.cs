@@ -1,9 +1,9 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.UI.Core.Services.Infrastructure;
+namespace McpServerManager.UI.Core.Services.Infrastructure;
 
 /// <summary>
 /// Host implementation of <see cref="IJsonParsingService"/> backed by <see cref="System.Text.Json"/>.

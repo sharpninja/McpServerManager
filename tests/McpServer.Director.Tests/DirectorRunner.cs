@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 /// <summary>
 /// Helper that invokes the Director CLI executable via <c>dotnet exec</c>
@@ -23,13 +23,19 @@ internal static class DirectorRunner
     /// Runs the Director CLI with the given arguments and returns the exit code,
     /// captured stdout, and captured stderr.
     /// </summary>
-    internal static async Task<CliResult> RunAsync(string args, int timeoutMs = DefaultTimeoutMs)
+    internal static Task<CliResult> RunAsync(string args, int timeoutMs = DefaultTimeoutMs)
+        => RunAsync(args, workingDirectory: RepoRoot, timeoutMs: timeoutMs);
+
+    /// <summary>
+    /// Runs the Director CLI with the given arguments and a custom working directory.
+    /// </summary>
+    internal static async Task<CliResult> RunAsync(string args, string workingDirectory, int timeoutMs = DefaultTimeoutMs)
     {
         var psi = new ProcessStartInfo
         {
             FileName = "dotnet",
             Arguments = $"exec \"{DirectorDll}\" {args}",
-            WorkingDirectory = RepoRoot,
+            WorkingDirectory = workingDirectory,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,

@@ -1,13 +1,13 @@
 using System.Reflection;
 using McpServer.Cqrs;
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Tests.TestInfrastructure;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Tests.TestInfrastructure;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
-namespace McpServer.UI.Core.Tests.Handlers;
+namespace McpServerManager.UI.Core.Tests.Handlers;
 
 public sealed class HandlerApiDispatchTests
 {
@@ -16,12 +16,12 @@ public sealed class HandlerApiDispatchTests
         get
         {
             var data = new TheoryData<Type, Type>();
-            var assembly = typeof(McpServer.UI.Core.ServiceCollectionExtensions).Assembly;
+            var assembly = typeof(McpServerManager.UI.Core.ServiceCollectionExtensions).Assembly;
 
             var handlers = assembly.GetTypes()
                 .Where(t =>
                     t is { IsAbstract: false, IsInterface: false } &&
-                    t.Namespace == "McpServer.UI.Core.Handlers" &&
+                    t.Namespace == "McpServerManager.UI.Core.Handlers" &&
                     t.Name.EndsWith("Handler", StringComparison.Ordinal))
                 .OrderBy(t => t.FullName, StringComparer.Ordinal);
 

@@ -1,9 +1,9 @@
 using System;
 using McpServer.Cqrs;
-using McpServer.UI.Core.Auth;
-using McpServer.UI.Core.Hosting;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.ViewModels;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.Hosting;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using McpServerManager.Core.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -27,7 +27,7 @@ internal static class AndroidAppServiceFactory
         services.AddCqrsDispatcher();
         services.AddCqrsLoggerProvider();
         services.AddCqrsHandlers(typeof(NavigateBackCommand).Assembly);
-        services.AddCqrsHandlers(typeof(McpServer.UI.Core.Commands.InvokeUiActionHandler).Assembly);
+        services.AddCqrsHandlers(typeof(McpServerManager.UI.Core.Commands.InvokeUiActionHandler).Assembly);
         services.AddSingleton<IConnectionAuthService>(_ => new CoreConnectionAuthServiceAdapter());
         services.AddSingleton<CoreConnectionViewModel>();
         return services.BuildServiceProvider();
@@ -67,9 +67,9 @@ internal static class AndroidAppServiceFactory
 
         services.AddSingleton(commandTargetAccessor);
         services.AddSingleton<McpServerManager.Core.Services.IClipboardService>(clipboardService);
-        services.AddSingleton<McpServer.UI.Core.Services.IClipboardService>(sp => sp.GetRequiredService<McpServerManager.Core.Services.IClipboardService>());
+        services.AddSingleton<McpServerManager.UI.Core.Services.IClipboardService>(sp => sp.GetRequiredService<McpServerManager.Core.Services.IClipboardService>());
         services.AddSingleton<McpServerManager.Core.Services.ISystemNotificationService, AndroidSystemNotificationService>();
-        services.AddSingleton<McpServer.UI.Core.Services.ISystemNotificationService>(sp => sp.GetRequiredService<McpServerManager.Core.Services.ISystemNotificationService>());
+        services.AddSingleton<McpServerManager.UI.Core.Services.ISystemNotificationService>(sp => sp.GetRequiredService<McpServerManager.Core.Services.ISystemNotificationService>());
         RegisterUiCoreCommandTargets(services);
         RegisterCoreCommandTargets(services);
 
@@ -114,16 +114,16 @@ internal static class AndroidAppServiceFactory
 
     private static void RegisterUiCoreCommandTargets(IServiceCollection services)
     {
-        services.TryAddSingleton<McpServer.UI.Core.Commands.ICommandTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.INavigationTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.IRequestDetailsTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.IPreviewTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.IArchiveTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.ISessionDataTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.IClipboardTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.IConfigTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.IUiDispatchTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
-        services.TryAddSingleton<McpServer.UI.Core.Commands.ITodoCopilotTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.ICommandTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.INavigationTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IRequestDetailsTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IPreviewTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IArchiveTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.ISessionDataTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IClipboardTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IConfigTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IUiDispatchTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.ITodoCopilotTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
     }
 
     private static void RegisterCoreCommandTargets(IServiceCollection services)
@@ -156,7 +156,7 @@ internal sealed class DeferredCommandTargetAccessor
         }
     }
 
-    public McpServer.UI.Core.Commands.ICommandTarget RequireUiCoreTarget()
+    public McpServerManager.UI.Core.Commands.ICommandTarget RequireUiCoreTarget()
     {
         lock (_sync)
         {

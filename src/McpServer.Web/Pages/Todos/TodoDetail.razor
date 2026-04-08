@@ -156,7 +156,7 @@
     private const string EditorSectionKey = "editor";
     private const string PromptSectionKey = "prompt";
 
-    private bool CanEdit => AuthPolicy.CanExecuteAction(McpServer.UI.Core.Authorization.McpActionKeys.TodoUpdate);
+    private bool CanEdit => AuthPolicy.CanExecuteAction(McpServerManager.UI.Core.Authorization.McpActionKeys.TodoUpdate);
 
     private static readonly string[] PriorityOrder = ["critical", "high", "medium", "low"];
 

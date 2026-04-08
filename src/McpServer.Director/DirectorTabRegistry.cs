@@ -1,7 +1,7 @@
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Navigation;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Navigation;
 
-namespace McpServer.Director;
+namespace McpServerManager.Director;
 
 /// <summary>
 /// In-memory tab registry used by Director to declaratively build tab navigation.

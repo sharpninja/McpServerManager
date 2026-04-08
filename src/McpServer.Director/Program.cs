@@ -3,11 +3,11 @@ using System.Reflection;
 using System.Text.Json;
 using McpServer.Cqrs;
 using McpServer.Cqrs.Mvvm;
-using McpServer.Director.Commands;
+using McpServerManager.Director.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
 
-namespace McpServer.Director;
+namespace McpServerManager.Director;
 
 /// <summary>
 /// TR-MCP-DIR-001, TR-MCP-DIR-003: Director CLI entry point.

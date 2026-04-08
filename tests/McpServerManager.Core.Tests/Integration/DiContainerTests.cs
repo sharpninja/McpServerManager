@@ -1,9 +1,9 @@
 using FluentAssertions;
 using McpServer.Cqrs;
 using McpServer.Client;
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Hosting;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Hosting;
+using McpServerManager.UI.Core.Services;
 using McpServerManager.Core;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
@@ -34,7 +34,7 @@ public sealed class DiContainerTests : IDisposable
     [Fact]
     public void ServiceProvider_Resolves_HealthApiClient()
     {
-        var healthClient = _provider.GetService<McpServer.UI.Core.Services.IHealthApiClient>();
+        var healthClient = _provider.GetService<McpServerManager.UI.Core.Services.IHealthApiClient>();
         healthClient.Should().NotBeNull();
         healthClient.Should().BeOfType<UiCoreHealthApiClientAdapter>();
     }
@@ -51,7 +51,7 @@ public sealed class DiContainerTests : IDisposable
     {
         var roleContext = _provider.GetRequiredService<IRoleContext>();
         var authPolicyService = _provider.GetRequiredService<IAuthorizationPolicyService>();
-        var workspaceContext = _provider.GetRequiredService<McpServer.UI.Core.ViewModels.WorkspaceContextViewModel>();
+        var workspaceContext = _provider.GetRequiredService<McpServerManager.UI.Core.ViewModels.WorkspaceContextViewModel>();
 
         roleContext.GetType().Name.Should().Be("AllowAllRoleContext");
         authPolicyService.GetType().Name.Should().Be("AllowAllAuthorizationPolicyService");
@@ -69,7 +69,7 @@ public sealed class DiContainerTests : IDisposable
     [Fact]
     public void ServiceProvider_Resolves_UiCoreTodoCopilotTarget()
     {
-        var target = _provider.GetService<McpServer.UI.Core.Commands.ITodoCopilotTarget>();
+        var target = _provider.GetService<McpServerManager.UI.Core.Commands.ITodoCopilotTarget>();
         target.Should().NotBeNull();
         target.Should().BeSameAs(_target.Object);
     }
@@ -149,7 +149,7 @@ public sealed class DiContainerTests : IDisposable
         McpServerClient client,
         Uri baseUri)
     {
-        var uiTarget = target.As<McpServer.UI.Core.Commands.ICommandTarget>();
+        var uiTarget = target.As<McpServerManager.UI.Core.Commands.ICommandTarget>();
         var services = new ServiceCollection();
         services.AddMcpHost(options =>
         {

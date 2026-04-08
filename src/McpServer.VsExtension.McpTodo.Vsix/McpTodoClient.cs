@@ -8,9 +8,9 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServer.VsExtension.McpTodo.Models;
+using McpServerManager.VsExtension.McpTodo.Models;
 
-namespace McpServer.VsExtension.McpTodo;
+namespace McpServerManager.VsExtension.McpTodo;
 
 public sealed class McpTodoClient
 {

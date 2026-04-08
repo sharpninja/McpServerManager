@@ -2,7 +2,7 @@ using System;
 using McpServer.Cqrs;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace McpServer.UI.Core.Hosting;
+namespace McpServerManager.UI.Core.Hosting;
 
 public enum McpHostLifetimeStrategy
 {

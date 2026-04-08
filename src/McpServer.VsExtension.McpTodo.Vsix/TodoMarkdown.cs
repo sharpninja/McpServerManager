@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using McpServer.VsExtension.McpTodo.Models;
+using McpServerManager.VsExtension.McpTodo.Models;
 
-namespace McpServer.VsExtension.McpTodo;
+namespace McpServerManager.VsExtension.McpTodo;
 
 /// <summary>Fields extracted from a new-todo template for the CLI command.</summary>
 public sealed class NewTodoFields

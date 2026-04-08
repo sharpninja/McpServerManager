@@ -1,7 +1,7 @@
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.Director;
+namespace McpServerManager.Director;
 
 /// <summary>Director adapter for <see cref="IRepoApiClient"/> backed by <see cref="McpServer.Client.McpServerClient"/>.</summary>
 internal sealed class RepoApiClientAdapter : IRepoApiClient

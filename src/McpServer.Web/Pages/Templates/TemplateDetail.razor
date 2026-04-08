@@ -224,7 +224,7 @@
     private const string VariablesSectionKey = "variables";
     private const string ContentSectionKey = "content";
 
-    private bool CanEdit => AuthPolicy.CanExecuteAction(McpServer.UI.Core.Authorization.McpActionKeys.TemplateUpdate);
+    private bool CanEdit => AuthPolicy.CanExecuteAction(McpServerManager.UI.Core.Authorization.McpActionKeys.TemplateUpdate);
 
     protected override async Task OnParametersSetAsync()
     {

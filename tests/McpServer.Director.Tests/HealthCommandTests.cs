@@ -1,11 +1,16 @@
-namespace McpServer.Director.Tests;
+namespace McpServerManager.Director.Tests;
 
 /// <summary>
 /// Tests for the <c>health</c> command.
-/// Requires the MCP server to be running on the default port.
+/// Spins up a real MCP server instance on a random port and verifies the Director
+/// can connect and report health status.
 /// </summary>
-public sealed class HealthCommandTests
+public sealed class HealthCommandTests : IClassFixture<McpServerFixture>
 {
+    private readonly McpServerFixture _server;
+
+    public HealthCommandTests(McpServerFixture server) => _server = server;
+
     [Fact]
     public async Task HealthHelp_ExitZero()
     {
@@ -18,13 +23,12 @@ public sealed class HealthCommandTests
     [Fact]
     public async Task Health_ReturnsServerStatus()
     {
-        var result = await DirectorRunner.RunAsync("health");
+        var result = await DirectorRunner.RunAsync(
+            $"health --workspace \"{_server.WorkspaceDir}\"",
+            workingDirectory: _server.WorkspaceDir);
 
         Assert.Equal(0, result.ExitCode);
         var output = result.AllOutput;
-        var hasHealthy = output.Contains("healthy", StringComparison.OrdinalIgnoreCase);
-        var hasExpectedEnvironmentFailure = output.Contains("refused", StringComparison.OrdinalIgnoreCase)
-            || output.Contains("actively refused", StringComparison.OrdinalIgnoreCase);
-        Assert.True(hasHealthy || hasExpectedEnvironmentFailure, $"Unexpected output: {output}");
+        Assert.Contains("healthy", output, StringComparison.OrdinalIgnoreCase);
     }
 }

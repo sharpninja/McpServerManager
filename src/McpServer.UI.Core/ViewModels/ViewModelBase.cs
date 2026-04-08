@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 /// <summary>
 /// Base type for UI.Core view models.

@@ -5,7 +5,7 @@ namespace McpServerManager.Core.Services;
 /// <summary>
 /// Adapts the app speech filter singleton to UI.Core settings abstractions.
 /// </summary>
-public sealed class SpeechFilterServiceAdapter : McpServer.UI.Core.Services.ISpeechFilterService
+public sealed class SpeechFilterServiceAdapter : McpServerManager.UI.Core.Services.ISpeechFilterService
 {
     private readonly SpeechFilterService _inner;
 

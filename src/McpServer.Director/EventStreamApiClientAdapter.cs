@@ -1,8 +1,8 @@
 using McpServer.Client;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.Director;
+namespace McpServerManager.Director;
 
 /// <summary>
 /// Director adapter for <see cref="IEventStreamApiClient"/> backed by <see cref="McpServerClient"/>.

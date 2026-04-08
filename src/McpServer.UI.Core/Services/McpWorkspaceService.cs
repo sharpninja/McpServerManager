@@ -6,11 +6,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using McpServer.Client;
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Models;
 using Microsoft.Extensions.Logging;
 using ClientModels = McpServer.Client.Models;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>Client for MCP workspace-management endpoints.</summary>
 public sealed class McpWorkspaceService

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
 
-namespace McpServer.Director;
+namespace McpServerManager.Director;
 
 /// <summary>
 /// TR-MCP-LOG-001: Configures Serilog file-based logging for the Director CLI.

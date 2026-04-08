@@ -4,7 +4,7 @@ using System.IO;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
-namespace McpServer.UI.Core.Models;
+namespace McpServerManager.UI.Core.Models;
 
 /// <summary>Path and content for the prompt templates YAML file (name + template text per item; context is sent to the model with each query).</summary>
 public static class PromptTemplatesIo

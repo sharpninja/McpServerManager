@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Reusable <see cref="IUiDispatcherService"/> implementation that delegates UI marshaling to a strategy.

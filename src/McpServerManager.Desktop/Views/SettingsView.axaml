@@ -20,7 +20,7 @@
             <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Default language"/>
             <TextBox Grid.Row="0" Grid.Column="1"
                      Text="{Binding VoiceLanguage, Mode=TwoWay}"
-                     Watermark="en-US"/>
+                     PlaceholderText="en-US"/>
             <TextBlock Grid.Row="1" Grid.Column="0"/>
             <CheckBox Grid.Row="1" Grid.Column="1"
                       Content="Auto-continue voice chat after each response"
@@ -37,7 +37,7 @@
           <TextBox Text="{Binding SpeechFilterWords, Mode=TwoWay}"
                    AcceptsReturn="True"
                    TextWrapping="Wrap"
-                   Watermark="Enter filter phrases, one per line..."
+                   PlaceholderText="Enter filter phrases, one per line..."
                    FontFamily="Cascadia Code,Consolas,Menlo,monospace"
                    FontSize="14"
                    MinHeight="220"

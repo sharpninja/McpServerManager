@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
-             xmlns:uicorevm="using:McpServer.UI.Core.ViewModels"
+             xmlns:uicorevm="using:McpServerManager.UI.Core.ViewModels"
              xmlns:conv="using:McpServerManager.Core.Converters"
              xmlns:controls="using:McpServerManager.Android.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
@@ -32,7 +32,7 @@
             Background="{DynamicResource SystemAltMediumHighColor}"
             Padding="8" Margin="0,0,0,6" CornerRadius="8">
       <StackPanel Spacing="4">
-        <TextBox Text="{Binding NewTodoTitle, Mode=TwoWay}" Watermark="Title…"/>
+        <TextBox Text="{Binding NewTodoTitle, Mode=TwoWay}" PlaceholderText="Title…"/>
         <StackPanel Orientation="Horizontal" Spacing="8">
           <ComboBox ItemsSource="{x:Static vm:TodoListViewModel.NewPriorityOptions}"
                     SelectedIndex="{Binding NewTodoPriorityIndex}" MinWidth="100"/>
@@ -57,7 +57,7 @@
                 ToolTip.Tip="Text search scope"/>
       <TextBox Grid.Column="2"
                Text="{Binding FilterText, Mode=TwoWay}"
-               Watermark="Filter…" Margin="0,0,4,0"/>
+               PlaceholderText="Filter…" Margin="0,0,4,0"/>
       <Button Grid.Column="3"
               Content="✕" Command="{Binding ClearFiltersCommand}"
               ToolTip.Tip="Clear all filters" Padding="8,4"/>

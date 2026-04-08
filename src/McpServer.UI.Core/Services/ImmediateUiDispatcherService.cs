@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Default dispatcher that executes work inline when no UI dispatcher is supplied by host.

@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core.Plugins;
+
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,8 +11,7 @@ using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
 using System;
 using System.Globalization;
-using System.Linq;
-using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
+using UiDispatcherHost = McpServerManager.UI.Core.Services.UiDispatcherHost;
 
 namespace McpServerManager.Android;
 
@@ -36,7 +35,6 @@ public partial class App : Application
         {
             if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
             {
-                DisableAvaloniaDataAnnotationValidation();
                 AndroidLogcatBridge.EnsureInitialized();
                 AndroidCrashDiagnostics.ReplayPendingDiagnostics();
                 AndroidOidcJwtCacheInvalidationMonitor.EnsureInitialized();
@@ -164,11 +162,4 @@ public partial class App : Application
             "Android Avalonia application crashed while completing framework initialization.");
     }
 
-    private void DisableAvaloniaDataAnnotationValidation()
-    {
-        var dataValidationPluginsToRemove =
-            BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
-        foreach (var plugin in dataValidationPluginsToRemove)
-            BindingPlugins.DataValidators.Remove(plugin);
-    }
 }

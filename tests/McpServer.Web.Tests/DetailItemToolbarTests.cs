@@ -1,16 +1,16 @@
 using Bunit;
 using Bunit.TestDoubles;
 using McpServer.Cqrs;
-using McpServer.UI.Core;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
-namespace McpServer.Web.Tests;
+namespace McpServerManager.Web.Tests;
 
 public sealed class DetailItemToolbarTests
 {
@@ -29,7 +29,7 @@ public sealed class DetailItemToolbarTests
         };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
-        var cut = ctx.Render<McpServer.Web.Pages.Todos.TodoDetail>(parameters => parameters.Add(x => x.TodoId, "TODO-002"));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(parameters => parameters.Add(x => x.TodoId, "TODO-002"));
 
         cut.WaitForAssertion(() =>
         {
@@ -78,7 +78,7 @@ public sealed class DetailItemToolbarTests
         using var ctx = CreateTestContext(services => services.AddSingleton<ISessionLogApiClient>(api));
         ctx.Services.GetRequiredService<BunitNavigationManager>()
             .NavigateTo("/sessions/session-002?agent=Codex&model=gpt-5&text=status");
-        var cut = ctx.Render<McpServer.Web.Pages.Sessions.SessionLogDetail>(parameters => parameters
+        var cut = ctx.Render<McpServerManager.Web.Pages.Sessions.SessionLogDetail>(parameters => parameters
             .Add(x => x.SessionId, "session-002"));
 
         cut.WaitForAssertion(() =>
@@ -119,7 +119,7 @@ public sealed class DetailItemToolbarTests
         using var ctx = CreateTestContext(services => services.AddSingleton<ITemplateApiClient>(api));
         ctx.Services.GetRequiredService<BunitNavigationManager>()
             .NavigateTo("/templates/template-002?category=planning&tag=tag-b&keyword=hello%20world");
-        var cut = ctx.Render<McpServer.Web.Pages.Templates.TemplateDetail>(parameters => parameters
+        var cut = ctx.Render<McpServerManager.Web.Pages.Templates.TemplateDetail>(parameters => parameters
             .Add(x => x.TemplateId, "template-002"));
 
         cut.WaitForAssertion(() =>
@@ -172,7 +172,7 @@ public sealed class DetailItemToolbarTests
         using var ctx = CreateTestContext(services => services.AddSingleton<IWorkspaceApiClient>(api));
         ctx.Services.GetRequiredService<BunitNavigationManager>()
             .NavigateTo($"/workspaces/detail?path={Uri.EscapeDataString(currentPath)}");
-        var cut = ctx.Render<McpServer.Web.Pages.Workspaces.WorkspaceDetail>();
+        var cut = ctx.Render<McpServerManager.Web.Pages.Workspaces.WorkspaceDetail>();
 
         cut.WaitForAssertion(() =>
         {

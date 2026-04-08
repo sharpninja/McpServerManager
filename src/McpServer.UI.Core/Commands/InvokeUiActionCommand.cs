@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using McpServer.Cqrs;
 using Newtonsoft.Json;
 
-namespace McpServer.UI.Core.Commands;
+namespace McpServerManager.UI.Core.Commands;
 
 /// <summary>
 /// Wraps a ViewModel action delegate so it can be dispatched through the CQRS dispatcher.

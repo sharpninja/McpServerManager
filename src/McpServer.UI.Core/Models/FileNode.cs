@@ -2,7 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
 using System.IO;
 
-namespace McpServer.UI.Core.Models;
+namespace McpServerManager.UI.Core.Models;
 
 public partial class FileNode : ObservableObject
 {

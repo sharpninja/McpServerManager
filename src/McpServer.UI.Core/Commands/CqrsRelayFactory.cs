@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using McpServer.Cqrs;
 using McpServer.Cqrs.Mvvm;
 
-namespace McpServer.UI.Core.Commands;
+namespace McpServerManager.UI.Core.Commands;
 
 public static class CqrsRelayFactory
 {

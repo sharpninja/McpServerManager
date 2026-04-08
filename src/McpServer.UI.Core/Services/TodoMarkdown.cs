@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Models;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 #pragma warning disable CS1591
 

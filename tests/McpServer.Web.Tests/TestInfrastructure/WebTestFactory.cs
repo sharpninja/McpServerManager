@@ -7,10 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
 
-namespace McpServer.Web.Tests.TestInfrastructure;
+namespace McpServerManager.Web.Tests.TestInfrastructure;
 
 /// <summary>
 /// Shared factory helpers for <see cref="WebApplicationFactory{TEntryPoint}"/>-based integration tests.
@@ -54,7 +54,7 @@ internal static class WebTestFactory
 
 /// <summary>
 /// <see cref="WebApplicationFactory{Program}"/> subclass that disables DI validation-on-build
-/// (since <see cref="McpServer.Web"/> only registers adapters for its own feature area, not the full
+/// (since <see cref="McpServerManager.Web"/> only registers adapters for its own feature area, not the full
 /// <c>UI.Core</c> handler surface) and stubs out OIDC metadata.
 /// </summary>
 internal sealed class McpWebTestFactory : WebApplicationFactory<Program>

@@ -4,9 +4,9 @@ using System.Text.Json;
 using System.Runtime.InteropServices;
 using System.Linq;
 using System.Globalization;
-using McpServer.UI.Core.Converters;
+using McpServerManager.UI.Core.Converters;
 
-namespace McpServer.UI.Core;
+namespace McpServerManager.UI.Core;
 
 public sealed class AppSettings
 {

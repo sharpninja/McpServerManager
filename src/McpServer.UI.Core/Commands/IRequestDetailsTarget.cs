@@ -1,6 +1,6 @@
-using McpServer.UI.Core.Models.Json;
+using McpServerManager.UI.Core.Models.Json;
 
-namespace McpServer.UI.Core.Commands;
+namespace McpServerManager.UI.Core.Commands;
 
 /// <summary>
 /// Request detail viewing, selection, and search-row interaction.

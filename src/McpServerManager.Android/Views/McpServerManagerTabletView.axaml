@@ -3,8 +3,8 @@
              xmlns:vm="using:McpServerManager.Core.ViewModels"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:models="using:McpServer.UI.Core.Models"
-             xmlns:jsonModels="using:McpServer.UI.Core.Models.Json"
+             xmlns:models="using:McpServerManager.UI.Core.Models"
+             xmlns:jsonModels="using:McpServerManager.UI.Core.Models.Json"
              xmlns:conv="using:McpServerManager.Core.Converters"
              xmlns:beh="using:McpServerManager.Core.Behaviors"
              xmlns:views="using:McpServerManager.Android.Views"
@@ -94,7 +94,7 @@
                     <!-- Search -->
                     <Grid Grid.Row="1" ColumnDefinitions="Auto, *" Margin="0,0,0,4">
                         <SelectableTextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBox Grid.Column="1" Text="{Binding SearchQuery}" Watermark="Search..."/>
+                        <TextBox Grid.Column="1" Text="{Binding SearchQuery}" PlaceholderText="Search..."/>
                     </Grid>
                     <!-- Search results -->
                     <Border Grid.Row="2" MinHeight="80" BorderBrush="{DynamicResource SearchBorderBrush}" BorderThickness="0,0,0,1" Padding="4" Margin="0,0,0,4">

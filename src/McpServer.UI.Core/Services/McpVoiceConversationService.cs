@@ -11,10 +11,10 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Models;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Typed client for MCP voice conversation REST endpoints.

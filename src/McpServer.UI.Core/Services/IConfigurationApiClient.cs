@@ -1,4 +1,4 @@
-namespace McpServer.UI.Core.Services;
+namespace McpServerManager.UI.Core.Services;
 
 /// <summary>Host-provided API abstraction for server configuration management.</summary>
 public interface IConfigurationApiClient

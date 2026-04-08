@@ -15,8 +15,8 @@
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
     <GitVersionSkip>true</GitVersionSkip>
-    <RootNamespace>McpServer.VsExtension.McpTodo</RootNamespace>
-    <AssemblyName>McpServer.VsExtension.McpTodo</AssemblyName>
+    <RootNamespace>McpServerManager.VsExtension.McpTodo</RootNamespace>
+    <AssemblyName>McpServerManager.VsExtension.McpTodo</AssemblyName>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>

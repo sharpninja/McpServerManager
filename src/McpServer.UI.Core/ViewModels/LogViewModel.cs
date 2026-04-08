@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 using Microsoft.Extensions.Logging;
 
-namespace McpServer.UI.Core.ViewModels;
+namespace McpServerManager.UI.Core.ViewModels;
 
 /// <summary>
 /// Log viewer view model backed by an app log source abstraction.

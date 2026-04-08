@@ -1,7 +1,7 @@
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 using Xunit;
 
-namespace McpServer.UI.Core.Tests;
+namespace McpServerManager.UI.Core.Tests;
 
 public sealed class BooleanSearchParserTests
 {

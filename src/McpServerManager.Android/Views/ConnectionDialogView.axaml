@@ -36,7 +36,7 @@
             <TextBox x:Name="HostTextBox"
                      Grid.Column="0"
                      Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                     Watermark="e.g. 10.0.2.2"
+                     PlaceholderText="e.g. 10.0.2.2"
                      IsEnabled="{Binding !IsConnecting}"/>
             <Button Grid.Column="1"
                     Command="{Binding ScanQrCodeCommand}"
@@ -53,7 +53,7 @@
         <SelectableTextBlock Text="Port" FontSize="18"/>
         <TextBox x:Name="PortTextBox"
                  Text="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                 Watermark="e.g. 7147"
+                 PlaceholderText="e.g. 7147"
                  IsEnabled="{Binding !IsConnecting}"/>
 
         <SelectableTextBlock Text="{Binding ErrorMessage}"

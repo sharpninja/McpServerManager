@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace McpServer.VsExtension.McpTodo;
+namespace McpServerManager.VsExtension.McpTodo;
 
 /// <summary>
 /// Boolean filter expression for text filter: terms, !, &amp;&amp;, ||, and parentheses.

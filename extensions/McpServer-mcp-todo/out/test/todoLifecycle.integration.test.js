@@ -39,18 +39,18 @@ const node_test_1 = require("node:test");
 const assert = __importStar(require("node:assert/strict"));
 const http = __importStar(require("http"));
 const fs = __importStar(require("fs"));
-const path_1 = __importStar(require("path"));
+const path = __importStar(require("path"));
 // Import the compiled markdown helpers (no vscode dependency)
 const todoMarkdown_1 = require("../todoMarkdown");
 const markerFileName = 'AGENTS-README-FIRST.yaml';
 function findMarkerPath(startDir) {
     let current = startDir;
     while (true) {
-        const candidate = path_1.join(current, markerFileName);
+        const candidate = path.join(current, markerFileName);
         if (fs.existsSync(candidate)) {
             return candidate;
         }
-        const parent = path_1.dirname(current);
+        const parent = path.dirname(current);
         if (parent === current) {
             return null;
         }

@@ -1,6 +1,6 @@
 using McpServer.Cqrs;
 
-namespace McpServer.UI.Core.Messages;
+namespace McpServerManager.UI.Core.Messages;
 
 /// <summary>Query to retrieve the current effective flattened configuration.</summary>
 public sealed record GetConfigurationValuesQuery : IQuery<IReadOnlyDictionary<string, string>>;

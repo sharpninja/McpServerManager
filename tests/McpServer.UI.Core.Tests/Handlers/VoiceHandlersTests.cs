@@ -1,13 +1,13 @@
-using McpServer.UI.Core.Authorization;
-using McpServer.UI.Core.Handlers;
-using McpServer.UI.Core.Messages;
-using McpServer.UI.Core.Services;
-using McpServer.UI.Core.Tests.TestInfrastructure;
+using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Handlers;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.Tests.TestInfrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
-namespace McpServer.UI.Core.Tests.Handlers;
+namespace McpServerManager.UI.Core.Tests.Handlers;
 
 public sealed class VoiceHandlersTests
 {

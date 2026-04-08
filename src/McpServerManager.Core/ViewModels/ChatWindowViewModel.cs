@@ -7,7 +7,7 @@ using CoreChatFileOpenResult = McpServerManager.Core.Services.ChatFileOpenResult
 
 namespace McpServerManager.Core.ViewModels;
 
-public partial class ChatWindowViewModel : McpServer.UI.Core.ViewModels.ChatWindowViewModel
+public partial class ChatWindowViewModel : McpServerManager.UI.Core.ViewModels.ChatWindowViewModel
 {
     private readonly CqrsDispatcher _dispatcher;
 

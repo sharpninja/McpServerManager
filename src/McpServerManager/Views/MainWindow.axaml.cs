@@ -14,10 +14,10 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FileNode = McpServer.UI.Core.Models.FileNode;
-using JsonTreeNode = McpServer.UI.Core.Models.Json.JsonTreeNode;
-using SearchableTurn = McpServer.UI.Core.Models.Json.SearchableTurn;
-using UiDispatcherHost = McpServer.UI.Core.Services.UiDispatcherHost;
+using FileNode = McpServerManager.UI.Core.Models.FileNode;
+using JsonTreeNode = McpServerManager.UI.Core.Models.Json.JsonTreeNode;
+using SearchableTurn = McpServerManager.UI.Core.Models.Json.SearchableTurn;
+using UiDispatcherHost = McpServerManager.UI.Core.Services.UiDispatcherHost;
 
 namespace McpServerManager.Views;
 

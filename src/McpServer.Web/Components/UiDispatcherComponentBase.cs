@@ -1,8 +1,8 @@
 using System.Threading.Tasks;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 using Microsoft.AspNetCore.Components;
 
-namespace McpServer.Web.Components;
+namespace McpServerManager.Web.Components;
 
 public abstract class UiDispatcherComponentBase : ComponentBase
 {

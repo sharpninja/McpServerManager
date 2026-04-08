@@ -6,10 +6,10 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
-using McpServer.UI.Core.Services;
+using McpServerManager.UI.Core.Services;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.ViewModels;
-using UiCoreTodoListEntry = McpServer.UI.Core.ViewModels.TodoListEntry;
+using UiCoreTodoListEntry = McpServerManager.UI.Core.ViewModels.TodoListEntry;
 
 namespace McpServerManager.Desktop.Views;
 
@@ -197,7 +197,11 @@ public partial class TodoListView : UserControl
 
         try
         {
-            await topLevel.Clipboard.SetTextAsync(selectedText);
+            var item = new Avalonia.Input.DataTransferItem();
+            item.Set(Avalonia.Input.DataFormat.Text, selectedText);
+            var data = new Avalonia.Input.DataTransfer();
+            data.Add(item);
+            await topLevel.Clipboard.SetDataAsync(data);
         }
         catch
         {

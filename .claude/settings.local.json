@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /f/GitHub/McpServerManager/.claude/worktrees/magical-ritchie -type f -name *auth* -o -name *Auth*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(curl -s http://localhost:7147/auth/config)",
+      "Bash(curl -s http://localhost:39984/auth/config)",
+      "Bash(find F:GitHubMcpServerManagersrc F:GitHubMcpServerManagertests -name *.cs -type f)",
+      "Bash(xargs grep:*)",
+      "Bash(find F:GitHubMcpServerManagertests -name *.cs -type f)",
+      "Bash(find F:GitHubMcpServerManager -name *.json -o -name *.xml -o -name *.yaml -o -name *.yml)",
+      "Bash(grep -r '^namespace McpServer\\\\.' F:GitHubMcpServerManagertests --include=*.cs)",
+      "Bash(find F:GitHubMcpServerManagersrc -name *.csproj -exec grep -H McpServer. {})",
+      "Bash(2)",
+      "Bash(find F:GitHubMcpServerManagersrc -name *.csproj)",
+      "Bash(find F:GitHubMcpServerManagertests -name *.csproj)",
+      "Bash(xargs -0 sed -i -e s/McpServer.Director/McpServerManager.Director/g -e s/McpServer.UI/McpServerManager.UI/g -e s/McpServer.Web/McpServerManager.Web/g -e s/McpServer.VsExtension/McpServerManager.VsExtension/g echo 'Done. Checking for double-renames...' grep -r McpServerManagerManager src tests --include=*.cs -l)",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(dotnet build:*)",
+      "Bash(while read:*)",
+      "Bash(do grep:*)",
+      "Bash(done)",
+      "Bash(xargs -0 sed -i -e 's/McpServer\\\\.Director/McpServerManager.Director/g' -e 's/McpServer\\\\.UI/McpServerManager.UI/g' -e 's/McpServer\\\\.Web/McpServerManager.Web/g' -e 's/McpServer\\\\.VsExtension/McpServerManager.VsExtension/g' echo \"AXAML files updated\")",
+      "Bash(do echo:*)",
+      "Read(//f/GitHub/McpServerManager/.claude/worktrees/magical-ritchie/**)",
+      "Bash(find /f/GitHub/McpServerManager -type f -name Build.cs -o -name Build.csproj -o -name *.nuke)",
+      "Bash(grep -n \"void RunDeploy\\\\|void RunPackDirector\\\\|void RunUpdateDirector\\\\|void RunUpdateWebUi\\\\|void RunBuildDesktop\\\\|void RunDeployAll\" /f/GitHub/McpServerManager/build/*.cs)",
+      "Bash(grep -n \"private.*DeployDirectorCore\\\\|private.*DeployWebUiCore\\\\|private.*DeployDesktopMsixCore\\\\|private.*DeployDesktopDebCore\" /f/GitHub/McpServerManager/build/*.cs)",
+      "Bash(grep -n \"BuildDesktopDebCore\" /f/GitHub/McpServerManager/build/*.cs)",
+      "Bash(grep -n \"BuildDesktopMsixCore\" /f/GitHub/McpServerManager/build/*.cs)",
+      "Bash(dotnet run:*)",
+      "Bash(find F:GitHubMcpServerManager -type f -name *.yaml -o -name *.yml)",
+      "Bash(git submodule:*)"
+    ]
+  }
+}

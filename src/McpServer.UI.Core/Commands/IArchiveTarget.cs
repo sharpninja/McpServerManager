@@ -1,6 +1,6 @@
-using McpServer.UI.Core.Models;
+using McpServerManager.UI.Core.Models;
 
-namespace McpServer.UI.Core.Commands;
+namespace McpServerManager.UI.Core.Commands;
 
 /// <summary>
 /// Archive operations for current file and tree items.

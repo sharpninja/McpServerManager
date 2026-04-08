@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:McpServerManager.Core.ViewModels"
-             xmlns:uicorevm="using:McpServer.UI.Core.ViewModels"
+             xmlns:uicorevm="using:McpServerManager.UI.Core.ViewModels"
              xmlns:conv="using:McpServerManager.Core.Converters"
              xmlns:controls="using:McpServerManager.Android.Controls"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="720"
@@ -50,7 +50,7 @@
                     CornerRadius="6"
                     Background="{DynamicResource SystemAltHighColor}">
                 <StackPanel Spacing="6">
-                    <TextBox Text="{Binding FilterText, Mode=TwoWay}" Watermark="Filter todos..."/>
+                    <TextBox Text="{Binding FilterText, Mode=TwoWay}" PlaceholderText="Filter todos..."/>
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
                         <ComboBox Grid.Column="0"
                                   ItemsSource="{x:Static vm:TodoListViewModel.PriorityOptions}"
