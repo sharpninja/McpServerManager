@@ -128,7 +128,7 @@ partial class Build
         var outputDirectory = Path.IsPathRooted(nupkgDirectory) ? nupkgDirectory : Path.Combine(RepoRootPath, nupkgDirectory);
         EnsureDirectoryExists(outputDirectory);
 
-        var targetFramework = ResolveTargetFramework(projectPath, "net9.0");
+        var targetFramework = ResolveTargetFramework(projectPath, "net10.0");
         var publishDirectory = Path.Combine(Path.GetDirectoryName(projectPath)!, "bin", Configuration, targetFramework, "publish");
         var projectDocument = XDocument.Load(projectPath);
         var propertyGroups = projectDocument.Root?.Elements().Where(x => x.Name.LocalName == "PropertyGroup").ToList() ?? new List<XElement>();
@@ -280,7 +280,7 @@ partial class Build
     private string BuildAndroidPackageCore()
     {
         var projectPath = Path.Combine(RepoRootPath, "src", "McpServerManager.Android", "McpServerManager.Android.csproj");
-        var targetFramework = ResolveTargetFramework(projectPath, "net9.0-android");
+        var targetFramework = ResolveTargetFramework(projectPath, "net10.0-android");
         var version = ResolveVersionDetails(PackageVersion);
         var artifactsDirectory = ArtifactsDirectoryPath;
         EnsureDirectoryExists(artifactsDirectory);
@@ -354,7 +354,7 @@ partial class Build
     private void DeployAndroidCore(string deviceSerial)
     {
         var projectPath = Path.Combine(RepoRootPath, "src", "McpServerManager.Android", "McpServerManager.Android.csproj");
-        var targetFramework = ResolveTargetFramework(projectPath, "net9.0-android");
+        var targetFramework = ResolveTargetFramework(projectPath, "net10.0-android");
 
         if (!ShouldExecuteAction($"Deploy Android app to {deviceSerial}"))
         {
@@ -430,7 +430,7 @@ partial class Build
                     "-r",
                     runtimeId,
                     "-f",
-                    "net9.0",
+                    "net10.0",
                     "--self-contained",
                     "true",
                     "-p:PublishSingleFile=true",

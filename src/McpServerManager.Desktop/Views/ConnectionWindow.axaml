@@ -22,12 +22,12 @@
 
                 <TextBlock Text="Host"/>
                 <TextBox Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                         Watermark="e.g. localhost"
+                         PlaceholderText="e.g. localhost"
                          IsEnabled="{Binding !IsConnecting}"/>
 
                 <TextBlock Text="Port"/>
                 <TextBox Text="{Binding Port, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                         Watermark="e.g. 7147"
+                         PlaceholderText="e.g. 7147"
                          IsEnabled="{Binding !IsConnecting}"/>
 
                 <TextBlock Text="{Binding ErrorMessage}"

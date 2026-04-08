@@ -17,7 +17,7 @@ partial class Build
         public string PackageDisplayName { get; set; } = "McpServerManager";
         public string Publisher { get; set; } = string.Empty;
         public string DesktopProjectPath { get; set; } = Path.Combine("src", "McpServerManager.Desktop", "McpServerManager.Desktop.csproj");
-        public string DesktopFramework { get; set; } = "net9.0";
+        public string DesktopFramework { get; set; } = "net10.0";
         public string DesktopSubDirectory { get; set; } = "desktop";
         public string DesktopAppId { get; set; } = "McpServerManagerDesktop";
         public string DesktopDescription { get; set; } = "Avalonia desktop app for browsing and analyzing Copilot request/session logs";

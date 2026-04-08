@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
 using McpServerManager.Core.Services;
 
 namespace McpServerManager.Desktop.Services;
@@ -17,6 +18,12 @@ public class DesktopClipboardService : IClipboardService
     {
         var mainWindow = _desktop.MainWindow;
         if (mainWindow?.Clipboard != null)
-            await mainWindow.Clipboard.SetTextAsync(text);
+        {
+            var item = new DataTransferItem();
+            item.Set(DataFormat.Text, text);
+            var data = new DataTransfer();
+            data.Add(item);
+            await mainWindow.Clipboard.SetDataAsync(data);
+        }
     }
 }
