@@ -197,7 +197,11 @@ public partial class TodoListView : UserControl
 
         try
         {
-            await topLevel.Clipboard.SetTextAsync(selectedText);
+            var item = new Avalonia.Input.DataTransferItem();
+            item.Set(Avalonia.Input.DataFormat.Text, selectedText);
+            var data = new Avalonia.Input.DataTransfer();
+            data.Add(item);
+            await topLevel.Clipboard.SetDataAsync(data);
         }
         catch
         {

@@ -78,7 +78,7 @@
         </ScrollViewer>
         <Border Grid.Row="4" Background="#f0f0f0" Padding="8" BorderBrush="#ddd" BorderThickness="0,1,0,0">
             <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
-                <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding CurrentInput}" Watermark="Ask about your logs..."
+                <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding CurrentInput}" PlaceholderText="Ask about your logs..."
                          MinHeight="36" Margin="0,0,8,0" KeyDown="OnInputKeyDown" FontSize="14"/>
                 <Button Grid.Row="0" Grid.Column="1" Content="Send" Command="{Binding SendCommand}"
                         IsEnabled="{Binding !IsLoading}" MinWidth="70" FontSize="14"/>

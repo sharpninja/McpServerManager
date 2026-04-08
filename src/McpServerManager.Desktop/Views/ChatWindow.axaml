@@ -80,7 +80,7 @@
         </Border>
         <Border Grid.Row="4" Classes="phone-toolbar-card" Padding="8">
             <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
-                <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding CurrentInput}" Watermark="Ask about your logs..."
+                <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding CurrentInput}" PlaceholderText="Ask about your logs..."
                          MinHeight="36" Margin="0,0,8,0" FontSize="14"
                          beh:KeyDownBehavior.Key="Return"
                          beh:KeyDownBehavior.Command="{Binding SendCommand}"/>

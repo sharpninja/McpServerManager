@@ -30,7 +30,7 @@
     <Grid ColumnDefinitions="*,Auto">
       <TextBox Grid.Column="0"
                Text="{Binding FilterText, Mode=TwoWay}"
-               Watermark="Filter workspaces..."/>
+               PlaceholderText="Filter workspaces..."/>
       <Button Grid.Column="1"
               Content="Clear"
               Command="{Binding ClearFiltersCommand}"

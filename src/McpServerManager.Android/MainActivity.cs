@@ -2,12 +2,15 @@ using Android.App;
 using Android.Content.PM;
 using Android.Content.Res;
 using Android.OS;
-using Avalonia;
 using Avalonia.Android;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.Android.Services;
 
 namespace McpServerManager.Android;
+
+/// <summary>Android application class for Avalonia 12 initialization.</summary>
+[Application]
+public class McpServerManagerApplication : AvaloniaAndroidApplication<App>;
 
 [Activity(
     Label = "MCP Server Manager",
@@ -15,7 +18,7 @@ namespace McpServerManager.Android;
     Icon = "@drawable/icon",
     MainLauncher = true,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.SmallestScreenSize | ConfigChanges.UiMode)]
-public class MainActivity : AvaloniaMainActivity<App>
+public class MainActivity : AvaloniaMainActivity
 {
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -31,21 +34,6 @@ public class MainActivity : AvaloniaMainActivity<App>
             "MainActivity.OnCreate",
             Core,
             "Main Android activity crashed during creation.");
-    }
-
-    protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
-    {
-        AppBuilder Core()
-        {
-            global::Android.Util.Log.Info("McpSM", "[MainActivity] CustomizeAppBuilder");
-            return base.CustomizeAppBuilder(builder)
-                .WithInterFont();
-        }
-
-        return AndroidCrashDiagnostics.ExecuteFatal(
-            "MainActivity.CustomizeAppBuilder",
-            Core,
-            "Main Android activity crashed while building the Avalonia application host.");
     }
 
     public override void OnConfigurationChanged(Configuration newConfig)

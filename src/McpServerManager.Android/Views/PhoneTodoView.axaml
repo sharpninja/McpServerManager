@@ -50,7 +50,7 @@
                     CornerRadius="6"
                     Background="{DynamicResource SystemAltHighColor}">
                 <StackPanel Spacing="6">
-                    <TextBox Text="{Binding FilterText, Mode=TwoWay}" Watermark="Filter todos..."/>
+                    <TextBox Text="{Binding FilterText, Mode=TwoWay}" PlaceholderText="Filter todos..."/>
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
                         <ComboBox Grid.Column="0"
                                   ItemsSource="{x:Static vm:TodoListViewModel.PriorityOptions}"

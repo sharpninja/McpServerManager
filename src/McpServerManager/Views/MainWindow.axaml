@@ -172,7 +172,7 @@
                     <!-- Search -->
                     <Grid Grid.Row="1" ColumnDefinitions="Auto, *" Margin="0,0,0,4">
                         <SelectableTextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBox Grid.Column="1" Text="{Binding SearchQuery}" Watermark="Request ID, text, model, timestamp..."/>
+                        <TextBox Grid.Column="1" Text="{Binding SearchQuery}" PlaceholderText="Request ID, text, model, timestamp..."/>
                     </Grid>
                     <!-- Search results index. Height set from layout (default 200px); tree row is only * so it fills rest. -->
                     <Border Grid.Row="2" MinHeight="80" BorderBrush="#ddd" BorderThickness="0,0,0,1" Padding="4" Margin="0,0,0,4">
