@@ -99,3 +99,109 @@ The user must confirm one of:
 - **Confirmed (b)**: Merge `claude/friendly-robinson` PR on Azure → Phase 0.2 sync picks up the new develop HEAD → `d0617b0` is dropped from history. *Recommended.*
 - **Override to (a)**: Cherry-pick `d0617b0` to Azure develop instead. We accept the inferior architecture and the missing tests. Not recommended.
 - **Hybrid**: Do both — port the unique parts of `d0617b0` that aren't in `3a90d9e` as additional fixes on top after the merge. Highest effort.
+
+## Update: User chose Hybrid (2026-04-11)
+
+The user picked **Hybrid**. Detailed second-pass diff analysis below identifies what's actually unique to `d0617b0` versus what's in `3a90d9e` already, then proposes the concrete port plan.
+
+### Trust-bootstrap interfaces — already present in both branches and in the common ancestor
+
+The following Repl.Core interfaces exist in **all four** of `91ed4a6` (common ancestor), `54d3ab8` (Azure `develop`), `3a90d9e` (`claude/friendly-robinson`), and `d0617b0` (GitHub-mirror) — same blob hashes, unchanged:
+
+- `src/McpServer.Repl.Core/IAuthRotationHandler.cs`
+- `src/McpServer.Repl.Core/IMarkerFileReader.cs`
+- `src/McpServer.Repl.Core/IReplProtocol.cs`
+- `src/McpServer.Repl.Core/ITrustBootstrapService.cs`
+
+These were authored before the branches split. Both `d0617b0` and `3a90d9e` inherit them as-is.
+
+### Neither branch implements `ITrustBootstrapService`
+
+A `git grep` for `: ITrustBootstrapService` and `class.*ITrustBootstrapService` returns **zero matches** in both `d0617b0` and `3a90d9e`. The interface is sitting unused on both sides.
+
+### What `d0617b0` actually does for trust/nonces
+
+Inside `AgentStdioHandler.cs` (the inline 646-line file), `d0617b0` has:
+
+```csharp
+private readonly Dictionary<string, string> _nonceByWorkspace = new(StringComparer.OrdinalIgnoreCase);
+```
+
+— an **out-of-band** nonce tracking dictionary that bypasses `ITrustBootstrapService` entirely. The trust bootstrap requirement (TR-MCP-REPL-006) is satisfied by inline ad-hoc code, not by an implementation of the existing interface.
+
+This means d0617b0 is internally inconsistent: it references TR-MCP-REPL-006 in its file header but implements it in a way that doesn't compose with the rest of the Repl.Core trust scaffolding. A future refactor would need to extract this into the existing `ITrustBootstrapService` anyway.
+
+### What `3a90d9e` does for trust/nonces
+
+A `git grep` for `nonce` in `3a90d9e -- src/McpServer.Repl.Core/ src/McpServer.Repl.Host/` matches only the existing comments in `IMarkerFileReader.cs`, `IReplProtocol.cs`, `ITrustBootstrapService.cs`. **No production nonce code exists** — the trust bootstrap interface is still unimplemented in this branch too.
+
+### What `d0617b0` does for the test child-process helper
+
+`tests/McpServer.Repl.IntegrationTests/ReplChildProcessHelper.cs`:
+
+- At `91ed4a6`: 303 lines (assumed — unchanged at the common ancestor)
+- At `3a90d9e`: 303 lines (file was not touched)
+- At `d0617b0`: **393 lines** (+90 lines added)
+
+So `d0617b0` adds ~90 lines of test infrastructure to the integration test child-process helper. `3a90d9e` does not touch this file. The 90 added lines are d0617b0-unique.
+
+### Concrete d0617b0-unique behaviors
+
+| Behavior | In `d0617b0`? | In `3a90d9e`? | Port required? |
+|---|---|---|---|
+| Extracted `AgentStdioProtocol` in `Repl.Core` | No | **YES** | No (we adopt 3a90d9e's design) |
+| Extracted `ReplCommandDispatcher` in `Repl.Core` | No | **YES** | No |
+| Extracted `YamlSerializer` in `Repl.Core` (340 lines) | No | **YES** | No |
+| Extracted `YamlEnvelopeTypes` in `Repl.Core` | No | **YES** | No |
+| `YamlPipeExecutionTests.cs` (403 lines of test coverage) | No | **YES** | No |
+| Per-workspace nonce tracking dictionary | YES (inline) | No | **YES — but as a clean `ITrustBootstrapService` impl, not inline** |
+| `ITrustBootstrapService` implementation routed through Repl.Core | No (inline ad-hoc) | No | **YES — net-new work, neither branch has it** |
+| ChildProcessHelper.cs +90-line test helper additions | YES | No | **YES — port verbatim** |
+
+### Revised hybrid port plan
+
+The hybrid is now three Azure-side commits in this exact order:
+
+1. **Merge `claude/friendly-robinson` PR to Azure `develop`**
+   - Brings in `AgentStdioProtocol`, `ReplCommandDispatcher`, `YamlSerializer`, `YamlEnvelopeTypes`, the refactored `AgentStdioHandler.cs`, `YamlPipeExecutionTests.cs`
+   - Pure merge — no conflict expected
+   - This is the user's responsibility to do via Azure DevOps PR review, OR I can do the merge locally in `F:/GitHub/McpServer` and push
+
+2. **NEW: implement `ITrustBootstrapService` properly** with workspace-scoped nonce tracking
+   - Class name: `TrustBootstrapService` in `src/McpServer.Repl.Core/`
+   - Owns the per-workspace `Dictionary<string, string>` nonce store from d0617b0, but exposed as `RegisterNonceAsync(workspaceId, nonce)` / `ValidateNonceAsync(workspaceId, expectedNonce)` per the interface
+   - Wired into DI in `ServiceCollectionExtensions`
+   - Tested by new unit tests in `tests/McpServer.Repl.Core.Tests/TrustBootstrapServiceTests.cs`
+   - This is **net-new work** that satisfies TR-MCP-REPL-006 and FR-MCP-REPL-004 cleanly
+
+3. **Port the +90-line `ReplChildProcessHelper.cs` test helper additions**
+   - Verbatim from `d0617b0`'s tree, applied on top of the post-merge state
+   - May need minor adjustments if the merge changed unrelated parts of the file
+   - Adds the integration test scaffolding d0617b0 needed
+
+After all three commits are pushed to Azure `develop`, Phase 0.2 sync picks up the new HEAD and the worktree submodule advances accordingly. `d0617b0`'s commit hash is then permanently dropped, but every meaningful behavior it added is preserved either by 3a90d9e (the protocol extraction) or by commits 2 and 3 above (the trust bootstrap impl and test helper).
+
+### Net new work this introduces beyond a vanilla cherry-pick
+
+- 1 new Azure commit implementing `TrustBootstrapService` (~150 lines + ~100 lines of tests)
+- 1 new Azure commit porting test helper additions (~90 lines, no new tests since the helper is itself test infrastructure)
+- Total: ~340 net new lines of Azure-side work, all properly tested and properly architected
+
+### Estimated effort
+
+- Step 1 (merge): minutes (if no conflicts)
+- Step 2 (implement TrustBootstrapService): ~2–3 hours (design, code, tests, doc comments referencing FR/TR IDs)
+- Step 3 (port test helper): ~30 minutes (mostly mechanical)
+- Total: ~3–4 hours of Azure-side work before Phase 0.2 can proceed
+
+### Confirmation required from user
+
+This hybrid port plan involves:
+- Writing on Azure DevOps `develop` (3 new commits, all pushed to origin = Azure)
+- Net-new design work (the `TrustBootstrapService` implementation isn't in either branch)
+- Tests authored under the Byrd Process
+
+I should NOT push any of this to Azure without the user's explicit confirmation. The next step is to ask the user to confirm:
+1. Should I proceed with the merge of `claude/friendly-robinson` myself (running locally in `F:/GitHub/McpServer` and pushing), or do they want to handle the Azure PR review themselves?
+2. Should the new `TrustBootstrapService` implementation be authored in this same worktree for the McpServerManager submodule update, or as a separate session in the standalone `F:/GitHub/McpServer` clone?
+3. Are they OK with the ~3–4 hour effort estimate for the hybrid before Phase 0.2 can proceed, or would they prefer to fall back to plain Option (b) and accept the loss of the d0617b0 test-helper additions?
