@@ -3,7 +3,7 @@
 	url = https://github.com/whistyun/Markdown.Avalonia.git
 [submodule "lib/McpServer"]
 	path = lib/McpServer
-	url = https://github.com/sharpninja/McpServer.git
+	url = https://dev.azure.com/McpServer/McpServer/_git/McpServer
 [submodule "tools/McpServerTools"]
 	path = tools/McpServerTools
 	url = https://github.com/sharpninja/McpServerTools.git
