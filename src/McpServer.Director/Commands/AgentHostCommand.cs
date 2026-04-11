@@ -101,21 +101,28 @@ internal static class AgentHostCommand
     {
         directorContext.RefreshBearerTokens();
 
-        var controlClient = directorContext.ControlClient
+        // The hosted agent operates inside a specific workspace, and that workspace's
+        // AGENTS-README-FIRST.yaml marker carries the authoritative per-workspace API key.
+        // Prefer ActiveWorkspaceClient (loaded from the marker) over ControlClient, which
+        // is intentionally seeded with an empty API key when a default URL is configured.
+        var workspaceClient = directorContext.ActiveWorkspaceClient;
+        var controlClient = directorContext.ControlClient;
+        var authoritativeClient = PickAuthoritativeClient(workspaceClient, controlClient)
             ?? throw new InvalidOperationException(
-                "No control-plane connection is available. Configure a default URL with 'director config set-default-url <url>' " +
-                "or run Director from a workspace with AGENTS-README-FIRST.yaml.");
+                "No MCP workspace connection is available. Run Director from a workspace with " +
+                "AGENTS-README-FIRST.yaml or configure a default URL with 'director config set-default-url <url>'.");
+
         var bearerToken = DirectorAgentSettings.TryLoadCachedBearerToken();
         var workspacePath = string.IsNullOrWhiteSpace(directorContext.ActiveWorkspacePath)
-            ? (!string.IsNullOrWhiteSpace(controlClient.WorkspacePath) ? controlClient.WorkspacePath : settings.WorkspacePath)
+            ? (!string.IsNullOrWhiteSpace(authoritativeClient.WorkspacePath) ? authoritativeClient.WorkspacePath : settings.WorkspacePath)
             : directorContext.ActiveWorkspacePath;
 
         services.AddMcpServerMcpAgent(options =>
         {
-            options.BaseUrl = new Uri(controlClient.BaseUrl);
-            options.ApiKey = controlClient.ApiKey;
+            options.BaseUrl = new Uri(authoritativeClient.BaseUrl);
+            options.ApiKey = authoritativeClient.ApiKey;
             options.BearerToken = bearerToken;
-            options.RequireAuthentication = !string.IsNullOrWhiteSpace(controlClient.ApiKey) || !string.IsNullOrWhiteSpace(bearerToken);
+            options.RequireAuthentication = !string.IsNullOrWhiteSpace(authoritativeClient.ApiKey) || !string.IsNullOrWhiteSpace(bearerToken);
             options.WorkspacePath = workspacePath;
             options.AgentId = settings.AgentId;
             options.AgentName = settings.AgentName;
@@ -138,6 +145,30 @@ internal static class AgentHostCommand
             new McpServer.Repl.Core.GenericClientPassthrough(
                 sp.GetRequiredService<McpServer.Client.McpServerClient>()));
         services.AddSingleton<ReplWorkflowToolAdapter>();
+    }
+
+    /// <summary>
+    /// Chooses the HTTP client that should back the hosted agent's MCP connection.
+    /// The workspace-marker client carries the authoritative per-workspace API key and is
+    /// preferred whenever it is populated. The control-plane client is used only as a
+    /// last-resort fallback (e.g., when running with a configured default URL and no marker).
+    /// </summary>
+    internal static McpHttpClient? PickAuthoritativeClient(
+        McpHttpClient? workspaceClient,
+        McpHttpClient? controlClient)
+    {
+        // Workspace marker has a real API key — always the best choice.
+        if (workspaceClient is not null && !string.IsNullOrWhiteSpace(workspaceClient.ApiKey))
+            return workspaceClient;
+
+        // Control client has a real API key — fall back to it.
+        if (controlClient is not null && !string.IsNullOrWhiteSpace(controlClient.ApiKey))
+            return controlClient;
+
+        // Neither has a key — prefer the workspace client when present so the base URL
+        // and workspace path reflect the workspace the user asked for; otherwise try
+        // the control client as a last resort.
+        return workspaceClient ?? controlClient;
     }
 }
 
@@ -1295,7 +1326,12 @@ internal sealed record DirectorAgentSettings(
         activeWorkspaceClient?.TrySetCachedBearerToken();
         var controlClient = McpHttpClient.FromDefaultUrlOrMarker(explicitWorkspace);
         controlClient?.TrySetCachedBearerToken();
-        if (controlClient is null || !Uri.TryCreate(controlClient.BaseUrl, UriKind.Absolute, out var baseUrl))
+
+        // Prefer the workspace-marker client because it carries the authoritative
+        // per-workspace API key. Fall back to the control-plane client only when no
+        // marker is present in the selected workspace.
+        var authoritativeClient = AgentHostCommand.PickAuthoritativeClient(activeWorkspaceClient, controlClient);
+        if (authoritativeClient is null || !Uri.TryCreate(authoritativeClient.BaseUrl, UriKind.Absolute, out var baseUrl))
         {
             throw new InvalidOperationException(
                 "No valid MCP base URL is configured. Run from a workspace with AGENTS-README-FIRST.yaml, set MCP_SERVER_BASE_URL, or use `director config set-default-url <url>`.");
@@ -1307,14 +1343,14 @@ internal sealed record DirectorAgentSettings(
         var apiKey = string.IsNullOrWhiteSpace(bearerToken)
             ? FirstNonEmpty(
                 ReadEnvironmentVariable(ApiKeyEnvironmentVariable),
-                controlClient.ApiKey)
+                authoritativeClient.ApiKey)
             : null;
         var requireAuthentication = !string.IsNullOrWhiteSpace(apiKey) || !string.IsNullOrWhiteSpace(bearerToken);
 
         var workspacePath = FirstNonEmpty(
             ReadEnvironmentVariable(WorkspacePathEnvironmentVariable),
             activeWorkspaceClient?.WorkspacePath,
-            controlClient.WorkspacePath,
+            authoritativeClient.WorkspacePath,
             explicitWorkspace)!;
 
         var modelId = FirstNonEmpty(
