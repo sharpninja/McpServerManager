@@ -453,48 +453,72 @@ internal static class DirectorCommands
             name ??= new DirectoryInfo(workspacePath).Name;
             Info($"Registering workspace '{name}' at {workspacePath}...");
 
-            // Step 1: Fetch the default (anonymous) API key from /api-key
+            // Step 1: Obtain an API key with write access.
+            // Prefer the primary workspace marker (full read/write), then the default key
+            // from GET /api-key (read-only — may be rejected for mutations), then fail.
             string apiKey;
-            try
+            var primaryClient = McpHttpClient.TryGetPrimaryWorkspaceClient();
+            if (primaryClient is not null && !string.IsNullOrWhiteSpace(primaryClient.ApiKey))
             {
-                using var anonHttp = new HttpClient { BaseAddress = new Uri(server) };
-                var keyResponse = await anonHttp.GetAsync("/api-key").ConfigureAwait(true);
-                keyResponse.EnsureSuccessStatusCode();
-                var keyJson = await keyResponse.Content.ReadAsStringAsync().ConfigureAwait(true);
-                using var doc = JsonDocument.Parse(keyJson);
-                apiKey = doc.RootElement.GetProperty("apiKey").GetString()
-                    ?? throw new InvalidOperationException("Server returned null apiKey.");
+                apiKey = primaryClient.ApiKey;
+                primaryClient.Dispose();
+                Info("Using primary workspace API key for authentication.");
             }
-            catch (Exception ex)
+            else
             {
-                Error($"Failed to fetch default API key from {server}/api-key: {ex.Message}");
-                return;
-            }
-
-            // Step 2: Register the workspace
-            try
-            {
-                using var client = new McpHttpClient(server, apiKey, workspacePath: string.Empty);
-                var result = await client.PostAsync<JsonElement>("/mcpserver/workspace", new
+                try
                 {
-                    workspacePath,
-                    name,
-                    isEnabled = true,
-                }).ConfigureAwait(true);
-
-                if (result.TryGetProperty("success", out var successProp) && !successProp.GetBoolean())
+                    using var anonHttp = new HttpClient { BaseAddress = new Uri(server) };
+                    var keyResponse = await anonHttp.GetAsync("/api-key").ConfigureAwait(true);
+                    keyResponse.EnsureSuccessStatusCode();
+                    var keyJson = await keyResponse.Content.ReadAsStringAsync().ConfigureAwait(true);
+                    using var doc = JsonDocument.Parse(keyJson);
+                    apiKey = doc.RootElement.GetProperty("apiKey").GetString()
+                        ?? throw new InvalidOperationException("Server returned null apiKey.");
+                    Warn("No primary workspace marker found; using the default read-only key (mutations may be rejected).");
+                }
+                catch (Exception ex)
                 {
-                    var errorMsg = result.TryGetProperty("error", out var errProp) ? errProp.GetString() : "Unknown error";
-                    Error($"Server rejected workspace registration: {errorMsg}");
+                    Error($"Failed to obtain an API key: {ex.Message}");
                     return;
                 }
-
-                Success("Workspace registered on the MCP Server.");
             }
-            catch (Exception ex)
+
+            // Step 2: Register the workspace (with retry for 503 during server startup)
+            const int maxRetries = 5;
+            for (var attempt = 1; attempt <= maxRetries; attempt++)
             {
-                Error($"Failed to register workspace: {ex.Message}");
-                return;
+                try
+                {
+                    using var client = new McpHttpClient(server, apiKey, workspacePath: string.Empty);
+                    var result = await client.PostAsync<JsonElement>("/mcpserver/workspace", new
+                    {
+                        workspacePath,
+                        name,
+                        isEnabled = true,
+                    }).ConfigureAwait(true);
+
+                    if (result.TryGetProperty("success", out var successProp) && !successProp.GetBoolean())
+                    {
+                        var errorMsg = result.TryGetProperty("error", out var errProp) ? errProp.GetString() : "Unknown error";
+                        Error($"Server rejected workspace registration: {errorMsg}");
+                        return;
+                    }
+
+                    Success("Workspace registered on the MCP Server.");
+                    break;
+                }
+                catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable && attempt < maxRetries)
+                {
+                    var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)); // 1s, 2s, 4s, 8s
+                    Warn($"Server returned 503 (startup in progress). Retrying in {delay.TotalSeconds:0}s... ({attempt}/{maxRetries})");
+                    await Task.Delay(delay).ConfigureAwait(true);
+                }
+                catch (Exception ex)
+                {
+                    Error($"Failed to register workspace: {ex.Message}");
+                    return;
+                }
             }
 
             // Step 3: Watch for AGENTS-README-FIRST.yaml to be created by the server

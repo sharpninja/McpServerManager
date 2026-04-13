@@ -379,6 +379,14 @@ internal sealed class McpHttpClient : IDisposable
     }
 
     /// <summary>
+    /// Returns an <see cref="McpHttpClient"/> for the primary workspace registered in
+    /// <c>C:\ProgramData\McpServer\appsettings.json</c>, or <c>null</c> if no primary
+    /// workspace is configured or the marker file cannot be read.
+    /// The returned client carries the primary workspace's full-access API key.
+    /// </summary>
+    public static McpHttpClient? TryGetPrimaryWorkspaceClient() => TryFromLocalPrimaryWorkspaceMarker();
+
+    /// <summary>
     /// Best-effort local bootstrap for the control-plane connection. When running on a machine with a local
     /// McpServer Windows service install, prefer the primary workspace marker from the deployed appsettings.
     /// This avoids pointing control-plane tabs (e.g. Agents/Workspaces) at a child workspace host.
