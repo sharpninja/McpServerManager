@@ -646,6 +646,14 @@ internal static class DirectorCommands
     /// </summary>
     private static Dictionary<string, string> ParseMarkerFields(string[] lines)
     {
+        // The AGENTS-README-FIRST.yaml has this structure:
+        //   port: 7147                <- indent 0, top-level field
+        //   baseUrl: http://...       <- indent 0, top-level field
+        //   endpoints:                <- indent 0, section header (no value)
+        //     health: /health         <- indent 2, nested → "endpoints.health"
+        //   signature:                <- indent 0, section header (no value)
+        //     algorithm: HMAC-SHA256  <- indent 2, nested → "signature.algorithm"
+        //     value: 07BD...          <- indent 2, nested → "signature.value"
         var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         string? currentSection = null;
 
@@ -665,26 +673,32 @@ internal static class DirectorCommands
             var key = trimmed[..colonIdx].Trim();
             var value = trimmed[(colonIdx + 1)..].Trim();
 
-            if (indent == 0 || indent == 2)
+            if (indent == 0)
             {
                 if (string.IsNullOrEmpty(value))
                 {
-                    // Section header (e.g. "endpoints:", "signature:")
-                    currentSection = indent == 0 ? key : null;
-                    if (indent == 2)
-                        currentSection = key;
+                    // Section header at root level (e.g. "endpoints:", "signature:")
+                    currentSection = key;
+                }
+                else
+                {
+                    // Top-level scalar field (e.g. "port: 7147", "baseUrl: http://...")
+                    fields[key] = value;
+                    currentSection = null;
+                }
+            }
+            else if (indent == 2 && currentSection is not null)
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    // Sub-section header (e.g. "fields:" under "signature:") — skip
                     continue;
                 }
 
-                // Top-level field
-                fields[key] = value;
-                currentSection = null;
-            }
-            else if (indent == 4 && currentSection is not null)
-            {
-                // Nested field under a section (e.g. "  health: /health" under "endpoints:")
+                // Nested field under the current section
                 fields[$"{currentSection}.{key}"] = value;
             }
+            // Deeper indentation (indent 4+) is ignored — list items, multi-line values, etc.
         }
 
         return fields;
