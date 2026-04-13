@@ -756,7 +756,7 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
             : messageText;
     }
 
-    private string BuildConsolePrompt() => $"{BuildConsolePromptLabel()} {_powerShellCurrentLocation}> ";
+    private string BuildConsolePrompt() => $"{BuildConsolePromptLabel()} {FormatPromptLocation(_powerShellCurrentLocation)}> ";
 
     private string BuildConsolePromptLabel() => $"{BuildConsolePromptLeadSegment()} [{_verbosity}]";
 
@@ -769,6 +769,44 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
             return _settings.AgentName.Trim();
 
         return "PS";
+    }
+
+    /// <summary>
+    /// Condenses a filesystem location for display in the interactive prompt.
+    /// Keeps the prompt short even when the user has cd'd deep inside the workspace
+    /// or when the absolute path is long, so there is always room to type.
+    /// </summary>
+    private string FormatPromptLocation(string location)
+    {
+        if (string.IsNullOrWhiteSpace(location))
+            return string.Empty;
+
+        var trimmed = location.TrimEnd('\\', '/');
+
+        // If the current location is inside the workspace, show it as ~/<relative>.
+        var workspace = _settings.WorkspacePath?.TrimEnd('\\', '/');
+        if (!string.IsNullOrWhiteSpace(workspace)
+            && trimmed.StartsWith(workspace, StringComparison.OrdinalIgnoreCase))
+        {
+            if (trimmed.Length == workspace.Length)
+                return "~";
+
+            var relative = trimmed[workspace.Length..].TrimStart('\\', '/');
+            return $"~/{relative.Replace('\\', '/')}";
+        }
+
+        // Otherwise, middle-ellipsis very long paths so the prompt stays usable.
+        const int maxLength = 40;
+        if (trimmed.Length <= maxLength)
+            return trimmed;
+
+        var tailLength = maxLength - 4; // reserve "...<sep>" prefix
+        var tail = trimmed[^tailLength..];
+        var separatorIndex = tail.IndexOfAny(['\\', '/']);
+        if (separatorIndex > 0)
+            tail = tail[separatorIndex..];
+
+        return $"...{tail}";
     }
 
     private void ClosePowerShellSession()
@@ -1093,44 +1131,119 @@ internal sealed class DirectorAgentConsoleApplication : IDisposable
 
     private void WriteBanner()
     {
-        Console.WriteLine("MCP Agent host (Director)");
-        Console.WriteLine("-----------------------------------");
-        Console.WriteLine($"MCP server : {_settings.BaseUrl}");
-        Console.WriteLine($"Workspace  : {_settings.WorkspacePath}");
-        Console.WriteLine($"Model      : {_settings.ModelId}");
+        var rows = new List<(string Label, string Value)>
+        {
+            ("MCP server", _settings.BaseUrl.ToString()),
+            ("Workspace", _settings.WorkspacePath),
+            ("Model", _settings.ModelId),
+        };
+
         if (_settings.ModelEndpoint is not null)
-            Console.WriteLine($"Model URL  : {_settings.ModelEndpoint}");
-        Console.WriteLine($"SourceType : {_settings.SourceType}");
-        Console.WriteLine($"Tools      : {string.Join(", ", _hostedAgent.Registration.Tools.Select(static tool => tool.Name))}");
+            rows.Add(("Model URL", _settings.ModelEndpoint.ToString()));
+
+        rows.Add(("SourceType", _settings.SourceType));
+        rows.Add(("Auth", DescribeAuthMode()));
+
+        var labelWidth = rows.Max(static r => r.Label.Length);
+
+        const string title = "MCP Agent host (Director)";
+        Console.WriteLine(title);
+        Console.WriteLine(new string('-', title.Length));
+
+        foreach (var (label, value) in rows)
+            Console.WriteLine($"{label.PadRight(labelWidth)} : {value}");
+
+        var toolNames = _hostedAgent.Registration.Tools
+            .Select(static tool => tool.Name)
+            .ToList();
+        var toolHeader = $"Tools ({toolNames.Count})".PadRight(labelWidth);
+        WriteWrappedList(toolHeader, labelWidth, toolNames);
+
         Console.WriteLine();
+    }
+
+    private string DescribeAuthMode()
+    {
+        if (!string.IsNullOrWhiteSpace(_settings.BearerToken))
+            return "bearer token";
+        if (!string.IsNullOrWhiteSpace(_settings.ApiKey))
+            return "api-key (workspace marker)";
+        return "(none \u2014 requests will fail)";
+    }
+
+    private static void WriteWrappedList(string header, int labelWidth, IReadOnlyList<string> items)
+    {
+        if (items.Count == 0)
+        {
+            Console.WriteLine($"{header} : (none)");
+            return;
+        }
+
+        var targetWidth = 80;
+        try
+        {
+            if (Console.WindowWidth > 20)
+                targetWidth = Console.WindowWidth - 1;
+        }
+        catch (IOException)
+        {
+            // Console.WindowWidth can throw on some hosted terminals; fall back to 80.
+        }
+
+        var indent = new string(' ', labelWidth + 3);
+        var maxLineLength = Math.Max(20, targetWidth - (labelWidth + 3));
+
+        var buffer = new StringBuilder();
+        var first = true;
+        foreach (var item in items)
+        {
+            var separator = buffer.Length == 0 ? string.Empty : ", ";
+            if (buffer.Length + separator.Length + item.Length > maxLineLength && buffer.Length > 0)
+            {
+                Console.WriteLine($"{(first ? header : new string(' ', labelWidth))} : {buffer}");
+                first = false;
+                buffer.Clear();
+            }
+            else if (separator.Length > 0)
+            {
+                buffer.Append(separator);
+            }
+
+            buffer.Append(item);
+        }
+
+        if (buffer.Length > 0)
+            Console.WriteLine($"{(first ? header : new string(' ', labelWidth))} : {buffer}");
     }
 
     private void WriteHelp()
     {
-        Console.WriteLine("Commands:");
-        Console.WriteLine("  /help              Show this help text.");
-        Console.WriteLine("  /tools             List the MCP-backed tools attached to the hosted agent.");
-        Console.WriteLine("  /session           Show the current MCP session-log identifier.");
-        Console.WriteLine("  /v N               Set verbosity level (1=concise, 2=balanced, 3=detailed).");
-        Console.WriteLine("  /new               Start a fresh conversation and session log.");
-        Console.WriteLine("  /exit              Exit the Director agent host.");
+        Console.WriteLine("Session commands:");
+        Console.WriteLine("  /help                   Show this help text.");
+        Console.WriteLine("  /tools                  List the MCP-backed tools and REPL workflow tools attached to the agent.");
+        Console.WriteLine("  /session                Show the current session id, agent name, and source type.");
+        Console.WriteLine($"  /v <1|2|3>              Set verbosity: 1=concise, 2=balanced, 3=detailed (currently: {_verbosity}).");
+        Console.WriteLine("  /new  (alias: /reset)   Start a fresh conversation and session log.");
+        Console.WriteLine("  /exit (alias: /quit)    Exit the Director agent host.");
         Console.WriteLine();
-        Console.WriteLine("REPL workflow commands:");
-        Console.WriteLine("  /todo              List all TODO items.");
-        Console.WriteLine("  /todo <keyword>    Search TODOs by keyword.");
-        Console.WriteLine("  /todo select <id>  Select a TODO as the active context.");
-        Console.WriteLine("  /todo get <id>     Show TODO details.");
-        Console.WriteLine("  /requirements      List functional requirements summary.");
-        Console.WriteLine("  /reqs              Alias for /requirements.");
-        Console.WriteLine("  /client <c>.<m>    Invoke McpServerClient sub-client method (e.g. /client context.SearchAsync).");
+        Console.WriteLine("Workspace commands:");
+        Console.WriteLine("  /todo                   List all TODO items.");
+        Console.WriteLine("  /todo <keyword>         Search TODOs by keyword.");
+        Console.WriteLine("  /todo select <id>       Select a TODO as the active context.");
+        Console.WriteLine("  /todo get <id>          Show TODO details.");
+        Console.WriteLine("  /requirements (/reqs)   List functional requirements summary.");
+        Console.WriteLine("  /client <c>.<m> [json]  Invoke McpServerClient sub-client method (e.g. /client context.SearchAsync).");
         Console.WriteLine();
-        Console.WriteLine("Prompt behavior:");
-        Console.WriteLine("  - The prompt shows model [verbosity] <location>> (model id from MCP_AGENT_MODEL_NAME or default).");
-        Console.WriteLine("  - ↑ / ↓ recall previous inputs; history and verbosity persist in .mcpServer/director-agent-console-state.json.");
-        Console.WriteLine("  - Prefix a line with ! to run it directly in the local PowerShell session.");
-        Console.WriteLine("  - Any line without ! is sent to the hosted agent as a normal chat prompt.");
+        Console.WriteLine("Input:");
+        Console.WriteLine("  <text>                  Sent to the hosted agent as a chat prompt.");
+        Console.WriteLine("  ! <command>             Runs the rest of the line in the local PowerShell session.");
+        Console.WriteLine("  \u2191 / \u2193                     Recall previous inputs from history.");
+        Console.WriteLine("  Ctrl+C                  Cancel the active PowerShell command; press again to exit.");
         Console.WriteLine();
-        Console.WriteLine("You can also execute a single prompt non-interactively:");
+        Console.WriteLine("Persistence:");
+        Console.WriteLine("  History and verbosity persist at .mcpServer/director-agent-console-state.json in the workspace.");
+        Console.WriteLine();
+        Console.WriteLine("Non-interactive mode — pass a single prompt as an argument:");
         Console.WriteLine(@"  director agent ""List open TODO items""");
         Console.WriteLine(@"  director agent ""! Get-Location""");
         Console.WriteLine();

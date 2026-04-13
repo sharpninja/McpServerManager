@@ -1,4 +1,7 @@
 using System.CommandLine;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using McpServer.Cqrs;
 using McpServerManager.UI.Core.Messages;
 using Spectre.Console;
@@ -28,6 +31,7 @@ internal static class DirectorCommands
         root.AddCommand(BuildDeleteCommand());
         root.AddCommand(BuildValidateCommand());
         root.AddCommand(BuildInitCommand());
+        root.AddCommand(BuildAddWorkspaceCommand());
         root.AddCommand(BuildTodoCommand());
         root.AddCommand(BuildSessionLogCommand());
     }
@@ -413,6 +417,304 @@ internal static class DirectorCommands
             }).ConfigureAwait(true);
         }, s_workspaceOption);
         return cmd;
+    }
+
+    /// <summary>
+    /// FR-MCP-030: Adds CWD (or the specified path) as a new workspace on the MCP Server,
+    /// waits for the server to write the AGENTS-README-FIRST.yaml marker file, then
+    /// verifies trust via HMAC signature check and health nonce echo.
+    /// </summary>
+    private static Command BuildAddWorkspaceCommand()
+    {
+        var nameOption = new Option<string?>("--name", "Display name for the workspace (defaults to directory name)");
+        nameOption.AddAlias("-n");
+        var serverOption = new Option<string>("--server", () => "http://localhost:7147", "MCP Server base URL");
+        serverOption.AddAlias("-s");
+
+        var cmd = new Command("add-workspace", "Register CWD as a new MCP Server workspace and verify trust")
+        {
+            s_workspaceOption,
+            nameOption,
+            serverOption,
+        };
+
+        cmd.SetHandler(async (string? workspace, string? name, string server) =>
+        {
+            var workspacePath = Path.GetFullPath(
+                string.IsNullOrWhiteSpace(workspace) ? Environment.CurrentDirectory : workspace.Trim());
+            var markerPath = Path.Combine(workspacePath, "AGENTS-README-FIRST.yaml");
+
+            if (File.Exists(markerPath))
+            {
+                Error($"Workspace is already registered — {markerPath} exists.");
+                return;
+            }
+
+            name ??= new DirectoryInfo(workspacePath).Name;
+            Info($"Registering workspace '{name}' at {workspacePath}...");
+
+            // Step 1: Fetch the default (anonymous) API key from /api-key
+            string apiKey;
+            try
+            {
+                using var anonHttp = new HttpClient { BaseAddress = new Uri(server) };
+                var keyResponse = await anonHttp.GetAsync("/api-key").ConfigureAwait(true);
+                keyResponse.EnsureSuccessStatusCode();
+                var keyJson = await keyResponse.Content.ReadAsStringAsync().ConfigureAwait(true);
+                using var doc = JsonDocument.Parse(keyJson);
+                apiKey = doc.RootElement.GetProperty("apiKey").GetString()
+                    ?? throw new InvalidOperationException("Server returned null apiKey.");
+            }
+            catch (Exception ex)
+            {
+                Error($"Failed to fetch default API key from {server}/api-key: {ex.Message}");
+                return;
+            }
+
+            // Step 2: Register the workspace
+            try
+            {
+                using var client = new McpHttpClient(server, apiKey, workspacePath: string.Empty);
+                var result = await client.PostAsync<JsonElement>("/mcpserver/workspace", new
+                {
+                    workspacePath,
+                    name,
+                    isEnabled = true,
+                }).ConfigureAwait(true);
+
+                if (result.TryGetProperty("success", out var successProp) && !successProp.GetBoolean())
+                {
+                    var errorMsg = result.TryGetProperty("error", out var errProp) ? errProp.GetString() : "Unknown error";
+                    Error($"Server rejected workspace registration: {errorMsg}");
+                    return;
+                }
+
+                Success("Workspace registered on the MCP Server.");
+            }
+            catch (Exception ex)
+            {
+                Error($"Failed to register workspace: {ex.Message}");
+                return;
+            }
+
+            // Step 3: Watch for AGENTS-README-FIRST.yaml to be created by the server
+            Info("Waiting for AGENTS-README-FIRST.yaml...");
+            var appeared = await WaitForFileAsync(markerPath, TimeSpan.FromSeconds(30)).ConfigureAwait(true);
+            if (!appeared)
+            {
+                Warn("Marker file was not created within 30 seconds. Check the MCP Server logs.");
+                return;
+            }
+
+            // Step 4: Read the marker and verify trust
+            var markerClient = McpHttpClient.FromMarkerOnly(workspacePath);
+            if (markerClient is null)
+            {
+                Error("Marker file was created but could not be parsed.");
+                return;
+            }
+
+            // Step 5: Verify HMAC-SHA256 signature
+            var lines = File.ReadAllLines(markerPath);
+            var markerFields = ParseMarkerFields(lines);
+            if (!VerifyMarkerSignature(markerFields, out var sigError))
+            {
+                Error($"Marker signature INVALID: {sigError}");
+                markerClient.Dispose();
+                return;
+            }
+
+            Success("Marker signature verified.");
+
+            // Step 6: Health nonce echo verification
+            var nonce = Guid.NewGuid().ToString("N");
+            try
+            {
+                var healthResult = await markerClient.GetAsync<JsonElement>(
+                    $"/health?nonce={Uri.EscapeDataString(nonce)}").ConfigureAwait(true);
+                var echoedNonce = healthResult.TryGetProperty("nonce", out var nonceProp)
+                    ? nonceProp.GetString() : null;
+                if (!string.Equals(echoedNonce, nonce, StringComparison.Ordinal))
+                {
+                    Error($"Health nonce mismatch: sent '{nonce}', got '{echoedNonce}'.");
+                    markerClient.Dispose();
+                    return;
+                }
+
+                Success("Health nonce verified.");
+            }
+            catch (Exception ex)
+            {
+                Error($"Health check failed: {ex.Message}");
+                markerClient.Dispose();
+                return;
+            }
+
+            markerClient.Dispose();
+            Success($"Workspace added and trusted: {workspacePath}");
+            Info($"Marker: {markerPath}");
+            Info($"API key: {markerClient.ApiKey[..Math.Min(8, markerClient.ApiKey.Length)]}...");
+        }, s_workspaceOption, nameOption, serverOption);
+
+        return cmd;
+    }
+
+    /// <summary>Waits for a file to appear on disk using FileSystemWatcher + polling fallback.</summary>
+    private static async Task<bool> WaitForFileAsync(string filePath, TimeSpan timeout)
+    {
+        if (File.Exists(filePath))
+            return true;
+
+        var dir = Path.GetDirectoryName(filePath)!;
+        var fileName = Path.GetFileName(filePath);
+        using var tcs = new CancellationTokenSource(timeout);
+
+        try
+        {
+            using var watcher = new FileSystemWatcher(dir, fileName)
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.CreationTime,
+                EnableRaisingEvents = true,
+            };
+
+            var taskCompletion = new TaskCompletionSource<bool>();
+            watcher.Created += (_, _) => taskCompletion.TrySetResult(true);
+
+            // Polling fallback (FSW can miss events on some filesystems)
+            _ = Task.Run(async () =>
+            {
+                while (!tcs.Token.IsCancellationRequested)
+                {
+                    if (File.Exists(filePath))
+                    {
+                        taskCompletion.TrySetResult(true);
+                        return;
+                    }
+
+                    await Task.Delay(500, tcs.Token).ConfigureAwait(false);
+                }
+            }, tcs.Token);
+
+            tcs.Token.Register(() => taskCompletion.TrySetResult(false));
+            return await taskCompletion.Task.ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            return File.Exists(filePath);
+        }
+    }
+
+    /// <summary>
+    /// Parses the flat and dotted fields from the marker YAML for signature verification.
+    /// Returns a dictionary mapping dotted keys (e.g. "endpoints.health") to their string values.
+    /// </summary>
+    private static Dictionary<string, string> ParseMarkerFields(string[] lines)
+    {
+        var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        string? currentSection = null;
+
+        foreach (var line in lines)
+        {
+            if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith('#'))
+                continue;
+
+            var trimmed = line.TrimEnd();
+            var indent = trimmed.Length - trimmed.TrimStart().Length;
+            trimmed = trimmed.Trim();
+
+            if (!trimmed.Contains(':'))
+                continue;
+
+            var colonIdx = trimmed.IndexOf(':');
+            var key = trimmed[..colonIdx].Trim();
+            var value = trimmed[(colonIdx + 1)..].Trim();
+
+            if (indent == 0 || indent == 2)
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    // Section header (e.g. "endpoints:", "signature:")
+                    currentSection = indent == 0 ? key : null;
+                    if (indent == 2)
+                        currentSection = key;
+                    continue;
+                }
+
+                // Top-level field
+                fields[key] = value;
+                currentSection = null;
+            }
+            else if (indent == 4 && currentSection is not null)
+            {
+                // Nested field under a section (e.g. "  health: /health" under "endpoints:")
+                fields[$"{currentSection}.{key}"] = value;
+            }
+        }
+
+        return fields;
+    }
+
+    /// <summary>
+    /// Verifies the HMAC-SHA256 marker signature using the canonical payload format
+    /// from MarkerFileService.BuildSignaturePayload (lib/McpServer/src/McpServer.Services/Services/MarkerFileService.cs:288).
+    /// </summary>
+    private static bool VerifyMarkerSignature(Dictionary<string, string> fields, out string error)
+    {
+        error = string.Empty;
+
+        if (!fields.TryGetValue("apiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
+        {
+            error = "Marker file is missing apiKey.";
+            return false;
+        }
+
+        if (!fields.TryGetValue("signature.value", out var expectedSignature) || string.IsNullOrWhiteSpace(expectedSignature))
+        {
+            error = "Marker file is missing signature.value.";
+            return false;
+        }
+
+        // Build canonical payload matching MarkerFileService.BuildSignaturePayload (lines 288-321)
+        string[] signatureFields =
+        [
+            "signature.canonicalization", "port", "baseUrl", "apiKey", "workspace", "workspacePath",
+            "pid", "startedAt", "markerWrittenAtUtc", "serverStartedAtUtc",
+            "endpoints.health", "endpoints.swagger", "endpoints.swaggerUi", "endpoints.mcpTransport",
+            "endpoints.sessionLog", "endpoints.sessionLogDialog",
+            "endpoints.contextSearch", "endpoints.contextPack", "endpoints.contextSources",
+            "endpoints.todo", "endpoints.repo", "endpoints.desktop", "endpoints.gitHub",
+            "endpoints.tools", "endpoints.workspace", "endpoints.serverStartupUtc",
+            "endpoints.markerFileTimestamp",
+        ];
+
+        // The server uses the plain key names (without the "signature." prefix for canonicalization)
+        var payload = new StringBuilder();
+        foreach (var field in signatureFields)
+        {
+            var lookupKey = field;
+            var payloadKey = field;
+
+            // "signature.canonicalization" is stored under key "canonicalization" in the payload
+            // but looked up as "signature.canonicalization" in our parsed fields
+            if (field == "signature.canonicalization")
+                payloadKey = "canonicalization";
+
+            var value = fields.TryGetValue(lookupKey, out var v) ? v : string.Empty;
+            payload.Append(payloadKey).Append('=').Append(value.ReplaceLineEndings("\n")).Append('\n');
+        }
+
+        var keyBytes = Encoding.UTF8.GetBytes(apiKey);
+        var payloadBytes = Encoding.UTF8.GetBytes(payload.ToString());
+        using var hmac = new HMACSHA256(keyBytes);
+        var computed = Convert.ToHexString(hmac.ComputeHash(payloadBytes));
+
+        if (!string.Equals(computed, expectedSignature, StringComparison.OrdinalIgnoreCase))
+        {
+            error = $"Computed {computed[..16]}... does not match expected {expectedSignature[..16]}...";
+            return false;
+        }
+
+        return true;
     }
 
     private static Command BuildTodoCommand()
