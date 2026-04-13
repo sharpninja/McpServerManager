@@ -395,43 +395,145 @@ internal sealed class McpHttpClient : IDisposable
     {
         try
         {
-            const string appSettingsPath = @"C:\ProgramData\McpServer\appsettings.json";
-            if (!File.Exists(appSettingsPath))
-                return null;
+            // The deployed config may be JSON or YAML — check both.
+            const string jsonPath = @"C:\ProgramData\McpServer\appsettings.json";
+            const string yamlPath = @"C:\ProgramData\McpServer\appsettings.yaml";
 
-            using var doc = JsonDocument.Parse(File.ReadAllText(appSettingsPath));
-            if (!doc.RootElement.TryGetProperty("Mcp", out var mcp) ||
-                !mcp.TryGetProperty("Workspaces", out var workspaces) ||
-                workspaces.ValueKind != JsonValueKind.Array)
-            {
-                return null;
-            }
+            if (File.Exists(jsonPath))
+                return TryParsePrimaryWorkspaceFromJson(File.ReadAllText(jsonPath));
 
-            foreach (var ws in workspaces.EnumerateArray())
-            {
-                if (ws.ValueKind != JsonValueKind.Object)
-                    continue;
-
-                if (!ws.TryGetProperty("IsPrimary", out var isPrimary) || isPrimary.ValueKind != JsonValueKind.True)
-                    continue;
-
-                if (!ws.TryGetProperty("WorkspacePath", out var pathProp) || pathProp.ValueKind != JsonValueKind.String)
-                    continue;
-
-                var workspacePath = pathProp.GetString();
-                if (string.IsNullOrWhiteSpace(workspacePath))
-                    continue;
-
-                var client = FromMarkerOnly(workspacePath);
-                if (client is not null)
-                    return client;
-            }
+            if (File.Exists(yamlPath))
+                return TryParsePrimaryWorkspaceFromYaml(File.ReadAllLines(yamlPath));
 
             return null;
         }
         catch
         {
             return null;
+        }
+    }
+
+    private static McpHttpClient? TryParsePrimaryWorkspaceFromJson(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("Mcp", out var mcp) ||
+            !mcp.TryGetProperty("Workspaces", out var workspaces) ||
+            workspaces.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        foreach (var ws in workspaces.EnumerateArray())
+        {
+            if (ws.ValueKind != JsonValueKind.Object)
+                continue;
+
+            if (!ws.TryGetProperty("IsPrimary", out var isPrimary) || isPrimary.ValueKind != JsonValueKind.True)
+                continue;
+
+            if (!ws.TryGetProperty("WorkspacePath", out var pathProp) || pathProp.ValueKind != JsonValueKind.String)
+                continue;
+
+            var workspacePath = pathProp.GetString();
+            if (string.IsNullOrWhiteSpace(workspacePath))
+                continue;
+
+            var client = FromMarkerOnly(workspacePath);
+            if (client is not null)
+                return client;
+        }
+
+        return null;
+    }
+
+    private static McpHttpClient? TryParsePrimaryWorkspaceFromYaml(string[] lines)
+    {
+        // Simple line-by-line YAML parser for the Workspaces array.
+        // Looks for entries with IsPrimary: true and extracts WorkspacePath.
+        bool inWorkspaces = false;
+        bool inEntry = false;
+        bool isPrimary = false;
+        string? workspacePath = null;
+
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.TrimEnd();
+            var trimmed = line.TrimStart();
+            var indent = line.Length - trimmed.Length;
+
+            // Detect the "Workspaces:" section header (at any indent under Mcp:)
+            if (trimmed.Equals("Workspaces:", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("Workspaces:", StringComparison.OrdinalIgnoreCase))
+            {
+                inWorkspaces = true;
+                inEntry = false;
+                continue;
+            }
+
+            if (!inWorkspaces)
+                continue;
+
+            // Exit Workspaces when we hit a line at equal or lesser indent that's not a list item
+            if (indent <= 2 && !trimmed.StartsWith("- ") && !string.IsNullOrWhiteSpace(trimmed))
+            {
+                // Flush last entry
+                if (inEntry && isPrimary && !string.IsNullOrWhiteSpace(workspacePath))
+                {
+                    var client = FromMarkerOnly(workspacePath);
+                    if (client is not null)
+                        return client;
+                }
+
+                inWorkspaces = false;
+                continue;
+            }
+
+            // New list item
+            if (trimmed.StartsWith("- "))
+            {
+                // Flush previous entry
+                if (inEntry && isPrimary && !string.IsNullOrWhiteSpace(workspacePath))
+                {
+                    var client = FromMarkerOnly(workspacePath);
+                    if (client is not null)
+                        return client;
+                }
+
+                inEntry = true;
+                isPrimary = false;
+                workspacePath = null;
+
+                // The "- " prefix may contain the first key (e.g. "- WorkspacePath: ...")
+                var rest = trimmed[2..].Trim();
+                ParseYamlWorkspaceField(rest, ref isPrimary, ref workspacePath);
+                continue;
+            }
+
+            if (inEntry)
+                ParseYamlWorkspaceField(trimmed, ref isPrimary, ref workspacePath);
+        }
+
+        // Flush final entry
+        if (inEntry && isPrimary && !string.IsNullOrWhiteSpace(workspacePath))
+        {
+            var client = FromMarkerOnly(workspacePath);
+            if (client is not null)
+                return client;
+        }
+
+        return null;
+    }
+
+    private static void ParseYamlWorkspaceField(string trimmedLine, ref bool isPrimary, ref string? workspacePath)
+    {
+        if (trimmedLine.StartsWith("IsPrimary:", StringComparison.OrdinalIgnoreCase))
+        {
+            var value = trimmedLine["IsPrimary:".Length..].Trim();
+            isPrimary = value.Equals("true", StringComparison.OrdinalIgnoreCase);
+        }
+        else if (trimmedLine.StartsWith("WorkspacePath:", StringComparison.OrdinalIgnoreCase))
+        {
+            workspacePath = trimmedLine["WorkspacePath:".Length..].Trim();
         }
     }
 

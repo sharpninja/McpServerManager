@@ -484,41 +484,53 @@ internal static class DirectorCommands
                 }
             }
 
-            // Step 2: Register the workspace (with retry for 503 during server startup)
+            // Step 2: Register the workspace (with retry for 503 during server startup).
+            // Uses raw HttpClient instead of McpHttpClient.PostAsync to get direct access
+            // to HttpResponseMessage.StatusCode for the retry decision.
             const int maxRetries = 5;
+            using var registrationHttp = new HttpClient { BaseAddress = new Uri(server) };
+            registrationHttp.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
+            var requestBody = JsonSerializer.Serialize(new { workspacePath, name, isEnabled = true });
+
+            var registered = false;
             for (var attempt = 1; attempt <= maxRetries; attempt++)
             {
-                try
-                {
-                    using var client = new McpHttpClient(server, apiKey, workspacePath: string.Empty);
-                    var result = await client.PostAsync<JsonElement>("/mcpserver/workspace", new
-                    {
-                        workspacePath,
-                        name,
-                        isEnabled = true,
-                    }).ConfigureAwait(true);
+                using var content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+                using var response = await registrationHttp.PostAsync("/mcpserver/workspace", content).ConfigureAwait(true);
 
-                    if (result.TryGetProperty("success", out var successProp) && !successProp.GetBoolean())
+                if (response.IsSuccessStatusCode)
+                {
+                    var resultJson = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
+                    using var resultDoc = JsonDocument.Parse(resultJson);
+                    if (resultDoc.RootElement.TryGetProperty("success", out var successProp) && !successProp.GetBoolean())
                     {
-                        var errorMsg = result.TryGetProperty("error", out var errProp) ? errProp.GetString() : "Unknown error";
+                        var errorMsg = resultDoc.RootElement.TryGetProperty("error", out var errProp) ? errProp.GetString() : "Unknown error";
                         Error($"Server rejected workspace registration: {errorMsg}");
                         return;
                     }
 
                     Success("Workspace registered on the MCP Server.");
+                    registered = true;
                     break;
                 }
-                catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable && attempt < maxRetries)
+
+                if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable && attempt < maxRetries)
                 {
                     var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)); // 1s, 2s, 4s, 8s
                     Warn($"Server returned 503 (startup in progress). Retrying in {delay.TotalSeconds:0}s... ({attempt}/{maxRetries})");
                     await Task.Delay(delay).ConfigureAwait(true);
+                    continue;
                 }
-                catch (Exception ex)
-                {
-                    Error($"Failed to register workspace: {ex.Message}");
-                    return;
-                }
+
+                var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
+                Error($"Failed to register workspace: HTTP {(int)response.StatusCode} {response.StatusCode}: {errorBody}");
+                return;
+            }
+
+            if (!registered)
+            {
+                Error("Failed to register workspace after all retry attempts.");
+                return;
             }
 
             // Step 3: Watch for AGENTS-README-FIRST.yaml to be created by the server
