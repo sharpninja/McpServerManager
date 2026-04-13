@@ -446,7 +446,8 @@ internal static class DirectorCommands
 
             if (File.Exists(markerPath))
             {
-                Error($"Workspace is already registered — {markerPath} exists.");
+                Info($"Workspace already registered — validating trust for {markerPath}...");
+                await ValidateMarkerTrustAsync(workspacePath, markerPath).ConfigureAwait(true);
                 return;
             }
 
@@ -542,54 +543,8 @@ internal static class DirectorCommands
                 return;
             }
 
-            // Step 4: Read the marker and verify trust
-            var markerClient = McpHttpClient.FromMarkerOnly(workspacePath);
-            if (markerClient is null)
-            {
-                Error("Marker file was created but could not be parsed.");
-                return;
-            }
-
-            // Step 5: Verify HMAC-SHA256 signature
-            var lines = File.ReadAllLines(markerPath);
-            var markerFields = ParseMarkerFields(lines);
-            if (!VerifyMarkerSignature(markerFields, out var sigError))
-            {
-                Error($"Marker signature INVALID: {sigError}");
-                markerClient.Dispose();
-                return;
-            }
-
-            Success("Marker signature verified.");
-
-            // Step 6: Health nonce echo verification
-            var nonce = Guid.NewGuid().ToString("N");
-            try
-            {
-                var healthResult = await markerClient.GetAsync<JsonElement>(
-                    $"/health?nonce={Uri.EscapeDataString(nonce)}").ConfigureAwait(true);
-                var echoedNonce = healthResult.TryGetProperty("nonce", out var nonceProp)
-                    ? nonceProp.GetString() : null;
-                if (!string.Equals(echoedNonce, nonce, StringComparison.Ordinal))
-                {
-                    Error($"Health nonce mismatch: sent '{nonce}', got '{echoedNonce}'.");
-                    markerClient.Dispose();
-                    return;
-                }
-
-                Success("Health nonce verified.");
-            }
-            catch (Exception ex)
-            {
-                Error($"Health check failed: {ex.Message}");
-                markerClient.Dispose();
-                return;
-            }
-
-            markerClient.Dispose();
-            Success($"Workspace added and trusted: {workspacePath}");
-            Info($"Marker: {markerPath}");
-            Info($"API key: {markerClient.ApiKey[..Math.Min(8, markerClient.ApiKey.Length)]}...");
+            // Step 4: Validate trust on the new marker
+            await ValidateMarkerTrustAsync(workspacePath, markerPath).ConfigureAwait(true);
         }, s_workspaceOption, nameOption, serverOption);
 
         return cmd;
@@ -638,6 +593,61 @@ internal static class DirectorCommands
         {
             return File.Exists(filePath);
         }
+    }
+
+    /// <summary>
+    /// Reads the marker file, verifies its HMAC-SHA256 signature, and performs
+    /// a health nonce echo check. Prints success/error via <see cref="CommandHelpers"/>.
+    /// </summary>
+    private static async Task ValidateMarkerTrustAsync(string workspacePath, string markerPath)
+    {
+        var markerClient = McpHttpClient.FromMarkerOnly(workspacePath);
+        if (markerClient is null)
+        {
+            Error("Marker file could not be parsed.");
+            return;
+        }
+
+        // Signature verification
+        var lines = File.ReadAllLines(markerPath);
+        var markerFields = ParseMarkerFields(lines);
+        if (!VerifyMarkerSignature(markerFields, out var sigError))
+        {
+            Error($"Marker signature INVALID: {sigError}");
+            markerClient.Dispose();
+            return;
+        }
+
+        Success("Marker signature verified.");
+
+        // Health nonce echo verification
+        var nonce = Guid.NewGuid().ToString("N");
+        try
+        {
+            var healthResult = await markerClient.GetAsync<JsonElement>(
+                $"/health?nonce={Uri.EscapeDataString(nonce)}").ConfigureAwait(true);
+            var echoedNonce = healthResult.TryGetProperty("nonce", out var nonceProp)
+                ? nonceProp.GetString() : null;
+            if (!string.Equals(echoedNonce, nonce, StringComparison.Ordinal))
+            {
+                Error($"Health nonce mismatch: sent '{nonce}', got '{echoedNonce}'.");
+                markerClient.Dispose();
+                return;
+            }
+
+            Success("Health nonce verified.");
+        }
+        catch (Exception ex)
+        {
+            Error($"Health check failed: {ex.Message}");
+            markerClient.Dispose();
+            return;
+        }
+
+        Success($"Workspace trusted: {workspacePath}");
+        Info($"Marker: {markerPath}");
+        Info($"API key: {markerClient.ApiKey[..Math.Min(8, markerClient.ApiKey.Length)]}...");
+        markerClient.Dispose();
     }
 
     /// <summary>
