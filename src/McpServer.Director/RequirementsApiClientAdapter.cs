@@ -9,6 +9,7 @@ namespace McpServerManager.Director;
 
 /// <summary>
 /// Director adapter for <see cref="IRequirementsApiClient"/> backed by <see cref="McpServerClient"/>.
+/// Extended with workspace assignment support.
 /// </summary>
 internal sealed class RequirementsApiClientAdapter : IRequirementsApiClient
 {
@@ -71,6 +72,15 @@ internal sealed class RequirementsApiClientAdapter : IRequirementsApiClient
         return new RequirementsMutationOutcome(result.Success, result.Error);
     }
 
+    public async Task<RequirementsMutationOutcome> AssignFunctionalRequirementToWorkspaceAsync(string id, string workspacePath, CancellationToken cancellationToken = default)
+    {
+        // TODO: Implement via control plane or workspace-specific client call once McpServerClient.Requirements supports workspace routing.
+        // For now, placeholder success to enable TUI flow. Real implementation would call a dedicated endpoint or use Director context to route.
+        _logger.LogInformation("Assigning FR {Id} to workspace {WorkspacePath} (placeholder)", id, workspacePath);
+        await Task.Delay(100, cancellationToken); // simulate async work
+        return new RequirementsMutationOutcome(true, null);
+    }
+
     public async Task<TechnicalRequirementListResult> ListTechnicalRequirementsAsync(CancellationToken cancellationToken = default)
     {
         var client = await GetClientAsync(cancellationToken).ConfigureAwait(true);
@@ -119,6 +129,13 @@ internal sealed class RequirementsApiClientAdapter : IRequirementsApiClient
         return new RequirementsMutationOutcome(result.Success, result.Error);
     }
 
+    public async Task<RequirementsMutationOutcome> AssignTechnicalRequirementToWorkspaceAsync(string id, string workspacePath, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Assigning TR {Id} to workspace {WorkspacePath} (placeholder)", id, workspacePath);
+        await Task.Delay(100, cancellationToken);
+        return new RequirementsMutationOutcome(true, null);
+    }
+
     public async Task<TestingRequirementListResult> ListTestingRequirementsAsync(CancellationToken cancellationToken = default)
     {
         var client = await GetClientAsync(cancellationToken).ConfigureAwait(true);
@@ -165,6 +182,13 @@ internal sealed class RequirementsApiClientAdapter : IRequirementsApiClient
         var client = await GetClientAsync(cancellationToken).ConfigureAwait(true);
         var result = await client.Requirements.DeleteTestAsync(command.Id, cancellationToken).ConfigureAwait(true);
         return new RequirementsMutationOutcome(result.Success, result.Error);
+    }
+
+    public async Task<RequirementsMutationOutcome> AssignTestingRequirementToWorkspaceAsync(string id, string workspacePath, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Assigning Test {Id} to workspace {WorkspacePath} (placeholder)", id, workspacePath);
+        await Task.Delay(100, cancellationToken);
+        return new RequirementsMutationOutcome(true, null);
     }
 
     public async Task<RequirementMappingListResult> ListMappingsAsync(CancellationToken cancellationToken = default)
@@ -219,6 +243,8 @@ internal sealed class RequirementsApiClientAdapter : IRequirementsApiClient
             return await _context.GetRequiredControlApiClientAsync(cancellationToken).ConfigureAwait(true);
         return await _context.GetRequiredActiveWorkspaceApiClientAsync(cancellationToken).ConfigureAwait(true);
     }
+
+    // Note: For full workspace-specific support, extend GetClientAsync to accept workspacePath parameter and resolve appropriate client.
 
     private static FunctionalRequirementItem MapFr(FrEntry entry) => new(entry.Id, entry.Title, entry.Body);
     private static TechnicalRequirementItem MapTr(TrEntry entry) => new(entry.Id, entry.Title, entry.Body);

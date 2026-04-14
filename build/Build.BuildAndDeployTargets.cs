@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using static Nuke.Common.Logger;
+using Serilog;
 
 partial class Build
 {
@@ -26,7 +26,7 @@ partial class Build
             return true;
         }
 
-        Warn($"[WhatIf] {description}");
+        Log.Warning($"[WhatIf] {description}");
         return false;
     }
 
@@ -73,17 +73,17 @@ partial class Build
 
     private void ShowDeploySummary(List<DeploymentResult> results)
     {
-        Info("Deployment summary");
+        Log.Information("Deployment summary");
         foreach (var result in results)
         {
-            Info($"{result.Target}: {result.Status} - {result.Message}");
+            Log.Information($"{result.Target}: {result.Status} - {result.Message}");
         }
 
         var successCount = results.Count(x => x.Status == "Success");
         var whatIfCount = results.Count(x => x.Status == "WhatIf");
         var skippedCount = results.Count(x => x.Status == "Skipped");
         var failedCount = results.Count(x => x.Status == "Failed");
-        Info($"Success={successCount}  WhatIf={whatIfCount}  Skipped={skippedCount}  Failed={failedCount}");
+        Log.Information($"Success={successCount}  WhatIf={whatIfCount}  Skipped={skippedCount}  Failed={failedCount}");
     }
 
     private string ExecuteDotnetToolPipeline(
@@ -364,7 +364,7 @@ partial class Build
         var devices = InvokeProcess(ResolveAdbPath(), new List<string> { "devices", "-l" }, RepoRootPath, true);
         foreach (var line in devices.StandardOutputLines)
         {
-            Info(line);
+            Log.Information(line);
         }
 
         InvokeDotNet(
@@ -560,7 +560,7 @@ partial class Build
             InvokeWslCommand(distro, $"cp {QuoteBashLiteral(wslTempDebPath)} {QuoteBashLiteral(wslDebPath)}");
             if (installAfterBuild)
             {
-                Info($"Launching interactive WSL sudo in distro '{distro}'. Enter your password if prompted.");
+                Log.Information($"Launching interactive WSL sudo in distro '{distro}'. Enter your password if prompted.");
                 InvokeInteractiveWslCommand(distro, $"sudo dpkg -i {QuoteBashLiteral(wslTempDebPath)}");
             }
 
@@ -572,7 +572,7 @@ partial class Build
             InvokeProcess("dpkg-deb", new List<string> { "--build", "--root-owner-group", debStagingDirectory, debFilePath }, RepoRootPath, true);
             if (installAfterBuild)
             {
-                Info("Launching interactive sudo for desktop DEB install. Enter your password if prompted.");
+                Log.Information("Launching interactive sudo for desktop DEB install. Enter your password if prompted.");
                 InvokeInteractiveProcess("sudo", new List<string> { "dpkg", "-i", debFilePath }, RepoRootPath, true);
             }
         }
@@ -778,7 +778,7 @@ partial class Build
             installAfterPack: true,
             skipVersionBumpValue: SkipVersionBump,
             skipProcessStopValue: SkipProcessStop);
-        Info($"Dotnet tool pipeline complete: {packagePath}");
+        Log.Information($"Dotnet tool pipeline complete: {packagePath}");
     }
 
     private void RunPackDirectorToolTarget()
@@ -791,7 +791,7 @@ partial class Build
             installAfterPack: false,
             skipVersionBumpValue: true,
             skipProcessStopValue: true);
-        Info($"Director package ready: {packagePath}");
+        Log.Information($"Director package ready: {packagePath}");
     }
 
     private void RunUpdateDirectorToolTarget()
@@ -802,7 +802,7 @@ partial class Build
             throw new InvalidOperationException(result.Message);
         }
 
-        Info(result.Message);
+        Log.Information(result.Message);
     }
 
     private void RunPublishWebZipTarget()
@@ -814,7 +814,7 @@ partial class Build
 
         if (!ShouldExecuteAction($"Publish McpServer.Web {version.SemVer}"))
         {
-            Info($"Would publish McpServer.Web to {zipPath}");
+            Log.Information($"Would publish McpServer.Web to {zipPath}");
             return;
         }
 
@@ -842,7 +842,7 @@ partial class Build
         }
 
         ZipFile.CreateFromDirectory(publishDirectory, zipPath, CompressionLevel.Optimal, false);
-        Info($"Web publish ready: {zipPath}");
+        Log.Information($"Web publish ready: {zipPath}");
     }
 
     private void RunUpdateWebUiToolTarget()
@@ -853,13 +853,13 @@ partial class Build
             throw new InvalidOperationException(result.Message);
         }
 
-        Info(result.Message);
+        Log.Information(result.Message);
     }
 
     private void RunBuildAndroidPackageTarget()
     {
         var apkPath = BuildAndroidPackageCore();
-        Info($"Android package ready: {apkPath}");
+        Log.Information($"Android package ready: {apkPath}");
     }
 
     private void RunDeployAndroidTarget()
@@ -870,19 +870,19 @@ partial class Build
                 ? AndroidPhoneSerial
                 : "ZD222QH58Q";
         DeployAndroidCore(targetSerial);
-        Info($"Android deployment completed for {targetSerial}");
+        Log.Information($"Android deployment completed for {targetSerial}");
     }
 
     private void RunBuildDesktopMsixTarget()
     {
         var msixPath = BuildDesktopMsixCore(installAfterBuild: Install);
-        Info($"Desktop MSIX ready: {msixPath}");
+        Log.Information($"Desktop MSIX ready: {msixPath}");
     }
 
     private void RunBuildDesktopDebTarget()
     {
         var debPath = BuildDesktopDebCore(installAfterBuild: Install);
-        Info($"Desktop DEB ready: {debPath}");
+        Log.Information($"Desktop DEB ready: {debPath}");
     }
 
     private void RunDeployAllTarget()

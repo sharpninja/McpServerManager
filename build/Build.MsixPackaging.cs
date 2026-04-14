@@ -7,7 +7,7 @@ using System.Text;
 using System.Runtime.Versioning;
 using System.Xml;
 using System.Xml.Linq;
-using static Nuke.Common.Logger;
+using Serilog;
 
 partial class Build
 {
@@ -353,11 +353,11 @@ partial class Build
         {
             if (CommandExists("gsudo"))
             {
-                Warn("[WhatIf] Elevate the MSIX certificate trust step through gsudo, then install the package in the invoking user context.");
+                Log.Warning("[WhatIf] Elevate the MSIX certificate trust step through gsudo, then install the package in the invoking user context.");
             }
             else
             {
-                Warn("[WhatIf] MSIX certificate trust would require elevation, and gsudo was not found in PATH.");
+                Log.Warning("[WhatIf] MSIX certificate trust would require elevation, and gsudo was not found in PATH.");
             }
 
             return BuildDesktopMsixCoreNative(installAfterBuild: false);

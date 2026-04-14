@@ -67,8 +67,7 @@
                                           x:Name="VoicePinToggleButton"
                                           Content="Pinned"
                                           IsChecked="True"
-                                          Checked="OnVoicePinToggleChanged"
-                                          Unchecked="OnVoicePinToggleChanged"
+                                          IsCheckedChanged="OnVoicePinToggleChanged"
                                           Padding="10,4"/>
                             <Button Grid.Column="2"
                                     x:Name="VoiceFlyoutCloseButton"
@@ -131,8 +130,7 @@
                 <ToggleButton Grid.Column="5"
                               x:Name="VoiceFlyoutToggleButton"
                               Content="Voice"
-                              Checked="OnVoiceFlyoutToggleChanged"
-                              Unchecked="OnVoiceFlyoutToggleChanged"
+                              IsCheckedChanged="OnVoiceFlyoutToggleChanged"
                               VerticalAlignment="Center"
                               Padding="10,4"/>
                 <Button Grid.Column="6"

@@ -4,6 +4,7 @@ namespace McpServerManager.UI.Core.Services;
 
 /// <summary>
 /// Abstraction over requirements endpoints used by UI.Core CQRS handlers.
+/// Extended with workspace assignment support for Director TUI.
 /// </summary>
 public interface IRequirementsApiClient
 {
@@ -22,6 +23,9 @@ public interface IRequirementsApiClient
     /// <summary>Deletes a functional requirement.</summary>
     Task<RequirementsMutationOutcome> DeleteFunctionalRequirementAsync(DeleteFunctionalRequirementCommand command, CancellationToken cancellationToken = default);
 
+    /// <summary>Assigns a functional requirement to a (potentially different) workspace.</summary>
+    Task<RequirementsMutationOutcome> AssignFunctionalRequirementToWorkspaceAsync(string id, string workspacePath, CancellationToken cancellationToken = default);
+
     /// <summary>Lists technical requirements.</summary>
     Task<TechnicalRequirementListResult> ListTechnicalRequirementsAsync(CancellationToken cancellationToken = default);
 
@@ -37,6 +41,9 @@ public interface IRequirementsApiClient
     /// <summary>Deletes a technical requirement.</summary>
     Task<RequirementsMutationOutcome> DeleteTechnicalRequirementAsync(DeleteTechnicalRequirementCommand command, CancellationToken cancellationToken = default);
 
+    /// <summary>Assigns a technical requirement to a (potentially different) workspace.</summary>
+    Task<RequirementsMutationOutcome> AssignTechnicalRequirementToWorkspaceAsync(string id, string workspacePath, CancellationToken cancellationToken = default);
+
     /// <summary>Lists testing requirements.</summary>
     Task<TestingRequirementListResult> ListTestingRequirementsAsync(CancellationToken cancellationToken = default);
 
@@ -51,6 +58,9 @@ public interface IRequirementsApiClient
 
     /// <summary>Deletes a testing requirement.</summary>
     Task<RequirementsMutationOutcome> DeleteTestingRequirementAsync(DeleteTestingRequirementCommand command, CancellationToken cancellationToken = default);
+
+    /// <summary>Assigns a testing requirement to a (potentially different) workspace.</summary>
+    Task<RequirementsMutationOutcome> AssignTestingRequirementToWorkspaceAsync(string id, string workspacePath, CancellationToken cancellationToken = default);
 
     /// <summary>Lists FR-to-TR mapping rows.</summary>
     Task<RequirementMappingListResult> ListMappingsAsync(CancellationToken cancellationToken = default);

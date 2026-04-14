@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Xml;
 using System.Xml.Linq;
-using static Nuke.Common.Logger;
+using Serilog;
 
 partial class Build
 {
@@ -227,7 +227,7 @@ partial class Build
 
         if (!ShouldExecuteAction($"Package VSIX from {dllPath}"))
         {
-            Info($"Would package VSIX to {vsixPath}");
+            Log.Information($"Would package VSIX to {vsixPath}");
             return;
         }
 
@@ -331,7 +331,7 @@ partial class Build
         archive.CreateEntryFromFile(Path.Combine(stagingDirectory, "McpServer.VsExtension.McpTodo.dll"), "McpServer.VsExtension.McpTodo.dll");
         archive.CreateEntryFromFile(Path.Combine(stagingDirectory, "McpServer.VsExtension.McpTodo.pkgdef"), "McpServer.VsExtension.McpTodo.pkgdef");
 
-        Info($"VSIX package ready: {vsixPath}");
+        Log.Information($"VSIX package ready: {vsixPath}");
     }
 
     private void RunBuildAndInstallVsixTarget()
@@ -814,7 +814,7 @@ partial class Build
             }
         }
 
-        Info("Packages needing consolidation:");
+        Log.Information("Packages needing consolidation:");
         var foundIssues = false;
         foreach (var pair in packageVersions.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
         {
@@ -824,12 +824,12 @@ partial class Build
             }
 
             foundIssues = true;
-            Info($"{pair.Key}: {string.Join(", ", pair.Value.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))}");
+            Log.Information($"{pair.Key}: {string.Join(", ", pair.Value.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))}");
         }
 
         if (!foundIssues)
         {
-            Info("No package version discrepancies found.");
+            Log.Information("No package version discrepancies found.");
         }
     }
 

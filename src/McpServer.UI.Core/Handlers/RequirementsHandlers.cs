@@ -440,6 +440,78 @@ internal sealed class GenerateRequirementsDocumentQueryHandler : IQueryHandler<G
     }
 }
 
+/// <summary>Handles <see cref="AssignFunctionalRequirementToWorkspaceCommand"/>.</summary>
+internal sealed class AssignFunctionalRequirementToWorkspaceCommandHandler : ICommandHandler<AssignFunctionalRequirementToWorkspaceCommand, RequirementsMutationOutcome>
+{
+    private readonly IRequirementsApiClient _client;
+    private readonly IAuthorizationPolicyService _authorizationPolicy;
+    private readonly ILogger<AssignFunctionalRequirementToWorkspaceCommandHandler> _logger;
+
+    public AssignFunctionalRequirementToWorkspaceCommandHandler(
+        IRequirementsApiClient client,
+        IAuthorizationPolicyService authorizationPolicy,
+        ILogger<AssignFunctionalRequirementToWorkspaceCommandHandler> logger)
+    {
+        _client = client;
+        _authorizationPolicy = authorizationPolicy;
+        _logger = logger;
+    }
+
+    public async Task<Result<RequirementsMutationOutcome>> HandleAsync(AssignFunctionalRequirementToWorkspaceCommand command, CallContext context)
+        => await RequirementsHandlerHelpers.WriteAsync(
+            _authorizationPolicy,
+            _logger,
+            () => _client.AssignFunctionalRequirementToWorkspaceAsync(command.Id, command.WorkspacePath, context.CancellationToken)).ConfigureAwait(true);
+}
+
+/// <summary>Handles <see cref="AssignTechnicalRequirementToWorkspaceCommand"/>.</summary>
+internal sealed class AssignTechnicalRequirementToWorkspaceCommandHandler : ICommandHandler<AssignTechnicalRequirementToWorkspaceCommand, RequirementsMutationOutcome>
+{
+    private readonly IRequirementsApiClient _client;
+    private readonly IAuthorizationPolicyService _authorizationPolicy;
+    private readonly ILogger<AssignTechnicalRequirementToWorkspaceCommandHandler> _logger;
+
+    public AssignTechnicalRequirementToWorkspaceCommandHandler(
+        IRequirementsApiClient client,
+        IAuthorizationPolicyService authorizationPolicy,
+        ILogger<AssignTechnicalRequirementToWorkspaceCommandHandler> logger)
+    {
+        _client = client;
+        _authorizationPolicy = authorizationPolicy;
+        _logger = logger;
+    }
+
+    public async Task<Result<RequirementsMutationOutcome>> HandleAsync(AssignTechnicalRequirementToWorkspaceCommand command, CallContext context)
+        => await RequirementsHandlerHelpers.WriteAsync(
+            _authorizationPolicy,
+            _logger,
+            () => _client.AssignTechnicalRequirementToWorkspaceAsync(command.Id, command.WorkspacePath, context.CancellationToken)).ConfigureAwait(true);
+}
+
+/// <summary>Handles <see cref="AssignTestingRequirementToWorkspaceCommand"/>.</summary>
+internal sealed class AssignTestingRequirementToWorkspaceCommandHandler : ICommandHandler<AssignTestingRequirementToWorkspaceCommand, RequirementsMutationOutcome>
+{
+    private readonly IRequirementsApiClient _client;
+    private readonly IAuthorizationPolicyService _authorizationPolicy;
+    private readonly ILogger<AssignTestingRequirementToWorkspaceCommandHandler> _logger;
+
+    public AssignTestingRequirementToWorkspaceCommandHandler(
+        IRequirementsApiClient client,
+        IAuthorizationPolicyService authorizationPolicy,
+        ILogger<AssignTestingRequirementToWorkspaceCommandHandler> logger)
+    {
+        _client = client;
+        _authorizationPolicy = authorizationPolicy;
+        _logger = logger;
+    }
+
+    public async Task<Result<RequirementsMutationOutcome>> HandleAsync(AssignTestingRequirementToWorkspaceCommand command, CallContext context)
+        => await RequirementsHandlerHelpers.WriteAsync(
+            _authorizationPolicy,
+            _logger,
+            () => _client.AssignTestingRequirementToWorkspaceAsync(command.Id, command.WorkspacePath, context.CancellationToken)).ConfigureAwait(true);
+}
+
 internal static class RequirementsHandlerHelpers
 {
     public static async Task<Result<T>> ReadAsync<T>(

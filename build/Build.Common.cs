@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using static Nuke.Common.Logger;
+using Serilog;
 
 partial class Build
 {

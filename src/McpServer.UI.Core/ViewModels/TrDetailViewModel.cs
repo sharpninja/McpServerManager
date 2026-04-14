@@ -9,8 +9,9 @@ namespace McpServerManager.UI.Core.ViewModels;
 
 /// <summary>
 /// ViewModel for technical requirement detail and CRUD operations.
+/// Extended with workspace assignment support for Director TUI.
 /// </summary>
-[ViewModelCommand("requirements-tr-detail", Description = "Get/create/update/delete technical requirements")]
+[ViewModelCommand("requirements-tr-detail", Description = "Get/create/update/delete/assign technical requirements")]
 public sealed class TrDetailViewModel : AreaDetailViewModelBase<TechnicalRequirementItem>
 {
     private readonly Dispatcher _dispatcher;
@@ -113,6 +114,51 @@ public sealed class TrDetailViewModel : AreaDetailViewModelBase<TechnicalRequire
             _logger.LogError("{ExceptionDetail}", ex.ToString());
             ErrorMessage = ex.Message;
             StatusMessage = "Delete failed.";
+            return null;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// Assigns a technical requirement to a (potentially different) workspace.
+    /// Used by the Director TUI "Assign WS" button (following FrDetailViewModel pattern).
+    /// </summary>
+    public async Task<RequirementsMutationOutcome?> AssignToWorkspaceAsync(string id, string workspacePath, CancellationToken ct = default)
+    {
+        IsBusy = true;
+        ErrorMessage = null;
+        StatusMessage = $"Assigning {id} to workspace '{workspacePath}'...";
+        try
+        {
+            var result = await _dispatcher.SendAsync(
+                new AssignTechnicalRequirementToWorkspaceCommand(id, workspacePath), 
+                ct).ConfigureAwait(true);
+            
+            if (!result.IsSuccess || result.Value is null)
+            {
+                ErrorMessage = result.Error ?? "Assign failed.";
+                StatusMessage = "Assign failed.";
+                return null;
+            }
+
+            if (!result.Value.Success)
+            {
+                ErrorMessage = result.Value.Error ?? "Assign failed.";
+                StatusMessage = "Assign failed.";
+                return result.Value;
+            }
+
+            StatusMessage = $"Assigned {id} to workspace '{workspacePath}'.";
+            return result.Value;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("{ExceptionDetail}", ex.ToString());
+            ErrorMessage = ex.Message;
+            StatusMessage = "Assign failed.";
             return null;
         }
         finally

@@ -123,129 +123,170 @@
     {
       "properties": {
         "AndroidEmulatorSerial": {
-          "type": "string"
+          "type": "string",
+          "description": "Serial number of Android emulator"
         },
         "AndroidPhoneSerial": {
-          "type": "string"
+          "type": "string",
+          "description": "Serial number of physical Android phone"
         },
         "Clean": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Clean artifacts before building"
         },
         "Configuration": {
-          "type": "string"
+          "type": "string",
+          "description": "Build configuration (Debug/Release)"
         },
         "DeploySelection": {
-          "type": "string"
+          "type": "string",
+          "description": "Comma-separated list of components to deploy (All, Director, WebUi, AndroidPhone, AndroidEmulator, DesktopMsix, DesktopDeb)"
         },
         "DeviceSerial": {
-          "type": "string"
+          "type": "string",
+          "description": "Android device serial number for deployment and diagnostics"
         },
         "ExpectedRepoUrl": {
-          "type": "string"
+          "type": "string",
+          "description": "Expected F-Droid repository URL for verification"
         },
         "ExpectedVersion": {
-          "type": "string"
+          "type": "string",
+          "description": "Expected version for validation steps"
         },
         "ExtensionDevelopmentPath": {
-          "type": "string"
+          "type": "string",
+          "description": "Path to the extension under development for VS Code launch"
         },
         "ExtensionsDir": {
-          "type": "string"
+          "type": "string",
+          "description": "Custom extensions directory for VS Code/Cursor"
         },
         "Force": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Force operation even when safety checks would block it"
         },
         "IncludeBugreport": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Include full bugreport when collecting Android crash data"
         },
         "IncludeCursor": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Include installation for Cursor editor"
         },
         "IncludeVsCode": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Include installation for VS Code"
         },
         "Install": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Install package/extension after building"
         },
         "InstallDir": {
-          "type": "string"
+          "type": "string",
+          "description": "Custom directory for installing VS extensions"
         },
         "JsonOutputPath": {
-          "type": "string"
+          "type": "string",
+          "description": "Path where JSON output should be written"
         },
         "KillExisting": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Kill existing running instances before starting new ones"
         },
         "NoBuild": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Skip build step when possible"
         },
         "NoCert": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Skip code signing during packaging"
         },
         "NupkgDir": {
-          "type": "string"
+          "type": "string",
+          "description": "Directory for output NuGet packages"
         },
         "OutputDir": {
-          "type": "string"
+          "type": "string",
+          "description": "Root directory for build artifacts"
         },
         "OutputRoot": {
-          "type": "string"
+          "type": "string",
+          "description": "Root directory for specialized output (e.g. crash artifacts)"
         },
         "PackageName": {
-          "type": "string"
+          "type": "string",
+          "description": "Android package name for diagnostics collection"
         },
         "PackageVersion": {
-          "type": "string"
+          "type": "string",
+          "description": "Override version for packages and artifacts"
         },
         "Phase": {
-          "type": "string"
+          "type": "string",
+          "description": "Phase for Android crash collection workflow (Prepare/Collect)"
         },
         "Port": {
           "type": "integer",
+          "description": "Port number for Web UI",
           "format": "int32"
         },
         "ProjectPath": {
-          "type": "string"
+          "type": "string",
+          "description": "Path to project used for tool packing/updating"
         },
         "Rid": {
-          "type": "string"
+          "type": "string",
+          "description": "Runtime Identifier (win-x64, linux-x64, etc.)"
         },
         "SkipInstall": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Skip automatic installation of VSIX/extension"
         },
         "SkipProcessStop": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Do not stop running processes before updating tools"
         },
         "SkipVersionBump": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Skip automatic GitVersion patch bump"
         },
         "TimeoutSeconds": {
           "type": "integer",
+          "description": "Timeout in seconds for startup/health checks",
           "format": "int32"
         },
         "ToolCommand": {
-          "type": "string"
+          "type": "string",
+          "description": "Command name for the installed dotnet tool"
         },
         "ToolId": {
-          "type": "string"
+          "type": "string",
+          "description": "NuGet tool package ID (e.g. SharpNinja.McpServer.Director)"
         },
         "VsCodePath": {
-          "type": "string"
+          "type": "string",
+          "description": "Path to VS Code (Code.exe) executable"
         },
         "VsixEntry": {
-          "type": "string"
+          "type": "string",
+          "description": "Specific file entry to extract/read from a VSIX archive"
         },
         "VsixPath": {
-          "type": "string"
+          "type": "string",
+          "description": "Path to a specific VSIX file to use"
         },
         "WhatIf": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Show what would be done without executing destructive actions"
         },
         "WorkspaceFolder": {
-          "type": "string"
+          "type": "string",
+          "description": "Workspace folder to open when launching VS Code with extension"
         },
         "WslDistro": {
-          "type": "string"
+          "type": "string",
+          "description": "WSL distribution name for Linux packaging"
         }
       }
     },

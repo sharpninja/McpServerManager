@@ -62,6 +62,22 @@ public sealed record DeleteRequirementMappingCommand(string FrId) : ICommand<Req
 /// <summary>Query to generate requirements output for a specific doc selector.</summary>
 public sealed record GenerateRequirementsDocumentQuery(string Doc = "all") : IQuery<GeneratedRequirementsDocument>;
 
+/// <summary>
+/// Command to assign (or move) a functional requirement to a specific workspace.
+/// Supports reassigning requirements across workspaces in the Director TUI.
+/// </summary>
+public sealed record AssignFunctionalRequirementToWorkspaceCommand(string Id, string WorkspacePath) : ICommand<RequirementsMutationOutcome>;
+
+/// <summary>
+/// Command to assign (or move) a technical requirement to a specific workspace.
+/// </summary>
+public sealed record AssignTechnicalRequirementToWorkspaceCommand(string Id, string WorkspacePath) : ICommand<RequirementsMutationOutcome>;
+
+/// <summary>
+/// Command to assign (or move) a testing requirement to a specific workspace.
+/// </summary>
+public sealed record AssignTestingRequirementToWorkspaceCommand(string Id, string WorkspacePath) : ICommand<RequirementsMutationOutcome>;
+
 /// <summary>List result for functional requirements.</summary>
 public sealed record FunctionalRequirementListResult(IReadOnlyList<FunctionalRequirementItem> Items);
 

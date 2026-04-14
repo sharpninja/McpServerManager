@@ -310,7 +310,8 @@ internal sealed class MainScreen : Window
                 _testListVm,
                 _testDetailVm,
                 _mappingListVm,
-                _requirementsGenerateVm),
+                _requirementsGenerateVm,
+                _workspaceListVm),
             HasWorkspaceOrControl));
 
         _tabRegistry.RegisterTab(new TabRegistration(

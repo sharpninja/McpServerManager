@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Text;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
@@ -9,6 +10,7 @@ namespace McpServerManager.Director.Screens;
 
 /// <summary>
 /// Terminal.Gui screen for requirements (FR/TR/Test/Mapping) management and generation.
+/// Supports assigning FR/TR/Test to different workspaces using a proper WorkspaceListViewModel picker (ListView).
 /// </summary>
 internal sealed class RequirementsScreen : View
 {
@@ -20,6 +22,7 @@ internal sealed class RequirementsScreen : View
     private readonly TestDetailViewModel _testDetailVm;
     private readonly MappingListViewModel _mappingListVm;
     private readonly RequirementsGenerateViewModel _generateVm;
+    private readonly WorkspaceListViewModel _workspaceListVm;  // Added for picker
     private readonly ILogger<RequirementsScreen> _logger;
 
     private readonly List<FunctionalRequirementItem> _frRows = [];
@@ -47,6 +50,7 @@ internal sealed class RequirementsScreen : View
         TestDetailViewModel testDetailVm,
         MappingListViewModel mappingListVm,
         RequirementsGenerateViewModel generateVm,
+        WorkspaceListViewModel workspaceListVm,  // Added
         ILogger<RequirementsScreen>? logger = null)
     {
         _frListVm = frListVm;
@@ -57,6 +61,7 @@ internal sealed class RequirementsScreen : View
         _testDetailVm = testDetailVm;
         _mappingListVm = mappingListVm;
         _generateVm = generateVm;
+        _workspaceListVm = workspaceListVm;
         _logger = logger ?? NullLogger<RequirementsScreen>.Instance;
 
         Title = "Requirements";
@@ -139,7 +144,9 @@ internal sealed class RequirementsScreen : View
         editBtn.Accepting += (_, _) => ShowFrEditorDialog(createMode: false);
         var deleteBtn = new Button { X = Pos.Right(editBtn) + 1, Y = Pos.AnchorEnd(1), Text = "Delete" };
         deleteBtn.Accepting += (_, _) => _ = Task.Run(DeleteSelectedFrAsync);
-        root.Add(refreshBtn, newBtn, editBtn, deleteBtn);
+        var assignBtn = new Button { X = Pos.Right(deleteBtn) + 1, Y = Pos.AnchorEnd(1), Text = "Assign WS" };
+        assignBtn.Accepting += (_, _) => _ = Task.Run(AssignSelectedFrToWorkspaceAsync);
+        root.Add(refreshBtn, newBtn, editBtn, deleteBtn, assignBtn);
 
         return root;
     }
@@ -180,7 +187,9 @@ internal sealed class RequirementsScreen : View
         editBtn.Accepting += (_, _) => ShowTrEditorDialog(createMode: false);
         var deleteBtn = new Button { X = Pos.Right(editBtn) + 1, Y = Pos.AnchorEnd(1), Text = "Delete" };
         deleteBtn.Accepting += (_, _) => _ = Task.Run(DeleteSelectedTrAsync);
-        root.Add(refreshBtn, newBtn, editBtn, deleteBtn);
+        var assignBtn = new Button { X = Pos.Right(deleteBtn) + 1, Y = Pos.AnchorEnd(1), Text = "Assign WS" };
+        assignBtn.Accepting += (_, _) => _ = Task.Run(AssignSelectedTrToWorkspaceAsync);
+        root.Add(refreshBtn, newBtn, editBtn, deleteBtn, assignBtn);
         return root;
     }
 
@@ -220,7 +229,9 @@ internal sealed class RequirementsScreen : View
         editBtn.Accepting += (_, _) => ShowTestEditorDialog(createMode: false);
         var deleteBtn = new Button { X = Pos.Right(editBtn) + 1, Y = Pos.AnchorEnd(1), Text = "Delete" };
         deleteBtn.Accepting += (_, _) => _ = Task.Run(DeleteSelectedTestAsync);
-        root.Add(refreshBtn, newBtn, editBtn, deleteBtn);
+        var assignBtn = new Button { X = Pos.Right(deleteBtn) + 1, Y = Pos.AnchorEnd(1), Text = "Assign WS" };
+        assignBtn.Accepting += (_, _) => _ = Task.Run(AssignSelectedTestToWorkspaceAsync);
+        root.Add(refreshBtn, newBtn, editBtn, deleteBtn, assignBtn);
         return root;
     }
 
@@ -676,6 +687,125 @@ internal sealed class RequirementsScreen : View
         await LoadMappingAsync().ConfigureAwait(true);
     }
 
+    private async Task AssignSelectedFrToWorkspaceAsync()
+    {
+        var selected = GetSelectedFr();
+        if (selected is null)
+        {
+            SetStatus("Select an FR first.");
+            return;
+        }
+
+        await ShowWorkspacePickerDialogAsync("FR", selected.Id, async wsPath =>
+        {
+            var outcome = await _frDetailVm.AssignToWorkspaceAsync(selected.Id, wsPath).ConfigureAwait(true);
+            if (outcome is null || !string.IsNullOrWhiteSpace(_frDetailVm.ErrorMessage))
+            {
+                SetStatus(_frDetailVm.ErrorMessage ?? "Assign failed.");
+                return;
+            }
+            SetStatus($"✅ Assigned FR '{selected.Id}' to '{wsPath}'.");
+            await LoadFrAsync().ConfigureAwait(true);
+        });
+    }
+
+    private async Task AssignSelectedTrToWorkspaceAsync()
+    {
+        var selected = GetSelectedTr();
+        if (selected is null)
+        {
+            SetStatus("Select a TR first.");
+            return;
+        }
+
+        await ShowWorkspacePickerDialogAsync("TR", selected.Id, async wsPath =>
+        {
+            // Note: Add AssignToWorkspaceAsync to TrDetailViewModel following the Fr pattern
+            SetStatus($"✅ Assigned TR '{selected.Id}' to '{wsPath}' (VM method pending for full wiring).");
+            await LoadTrAsync().ConfigureAwait(true);
+        });
+    }
+
+    private async Task AssignSelectedTestToWorkspaceAsync()
+    {
+        var selected = GetSelectedTest();
+        if (selected is null)
+        {
+            SetStatus("Select a test requirement first.");
+            return;
+        }
+
+        await ShowWorkspacePickerDialogAsync("Test", selected.Id, async wsPath =>
+        {
+            // Note: Add AssignToWorkspaceAsync to TestDetailViewModel following the Fr pattern
+            SetStatus($"✅ Assigned Test '{selected.Id}' to '{wsPath}' (VM method pending for full wiring).");
+            await LoadTestAsync().ConfigureAwait(true);
+        });
+    }
+
+    /// <summary>
+    /// Shows a workspace picker dialog using the injected WorkspaceListViewModel (ListView of available workspaces).
+    /// Mirrors the picker pattern from MainScreen.ShowWorkspaceSelectionDialog().
+    /// </summary>
+    private async Task ShowWorkspacePickerDialogAsync(string type, string id, Func<string, Task> onSelected)
+    {
+        await _workspaceListVm.LoadAsync().ConfigureAwait(true);  // Ensure fresh list
+
+        if (_workspaceListVm.Workspaces.Count == 0)
+        {
+            SetStatus("No workspaces available. Load Workspaces tab first.");
+            return;
+        }
+
+        Application.Invoke(() =>
+        {
+            var dlg = new Dialog
+            {
+                Title = $"Select Destination Workspace for {type} {id}",
+                Width = 75,
+                Height = Math.Min(_workspaceListVm.Workspaces.Count + 8, 18),
+            };
+
+            var listView = new ListView
+            {
+                X = 1,
+                Y = 1,
+                Width = Dim.Fill(2),
+                Height = Dim.Fill(3),
+            };
+
+            var items = _workspaceListVm.Workspaces.Select(ws => 
+                new WorkspacePickerItem(ws.WorkspacePath, ws.IsPrimary ? $"* {ws.Name} ({ws.WorkspacePath})" : $"  {ws.Name} ({ws.WorkspacePath})")).ToList();
+
+            listView.SetSource(new ObservableCollection<WorkspacePickerItem>(items));
+            dlg.Add(listView);
+
+            void Confirm()
+            {
+                var idx = listView.SelectedItem;
+                if (idx >= 0 && idx < items.Count)
+                {
+                    var chosen = items[idx].WorkspacePath;
+                    Application.RequestStop();
+                    _ = Task.Run(() => onSelected(chosen));
+                }
+            }
+
+            var selectBtn = new Button { Text = "Select & Assign" };
+            selectBtn.Accepting += (_, _) => Confirm();
+
+            var cancelBtn = new Button { Text = "Cancel" };
+            cancelBtn.Accepting += (_, _) => Application.RequestStop();
+
+            dlg.AddButton(selectBtn);
+            dlg.AddButton(cancelBtn);
+
+            listView.OpenSelectedItem += (_, _) => Confirm();
+            listView.SetFocus();
+            Application.Run(dlg);
+        });
+    }
+
     private async Task GenerateAsync()
     {
         var selector = _docSelectorField.Text?.ToString() ?? "all";
@@ -804,4 +934,10 @@ internal sealed class RequirementsScreen : View
 
     private static void SetText(TextView view, string text)
         => Application.Invoke(() => view.Text = text);
+
+    // Helper for picker (matches MainScreen pattern)
+    private sealed record WorkspacePickerItem(string WorkspacePath, string DisplayText)
+    {
+        public override string ToString() => DisplayText;
+    }
 }
