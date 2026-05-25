@@ -44,6 +44,10 @@
 
 **TR9.** — Placeholder requirement backfilled by DB-FK-001.
 
+## TR-GEN-YAML-001
+
+**YAML Generation Test** — TR for YAML document generation test
+
 ## TR-RTUI-001
 
 **TR-RTUI-001** — Placeholder requirement backfilled by DB-FK-001.
@@ -179,4 +183,8 @@
 ## TR-RTUI-128
 
 **TR-RTUI-128** — Placeholder requirement backfilled by DB-FK-001.
+
+## TR-TEST-001
+
+**TR-TEST-001** — Placeholder requirement backfilled for TODO link TR-TEST-001.
 
