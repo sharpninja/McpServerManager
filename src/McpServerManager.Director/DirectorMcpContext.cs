@@ -1,7 +1,6 @@
 using McpServer.Client;
 using McpServerManager.Director.Auth;
 using McpServerManager.UI.Core.Hosting;
-using System.Text.Json;
 
 namespace McpServerManager.Director;
 
@@ -149,7 +148,7 @@ internal sealed class DirectorMcpContext : IMcpHostContext, IDisposable
                 "No control-plane connection is available. Configure a default URL with 'director config set-default-url <url>' " +
                 "or run Director from a workspace with AGENTS-README-FIRST.yaml.");
 
-        TrySeedControlApiKeyFromPrimaryWorkspaceMarker(client);
+        TrySeedControlApiKeyFromLocalWorkspaceMarker(client);
         await EnsureInitializedAsync(client, cancellationToken).ConfigureAwait(true);
         return client;
     }
@@ -227,7 +226,7 @@ internal sealed class DirectorMcpContext : IMcpHostContext, IDisposable
         return cached.AccessToken;
     }
 
-    private void TrySeedControlApiKeyFromPrimaryWorkspaceMarker(McpServerClient client)
+    private void TrySeedControlApiKeyFromLocalWorkspaceMarker(McpServerClient client)
     {
         if (!string.IsNullOrWhiteSpace(client.ApiKey))
             return;
@@ -238,45 +237,13 @@ internal sealed class DirectorMcpContext : IMcpHostContext, IDisposable
 
         try
         {
-            const string appSettingsPath = @"C:\ProgramData\McpServer\appsettings.json";
-            if (!File.Exists(appSettingsPath))
+            var markerClient = McpHttpClient.TryGetLocalWorkspaceCredentialClient(controlBaseUrl);
+            if (markerClient is null)
                 return;
-
-            using var doc = JsonDocument.Parse(File.ReadAllText(appSettingsPath));
-            if (!doc.RootElement.TryGetProperty("Mcp", out var mcp) ||
-                !mcp.TryGetProperty("Workspaces", out var workspaces) ||
-                workspaces.ValueKind != JsonValueKind.Array)
-            {
-                return;
-            }
-
-            string? primaryWorkspacePath = null;
-            foreach (var ws in workspaces.EnumerateArray())
-            {
-                if (ws.TryGetProperty("IsPrimary", out var isPrimary) && isPrimary.ValueKind == JsonValueKind.True &&
-                    ws.TryGetProperty("WorkspacePath", out var pathProp) && pathProp.ValueKind == JsonValueKind.String)
-                {
-                    primaryWorkspacePath = pathProp.GetString();
-                    break;
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(primaryWorkspacePath))
-                return;
-
-            var markerClient = McpHttpClient.FromMarkerOnly(primaryWorkspacePath);
-            if (markerClient is null || string.IsNullOrWhiteSpace(markerClient.ApiKey))
-                return;
-
-            if (!string.Equals(
-                    markerClient.BaseUrl.TrimEnd('/'),
-                    controlBaseUrl.TrimEnd('/'),
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
 
             client.ApiKey = markerClient.ApiKey;
+            client.WorkspacePath = markerClient.WorkspacePath;
+            markerClient.Dispose();
         }
         catch
         {

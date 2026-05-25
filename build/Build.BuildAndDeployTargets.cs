@@ -700,7 +700,7 @@ partial class Build
                 "director",
                 "nupkg",
                 installAfterPack: true,
-                skipVersionBumpValue: true,
+                skipVersionBumpValue: SkipVersionBump,
                 skipProcessStopValue: SkipProcessStop);
 
             return CreateDeploymentResult("Director", WhatIf ? "WhatIf" : "Success", WhatIf ? $"Would install Director from {nupkgPath}." : $"Installed Director from {nupkgPath}.");
@@ -731,7 +731,7 @@ partial class Build
                 "mcp-web",
                 "nupkg",
                 installAfterPack: true,
-                skipVersionBumpValue: true,
+                skipVersionBumpValue: SkipVersionBump,
                 skipProcessStopValue: true);
 
             return CreateDeploymentResult("WebUi", WhatIf ? "WhatIf" : "Success", WhatIf ? $"Would install WebUi from {nupkgPath}." : $"Installed WebUi from {nupkgPath}.");

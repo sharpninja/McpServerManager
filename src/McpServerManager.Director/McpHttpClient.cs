@@ -359,21 +359,37 @@ internal sealed class McpHttpClient : IDisposable
         var cfg = DirectorCliConfigStore.Load();
         if (!string.IsNullOrWhiteSpace(cfg.DefaultBaseUrl))
         {
-            // Use marker workspace path if available; otherwise try the primary workspace
-            // from the deployed appsettings. Never fall back to CWD — it may be the service
+            // Use marker workspace path if available; otherwise try a local configured
+            // workspace from the deployed appsettings. Never fall back to CWD — it may be the service
             // install directory (e.g. C:\ProgramData\McpServer), not a registered workspace.
+            var configuredClient = markerClient is null
+                ? TryFromLocalConfiguredWorkspaceMarker(cfg.DefaultBaseUrl)
+                : null;
             var workspacePath = markerClient?.WorkspacePath
-                                ?? TryFromLocalPrimaryWorkspaceMarker()?.WorkspacePath
+                                ?? configuredClient?.WorkspacePath
                                 ?? string.Empty;
+            markerClient?.Dispose();
+            configuredClient?.Dispose();
             return new McpHttpClient(
                 cfg.DefaultBaseUrl,
                 apiKey: string.Empty,
                 workspacePath);
         }
 
-        var primaryMarkerClient = TryFromLocalPrimaryWorkspaceMarker();
+        var primaryMarkerClient = TryFromLocalConfiguredWorkspaceMarker(primaryOnly: true);
         if (primaryMarkerClient is not null)
+        {
+            markerClient?.Dispose();
             return primaryMarkerClient;
+        }
+
+        var configuredMarkerClient = markerClient is null
+            ? TryFromLocalConfiguredWorkspaceMarker()
+            : null;
+        if (configuredMarkerClient is not null)
+        {
+            return configuredMarkerClient;
+        }
 
         return markerClient;
     }
@@ -384,14 +400,31 @@ internal sealed class McpHttpClient : IDisposable
     /// workspace is configured or the marker file cannot be read.
     /// The returned client carries the primary workspace's full-access API key.
     /// </summary>
-    public static McpHttpClient? TryGetPrimaryWorkspaceClient() => TryFromLocalPrimaryWorkspaceMarker();
+    public static McpHttpClient? TryGetPrimaryWorkspaceClient() => TryFromLocalConfiguredWorkspaceMarker(primaryOnly: true);
+
+    /// <summary>
+    /// Returns a full-access local workspace credential for control-plane mutations.
+    /// Prefers the current marker, then configured primary workspaces, then any configured workspace marker.
+    /// </summary>
+    public static McpHttpClient? TryGetLocalWorkspaceCredentialClient(string? serverBaseUrl = null, string? directory = null)
+    {
+        var markerClient = FromMarkerOnly(directory);
+        if (IsUsableCredentialForServer(markerClient, serverBaseUrl))
+            return markerClient;
+
+        markerClient?.Dispose();
+        return TryFromLocalConfiguredWorkspaceMarker(serverBaseUrl);
+    }
 
     /// <summary>
     /// Best-effort local bootstrap for the control-plane connection. When running on a machine with a local
-    /// McpServer Windows service install, prefer the primary workspace marker from the deployed appsettings.
+    /// McpServer Windows service install, prefer the primary workspace marker from the deployed appsettings,
+    /// then fall back to another configured workspace marker.
     /// This avoids pointing control-plane tabs (e.g. Agents/Workspaces) at a child workspace host.
     /// </summary>
-    private static McpHttpClient? TryFromLocalPrimaryWorkspaceMarker()
+    private static McpHttpClient? TryFromLocalConfiguredWorkspaceMarker(
+        string? serverBaseUrl = null,
+        bool primaryOnly = false)
     {
         try
         {
@@ -400,10 +433,16 @@ internal sealed class McpHttpClient : IDisposable
             const string yamlPath = @"C:\ProgramData\McpServer\appsettings.yaml";
 
             if (File.Exists(jsonPath))
-                return TryParsePrimaryWorkspaceFromJson(File.ReadAllText(jsonPath));
+                return TryCreateWorkspaceCredentialClient(
+                    ParseConfiguredWorkspacesFromJson(File.ReadAllText(jsonPath)),
+                    serverBaseUrl,
+                    primaryOnly);
 
             if (File.Exists(yamlPath))
-                return TryParsePrimaryWorkspaceFromYaml(File.ReadAllLines(yamlPath));
+                return TryCreateWorkspaceCredentialClient(
+                    ParseConfiguredWorkspacesFromYaml(File.ReadAllLines(yamlPath)),
+                    serverBaseUrl,
+                    primaryOnly);
 
             return null;
         }
@@ -413,43 +452,75 @@ internal sealed class McpHttpClient : IDisposable
         }
     }
 
-    private static McpHttpClient? TryParsePrimaryWorkspaceFromJson(string json)
+    /// <summary>Configured workspace entry from the deployed local service config.</summary>
+    internal readonly record struct ConfiguredWorkspace(string WorkspacePath, bool IsPrimary);
+
+    /// <summary>
+    /// Creates a credential client from configured workspaces, trying primary entries before other markers.
+    /// </summary>
+    internal static McpHttpClient? TryCreateWorkspaceCredentialClient(
+        IEnumerable<ConfiguredWorkspace> workspaces,
+        string? serverBaseUrl = null,
+        bool primaryOnly = false)
     {
-        using var doc = JsonDocument.Parse(json);
-        if (!doc.RootElement.TryGetProperty("Mcp", out var mcp) ||
-            !mcp.TryGetProperty("Workspaces", out var workspaces) ||
-            workspaces.ValueKind != JsonValueKind.Array)
+        foreach (var workspace in workspaces
+                     .Where(static workspace => !string.IsNullOrWhiteSpace(workspace.WorkspacePath))
+                     .OrderByDescending(static workspace => workspace.IsPrimary))
         {
-            return null;
-        }
-
-        foreach (var ws in workspaces.EnumerateArray())
-        {
-            if (ws.ValueKind != JsonValueKind.Object)
+            if (primaryOnly && !workspace.IsPrimary)
                 continue;
 
-            if (!ws.TryGetProperty("IsPrimary", out var isPrimary) || isPrimary.ValueKind != JsonValueKind.True)
-                continue;
-
-            if (!ws.TryGetProperty("WorkspacePath", out var pathProp) || pathProp.ValueKind != JsonValueKind.String)
-                continue;
-
-            var workspacePath = pathProp.GetString();
-            if (string.IsNullOrWhiteSpace(workspacePath))
-                continue;
-
-            var client = FromMarkerOnly(workspacePath);
-            if (client is not null)
+            var client = FromMarkerOnly(workspace.WorkspacePath);
+            if (IsUsableCredentialForServer(client, serverBaseUrl))
                 return client;
+
+            client?.Dispose();
         }
 
         return null;
     }
 
-    private static McpHttpClient? TryParsePrimaryWorkspaceFromYaml(string[] lines)
+    /// <summary>Parses configured workspaces from the deployed JSON appsettings file.</summary>
+    internal static IReadOnlyList<ConfiguredWorkspace> ParseConfiguredWorkspacesFromJson(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        if (!TryGetPropertyIgnoreCase(doc.RootElement, "Mcp", out var mcp) ||
+            !TryGetPropertyIgnoreCase(mcp, "Workspaces", out var workspaces) ||
+            workspaces.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var configured = new List<ConfiguredWorkspace>();
+        foreach (var ws in workspaces.EnumerateArray())
+        {
+            if (ws.ValueKind != JsonValueKind.Object)
+                continue;
+
+            if (!TryGetPropertyIgnoreCase(ws, "WorkspacePath", out var pathProp) ||
+                pathProp.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            var workspacePath = pathProp.GetString();
+            if (string.IsNullOrWhiteSpace(workspacePath))
+                continue;
+
+            var isPrimary = TryGetPropertyIgnoreCase(ws, "IsPrimary", out var isPrimaryProp) &&
+                            isPrimaryProp.ValueKind == JsonValueKind.True;
+            configured.Add(new ConfiguredWorkspace(workspacePath, isPrimary));
+        }
+
+        return configured;
+    }
+
+    /// <summary>Parses configured workspaces from the deployed YAML appsettings file.</summary>
+    internal static IReadOnlyList<ConfiguredWorkspace> ParseConfiguredWorkspacesFromYaml(string[] lines)
     {
         // Simple line-by-line YAML parser for the Workspaces array.
-        // Looks for entries with IsPrimary: true and extracts WorkspacePath.
+        // Extracts WorkspacePath plus IsPrimary without loading a full YAML parser.
+        var configured = new List<ConfiguredWorkspace>();
         bool inWorkspaces = false;
         bool inEntry = false;
         bool isPrimary = false;
@@ -477,12 +548,8 @@ internal sealed class McpHttpClient : IDisposable
             if (indent <= 2 && !trimmed.StartsWith("- ") && !string.IsNullOrWhiteSpace(trimmed))
             {
                 // Flush last entry
-                if (inEntry && isPrimary && !string.IsNullOrWhiteSpace(workspacePath))
-                {
-                    var client = FromMarkerOnly(workspacePath);
-                    if (client is not null)
-                        return client;
-                }
+                if (inEntry && !string.IsNullOrWhiteSpace(workspacePath))
+                    configured.Add(new ConfiguredWorkspace(workspacePath, isPrimary));
 
                 inWorkspaces = false;
                 continue;
@@ -492,12 +559,8 @@ internal sealed class McpHttpClient : IDisposable
             if (trimmed.StartsWith("- "))
             {
                 // Flush previous entry
-                if (inEntry && isPrimary && !string.IsNullOrWhiteSpace(workspacePath))
-                {
-                    var client = FromMarkerOnly(workspacePath);
-                    if (client is not null)
-                        return client;
-                }
+                if (inEntry && !string.IsNullOrWhiteSpace(workspacePath))
+                    configured.Add(new ConfiguredWorkspace(workspacePath, isPrimary));
 
                 inEntry = true;
                 isPrimary = false;
@@ -514,14 +577,10 @@ internal sealed class McpHttpClient : IDisposable
         }
 
         // Flush final entry
-        if (inEntry && isPrimary && !string.IsNullOrWhiteSpace(workspacePath))
-        {
-            var client = FromMarkerOnly(workspacePath);
-            if (client is not null)
-                return client;
-        }
+        if (inEntry && !string.IsNullOrWhiteSpace(workspacePath))
+            configured.Add(new ConfiguredWorkspace(workspacePath, isPrimary));
 
-        return null;
+        return configured;
     }
 
     private static void ParseYamlWorkspaceField(string trimmedLine, ref bool isPrimary, ref string? workspacePath)
@@ -535,6 +594,65 @@ internal sealed class McpHttpClient : IDisposable
         {
             workspacePath = trimmedLine["WorkspacePath:".Length..].Trim();
         }
+    }
+
+    private static bool TryGetPropertyIgnoreCase(JsonElement element, string propertyName, out JsonElement value)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            value = default;
+            return false;
+        }
+
+        if (element.TryGetProperty(propertyName, out value))
+            return true;
+
+        foreach (var property in element.EnumerateObject())
+        {
+            if (property.NameEquals(propertyName) ||
+                string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static bool IsUsableCredentialForServer(McpHttpClient? client, string? serverBaseUrl)
+    {
+        if (client is null || string.IsNullOrWhiteSpace(client.ApiKey))
+            return false;
+
+        return string.IsNullOrWhiteSpace(serverBaseUrl) ||
+               BaseUrlsTargetSameServer(client.BaseUrl, serverBaseUrl);
+    }
+
+    private static bool BaseUrlsTargetSameServer(string left, string right)
+    {
+        if (string.Equals(left.TrimEnd('/'), right.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (!Uri.TryCreate(left, UriKind.Absolute, out var leftUri) ||
+            !Uri.TryCreate(right, UriKind.Absolute, out var rightUri))
+        {
+            return false;
+        }
+
+        return string.Equals(leftUri.Scheme, rightUri.Scheme, StringComparison.OrdinalIgnoreCase) &&
+               leftUri.Port == rightUri.Port &&
+               IsLocalHostAlias(leftUri.Host) &&
+               IsLocalHostAlias(rightUri.Host);
+    }
+
+    private static bool IsLocalHostAlias(string host)
+    {
+        return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(host, Environment.MachineName, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

@@ -454,35 +454,22 @@ internal static class DirectorCommands
             name ??= new DirectoryInfo(workspacePath).Name;
             Info($"Registering workspace '{name}' at {workspacePath}...");
 
-            // Step 1: Obtain an API key with write access.
-            // Prefer the primary workspace marker (full read/write), then the default key
-            // from GET /api-key (read-only — may be rejected for mutations), then fail.
+            // Step 1: Obtain a local full-access API key. The unauthenticated /api-key endpoint
+            // is read-only and must not be used for workspace registration mutations.
             string apiKey;
-            var primaryClient = McpHttpClient.TryGetPrimaryWorkspaceClient();
-            if (primaryClient is not null && !string.IsNullOrWhiteSpace(primaryClient.ApiKey))
+            string? credentialWorkspacePath;
+            var credentialClient = McpHttpClient.TryGetLocalWorkspaceCredentialClient(server, Environment.CurrentDirectory);
+            if (credentialClient is not null && !string.IsNullOrWhiteSpace(credentialClient.ApiKey))
             {
-                apiKey = primaryClient.ApiKey;
-                primaryClient.Dispose();
-                Info("Using primary workspace API key for authentication.");
+                apiKey = credentialClient.ApiKey;
+                credentialWorkspacePath = credentialClient.WorkspacePath;
+                credentialClient.Dispose();
+                Info("Using local workspace API key for authentication.");
             }
             else
             {
-                try
-                {
-                    using var anonHttp = new HttpClient { BaseAddress = new Uri(server) };
-                    var keyResponse = await anonHttp.GetAsync("/api-key").ConfigureAwait(true);
-                    keyResponse.EnsureSuccessStatusCode();
-                    var keyJson = await keyResponse.Content.ReadAsStringAsync().ConfigureAwait(true);
-                    using var doc = JsonDocument.Parse(keyJson);
-                    apiKey = doc.RootElement.GetProperty("apiKey").GetString()
-                        ?? throw new InvalidOperationException("Server returned null apiKey.");
-                    Warn("No primary workspace marker found; using the default read-only key (mutations may be rejected).");
-                }
-                catch (Exception ex)
-                {
-                    Error($"Failed to obtain an API key: {ex.Message}");
-                    return;
-                }
+                Error("Failed to obtain a local full-access API key. Run Director from a registered local workspace or ensure a configured workspace marker exists.");
+                return;
             }
 
             // Step 2: Register the workspace (with retry for 503 during server startup).
@@ -491,6 +478,8 @@ internal static class DirectorCommands
             const int maxRetries = 5;
             using var registrationHttp = new HttpClient { BaseAddress = new Uri(server) };
             registrationHttp.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
+            if (!string.IsNullOrWhiteSpace(credentialWorkspacePath))
+                registrationHttp.DefaultRequestHeaders.Add("X-Workspace-Path", credentialWorkspacePath);
             var requestBody = JsonSerializer.Serialize(new { workspacePath, name, isEnabled = true });
 
             var registered = false;
