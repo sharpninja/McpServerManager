@@ -114,6 +114,20 @@
                         Padding="16,6" ToolTip.Tip="Send ESC to Copilot">
                     <TextBlock Text="ESC" FontSize="14" FontWeight="SemiBold"/>
                 </Button>
+                <Button x:Name="CopyTranscriptButton"
+                        Click="OnCopyTranscriptClick"
+                        Padding="16,6"
+                        ToolTip.Tip="Copy transcript">
+                    <PathIcon Data="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"
+                              Width="24" Height="24"/>
+                </Button>
+                <Button x:Name="SaveTranscriptJsonlButton"
+                        Click="OnSaveTranscriptJsonlClick"
+                        Padding="16,6"
+                        ToolTip.Tip="Save transcript JSONL">
+                    <PathIcon Data="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"
+                              Width="24" Height="24"/>
+                </Button>
                 <ToggleButton x:Name="AutoContinueToggle"
                               Padding="16,6" ToolTip.Tip="Auto-continue">
                     <PathIcon Data="M17,17H7V7H17M21,1H7C5.89,1 5,1.89 5,3V17C5,18.1 5.9,19 7,19H21C22.1,19 23,18.1 23,17V3C23,1.89 22.1,1 21,1M1,7H3V21H17V23H3C1.9,23 1,22.1 1,21V7Z" Width="24" Height="24"/>

@@ -146,7 +146,7 @@ function Get-LocalViewModelDeclarations {
 $managerCommandFiles = @(
     Get-ChildItem -LiteralPath (Join-Path $RepoRoot "src/McpServerManager.Core/Commands") -Filter "*.cs" -File
 )
-$uiCoreMessagePath = Resolve-RepoPath "src/McpServer.UI.Core/Messages"
+$uiCoreMessagePath = Resolve-RepoPath "src/McpServerManager.UI.Core/Messages"
 $uiCoreMessageFiles = @()
 if (Test-Path -LiteralPath $uiCoreMessagePath) {
     $uiCoreMessageFiles = Get-ChildItem -LiteralPath $uiCoreMessagePath -Filter "*.cs" -File
@@ -155,8 +155,8 @@ if (Test-Path -LiteralPath $uiCoreMessagePath) {
 $managerSymbols = Get-CqrsSymbols -Files $managerCommandFiles
 $uiCoreSymbols = Get-CqrsSymbols -Files $uiCoreMessageFiles
 $hostWrappers = Get-HostWrapperInventory -RelativePath "src/McpServerManager.Core/ViewModels"
-$directorLocal = Get-LocalViewModelDeclarations -RelativePath "src/McpServer.Director"
-$webLocal = Get-LocalViewModelDeclarations -RelativePath "src/McpServer.Web"
+$directorLocal = Get-LocalViewModelDeclarations -RelativePath "src/McpServerManager.Director"
+$webLocal = Get-LocalViewModelDeclarations -RelativePath "src/McpServerManager.Web"
 
 $inventory = [pscustomobject]@{
     GeneratedAtUtc = (Get-Date).ToUniversalTime().ToString("o")

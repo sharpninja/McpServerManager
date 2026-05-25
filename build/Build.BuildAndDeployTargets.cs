@@ -9,14 +9,89 @@ using Serilog;
 
 partial class Build
 {
-    private DeploymentResult CreateDeploymentResult(string target, string status, string message)
+    private DeploymentResult CreateDeploymentResult(string target, string status, string message, TimeSpan? duration = null)
     {
         return new DeploymentResult
         {
             Target = target,
             Status = status,
-            Message = message
+            Message = message,
+            Duration = duration ?? TimeSpan.Zero
         };
+    }
+
+    private static string FormatDeployDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+        {
+            return $"{duration.TotalHours:0.0}h";
+        }
+
+        if (duration.TotalMinutes >= 1)
+        {
+            return $"{duration.TotalMinutes:0.0}m";
+        }
+
+        return $"{Math.Max(0.1, duration.TotalSeconds):0.0}s";
+    }
+
+    private void LogDeployTargetCompleted(DeploymentResult result, int index, int total)
+    {
+        var elapsed = FormatDeployDuration(result.Duration);
+        var message = $"DeployAll target {index}/{total} finished: {result.Target} => {result.Status} in {elapsed}. {result.Message}";
+        if (string.Equals(result.Status, "Failed", StringComparison.OrdinalIgnoreCase))
+        {
+            Log.Error(message);
+        }
+        else if (string.Equals(result.Status, "Skipped", StringComparison.OrdinalIgnoreCase))
+        {
+            Log.Warning(message);
+        }
+        else
+        {
+            Log.Information(message);
+        }
+
+        Console.Out.Flush();
+        Console.Error.Flush();
+    }
+
+    private DeploymentResult RunDeploySelection(string selection, int index, int total)
+    {
+        Log.Information($"DeployAll target {index}/{total} starting: {selection}");
+        Console.Out.Flush();
+
+        var stopwatch = Stopwatch.StartNew();
+        DeploymentResult result;
+        switch (selection)
+        {
+            case "Director":
+                result = DeployDirectorCore();
+                break;
+            case "WebUi":
+                result = DeployWebUiCore();
+                break;
+            case "AndroidPhone":
+                result = DeployAndroidSelection("AndroidPhone", false, AndroidPhoneSerial);
+                break;
+            case "AndroidEmulator":
+                result = DeployAndroidSelection("AndroidEmulator", true, AndroidEmulatorSerial);
+                break;
+            case "DesktopMsix":
+                result = DeployDesktopMsixCore();
+                break;
+            case "DesktopDeb":
+                result = DeployDesktopDebCore();
+                break;
+            default:
+                result = CreateDeploymentResult(selection, "Failed", $"Unsupported deploy selection '{selection}'.");
+                break;
+        }
+
+        stopwatch.Stop();
+        result = CreateDeploymentResult(result.Target, result.Status, result.Message, stopwatch.Elapsed);
+        LogDeployTargetCompleted(result, index, total);
+        return result;
     }
 
     private bool ShouldExecuteAction(string description)
@@ -76,14 +151,16 @@ partial class Build
         Log.Information("Deployment summary");
         foreach (var result in results)
         {
-            Log.Information($"{result.Target}: {result.Status} - {result.Message}");
+            var duration = result.Duration == TimeSpan.Zero ? string.Empty : $" ({FormatDeployDuration(result.Duration)})";
+            Log.Information($"{result.Target}: {result.Status}{duration} - {result.Message}");
         }
 
         var successCount = results.Count(x => x.Status == "Success");
         var whatIfCount = results.Count(x => x.Status == "WhatIf");
         var skippedCount = results.Count(x => x.Status == "Skipped");
         var failedCount = results.Count(x => x.Status == "Failed");
-        Log.Information($"Success={successCount}  WhatIf={whatIfCount}  Skipped={skippedCount}  Failed={failedCount}");
+        var totalDuration = TimeSpan.FromTicks(results.Sum(x => x.Duration.Ticks));
+        Log.Information($"Success={successCount}  WhatIf={whatIfCount}  Skipped={skippedCount}  Failed={failedCount}  Elapsed={FormatDeployDuration(totalDuration)}");
     }
 
     private string ExecuteDotnetToolPipeline(
@@ -355,6 +432,7 @@ partial class Build
     {
         var projectPath = Path.Combine(RepoRootPath, "src", "McpServerManager.Android", "McpServerManager.Android.csproj");
         var targetFramework = ResolveTargetFramework(projectPath, "net10.0-android");
+        var version = ResolveVersionDetails(PackageVersion);
 
         if (!ShouldExecuteAction($"Deploy Android app to {deviceSerial}"))
         {
@@ -377,7 +455,13 @@ partial class Build
                 targetFramework,
                 "-c",
                 Configuration,
-                $"-p:AdbTarget=-s {deviceSerial}"
+                $"-p:AdbTarget=-s {deviceSerial}",
+                "/p:Version=" + version.SemVer,
+                "/p:AssemblyVersion=" + $"{version.Major}.{version.Minor}.{version.Patch}",
+                "/p:FileVersion=" + $"{version.Major}.{version.Minor}.{version.Patch}",
+                "/p:InformationalVersion=" + version.SemVer,
+                "/p:ApplicationVersion=" + version.VersionCode.ToString(CultureInfo.InvariantCulture),
+                "/p:ApplicationDisplayVersion=" + version.SemVer
             },
             RepoRootPath);
     }
@@ -560,8 +644,8 @@ partial class Build
             InvokeWslCommand(distro, $"cp {QuoteBashLiteral(wslTempDebPath)} {QuoteBashLiteral(wslDebPath)}");
             if (installAfterBuild)
             {
-                Log.Information($"Launching interactive WSL sudo in distro '{distro}'. Enter your password if prompted.");
-                InvokeInteractiveWslCommand(distro, $"sudo dpkg -i {QuoteBashLiteral(wslTempDebPath)}");
+                Log.Information($"Installing desktop DEB in WSL distro '{distro}' as root.");
+                InvokeWslRootCommand(distro, $"dpkg -i {QuoteBashLiteral(wslTempDebPath)}");
             }
 
             InvokeWslCommand(distro, $"rm -rf {QuoteBashLiteral(wslBuildRoot)}");
@@ -611,7 +695,7 @@ partial class Build
             }
 
             var nupkgPath = ExecuteDotnetToolPipeline(
-                Path.Combine(RepoRootPath, "src", "McpServer.Director", "McpServer.Director.csproj"),
+                Path.Combine(RepoRootPath, "src", "McpServerManager.Director", "McpServerManager.Director.csproj"),
                 "SharpNinja.McpServer.Director",
                 "director",
                 "nupkg",
@@ -642,7 +726,7 @@ partial class Build
             }
 
             var nupkgPath = ExecuteDotnetToolPipeline(
-                Path.Combine(RepoRootPath, "src", "McpServer.Web", "McpServer.Web.csproj"),
+                Path.Combine(RepoRootPath, "src", "McpServerManager.Web", "McpServerManager.Web.csproj"),
                 "SharpNinja.McpServer.Web",
                 "mcp-web",
                 "nupkg",
@@ -767,7 +851,7 @@ partial class Build
 
     private void RunUpdateDotnetToolTarget()
     {
-        var resolvedProjectPath = ResolveProjectPathOrDefault(ProjectPath, Path.Combine("src", "McpServer.Director", "McpServer.Director.csproj"));
+        var resolvedProjectPath = ResolveProjectPathOrDefault(ProjectPath, Path.Combine("src", "McpServerManager.Director", "McpServerManager.Director.csproj"));
         var resolvedToolId = string.IsNullOrWhiteSpace(ToolId) ? "SharpNinja.McpServer.Director" : ToolId;
         var resolvedToolCommand = string.IsNullOrWhiteSpace(ToolCommand) ? "director" : ToolCommand;
         var packagePath = ExecuteDotnetToolPipeline(
@@ -784,7 +868,7 @@ partial class Build
     private void RunPackDirectorToolTarget()
     {
         var packagePath = ExecuteDotnetToolPipeline(
-            Path.Combine(RepoRootPath, "src", "McpServer.Director", "McpServer.Director.csproj"),
+            Path.Combine(RepoRootPath, "src", "McpServerManager.Director", "McpServerManager.Director.csproj"),
             "SharpNinja.McpServer.Director",
             "director",
             ArtifactsDirectoryPath,
@@ -808,13 +892,13 @@ partial class Build
     private void RunPublishWebZipTarget()
     {
         var version = ResolveVersionDetails(PackageVersion);
-        var projectPath = Path.Combine(RepoRootPath, "src", "McpServer.Web", "McpServer.Web.csproj");
+        var projectPath = Path.Combine(RepoRootPath, "src", "McpServerManager.Web", "McpServerManager.Web.csproj");
         var publishDirectory = Path.Combine(ArtifactsDirectoryPath, "web");
-        var zipPath = Path.Combine(ArtifactsDirectoryPath, $"McpServer.Web-{version.SemVer}.zip");
+        var zipPath = Path.Combine(ArtifactsDirectoryPath, $"McpServerManager.Web-{version.SemVer}.zip");
 
-        if (!ShouldExecuteAction($"Publish McpServer.Web {version.SemVer}"))
+        if (!ShouldExecuteAction($"Publish McpServerManager.Web {version.SemVer}"))
         {
-            Log.Information($"Would publish McpServer.Web to {zipPath}");
+            Log.Information($"Would publish McpServerManager.Web to {zipPath}");
             return;
         }
 
@@ -888,33 +972,15 @@ partial class Build
     private void RunDeployAllTarget()
     {
         var selections = ParseDeploySelections();
+        var requested = string.IsNullOrWhiteSpace(DeploySelection) ? "All" : DeploySelection;
+        Log.Information($"DeployAll requested selections: {requested}");
+        Log.Information($"DeployAll expanded selections ({selections.Count}): {string.Join(", ", selections)}");
+        Log.Information($"DeployAll configuration: Configuration={Configuration}, WhatIf={WhatIf}, PackageVersion={(string.IsNullOrWhiteSpace(PackageVersion) ? "<auto>" : PackageVersion)}");
+
         var results = new List<DeploymentResult>();
-        foreach (var selection in selections)
+        for (var i = 0; i < selections.Count; i++)
         {
-            switch (selection)
-            {
-                case "Director":
-                    results.Add(DeployDirectorCore());
-                    break;
-                case "WebUi":
-                    results.Add(DeployWebUiCore());
-                    break;
-                case "AndroidPhone":
-                    results.Add(DeployAndroidSelection("AndroidPhone", false, AndroidPhoneSerial));
-                    break;
-                case "AndroidEmulator":
-                    results.Add(DeployAndroidSelection("AndroidEmulator", true, AndroidEmulatorSerial));
-                    break;
-                case "DesktopMsix":
-                    results.Add(DeployDesktopMsixCore());
-                    break;
-                case "DesktopDeb":
-                    results.Add(DeployDesktopDebCore());
-                    break;
-                default:
-                    results.Add(CreateDeploymentResult(selection, "Failed", $"Unsupported deploy selection '{selection}'."));
-                    break;
-            }
+            results.Add(RunDeploySelection(selections[i], i + 1, selections.Count));
         }
 
         ShowDeploySummary(results);

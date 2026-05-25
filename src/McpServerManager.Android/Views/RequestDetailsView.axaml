@@ -99,6 +99,41 @@
         </ItemsControl>
       </Expander>
 
+      <!-- Commits -->
+      <Expander x:Name="CommitsExpander"
+                Header="{Binding Commits.Count, StringFormat='Commits ({0})'}"
+                HorizontalAlignment="Stretch">
+        <Grid MinHeight="54">
+          <SelectableTextBlock Text="No commits recorded."
+                               Foreground="{DynamicResource SubtleForeground}"
+                               FontStyle="Italic"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding Commits, Converter={StaticResource CountToVisibility}, ConverterParameter='Invert'}"/>
+          <ItemsControl x:Name="CommitsItemsControl"
+                        ItemsSource="{Binding Commits}"
+                        IsVisible="{Binding Commits, Converter={StaticResource CountToVisibility}}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="models:UnifiedCommit">
+                <Border Margin="2" Padding="4" Background="Transparent">
+                  <StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <SelectableTextBlock Text="{Binding ShortSha}" FontWeight="SemiBold" FontSize="15"/>
+                      <SelectableTextBlock Text="{Binding Branch}" FontSize="15" Foreground="{DynamicResource SubtleForeground}"/>
+                    </StackPanel>
+                    <SelectableTextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="16" Margin="0,2,0,0"/>
+                    <SelectableTextBlock Text="{Binding Author}" FontSize="14" Foreground="{DynamicResource SubtleForeground}" TextWrapping="Wrap"
+                                         IsVisible="{Binding Author, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <SelectableTextBlock Text="{Binding FilesChangedDisplay}" FontSize="14" Foreground="{DynamicResource SubtleForeground}" TextWrapping="Wrap"
+                                         IsVisible="{Binding FilesChangedDisplay, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Grid>
+      </Expander>
+
       <!-- Actions -->
       <Expander Header="{Binding Actions.Count, StringFormat='Actions ({0})'}"
                 HorizontalAlignment="Stretch">
@@ -166,4 +201,3 @@
     </StackPanel>
   </ScrollViewer>
 </UserControl>
-

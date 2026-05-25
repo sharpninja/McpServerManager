@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
+using AvaloniaEdit;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.ViewModels;
@@ -20,6 +21,7 @@ public partial class TodoListView : UserControl
     private bool _suppressOpenSelectedTodoOnce;
     private LayoutSettings _layoutSettings = new();
     private readonly List<ListBox> _groupListBoxes = new();
+    private TodoListViewModel? _currentViewModel;
 
     public TodoListView()
     {
@@ -61,10 +63,21 @@ public partial class TodoListView : UserControl
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        if (DataContext is TodoListViewModel vm)
+        if (ReferenceEquals(_currentViewModel, DataContext))
+            return;
+
+        if (_currentViewModel is not null)
         {
-            vm.GetEditorText = () => Editor.Text;
-            vm.PropertyChanged += OnViewModelPropertyChanged;
+            _currentViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _currentViewModel.GetEditorText = null;
+        }
+
+        _currentViewModel = DataContext as TodoListViewModel;
+        if (_currentViewModel is not null)
+        {
+            _currentViewModel.GetEditorText = () => Editor.Text;
+            _currentViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            SetEditorTextAndResetView(Editor, _currentViewModel.EditorText);
         }
     }
 
@@ -72,11 +85,31 @@ public partial class TodoListView : UserControl
     {
         if (sender is not TodoListViewModel vm) return;
         if (e.PropertyName == nameof(TodoListViewModel.EditorText))
-            Editor.Text = vm.EditorText;
+            SetEditorTextAndResetView(Editor, vm.EditorText);
+        else if (e.PropertyName == nameof(TodoListViewModel.EditorTitle))
+            ResetEditorViewToStart(Editor);
         else if (e.PropertyName == nameof(TodoListViewModel.EditorFontSize))
             Editor.FontSize = vm.EditorFontSize;
         else if (e.PropertyName == nameof(TodoListViewModel.SelectedEditorTab))
             SyncTabContent(vm);
+    }
+
+    internal static void SetEditorTextAndResetView(TextEditor editor, string? text)
+    {
+        var next = text ?? "";
+        if (!string.Equals(editor.Text ?? "", next, StringComparison.Ordinal))
+            editor.Text = next;
+
+        ResetEditorViewToStart(editor);
+    }
+
+    internal static void ResetEditorViewToStart(TextEditor editor)
+    {
+        editor.Select(0, 0);
+        editor.CaretOffset = 0;
+        editor.ScrollToHome();
+        editor.ScrollToLine(1);
+        editor.TextArea.Caret.BringCaretToView();
     }
 
     private void SyncTabContent(TodoListViewModel vm)

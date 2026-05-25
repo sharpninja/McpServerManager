@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 #if ANDROID
 using Android.App;
 using AndroidOS = Android.OS;
@@ -542,7 +544,7 @@ public partial class SimplifiedVoiceView : UserControl
             // Convert bare URIs to markdown links in the final accumulated display text.
             if (isDone)
             {
-                assistantBubble.Text = TextTransformations.ConvertBareUrisToMarkdownLinks(accumulated.ToString());
+                assistantBubble.Text = ResolveAssistantDisplayText(accumulated, vm);
                 assistantBubble.SetTimingFromDurations();
                 ScrollToBottom();
             }
@@ -644,10 +646,7 @@ public partial class SimplifiedVoiceView : UserControl
             }
         }
 
-        if (seedAccum.Length == 0)
-            seedBubble.Text = vm.AssistantDisplayText ?? vm.StatusText ?? "(no response)";
-        else
-            seedBubble.Text = seedAccum.ToString();
+        seedBubble.Text = ResolveAssistantDisplayText(seedAccum, vm);
 
         seedBubble.SetTimingFromDurations();
 
@@ -993,6 +992,81 @@ public partial class SimplifiedVoiceView : UserControl
     {
         e.Handled = true;
         _sendRequested = true;
+    }
+
+    private async void OnCopyTranscriptClick(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        var vm = VM;
+        if (vm == null)
+            return;
+
+        try
+        {
+            await vm.CopyTranscriptCommand.ExecuteAsync(null).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            vm.StatusText = $"Copy transcript failed: {ex.Message}";
+        }
+    }
+
+    private async void OnSaveTranscriptJsonlClick(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        var vm = VM;
+        if (vm == null)
+            return;
+
+        try
+        {
+            await SaveTranscriptJsonlAsync(vm).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException) when (_viewLifetimeCts.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            vm.StatusText = $"Save transcript failed: {ex.Message}";
+        }
+    }
+
+    private async Task SaveTranscriptJsonlAsync(VoiceConversationViewModel vm)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider is not { } storage)
+        {
+            vm.StatusText = "File save is not available.";
+            return;
+        }
+
+        var jsonl = await vm.BuildTranscriptJsonLinesForExportAsync(_viewLifetimeCts.Token).ConfigureAwait(true);
+        if (string.IsNullOrWhiteSpace(jsonl))
+        {
+            vm.StatusText = "No transcript entries available to save.";
+            return;
+        }
+
+        var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save Voice Transcript",
+            SuggestedFileName = vm.CreateTranscriptJsonlFileName(),
+            DefaultExtension = "jsonl",
+            ShowOverwritePrompt = true,
+            FileTypeChoices =
+            [
+                new FilePickerFileType("JSON Lines") { Patterns = ["*.jsonl"] },
+                new FilePickerFileType("All files") { Patterns = ["*"] }
+            ]
+        }).ConfigureAwait(true);
+
+        if (file is null)
+            return;
+
+        await using var stream = await file.OpenWriteAsync().ConfigureAwait(true);
+        await using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        await writer.WriteAsync(jsonl).ConfigureAwait(true);
+        vm.StatusText = $"Transcript JSONL saved: {file.Name}";
     }
 
     private void OnTextClearClick(object? sender, RoutedEventArgs e)
@@ -1436,6 +1510,17 @@ public partial class SimplifiedVoiceView : UserControl
     {
         _messages.Add(message);
         TrimChatHistory();
+    }
+
+    private static string ResolveAssistantDisplayText(StringBuilder accumulated, VoiceConversationViewModel vm)
+    {
+        var text = accumulated.ToString();
+        if (string.IsNullOrWhiteSpace(text))
+            text = vm.AssistantDisplayText;
+        if (string.IsNullOrWhiteSpace(text))
+            text = "No agent response text was returned.";
+
+        return TextTransformations.ConvertBareUrisToMarkdownLinks(text);
     }
 
     private void TrimChatHistory()

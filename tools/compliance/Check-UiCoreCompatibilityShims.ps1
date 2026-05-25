@@ -66,13 +66,13 @@ function Assert-ContainsPattern {
 
 Assert-ContainsPattern `
     -Rule "SHM001" `
-    -RelativePath "src/McpServer.UI.Core/Commands/CqrsRelayFactory.cs" `
+    -RelativePath "src/McpServerManager.UI.Core/Commands/CqrsRelayFactory.cs" `
     -Pattern "Create<T>\(Dispatcher\s+dispatcher,\s*Action<T\?>\s+action,\s*Func<T\?,\s*bool>\?\s+canExecute\)" `
     -MissingMessage "UI.Core relay factory must expose a parameter-aware Action<T?> canExecute overload for legacy host call patterns."
 
 Assert-ContainsPattern `
     -Rule "SHM002" `
-    -RelativePath "src/McpServer.UI.Core/Commands/CqrsRelayFactory.cs" `
+    -RelativePath "src/McpServerManager.UI.Core/Commands/CqrsRelayFactory.cs" `
     -Pattern "Create<T>\(Dispatcher\s+dispatcher,\s*Func<T\?,\s*Task>\s+action,\s*Func<T\?,\s*bool>\?\s+canExecute\)" `
     -MissingMessage "UI.Core relay factory must expose a parameter-aware Func<T?, Task> canExecute overload for compatibility."
 

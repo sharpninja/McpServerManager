@@ -1,8 +1,11 @@
 using System;
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Input;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.Android.Services;
@@ -120,6 +123,61 @@ public partial class VoiceConversationView : UserControl
         }
 
         e.Handled = true;
+    }
+
+    private async void OnSaveTranscriptJsonlClick(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        var vm = ViewModel;
+        if (vm == null)
+            return;
+
+        try
+        {
+            await SaveTranscriptJsonlAsync(vm).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            vm.StatusText = $"Save transcript failed: {ex.Message}";
+        }
+    }
+
+    private async Task SaveTranscriptJsonlAsync(VoiceConversationViewModel vm)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider is not { } storage)
+        {
+            vm.StatusText = "File save is not available.";
+            return;
+        }
+
+        var jsonl = await vm.BuildTranscriptJsonLinesForExportAsync().ConfigureAwait(true);
+        if (string.IsNullOrWhiteSpace(jsonl))
+        {
+            vm.StatusText = "No transcript entries available to save.";
+            return;
+        }
+
+        var file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save Voice Transcript",
+            SuggestedFileName = vm.CreateTranscriptJsonlFileName(),
+            DefaultExtension = "jsonl",
+            ShowOverwritePrompt = true,
+            FileTypeChoices =
+            [
+                new FilePickerFileType("JSON Lines") { Patterns = ["*.jsonl"] },
+                new FilePickerFileType("All files") { Patterns = ["*"] }
+            ]
+        }).ConfigureAwait(true);
+
+        if (file is null)
+            return;
+
+        await using var stream = await file.OpenWriteAsync().ConfigureAwait(true);
+        await using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        await writer.WriteAsync(jsonl).ConfigureAwait(true);
+        vm.StatusText = $"Transcript JSONL saved: {file.Name}";
     }
 
     private async void OnWakeStartClick(object? sender, RoutedEventArgs e)

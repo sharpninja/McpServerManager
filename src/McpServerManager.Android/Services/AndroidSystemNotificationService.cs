@@ -54,21 +54,17 @@ public sealed class AndroidSystemNotificationService : ISystemNotificationServic
 
             EnsureChannel(manager);
 
-            var builder = new Notification.Builder(context)
+            var builder = new Notification.Builder(context, ChannelId)
                 .SetSmallIcon(global::Android.Resource.Drawable.IcDialogInfo)
                 .SetContentTitle("Request Tracker")
                 .SetContentText(notificationMessage)
                 .SetStyle(new Notification.BigTextStyle().BigText(notificationMessage))
                 .SetAutoCancel(true)
-                .SetWhen(Java.Lang.JavaSystem.CurrentTimeMillis())
-                .SetPriority((int)NotificationPriority.Default);
+                .SetWhen(Java.Lang.JavaSystem.CurrentTimeMillis());
 
             var launchPendingIntent = CreateLaunchPendingIntent(context);
             if (launchPendingIntent != null)
                 builder.SetContentIntent(launchPendingIntent);
-
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-                builder.SetChannelId(ChannelId);
 
             manager.Notify(Interlocked.Increment(ref _nextNotificationId), builder.Build());
         }
@@ -138,9 +134,6 @@ public sealed class AndroidSystemNotificationService : ISystemNotificationServic
 
     private static void EnsureChannel(NotificationManager manager)
     {
-        if (Build.VERSION.SdkInt < BuildVersionCodes.O)
-            return;
-
         if (manager.GetNotificationChannel(ChannelId) != null)
             return;
 
@@ -155,4 +148,3 @@ public sealed class AndroidSystemNotificationService : ISystemNotificationServic
         manager.CreateNotificationChannel(channel);
     }
 }
-

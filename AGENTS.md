@@ -38,3 +38,17 @@ grep -rn '"mcp/' src/ --include="*.cs"   # MUST return 0 results
 **A rename is not complete until the verification grep confirms zero remaining instances.**
 This rule exists because a prior session shipped a partial rename that broke voice endpoints
 at runtime — a failure that would have been caught by a single grep.
+
+## TDD Lessons Learned
+
+### Test defines correct behavior, not failure proof
+A TDD unit test defines what CORRECT behavior looks like. Mock ALL paths to return success. Assert the correct API calls were made and the correct outcomes occurred. Do not set up mocks to fail just to "prove" the bug exists -- that tests the failure path, not the correct behavior.
+
+### Validate mocks refine understanding
+The validation phase (step 2 of Byrd Process) is when you discover whether your understanding of the system is correct. When a test fails during validation, it reveals a misunderstanding of the code, not just a code bug. Debug the flow, trace the actual code paths, and adjust the test (or your understanding) before writing implementation code.
+
+### Requirements first, then tests, then code
+Tests must be derived from surfaced requirements, not from hunches about where the bug might be. Writing a test before understanding the root cause leads to testing the wrong thing. Always trace the actual production flow and identify the exact error message and reproduction steps before writing the test.
+
+### Assertions verify intent, not side effects
+Assertions should verify the intended outcome (e.g., "this API was called, that API was not called") rather than checking error states from deliberately-broken mocks. This keeps tests robust against refactoring and makes the intent readable.

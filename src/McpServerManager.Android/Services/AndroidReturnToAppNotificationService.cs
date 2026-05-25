@@ -65,18 +65,14 @@ internal static class AndroidReturnToAppNotificationService
 
             EnsureChannel(manager);
 
-            var builder = new Notification.Builder(context)
+            var builder = new Notification.Builder(context, ChannelId)
                 .SetSmallIcon(global::Android.Resource.Drawable.IcDialogInfo)
                 .SetContentTitle("Return to Request Tracker")
                 .SetContentText("Sign-in is complete. Tap to return to the app.")
                 .SetContentIntent(pendingIntent)
                 .SetAutoCancel(true)
                 .SetOngoing(false)
-                .SetWhen(Java.Lang.JavaSystem.CurrentTimeMillis())
-                .SetPriority((int)NotificationPriority.High);
-
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-                builder.SetChannelId(ChannelId);
+                .SetWhen(Java.Lang.JavaSystem.CurrentTimeMillis());
 
             manager.Notify(NotificationId, builder.Build());
             _logger.LogInformation("Posted return-to-app notification fallback after OIDC token acquisition");
@@ -106,9 +102,6 @@ internal static class AndroidReturnToAppNotificationService
 
     private static void EnsureChannel(NotificationManager manager)
     {
-        if (Build.VERSION.SdkInt < BuildVersionCodes.O)
-            return;
-
         if (manager.GetNotificationChannel(ChannelId) != null)
             return;
 

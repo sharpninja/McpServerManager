@@ -37,7 +37,7 @@ public sealed class CommandRoundTripTests : IDisposable
     [Fact]
     public async Task NavigateBackCommand_DispatchesThroughDispatcher()
     {
-        var result = await _dispatcher.SendAsync(new NavigateBackCommand());
+        var result = await _dispatcher.SendAsync(new NavigateBackCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         _target.Verify(t => t.NavigateBack(), Times.Once);
@@ -46,7 +46,7 @@ public sealed class CommandRoundTripTests : IDisposable
     [Fact]
     public async Task NavigateForwardCommand_DispatchesThroughDispatcher()
     {
-        var result = await _dispatcher.SendAsync(new NavigateForwardCommand());
+        var result = await _dispatcher.SendAsync(new NavigateForwardCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         _target.Verify(t => t.NavigateForward(), Times.Once);
@@ -55,7 +55,7 @@ public sealed class CommandRoundTripTests : IDisposable
     [Fact]
     public async Task OpenAgentConfigCommand_DispatchesThroughDispatcher()
     {
-        var result = await _dispatcher.SendAsync(new OpenAgentConfigCommand());
+        var result = await _dispatcher.SendAsync(new OpenAgentConfigCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         _target.Verify(t => t.OpenAgentConfig(), Times.Once);
@@ -64,7 +64,7 @@ public sealed class CommandRoundTripTests : IDisposable
     [Fact]
     public async Task OpenPromptTemplatesCommand_DispatchesThroughDispatcher()
     {
-        var result = await _dispatcher.SendAsync(new OpenPromptTemplatesCommand());
+        var result = await _dispatcher.SendAsync(new OpenPromptTemplatesCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         _target.Verify(t => t.OpenPromptTemplates(), Times.Once);
@@ -73,7 +73,7 @@ public sealed class CommandRoundTripTests : IDisposable
     [Fact]
     public async Task ArchiveCurrentCommand_DispatchesThroughDispatcher()
     {
-        var result = await _dispatcher.SendAsync(new ArchiveCurrentCommand());
+        var result = await _dispatcher.SendAsync(new ArchiveCurrentCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         _target.Verify(t => t.Archive(), Times.Once);
@@ -82,7 +82,7 @@ public sealed class CommandRoundTripTests : IDisposable
     [Fact]
     public async Task ToggleShowRawMarkdownCommand_DispatchesThroughDispatcher()
     {
-        var result = await _dispatcher.SendAsync(new ToggleShowRawMarkdownCommand());
+        var result = await _dispatcher.SendAsync(new ToggleShowRawMarkdownCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         _target.Verify(t => t.ToggleShowRawMarkdown(), Times.Once);
@@ -91,7 +91,7 @@ public sealed class CommandRoundTripTests : IDisposable
     [Fact]
     public async Task PhoneNavigateSectionCommand_DispatchesThroughDispatcher()
     {
-        var result = await _dispatcher.SendAsync(new PhoneNavigateSectionCommand("details"));
+        var result = await _dispatcher.SendAsync(new PhoneNavigateSectionCommand("details"), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         _target.Verify(t => t.PhoneNavigateSection("details"), Times.Once);
@@ -103,7 +103,7 @@ public sealed class CommandRoundTripTests : IDisposable
         var uiCoreTarget = _target.As<McpServerManager.UI.Core.Commands.ITodoCopilotTarget>();
         uiCoreTarget.Setup(t => t.CopilotPlanAsync()).Returns(Task.CompletedTask);
 
-        var result = await _dispatcher.SendAsync(new McpServerManager.UI.Core.Commands.CopilotPlanCommand());
+        var result = await _dispatcher.SendAsync(new McpServerManager.UI.Core.Commands.CopilotPlanCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         uiCoreTarget.Verify(t => t.CopilotPlanAsync(), Times.Once);
@@ -112,9 +112,9 @@ public sealed class CommandRoundTripTests : IDisposable
     [Fact]
     public async Task MultipleCommands_DispatchSequentially()
     {
-        await _dispatcher.SendAsync(new NavigateBackCommand());
-        await _dispatcher.SendAsync(new NavigateForwardCommand());
-        await _dispatcher.SendAsync(new NavigateBackCommand());
+        await _dispatcher.SendAsync(new NavigateBackCommand(), TestContext.Current.CancellationToken);
+        await _dispatcher.SendAsync(new NavigateForwardCommand(), TestContext.Current.CancellationToken);
+        await _dispatcher.SendAsync(new NavigateBackCommand(), TestContext.Current.CancellationToken);
 
         _target.Verify(t => t.NavigateBack(), Times.Exactly(2));
         _target.Verify(t => t.NavigateForward(), Times.Once);
@@ -137,7 +137,8 @@ public sealed class CommandRoundTripTests : IDisposable
     public async Task InvokeUiActionCommand_WhenActionThrows_ReturnsFailureResult()
     {
         var result = await _dispatcher.SendAsync(
-            new McpServerManager.UI.Core.Commands.InvokeUiActionCommand(() => throw new InvalidOperationException("boom")));
+            new McpServerManager.UI.Core.Commands.InvokeUiActionCommand(() => throw new InvalidOperationException("boom")),
+            TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Contain("boom");

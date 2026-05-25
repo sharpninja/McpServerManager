@@ -16,7 +16,6 @@ public partial class TodoListView : UserControl
 {
     private bool? _wasPortrait;
     private bool _isUpdatingLayout;
-    private bool _hasAutoLoaded;
     private bool _suppressOpenSelectedTodoOnce;
     private LayoutSettings _layoutSettings = new();
     private readonly List<ListBox> _groupListBoxes = new();
@@ -40,14 +39,13 @@ public partial class TodoListView : UserControl
     private void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         // No auto-load — workspace-change event triggers the initial load.
-        _hasAutoLoaded = true;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (DataContext is TodoListViewModel vm)
         {
-            vm.GetEditorText = () => Editor.Text;
+            vm.GetEditorText = () => Editor.Text ?? string.Empty;
             vm.PropertyChanged += OnViewModelPropertyChanged;
         }
     }

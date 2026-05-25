@@ -67,37 +67,37 @@ function Assert-ContainsPattern {
 $adapterContracts = @(
     @{
         Rule = "ADP001"
-        File = "src/McpServer.Director/TodoApiClientAdapter.cs"
+        File = "src/McpServerManager.Director/TodoApiClientAdapter.cs"
         Pattern = "class\s+TodoApiClientAdapter\s*:\s*ITodoApiClient\b"
         Message = "Director TODO adapter must implement ITodoApiClient."
     },
     @{
         Rule = "ADP002"
-        File = "src/McpServer.Director/WorkspaceApiClientAdapter.cs"
+        File = "src/McpServerManager.Director/WorkspaceApiClientAdapter.cs"
         Pattern = "class\s+WorkspaceApiClientAdapter\s*:\s*IWorkspaceApiClient\b"
         Message = "Director workspace adapter must implement IWorkspaceApiClient."
     },
     @{
         Rule = "ADP003"
-        File = "src/McpServer.Director/SessionLogApiClientAdapter.cs"
+        File = "src/McpServerManager.Director/SessionLogApiClientAdapter.cs"
         Pattern = "class\s+SessionLogApiClientAdapter\s*:\s*ISessionLogApiClient\b"
         Message = "Director session log adapter must implement ISessionLogApiClient."
     },
     @{
         Rule = "ADP004"
-        File = "src/McpServer.Web/Adapters/TodoApiClientAdapter.cs"
+        File = "src/McpServerManager.Web/Adapters/TodoApiClientAdapter.cs"
         Pattern = "class\s+TodoApiClientAdapter\s*:\s*ITodoApiClient\b"
         Message = "Web TODO adapter must implement ITodoApiClient."
     },
     @{
         Rule = "ADP005"
-        File = "src/McpServer.Web/Adapters/WorkspaceApiClientAdapter.cs"
+        File = "src/McpServerManager.Web/Adapters/WorkspaceApiClientAdapter.cs"
         Pattern = "class\s+WorkspaceApiClientAdapter\s*:\s*IWorkspaceApiClient\b"
         Message = "Web workspace adapter must implement IWorkspaceApiClient."
     },
     @{
         Rule = "ADP006"
-        File = "src/McpServer.Web/Adapters/SessionLogApiClientAdapter.cs"
+        File = "src/McpServerManager.Web/Adapters/SessionLogApiClientAdapter.cs"
         Pattern = "class\s+SessionLogApiClientAdapter\s*:\s*ISessionLogApiClient\b"
         Message = "Web session log adapter must implement ISessionLogApiClient."
     }
@@ -114,39 +114,39 @@ foreach ($contract in $adapterContracts) {
 $registrationChecks = @(
     @{
         Rule = "ADP101"
-        File = "src/McpServer.Director/DirectorServiceRegistration.cs"
-        Pattern = "AddSingleton<ITodoApiClient>\s*\(_\s*=>\s*new\s+TodoApiClientAdapter\("
-        Message = "Director service registration must wire ITodoApiClient to TodoApiClientAdapter."
+        File = "src/McpServerManager.Director/DirectorServiceRegistration.cs"
+        Pattern = "options\.TodoClient\s*=\s*new\s+TodoApiClientAdapter\(directorContext\)"
+        Message = "Director service registration must wire ITodoApiClient to TodoApiClientAdapter through AddMcpHost."
     },
     @{
         Rule = "ADP102"
-        File = "src/McpServer.Director/DirectorServiceRegistration.cs"
-        Pattern = "AddSingleton<IWorkspaceApiClient>\s*\(_\s*=>\s*new\s+WorkspaceApiClientAdapter\("
-        Message = "Director service registration must wire IWorkspaceApiClient to WorkspaceApiClientAdapter."
+        File = "src/McpServerManager.Director/DirectorServiceRegistration.cs"
+        Pattern = "options\.WorkspaceClient\s*=\s*new\s+WorkspaceApiClientAdapter\(directorContext\)"
+        Message = "Director service registration must wire IWorkspaceApiClient to WorkspaceApiClientAdapter through AddMcpHost."
     },
     @{
         Rule = "ADP103"
-        File = "src/McpServer.Director/DirectorServiceRegistration.cs"
-        Pattern = "AddSingleton<ISessionLogApiClient>\s*\(_\s*=>\s*new\s+SessionLogApiClientAdapter\("
-        Message = "Director service registration must wire ISessionLogApiClient to SessionLogApiClientAdapter."
+        File = "src/McpServerManager.Director/DirectorServiceRegistration.cs"
+        Pattern = "options\.SessionLogClient\s*=\s*new\s+SessionLogApiClientAdapter\(directorContext\)"
+        Message = "Director service registration must wire ISessionLogApiClient to SessionLogApiClientAdapter through AddMcpHost."
     },
     @{
         Rule = "ADP104"
-        File = "src/McpServer.Web/WebServiceRegistration.cs"
-        Pattern = "AddScoped<ITodoApiClient,\s*TodoApiClientAdapter>\s*\(\s*\)"
-        Message = "Web service registration must wire ITodoApiClient to TodoApiClientAdapter."
+        File = "src/McpServerManager.Web/WebServiceRegistration.cs"
+        Pattern = "TodoClientFactory\s*=\s*static\s+sp\s*=>\s*ActivatorUtilities\.CreateInstance<TodoApiClientAdapter>\(sp\)"
+        Message = "Web service registration must wire ITodoApiClient to TodoApiClientAdapter through AddMcpHost."
     },
     @{
         Rule = "ADP105"
-        File = "src/McpServer.Web/WebServiceRegistration.cs"
-        Pattern = "AddScoped<IWorkspaceApiClient,\s*WorkspaceApiClientAdapter>\s*\(\s*\)"
-        Message = "Web service registration must wire IWorkspaceApiClient to WorkspaceApiClientAdapter."
+        File = "src/McpServerManager.Web/WebServiceRegistration.cs"
+        Pattern = "WorkspaceClientFactory\s*=\s*static\s+sp\s*=>\s*ActivatorUtilities\.CreateInstance<WorkspaceApiClientAdapter>\(sp\)"
+        Message = "Web service registration must wire IWorkspaceApiClient to WorkspaceApiClientAdapter through AddMcpHost."
     },
     @{
         Rule = "ADP106"
-        File = "src/McpServer.Web/WebServiceRegistration.cs"
-        Pattern = "AddScoped<ISessionLogApiClient,\s*SessionLogApiClientAdapter>\s*\(\s*\)"
-        Message = "Web service registration must wire ISessionLogApiClient to SessionLogApiClientAdapter."
+        File = "src/McpServerManager.Web/WebServiceRegistration.cs"
+        Pattern = "SessionLogClientFactory\s*=\s*static\s+sp\s*=>\s*ActivatorUtilities\.CreateInstance<SessionLogApiClientAdapter>\(sp\)"
+        Message = "Web service registration must wire ISessionLogApiClient to SessionLogApiClientAdapter through AddMcpHost."
     }
 )
 

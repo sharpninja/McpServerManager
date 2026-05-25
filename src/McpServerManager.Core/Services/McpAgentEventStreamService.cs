@@ -89,7 +89,7 @@ public sealed class McpAgentEventStreamService
             var payloadBuilder = new StringBuilder();
             string? currentEventName = null;
 
-            while (!reader.EndOfStream)
+            while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var line = await reader.ReadLineAsync(cancellationToken);

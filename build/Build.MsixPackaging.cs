@@ -819,11 +819,26 @@ partial class Build
             new[]
             {
                 "$ErrorActionPreference = 'Stop'",
-                $"$existing = Get-AppxPackage -Name '{QuotePowerShellLiteral(packageName)}' -ErrorAction SilentlyContinue",
-                "if ($null -ne $existing) { Remove-AppxPackage -Package $existing.PackageFullName -ErrorAction Stop }",
-                $"Add-AppxPackage -Path '{QuotePowerShellLiteral(msixPath)}' -ErrorAction Stop",
+                "$targetVolume = Get-AppxVolume | Where-Object { -not $_.IsOffline -and $_.IsSystemVolume } | Select-Object -First 1",
+                "if ($null -eq $targetVolume) { $targetVolume = Get-AppxVolume | Where-Object { -not $_.IsOffline -and $_.PackageStorePath -eq 'C:\\Program Files\\WindowsApps' } | Select-Object -First 1 }",
+                "if ($null -eq $targetVolume) { throw 'No online system AppX volume was found for MSIX installation.' }",
+                "Write-Host (\"MSIX target AppX volume: {0}\" -f $targetVolume.PackageStorePath)",
+                $"$existingPackages = @(Get-AppxPackage -Name '{QuotePowerShellLiteral(packageName)}' -ErrorAction SilentlyContinue)",
+                "foreach ($existing in $existingPackages) {",
+                "    Write-Host (\"Removing existing MSIX package: {0} at {1}\" -f $existing.PackageFullName, $existing.InstallLocation)",
+                "    Remove-AppxPackage -Package $existing.PackageFullName -ErrorAction Stop",
+                "}",
+                $"Add-AppxPackage -Path '{QuotePowerShellLiteral(msixPath)}' -Volume $targetVolume -ErrorAction Stop",
                 $"$installed = Get-AppxPackage -Name '{QuotePowerShellLiteral(packageName)}' -ErrorAction Stop",
-                "if ($null -eq $installed) { throw \"Package registration was not visible after Add-AppxPackage completed.\" }"
+                "if ($null -eq $installed) { throw \"Package registration was not visible after Add-AppxPackage completed.\" }",
+                "Write-Host (\"MSIX installed location: {0}\" -f $installed.InstallLocation)",
+                "$installItem = Get-Item -LiteralPath $installed.InstallLocation -Force -ErrorAction Stop",
+                "$isReparsePoint = (($installItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)",
+                "if ($isReparsePoint) {",
+                "    $reparseTarget = if ($installItem.PSObject.Properties.Name -contains 'Target' -and $null -ne $installItem.Target) { ($installItem.Target -join '; ') } else { '<unknown>' }",
+                "    throw (\"MSIX installed under an AppX reparse point: {0} -> {1}. Launching from this location can fail as an untrusted mount point.\" -f $installed.InstallLocation, $reparseTarget)",
+                "}",
+                "Write-Host 'MSIX package root is not a reparse point.'"
             });
         InvokePowerShellCommand(command, true);
     }

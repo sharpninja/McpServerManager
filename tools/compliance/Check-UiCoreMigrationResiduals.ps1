@@ -77,11 +77,11 @@ else {
         $inventoryJson = & $inventoryScript -RepoRoot $RepoRoot
         $inventory = $inventoryJson | ConvertFrom-Json
         if ($inventory.HostIsolation.DirectorLocalViewModelCount -ne 0) {
-            Add-Finding -Rule "RSD001" -File "src/McpServer.Director" -Message "Legacy Director-local ViewModel declarations remain."
+            Add-Finding -Rule "RSD001" -File "src/McpServerManager.Director" -Message "Legacy Director-local ViewModel declarations remain."
         }
 
         if ($inventory.HostIsolation.WebLocalViewModelCount -ne 0) {
-            Add-Finding -Rule "RSD001" -File "src/McpServer.Web" -Message "Legacy Web-local ViewModel declarations remain."
+            Add-Finding -Rule "RSD001" -File "src/McpServerManager.Web" -Message "Legacy Web-local ViewModel declarations remain."
         }
     }
     catch {
@@ -117,10 +117,10 @@ Assert-NoRegexMatches `
 
 Assert-NoRegexMatches `
     -Rule "RSD006" `
-    -RelativePath "src/McpServer.UI.Core" `
+    -RelativePath "src/McpServerManager.UI.Core" `
     -FileFilter "*.cs" `
     -Pattern "ConfigureAwait\(false\)" `
-    -Message "ConfigureAwait(false) is not allowed in McpServer.UI.Core migration scope."
+    -Message "ConfigureAwait(false) is not allowed in McpServerManager.UI.Core migration scope."
 
 Assert-NoRegexMatches `
     -Rule "RSD007" `

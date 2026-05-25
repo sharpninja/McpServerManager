@@ -107,7 +107,7 @@ public class OidcWebViewActivity : Activity
             }
 
             _logger.LogInformation("OidcWebViewActivity back pressed; finishing");
-            base.OnBackPressed();
+            Finish();
         }
 
         AndroidCrashDiagnostics.ExecuteFatal(

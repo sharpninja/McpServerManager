@@ -27,4 +27,7 @@ public partial class VoiceConversationViewModel
 
     private IRelayCommand? _clearTurnInputCommand;
     public IRelayCommand ClearTurnInputCommand => _clearTurnInputCommand ??= new RelayCommand(ClearTurnInput);
+
+    private IAsyncRelayCommand? _copyTranscriptCommand;
+    public IAsyncRelayCommand CopyTranscriptCommand => _copyTranscriptCommand ??= new AsyncRelayCommand(() => CopyTranscriptAsync());
 }

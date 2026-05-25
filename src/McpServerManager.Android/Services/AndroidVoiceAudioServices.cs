@@ -86,12 +86,13 @@ public sealed class AndroidAudioFocusService : IAndroidAudioFocusService
                 ? AudioFocus.GainTransientMayDuck
                 : AudioFocus.GainTransient;
 
-            _ = audioManager.RequestAudioFocus(_listener, Stream.Music, durationHint);
-            return new AudioFocusLease(this, audioManager);
+            var focusRequest = BuildFocusRequest(usage, durationHint);
+            _ = audioManager.RequestAudioFocus(focusRequest);
+            return new AudioFocusLease(this, audioManager, focusRequest);
         }
         catch
         {
-            ReleaseLeaseInternal(audioManager);
+            ReleaseLeaseInternal(audioManager, focusRequest: null);
             throw;
         }
     }
@@ -106,7 +107,26 @@ public sealed class AndroidAudioFocusService : IAndroidAudioFocusService
         _activeLeaseCount = 0;
     }
 
-    private void ReleaseLeaseInternal(AudioManager audioManager)
+    private AudioFocusRequestClass BuildFocusRequest(AndroidVoiceAudioFocusUsage usage, AudioFocus durationHint)
+    {
+        using var attributesBuilder = new AudioAttributes.Builder();
+        attributesBuilder.SetUsage(usage == AndroidVoiceAudioFocusUsage.TextToSpeechPlayback
+            ? AudioUsageKind.Media
+            : AudioUsageKind.VoiceCommunication);
+        attributesBuilder.SetContentType(AudioContentType.Speech);
+
+        using var attributes = attributesBuilder.Build()
+            ?? throw new InvalidOperationException("Android audio attributes could not be created.");
+
+        using var requestBuilder = new AudioFocusRequestClass.Builder(durationHint);
+        requestBuilder.SetAudioAttributes(attributes);
+        requestBuilder.SetOnAudioFocusChangeListener(_listener);
+
+        return requestBuilder.Build()
+            ?? throw new InvalidOperationException("Android audio focus request could not be created.");
+    }
+
+    private void ReleaseLeaseInternal(AudioManager audioManager, AudioFocusRequestClass? focusRequest)
     {
         lock (_sync)
         {
@@ -120,11 +140,16 @@ public sealed class AndroidAudioFocusService : IAndroidAudioFocusService
 
         try
         {
-            _ = audioManager.AbandonAudioFocus(_listener);
+            if (focusRequest != null)
+                _ = audioManager.AbandonAudioFocusRequest(focusRequest);
         }
         catch
         {
             // Best-effort cleanup.
+        }
+        finally
+        {
+            focusRequest?.Dispose();
         }
     }
 
@@ -139,7 +164,10 @@ public sealed class AndroidAudioFocusService : IAndroidAudioFocusService
         AudioFocusChanged?.Invoke(this, new AndroidAudioFocusChangedEventArgs(focusChange));
     }
 
-    private sealed class AudioFocusLease(AndroidAudioFocusService owner, AudioManager audioManager) : IDisposable
+    private sealed class AudioFocusLease(
+        AndroidAudioFocusService owner,
+        AudioManager audioManager,
+        AudioFocusRequestClass focusRequest) : IDisposable
     {
         private bool _disposed;
 
@@ -149,7 +177,7 @@ public sealed class AndroidAudioFocusService : IAndroidAudioFocusService
                 return;
 
             _disposed = true;
-            owner.ReleaseLeaseInternal(audioManager);
+            owner.ReleaseLeaseInternal(audioManager, focusRequest);
         }
     }
 

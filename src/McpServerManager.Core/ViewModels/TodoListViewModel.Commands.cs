@@ -23,6 +23,15 @@ public partial class TodoListViewModel
     private CqrsRelayCommand<bool>? _deleteSelectedCommand;
     public CqrsRelayCommand<bool> DeleteSelectedCommand => _deleteSelectedCommand ??= CqrsRelayFactory.Create(_dispatcher, DeleteSelectedAsync);
 
+    private CqrsRelayCommand<bool>? _moveSelectedTodoCommand;
+    public CqrsRelayCommand<bool> MoveSelectedTodoCommand => _moveSelectedTodoCommand ??= CqrsRelayFactory.Create(_dispatcher, MoveSelectedTodoAsync);
+
+    private CqrsRelayCommand<bool>? _confirmMoveTodoCommand;
+    public CqrsRelayCommand<bool> ConfirmMoveTodoCommand => _confirmMoveTodoCommand ??= CqrsRelayFactory.Create(_dispatcher, ConfirmMoveTodoAsync);
+
+    private CqrsRelayCommand<bool>? _cancelMoveTodoCommand;
+    public CqrsRelayCommand<bool> CancelMoveTodoCommand => _cancelMoveTodoCommand ??= CqrsRelayFactory.Create(_dispatcher, CancelMoveTodo);
+
     private CqrsRelayCommand<bool>? _analyzeRequirementsCommand;
     public CqrsRelayCommand<bool> AnalyzeRequirementsCommand => _analyzeRequirementsCommand ??= CqrsRelayFactory.Create(_dispatcher, AnalyzeRequirementsAsync);
 

@@ -67,58 +67,64 @@ function Assert-ContainsPattern {
 # Web composition root invariants
 Assert-ContainsPattern `
     -Rule "HIN001" `
-    -RelativePath "src/McpServer.Web/WebServiceRegistration.cs" `
-    -Pattern "AddUiCore\(typeof\(WebServiceRegistration\)\.Assembly\)" `
-    -MissingMessage "Web service registration must call AddUiCore(typeof(WebServiceRegistration).Assembly) for shared ViewModel/handler wiring."
+    -RelativePath "src/McpServerManager.Web/WebServiceRegistration.cs" `
+    -Pattern "AddMcpHost\(options\s*=>" `
+    -MissingMessage "Web service registration must use AddMcpHost for shared ViewModel/handler wiring."
+
+Assert-ContainsPattern `
+    -Rule "HIN001B" `
+    -RelativePath "src/McpServerManager.Web/WebServiceRegistration.cs" `
+    -Pattern "AdditionalHandlerAssemblies\s*=\s*\[\s*typeof\(WebServiceRegistration\)\.Assembly\s*\]" `
+    -MissingMessage "Web service registration must include the Web assembly in AddMcpHost handler discovery."
 
 Assert-ContainsPattern `
     -Rule "HIN002" `
-    -RelativePath "src/McpServer.Web/WebServiceRegistration.cs" `
-    -Pattern "AddScoped<ITodoApiClient,\s*TodoApiClientAdapter>\s*\(\s*\)" `
-    -MissingMessage "Web service registration must wire ITodoApiClient to TodoApiClientAdapter."
+    -RelativePath "src/McpServerManager.Web/WebServiceRegistration.cs" `
+    -Pattern "TodoClientFactory\s*=\s*static\s+sp\s*=>\s*ActivatorUtilities\.CreateInstance<TodoApiClientAdapter>\(sp\)" `
+    -MissingMessage "Web service registration must wire ITodoApiClient to TodoApiClientAdapter through AddMcpHost."
 
 Assert-ContainsPattern `
     -Rule "HIN003" `
-    -RelativePath "src/McpServer.Web/WebServiceRegistration.cs" `
-    -Pattern "AddScoped<IWorkspaceApiClient,\s*WorkspaceApiClientAdapter>\s*\(\s*\)" `
-    -MissingMessage "Web service registration must wire IWorkspaceApiClient to WorkspaceApiClientAdapter."
+    -RelativePath "src/McpServerManager.Web/WebServiceRegistration.cs" `
+    -Pattern "WorkspaceClientFactory\s*=\s*static\s+sp\s*=>\s*ActivatorUtilities\.CreateInstance<WorkspaceApiClientAdapter>\(sp\)" `
+    -MissingMessage "Web service registration must wire IWorkspaceApiClient to WorkspaceApiClientAdapter through AddMcpHost."
 
 Assert-ContainsPattern `
     -Rule "HIN004" `
-    -RelativePath "src/McpServer.Web/WebServiceRegistration.cs" `
-    -Pattern "AddScoped<ISessionLogApiClient,\s*SessionLogApiClientAdapter>\s*\(\s*\)" `
-    -MissingMessage "Web service registration must wire ISessionLogApiClient to SessionLogApiClientAdapter."
+    -RelativePath "src/McpServerManager.Web/WebServiceRegistration.cs" `
+    -Pattern "SessionLogClientFactory\s*=\s*static\s+sp\s*=>\s*ActivatorUtilities\.CreateInstance<SessionLogApiClientAdapter>\(sp\)" `
+    -MissingMessage "Web service registration must wire ISessionLogApiClient to SessionLogApiClientAdapter through AddMcpHost."
 
 # Director composition root invariants
 Assert-ContainsPattern `
     -Rule "HIN101" `
-    -RelativePath "src/McpServer.Director/DirectorServiceRegistration.cs" `
-    -Pattern "AddCqrs\(typeof\(Program\)\.Assembly\)" `
-    -MissingMessage "Director DI registration must initialize CQRS pipeline from Program assembly."
+    -RelativePath "src/McpServerManager.Director/DirectorServiceRegistration.cs" `
+    -Pattern "AddMcpHost\(options\s*=>" `
+    -MissingMessage "Director DI registration must use AddMcpHost for shared UI.Core and CQRS wiring."
 
 Assert-ContainsPattern `
     -Rule "HIN102" `
-    -RelativePath "src/McpServer.Director/DirectorServiceRegistration.cs" `
-    -Pattern "AddUiCore\(\)" `
-    -MissingMessage "Director DI registration must wire shared UI.Core services."
+    -RelativePath "src/McpServerManager.Director/DirectorServiceRegistration.cs" `
+    -Pattern "options\.Lifetime\s*=\s*McpHostLifetimeStrategy\.Singleton" `
+    -MissingMessage "Director DI registration must use singleton AddMcpHost lifetime."
 
 Assert-ContainsPattern `
     -Rule "HIN103" `
-    -RelativePath "src/McpServer.Director/DirectorServiceRegistration.cs" `
-    -Pattern "AddSingleton<ITodoApiClient>\s*\(_\s*=>\s*new\s+TodoApiClientAdapter\(" `
-    -MissingMessage "Director DI registration must wire ITodoApiClient to TodoApiClientAdapter."
+    -RelativePath "src/McpServerManager.Director/DirectorServiceRegistration.cs" `
+    -Pattern "options\.TodoClient\s*=\s*new\s+TodoApiClientAdapter\(directorContext\)" `
+    -MissingMessage "Director DI registration must wire ITodoApiClient to TodoApiClientAdapter through AddMcpHost."
 
 Assert-ContainsPattern `
     -Rule "HIN104" `
-    -RelativePath "src/McpServer.Director/DirectorServiceRegistration.cs" `
-    -Pattern "AddSingleton<IWorkspaceApiClient>\s*\(_\s*=>\s*new\s+WorkspaceApiClientAdapter\(" `
-    -MissingMessage "Director DI registration must wire IWorkspaceApiClient to WorkspaceApiClientAdapter."
+    -RelativePath "src/McpServerManager.Director/DirectorServiceRegistration.cs" `
+    -Pattern "options\.WorkspaceClient\s*=\s*new\s+WorkspaceApiClientAdapter\(directorContext\)" `
+    -MissingMessage "Director DI registration must wire IWorkspaceApiClient to WorkspaceApiClientAdapter through AddMcpHost."
 
 Assert-ContainsPattern `
     -Rule "HIN105" `
-    -RelativePath "src/McpServer.Director/DirectorServiceRegistration.cs" `
-    -Pattern "AddSingleton<ISessionLogApiClient>\s*\(_\s*=>\s*new\s+SessionLogApiClientAdapter\(" `
-    -MissingMessage "Director DI registration must wire ISessionLogApiClient to SessionLogApiClientAdapter."
+    -RelativePath "src/McpServerManager.Director/DirectorServiceRegistration.cs" `
+    -Pattern "options\.SessionLogClient\s*=\s*new\s+SessionLogApiClientAdapter\(directorContext\)" `
+    -MissingMessage "Director DI registration must wire ISessionLogApiClient to SessionLogApiClientAdapter through AddMcpHost."
 
 if ($findings.Count -eq 0) {
     Write-Host "UI.Core host integration check passed."

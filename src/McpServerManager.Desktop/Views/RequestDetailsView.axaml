@@ -125,6 +125,50 @@
           </Border>
       </Expander>
 
+      <!-- Commits -->
+      <Expander x:Name="CommitsExpander" Header="{Binding Commits.Count, StringFormat='Commits ({0})'}" IsExpanded="True" HorizontalAlignment="Stretch">
+          <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" CornerRadius="6" Background="{DynamicResource ThemeBackgroundBrush}" Padding="12" MinHeight="80">
+              <Grid>
+                  <SelectableTextBlock Text="No commits recorded." Foreground="{DynamicResource SubtleForeground}" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center"
+                             IsVisible="{Binding Commits, Converter={StaticResource CountToVisibility}, ConverterParameter='Invert'}"/>
+                  <StackPanel IsVisible="{Binding Commits, Converter={StaticResource CountToVisibility}}">
+                      <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,4" Margin="0,0,0,6">
+                          <Grid ColumnDefinitions="110,120,160,*,180">
+                              <SelectableTextBlock Grid.Column="0" Text="SHA" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <SelectableTextBlock Grid.Column="1" Text="Branch" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <SelectableTextBlock Grid.Column="2" Text="Author" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                              <SelectableTextBlock Grid.Column="3" Text="Message" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold" Margin="4,0"/>
+                              <SelectableTextBlock Grid.Column="4" Text="Files" FontFamily="Consolas, Monospace" FontSize="14" FontWeight="SemiBold"/>
+                          </Grid>
+                      </Border>
+                      <ItemsControl x:Name="CommitsItemsControl" ItemsSource="{Binding Commits}">
+                          <ItemsControl.ItemsPanel>
+                              <ItemsPanelTemplate>
+                                  <StackPanel Spacing="4"/>
+                              </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                              <DataTemplate DataType="models:UnifiedCommit">
+                                  <Border BorderBrush="{DynamicResource EntryBorderBrush}" BorderThickness="0,0,0,1" Margin="2" Padding="4">
+                                      <Grid ColumnDefinitions="110,120,160,*,180">
+                                          <StackPanel Grid.Column="0">
+                                              <SelectableTextBlock Text="{Binding ShortSha}" FontFamily="Consolas, Monospace" FontSize="13"/>
+                                              <SelectableTextBlock Text="{Binding TimestampDisplay}" FontFamily="Consolas, Monospace" FontSize="12" Foreground="{DynamicResource SubtleForeground}" TextWrapping="Wrap"/>
+                                          </StackPanel>
+                                          <SelectableTextBlock Grid.Column="1" Text="{Binding Branch}" FontFamily="Consolas, Monospace" FontSize="13" TextWrapping="Wrap"/>
+                                          <SelectableTextBlock Grid.Column="2" Text="{Binding Author}" FontFamily="Consolas, Monospace" FontSize="13" TextWrapping="Wrap"/>
+                                          <SelectableTextBlock Grid.Column="3" Text="{Binding Message}" FontFamily="Consolas, Monospace" FontSize="13" TextWrapping="Wrap" Margin="4,0"/>
+                                          <SelectableTextBlock Grid.Column="4" Text="{Binding FilesChangedDisplay}" FontFamily="Consolas, Monospace" FontSize="13" TextWrapping="Wrap"/>
+                                      </Grid>
+                                  </Border>
+                              </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                  </StackPanel>
+              </Grid>
+          </Border>
+      </Expander>
+
       <!-- Actions -->
       <Expander Header="{Binding Actions.Count, StringFormat='Actions ({0})'}" IsExpanded="True" HorizontalAlignment="Stretch">
           <Border BorderBrush="{DynamicResource ItemBorderBrush}" BorderThickness="1" CornerRadius="6" Background="{DynamicResource ThemeBackgroundBrush}" Padding="12" MinHeight="80">
@@ -217,4 +261,3 @@
     </StackPanel>
   </ScrollViewer>
 </UserControl>
-

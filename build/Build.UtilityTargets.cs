@@ -104,12 +104,12 @@ partial class Build
 
     private string GetVsixProjectDirectory()
     {
-        return Path.Combine(RepoRootPath, "src", "McpServer.VsExtension.McpTodo.Vsix");
+        return Path.Combine(RepoRootPath, "src", "McpServerManager.VsExtension.McpTodo.Vsix");
     }
 
     private string GetVsixProjectPath()
     {
-        return Path.Combine(GetVsixProjectDirectory(), "McpServer.VsExtension.McpTodo.Vsix.csproj");
+        return Path.Combine(GetVsixProjectDirectory(), "McpServerManager.VsExtension.McpTodo.Vsix.csproj");
     }
 
     private string ResolveVsixBuildRelativePath()
@@ -653,10 +653,10 @@ partial class Build
 
     private void RunStartWebUiTarget()
     {
-        var projectPath = Path.Combine(RepoRootPath, "src", "McpServer.Web", "McpServer.Web.csproj");
+        var projectPath = Path.Combine(RepoRootPath, "src", "McpServerManager.Web", "McpServerManager.Web.csproj");
         if (!File.Exists(projectPath))
         {
-            throw new FileNotFoundException($"McpServer.Web project not found at '{projectPath}'.");
+            throw new FileNotFoundException($"McpServerManager.Web project not found at '{projectPath}'.");
         }
 
         if (KillExisting && OperatingSystem.IsWindows())
@@ -675,7 +675,7 @@ partial class Build
 
         if (!NoBuild)
         {
-            if (!ShouldExecuteAction($"Build McpServer.Web ({Configuration})"))
+            if (!ShouldExecuteAction($"Build McpServerManager.Web ({Configuration})"))
             {
                 return;
             }
@@ -691,7 +691,7 @@ partial class Build
         var diagLog = Path.Combine(logRoot, $"web-ui-{stamp}.diag.json");
         var baseUrl = $"http://localhost:{Port}";
 
-        if (!ShouldExecuteAction($"Start McpServer.Web on {baseUrl}"))
+        if (!ShouldExecuteAction($"Start McpServerManager.Web on {baseUrl}"))
         {
             return;
         }

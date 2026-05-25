@@ -73,8 +73,8 @@ public sealed class FileSystemServiceTests : IDisposable
     public async Task WriteAllTextAsync_ThenReadAllTextAsync_RoundTrips()
     {
         var path = Path.Combine(_tempDir, "rw_async.txt");
-        await _sut.WriteAllTextAsync(path, "async-content");
-        var result = await _sut.ReadAllTextAsync(path);
+        await _sut.WriteAllTextAsync(path, "async-content", TestContext.Current.CancellationToken);
+        var result = await _sut.ReadAllTextAsync(path, TestContext.Current.CancellationToken);
         result.Should().Be("async-content");
     }
 

@@ -28,7 +28,7 @@ This uses default values:
 - Admin username: `admin`
 - Admin password: `admin`
 - Realm name: `mcpserver`
-- Appsettings path: `src/McpServer.Web/appsettings.Development.json`
+- Appsettings path: `src/McpServerManager.Web/appsettings.Development.json`
 
 ### Custom Configuration
 ```powershell
@@ -37,7 +37,7 @@ This uses default values:
     -AdminUser "admin" `
     -AdminPassword "MySecurePassword" `
     -RealmName "mcpserver" `
-    -AppsettingsPath "src/McpServer.Web/appsettings.Development.json"
+    -AppsettingsPath "src/McpServerManager.Web/appsettings.Development.json"
 ```
 
 ### Parameters
@@ -48,7 +48,7 @@ This uses default values:
 | `-AdminUser` | Keycloak admin username | `admin` |
 | `-AdminPassword` | Keycloak admin password | `admin` |
 | `-RealmName` | Name of the realm where mcp-web client exists | `mcpserver` |
-| `-AppsettingsPath` | Path to appsettings.Development.json file | `src/McpServer.Web/appsettings.Development.json` |
+| `-AppsettingsPath` | Path to appsettings.Development.json file | `src/McpServerManager.Web/appsettings.Development.json` |
 
 ### Example Output
 ```
@@ -57,7 +57,7 @@ Update mcp-web Client Secret
 ========================================
 Keycloak URL: http://localhost:7080
 Realm: mcpserver
-Appsettings: src/McpServer.Web/appsettings.Development.json
+Appsettings: src/McpServerManager.Web/appsettings.Development.json
 
 [1/4] Authenticating with Keycloak...
   ✓ Authenticated as admin
@@ -66,7 +66,7 @@ Appsettings: src/McpServer.Web/appsettings.Development.json
 [3/4] Retrieving mcp-web client secret...
   ✓ Client secret retrieved
 [4/4] Updating appsettings.Development.json...
-  ✓ Client secret updated in src/McpServer.Web/appsettings.Development.json
+  ✓ Client secret updated in src/McpServerManager.Web/appsettings.Development.json
 
 ========================================
 Update Complete!
@@ -108,7 +108,7 @@ scripts/update-mcp-web-client-secret.sh
     --admin-user "admin" \
     --admin-password "MySecurePassword" \
     --realm-name "mcpserver" \
-    --appsettings-path "src/McpServer.Web/appsettings.Development.json"
+    --appsettings-path "src/McpServerManager.Web/appsettings.Development.json"
 ```
 
 ### Command-Line Options
@@ -119,7 +119,7 @@ scripts/update-mcp-web-client-secret.sh
 | `--admin-user USER` | Keycloak admin username | `admin` |
 | `--admin-password PASS` | Keycloak admin password | `admin` |
 | `--realm-name REALM` | Name of the realm where mcp-web client exists | `mcpserver` |
-| `--appsettings-path PATH` | Path to appsettings.Development.json | `src/McpServer.Web/appsettings.Development.json` |
+| `--appsettings-path PATH` | Path to appsettings.Development.json | `src/McpServerManager.Web/appsettings.Development.json` |
 | `-h, --help` | Show help message | N/A |
 
 ### Example Output
@@ -199,7 +199,7 @@ Ensure `appsettings.Development.json` has appropriate file permissions:
 - **Windows**: Ensure the file is not readable by all users
 - **Linux/macOS**: Set permissions to `600` or `640`:
   ```bash
-  chmod 600 src/McpServer.Web/appsettings.Development.json
+  chmod 600 src/McpServerManager.Web/appsettings.Development.json
   ```
 
 ## Troubleshooting
@@ -210,7 +210,7 @@ Ensure `appsettings.Development.json` has appropriate file permissions:
 - Check the Keycloak admin console to ensure the `mcp-web` client exists
 
 ### Error: "Appsettings file not found"
-- Verify the appsettings path is correct (default: `src/McpServer.Web/appsettings.Development.json`)
+- Verify the appsettings path is correct (default: `src/McpServerManager.Web/appsettings.Development.json`)
 - Ensure you're running the script from the repository root
 
 ### Error: "Neither jq nor python3 is available" (Bash)
@@ -256,7 +256,7 @@ If the helper scripts are not available or fail, you can manually update the cli
 
 3. **Or use dotnet user-secrets**:
    ```bash
-   cd src/McpServer.Web
+   cd src/McpServerManager.Web
    dotnet user-secrets set "Authentication:Schemes:OpenIdConnect:ClientSecret" "z9y8x7w6-v5u4-3210-zyxw-vu9876543210"
    ```
 

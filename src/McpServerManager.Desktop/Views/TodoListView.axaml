@@ -14,7 +14,7 @@
     <conv:DoneToBackgroundBrushConverter x:Key="DoneToBackgroundBrush"/>
   </UserControl.Resources>
 
-  <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" Background="{DynamicResource ThemeBackgroundBrush}" Margin="8">
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" Background="{DynamicResource ThemeBackgroundBrush}" Margin="8">
 
     <!-- ═══ Toolbar ═══ -->
     <Border Grid.Row="0" Classes="phone-toolbar-card" Padding="8" Margin="0,0,0,6">
@@ -42,8 +42,41 @@
       </StackPanel>
     </Border>
 
+    <!-- ═══ Move-todo target selector ═══ -->
+    <Border Grid.Row="2" IsVisible="{Binding IsMoveTargetSelectorVisible}"
+            Classes="phone-toolbar-card"
+            Padding="8" Margin="0,0,0,6">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <TextBlock Grid.Column="0"
+                   Text="{Binding MoveTargetPrompt}"
+                   VerticalAlignment="Center"
+                   Margin="0,0,8,0"
+                   TextTrimming="CharacterEllipsis"/>
+        <ComboBox Grid.Column="1"
+                  ItemsSource="{Binding MoveTargets}"
+                  SelectedItem="{Binding SelectedMoveTarget, Mode=TwoWay}"
+                  MinWidth="260"
+                  Margin="0,0,8,0">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="uicorevm:TodoMoveTarget">
+              <TextBlock Text="{Binding DisplayText}" TextTrimming="CharacterEllipsis"/>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <Button Grid.Column="2"
+                Content="Move"
+                Command="{Binding ConfirmMoveTodoCommand}"
+                Padding="12,4"
+                Margin="0,0,6,0"/>
+        <Button Grid.Column="3"
+                Content="Cancel"
+                Command="{Binding CancelMoveTodoCommand}"
+                Padding="12,4"/>
+      </Grid>
+    </Border>
+
     <!-- ═══ Filter bar ═══ -->
-    <Border Grid.Row="2" Classes="phone-toolbar-card" Padding="8" Margin="0,0,0,6">
+    <Border Grid.Row="3" Classes="phone-toolbar-card" Padding="8" Margin="0,0,0,6">
     <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
       <ComboBox Grid.Column="0"
                 ItemsSource="{x:Static vm:TodoListViewModel.PriorityOptions}"
@@ -71,12 +104,12 @@
     </Border>
 
     <!-- ═══ Status bar ═══ -->
-    <Border Grid.Row="3" Classes="phone-outline-card" Padding="8,6" Margin="0,0,0,6">
+    <Border Grid.Row="4" Classes="phone-outline-card" Padding="8,6" Margin="0,0,0,6">
       <SelectableTextBlock Text="{Binding StatusText}" FontSize="12" Classes="subtle-text"/>
     </Border>
 
     <!-- ═══ Content area: list + splitter + editor ═══ -->
-    <Grid x:Name="ContentGrid" Grid.Row="4"
+    <Grid x:Name="ContentGrid" Grid.Row="5"
           ColumnDefinitions="1*,4,2*" RowDefinitions="*">
 
       <!-- List panel -->
@@ -128,6 +161,8 @@
                           <Separator/>
                           <MenuItem Header="Toggle Done"
                                     Command="{Binding DataContext.ToggleDoneCommand, ElementName=TodoRoot}"/>
+                          <MenuItem Header="Move..."
+                                    Command="{Binding DataContext.MoveSelectedTodoCommand, ElementName=TodoRoot}"/>
                           <MenuItem Header="Analyze Requirements"
                                     Command="{Binding DataContext.AnalyzeRequirementsCommand, ElementName=TodoRoot}"/>
                           <Separator/>

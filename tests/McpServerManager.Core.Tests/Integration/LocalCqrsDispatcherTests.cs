@@ -20,7 +20,8 @@ public sealed class LocalCqrsDispatcherTests
             {
                 executed = true;
                 return Task.CompletedTask;
-            }));
+            }),
+            TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue(result.Error);
         executed.Should().BeTrue();

@@ -58,6 +58,7 @@ partial class Build
         public string Target { get; init; } = string.Empty;
         public string Status { get; init; } = string.Empty;
         public string Message { get; init; } = string.Empty;
+        public TimeSpan Duration { get; init; } = TimeSpan.Zero;
     }
 
     private sealed class WebProcessInfo
@@ -103,6 +104,39 @@ partial class Build
     private static string QuoteBashLiteral(string value)
     {
         return "'" + value.Replace("'", "'\"'\"'", StringComparison.Ordinal) + "'";
+    }
+
+    private static string QuoteProcessArgument(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "\"\"";
+        }
+
+        if (value.IndexOfAny(new[] { ' ', '\t', '"', '\'' }) < 0)
+        {
+            return value;
+        }
+
+        return "\"" + value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
+    }
+
+    private static string FormatProcessCommand(string fileName, IReadOnlyList<string> arguments)
+    {
+        var parts = new List<string> { QuoteProcessArgument(fileName) };
+        for (var index = 0; index < arguments.Count; index++)
+        {
+            var previousArgument = index > 0 ? arguments[index - 1] : string.Empty;
+            if (string.Equals(previousArgument, "-Command", StringComparison.OrdinalIgnoreCase))
+            {
+                parts.Add("<script>");
+                continue;
+            }
+
+            parts.Add(QuoteProcessArgument(arguments[index]));
+        }
+
+        return string.Join(" ", parts);
     }
 
     private void EnsureDirectoryExists(string directoryPath)
@@ -190,16 +224,70 @@ partial class Build
         }
 
         using var process = new Process { StartInfo = startInfo };
-        process.Start();
+        var displayCommand = FormatProcessCommand(fileName, arguments);
+        var outputLock = new object();
+        var stdoutClosed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stderrClosed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
+        process.OutputDataReceived += (_, eventArgs) =>
+        {
+            if (eventArgs.Data is null)
+            {
+                stdoutClosed.TrySetResult();
+                return;
+            }
+
+            lock (outputLock)
+            {
+                result.StandardOutputLines.Add(eventArgs.Data);
+            }
+
+            Log.Information("[{Process}] {Line}", fileName, eventArgs.Data);
+            Console.Out.Flush();
+        };
+
+        process.ErrorDataReceived += (_, eventArgs) =>
+        {
+            if (eventArgs.Data is null)
+            {
+                stderrClosed.TrySetResult();
+                return;
+            }
+
+            lock (outputLock)
+            {
+                result.StandardErrorLines.Add(eventArgs.Data);
+            }
+
+            if (throwOnFailure)
+            {
+                Log.Warning("[{Process} stderr] {Line}", fileName, eventArgs.Data);
+            }
+            else
+            {
+                Log.Information("[{Process} stderr] {Line}", fileName, eventArgs.Data);
+            }
+
+            Console.Error.Flush();
+        };
+
+        Log.Information("Starting process: {Command} (cwd: {WorkingDirectory})", displayCommand, workingDirectory);
+        Console.Out.Flush();
+        var stopwatch = Stopwatch.StartNew();
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
         process.WaitForExit();
-        Task.WaitAll(stdoutTask, stderrTask);
+        Task.WaitAll(stdoutClosed.Task, stderrClosed.Task);
+        stopwatch.Stop();
 
         result.ExitCode = process.ExitCode;
-        result.StandardOutputLines.AddRange(SplitLines(stdoutTask.Result));
-        result.StandardErrorLines.AddRange(SplitLines(stderrTask.Result));
+        Log.Information(
+            "Completed process: {Command} => ExitCode={ExitCode} in {Elapsed:0.0}s",
+            displayCommand,
+            result.ExitCode,
+            stopwatch.Elapsed.TotalSeconds);
+        Console.Out.Flush();
 
         if (throwOnFailure && result.ExitCode != 0)
         {
@@ -643,6 +731,15 @@ partial class Build
             throwOnFailure);
     }
 
+    private ProcessInvocationResult InvokeWslRootCommand(string distro, string bashCommand, bool throwOnFailure = true)
+    {
+        return InvokeProcess(
+            "wsl.exe",
+            new List<string> { "-d", distro, "-u", "root", "--", "bash", "-lc", bashCommand },
+            RepoRootPath,
+            throwOnFailure);
+    }
+
     private ProcessInvocationResult InvokeInteractiveWslCommand(string distro, string bashCommand, bool throwOnFailure = true)
     {
         return InvokeInteractiveProcess(
@@ -764,8 +861,8 @@ partial class Build
         {
             var name = item["Name"]?.ToString() ?? string.Empty;
             var commandLine = item["CommandLine"]?.ToString() ?? string.Empty;
-            if (!(string.Equals(name, "dotnet.exe", StringComparison.OrdinalIgnoreCase) && commandLine.Contains("McpServer.Web", StringComparison.OrdinalIgnoreCase)) &&
-                !(string.Equals(name, "McpServer.Web.exe", StringComparison.OrdinalIgnoreCase) && commandLine.Contains("McpServer.Web", StringComparison.OrdinalIgnoreCase)))
+            if (!(string.Equals(name, "dotnet.exe", StringComparison.OrdinalIgnoreCase) && commandLine.Contains("McpServerManager.Web", StringComparison.OrdinalIgnoreCase)) &&
+                !(string.Equals(name, "McpServerManager.Web.exe", StringComparison.OrdinalIgnoreCase) && commandLine.Contains("McpServerManager.Web", StringComparison.OrdinalIgnoreCase)))
             {
                 continue;
             }

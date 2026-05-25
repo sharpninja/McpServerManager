@@ -84,7 +84,7 @@ Assert-ContainsPattern `
 
 Assert-ContainsPattern `
     -Rule "THR004" `
-    -RelativePath "src/McpServer.UI.Core/Commands/InvokeUiActionCommand.cs" `
+    -RelativePath "src/McpServerManager.UI.Core/Commands/InvokeUiActionCommand.cs" `
     -Pattern "Dispatcher\.UIThread\.InvokeAsync\(" `
     -MissingMessage "UI.Core InvokeUiAction handler must marshal command delegates via Dispatcher.UIThread.InvokeAsync()."
 

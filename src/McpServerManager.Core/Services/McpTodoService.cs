@@ -65,6 +65,17 @@ public sealed class McpTodoService
         return Map(result);
     }
 
+    /// <summary>Move a todo to another registered workspace.</summary>
+    public async Task<McpTodoMutationResult> MoveAsync(string id, string targetWorkspacePath, CancellationToken cancellationToken = default)
+    {
+        var result = await _client.Todo.MoveAsync(
+                id,
+                new ClientModels.TodoMoveRequest { TargetWorkspacePath = targetWorkspacePath },
+                cancellationToken)
+            .ConfigureAwait(true);
+        return Map(result);
+    }
+
     /// <summary>Run AI requirements analysis on a todo.</summary>
     public async Task<McpRequirementsAnalysisResult> AnalyzeRequirementsAsync(string id, CancellationToken cancellationToken = default)
     {

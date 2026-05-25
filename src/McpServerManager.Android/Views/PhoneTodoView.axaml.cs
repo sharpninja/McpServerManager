@@ -27,7 +27,6 @@ public partial class PhoneTodoView : UserControl
     }
 
     private PhoneTodoScreen _screen = PhoneTodoScreen.List;
-    private bool _hasAutoLoaded;
     private TodoListViewModel? _currentVm;
 
     public PhoneTodoView()
@@ -54,11 +53,10 @@ public partial class PhoneTodoView : UserControl
         AndroidBackNavigationService.BackRequested += OnAndroidBackRequested;
     }
 
-    private async void OnLoaded(object? sender, RoutedEventArgs e)
+    private void OnLoaded(object? sender, RoutedEventArgs e)
     {
         // No auto-load here — workspace-change event triggers the initial load
         // after the correct workspace path is set on the shared MCP client.
-        _hasAutoLoaded = true;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

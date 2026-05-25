@@ -119,7 +119,19 @@
         <!-- Row 4: Transcript History -->
         <Border Classes="phone-outline-card" Padding="10">
             <StackPanel Spacing="8">
-                <TextBlock Text="Transcript History" FontWeight="SemiBold"/>
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                    <TextBlock Grid.Column="0" Text="Transcript History" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1"
+                            Content="Copy"
+                            Command="{Binding CopyTranscriptCommand}"
+                            ToolTip.Tip="Copy transcript"
+                            Padding="8,4"/>
+                    <Button Grid.Column="2"
+                            Content="JSONL"
+                            Click="OnSaveTranscriptJsonlClick"
+                            ToolTip.Tip="Save transcript JSONL"
+                            Padding="8,4"/>
+                </Grid>
                 <ListBox ItemsSource="{Binding TranscriptItems}" SelectionMode="Single" MaxHeight="250">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="models:McpVoiceTranscriptEntry">

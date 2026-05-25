@@ -8,10 +8,6 @@ using McpServerManager.Android.Services;
 
 namespace McpServerManager.Android;
 
-/// <summary>Android application class for Avalonia 12 initialization.</summary>
-[Application]
-public class McpServerManagerApplication : AvaloniaAndroidApplication<App>;
-
 [Activity(
     Label = "MCP Server Manager",
     Theme = "@style/MyTheme.NoActionBar",
@@ -78,7 +74,6 @@ public class MainActivity : AvaloniaMainActivity
             "Main Android activity crashed while dispatching runtime-permission results.");
     }
 
-#pragma warning disable CS0618 // OnBackPressed is deprecated; used here to preserve expected Android back behavior in Avalonia phone views.
     public override void OnBackPressed()
     {
         bool Core()
@@ -90,7 +85,7 @@ public class MainActivity : AvaloniaMainActivity
             if (handled)
                 return true;
 
-            base.OnBackPressed();
+            MoveTaskToBack(false);
             return false;
         }
 
@@ -99,5 +94,4 @@ public class MainActivity : AvaloniaMainActivity
             Core,
             "Main Android activity crashed while processing a back-navigation request.");
     }
-#pragma warning restore CS0618
 }

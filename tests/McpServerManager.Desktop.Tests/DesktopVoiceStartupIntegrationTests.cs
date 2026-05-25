@@ -14,7 +14,9 @@ using McpServerManager.Android.Views;
 using McpServerManager.Core.Services;
 using McpServerManager.Core.ViewModels;
 using McpServerManager.Desktop.Views;
+using McpServerManager.UI.Core.Models.Json;
 using Xunit;
+using DesktopRequestDetailsView = McpServerManager.Desktop.Views.RequestDetailsView;
 
 namespace McpServerManager.Desktop.Tests;
 
@@ -194,6 +196,55 @@ public sealed class DesktopVoiceStartupIntegrationTests
             Assert.True(
                 Math.Abs(inputRowsPanel.Margin.Top + manualTextEntryBorder.Bounds.Height) < 1.0,
                 $"Expected top offset {-manualTextEntryBorder.Bounds.Height}, but got {inputRowsPanel.Margin.Top}.");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task RequestDetailsView_RendersCommitsSection()
+    {
+        await EnsureHeadlessAppResourcesAsync();
+
+        var turn = new UnifiedSessionTurn
+        {
+            QueryTitle = "Commit detail",
+            RequestId = "req-commit",
+            Response = "Done"
+        };
+        turn.Commits.Add(new UnifiedCommit
+        {
+            Sha = "abcdef1234567890",
+            Branch = "main",
+            Message = "Add commits section",
+            Author = "Codex",
+            Timestamp = "2026-05-21T20:00:00Z"
+        });
+        turn.Commits[0].FilesChanged.Add("src/McpServerManager.Desktop/Views/RequestDetailsView.axaml");
+
+        var view = new DesktopRequestDetailsView { DataContext = turn };
+        var window = new Window
+        {
+            Width = 960,
+            Height = 720,
+            Content = view
+        };
+
+        try
+        {
+            window.Show();
+            await PumpUiAsync();
+
+            var expander = view.FindControl<Expander>("CommitsExpander");
+            var items = view.FindControl<ItemsControl>("CommitsItemsControl");
+
+            Assert.NotNull(expander);
+            Assert.NotNull(items);
+            Assert.Single(turn.Commits);
+            Assert.Equal("abcdef123456", turn.Commits[0].ShortSha);
+            Assert.Same(turn.Commits, items.ItemsSource);
         }
         finally
         {

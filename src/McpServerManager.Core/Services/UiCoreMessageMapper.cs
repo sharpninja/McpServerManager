@@ -457,13 +457,16 @@ internal static class UiCoreMessageMapper
             [], // Blockers — not in unified model
             entry.Actions?.Select(ToSessionLogActionDetail).ToList() ?? [],
             entry.ProcessingDialog?.Select(ToSessionLogDialogDetail).ToList() ?? [],
-            []); // Commits — not in unified model
+            entry.Commits?.Select(ToSessionLogCommitDetail).ToList() ?? []);
 
     public static SessionLogActionDetail ToSessionLogActionDetail(Models.Json.UnifiedAction action)
         => new(action.Order, action.Description, action.Type, action.Status, action.FilePath);
 
     public static SessionLogDialogDetail ToSessionLogDialogDetail(Models.Json.UnifiedProcessingDialogItem dialog)
         => new(dialog.Timestamp, dialog.Role, dialog.Category, dialog.Content);
+
+    public static SessionLogCommitDetail ToSessionLogCommitDetail(Models.Json.UnifiedCommit commit)
+        => new(commit.Sha, commit.Branch, commit.Message, commit.Author, commit.Timestamp, commit.FilesChanged.ToList());
 
     // ── Session log reverse mapping (UI.Core → client DTO for submit) ───────
 

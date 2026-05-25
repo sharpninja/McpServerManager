@@ -1,24 +1,24 @@
 # Director Requirements
 
-This document tracks functional and technical requirements for the `McpServer.Director` CLI and TUI application.
+This document tracks functional and technical requirements for the `McpServerManager.Director` CLI and TUI application.
 
 ## Functional Requirements
 
 ### FR-MCP-030 Director CLI
 
-A console application (`McpServer.Director`) shall provide agent orchestration commands (init, add, launch, ban, unban, delete, merge, login, list, agents, validate, interactive) dispatched through the CQRS framework. Authentication uses OIDC Device Authorization Flow with the configured provider. Interactive mode uses Terminal.Gui v2 with ViewModel-bound screens.
+A console application (`McpServerManager.Director`) shall provide agent orchestration commands (init, add, launch, ban, unban, delete, merge, login, list, agents, validate, interactive) dispatched through the CQRS framework. Authentication uses OIDC Device Authorization Flow with the configured provider. Interactive mode uses Terminal.Gui v2 with ViewModel-bound screens.
 
 **Status:** ✅ Complete
 
-**Covered by:** `McpServer.Director` project — 15 source files: `Program.cs`, `McpHttpClient.cs`, `Auth/DirectorAuthOptions.cs`, `Auth/OidcAuthService.cs`, `Auth/TokenCache.cs`, `Commands/AuthCommands.cs`, `Commands/CommandHelpers.cs`, `Commands/DirectorCommands.cs`, `Commands/InteractiveCommand.cs`, `Screens/MainScreen.cs`, `Screens/HealthScreen.cs`, `Screens/AgentScreen.cs`, `Screens/TodoScreen.cs`, `Screens/SessionLogScreen.cs`, `Screens/WorkspaceListScreen.cs`, `Screens/WorkspacePolicyScreen.cs`, `Screens/LoginDialog.cs`, `Screens/ViewModelBinder.cs`
+**Covered by:** `McpServerManager.Director` project — 15 source files: `Program.cs`, `McpHttpClient.cs`, `Auth/DirectorAuthOptions.cs`, `Auth/OidcAuthService.cs`, `Auth/TokenCache.cs`, `Commands/AuthCommands.cs`, `Commands/CommandHelpers.cs`, `Commands/DirectorCommands.cs`, `Commands/InteractiveCommand.cs`, `Screens/MainScreen.cs`, `Screens/HealthScreen.cs`, `Screens/AgentScreen.cs`, `Screens/TodoScreen.cs`, `Screens/SessionLogScreen.cs`, `Screens/WorkspaceListScreen.cs`, `Screens/WorkspacePolicyScreen.cs`, `Screens/LoginDialog.cs`, `Screens/ViewModelBinder.cs`
 
-**Implementation:** 17 CLI commands registered via System.CommandLine. All commands communicate with the MCP server via `McpHttpClient` (reads connection details from `AGENTS-README-FIRST.yaml`). Auth uses OIDC Device Authorization Flow with token caching to `~/.mcpserver/tokens.json`. Interactive mode (`director interactive|tui|ui`) launches Terminal.Gui v2 with 6 tabs (Health, Workspaces, Agents, TODO, Sessions, Policy) plus a Login dialog, menu bar, auth status indicator, and keyboard shortcuts (F2 Login, F5 Refresh, Ctrl+Q Quit). ViewModels from `McpServer.UI.Core` are bound to Terminal.Gui controls via `ViewModelBinder` (INotifyPropertyChanged → Application.Invoke).
+**Implementation:** 17 CLI commands registered via System.CommandLine. All commands communicate with the MCP server via `McpHttpClient` (reads connection details from `AGENTS-README-FIRST.yaml`). Auth uses OIDC Device Authorization Flow with token caching to `~/.mcpserver/tokens.json`. Interactive mode (`director interactive|tui|ui`) launches Terminal.Gui v2 with 6 tabs (Health, Workspaces, Agents, TODO, Sessions, Policy) plus a Login dialog, menu bar, auth status indicator, and keyboard shortcuts (F2 Login, F5 Refresh, Ctrl+Q Quit). ViewModels from `McpServerManager.UI.Core` are bound to Terminal.Gui controls via `ViewModelBinder` (INotifyPropertyChanged → Application.Invoke).
 
 ### FR-MCP-037 Director CLI Exec Command
 
 The Director CLI shall support a `director exec <ViewModelName>` command that instantiates the named ViewModel from the registry, populates properties from JSON input (stdin or `--input` flag), executes the primary `IRelayCommand`, and returns the result as JSON to stdout. Exit code 0 = success, 1 = failure.
 
-**Covered by:** `McpServer.Director` project, `IViewModelRegistry`
+**Covered by:** `McpServerManager.Director` project, `IViewModelRegistry`
 
 ### FR-MCP-057 Director Agent Pool Management UI
 
@@ -28,7 +28,7 @@ Director shall provide an Agent Pool tab to monitor pooled agents and one-shot q
 
 ### FR-MCP-060 Director MVVM/CQRS Full Endpoint Coverage
 
-Director SHALL expose complete administrative endpoint coverage through the shared `McpServer.UI.Core` MVVM/CQRS layer so interactive tabs and `director exec` operations use the same command/query contracts, handlers, and authorization rules.
+Director SHALL expose complete administrative endpoint coverage through the shared `McpServerManager.UI.Core` MVVM/CQRS layer so interactive tabs and `director exec` operations use the same command/query contracts, handlers, and authorization rules.
 
 Each covered administration area SHALL provide ViewModel-first orchestration (list/detail or operation-focused ViewModel patterns), and Director screens SHALL remain presentation-only shells that delegate state and workflows to ViewModels and CQRS dispatch.
 
@@ -40,11 +40,11 @@ Tab composition SHALL be role-aware and declarative, with registration metadata 
 
 ### TR-MCP-DIR-001
 
-**Director Console App with CQRS** — `McpServer.Director` console application using `System.CommandLine` for CLI parsing and `McpServer.Cqrs` for all action dispatch. CLI commands: `health`, `list`, `agents` (defs/ws/events), `add`, `ban`, `unban`, `delete`, `validate`, `init`, `sync` (status/run), `todo`, `session-log`, `login`, `logout`, `whoami`, `interactive` (aliases: `tui`, `ui`), `exec`, `list-viewmodels`. Interactive mode uses Terminal.Gui v2 with 7 tabbed screens (Health, Workspaces, Agents, TODO, Sessions, Sync, Policy) plus LoginDialog, menu bar, auth status indicator, and keyboard shortcuts (F2 Login, F5 Refresh, Ctrl+Q Quit).
+**Director Console App with CQRS** — `McpServerManager.Director` console application using `System.CommandLine` for CLI parsing and `McpServer.Cqrs` for all action dispatch. CLI commands: `health`, `list`, `agents` (defs/ws/events), `add`, `ban`, `unban`, `delete`, `validate`, `init`, `sync` (status/run), `todo`, `session-log`, `login`, `logout`, `whoami`, `interactive` (aliases: `tui`, `ui`), `exec`, `list-viewmodels`. Interactive mode uses Terminal.Gui v2 with 7 tabbed screens (Health, Workspaces, Agents, TODO, Sessions, Sync, Policy) plus LoginDialog, menu bar, auth status indicator, and keyboard shortcuts (F2 Login, F5 Refresh, Ctrl+Q Quit).
 
 **Status:** ✅ Complete — 18 CLI commands, 9 Terminal.Gui screens, solution builds with 0 warnings
 
-**Covered by:** `McpServer.Director` project (`Program.cs`, `DirectorCommands.cs`, `AuthCommands.cs`, `InteractiveCommand.cs`, `McpHttpClient.cs`, `MainScreen.cs`, `HealthScreen.cs`, `AgentScreen.cs`, `TodoScreen.cs`, `SessionLogScreen.cs`, `SyncScreen.cs`, `WorkspaceListScreen.cs`, `WorkspacePolicyScreen.cs`, `LoginDialog.cs`, `ViewModelBinder.cs`)
+**Covered by:** `McpServerManager.Director` project (`Program.cs`, `DirectorCommands.cs`, `AuthCommands.cs`, `InteractiveCommand.cs`, `McpHttpClient.cs`, `MainScreen.cs`, `HealthScreen.cs`, `AgentScreen.cs`, `TodoScreen.cs`, `SessionLogScreen.cs`, `SyncScreen.cs`, `WorkspaceListScreen.cs`, `WorkspacePolicyScreen.cs`, `LoginDialog.cs`, `ViewModelBinder.cs`)
 
 ### TR-MCP-DIR-002
 
@@ -52,7 +52,7 @@ Tab composition SHALL be role-aware and declarative, with registration metadata 
 
 **Status:** ✅ Complete
 
-**Covered by:** `McpServer.Director` project (`Auth/OidcAuthService.cs`, `Auth/TokenCache.cs`, `Auth/DirectorAuthOptions.cs`, `Commands/AuthCommands.cs`, `Screens/LoginDialog.cs`)
+**Covered by:** `McpServerManager.Director` project (`Auth/OidcAuthService.cs`, `Auth/TokenCache.cs`, `Auth/DirectorAuthOptions.cs`, `Commands/AuthCommands.cs`, `Screens/LoginDialog.cs`)
 
 ### TR-MCP-DIR-003
 
@@ -60,7 +60,7 @@ Tab composition SHALL be role-aware and declarative, with registration metadata 
 
 **Status:** ✅ Complete
 
-**Covered by:** `McpServer.Director` project (`Program.cs` exec/list-viewmodels commands), `McpServer.UI.Core` (`IViewModelRegistry`)
+**Covered by:** `McpServerManager.Director` project (`Program.cs` exec/list-viewmodels commands), `McpServerManager.UI.Core` (`IViewModelRegistry`)
 
 ### TR-MCP-DIR-004
 
@@ -80,7 +80,7 @@ Director non-interactive command paths (`director` CLI commands and `director ex
 
 **Status:** ✅ Complete
 
-**Covered by:** `McpServer.UI.Core/Messages/*Messages.cs`, `McpServer.UI.Core/Handlers/*Handlers.cs`, `McpServer.Director/*ApiClientAdapter.cs`, `McpServer.Director/Commands/DirectorCommands.cs`, `McpServer.Director/Commands/AuthCommands.cs`
+**Covered by:** `McpServerManager.UI.Core/Messages/*Messages.cs`, `McpServerManager.UI.Core/Handlers/*Handlers.cs`, `McpServerManager.Director/*ApiClientAdapter.cs`, `McpServerManager.Director/Commands/DirectorCommands.cs`, `McpServerManager.Director/Commands/AuthCommands.cs`
 
 ### TR-MCP-DIR-006
 
@@ -90,7 +90,7 @@ List/detail areas SHALL follow `AreaListViewModelBase<T>` / `AreaDetailViewModel
 
 **Status:** ✅ Complete
 
-**Covered by:** `McpServer.UI.Core/ViewModels/*ViewModel.cs`, `McpServer.UI.Core/ViewModels/Base/AreaListViewModelBase.cs`, `McpServer.UI.Core/ViewModels/Base/AreaDetailViewModelBase.cs`, `McpServer.Director/Screens/*Screen.cs`
+**Covered by:** `McpServerManager.UI.Core/ViewModels/*ViewModel.cs`, `McpServerManager.UI.Core/ViewModels/Base/AreaListViewModelBase.cs`, `McpServerManager.UI.Core/ViewModels/Base/AreaDetailViewModelBase.cs`, `McpServerManager.Director/Screens/*Screen.cs`
 
 ### TR-MCP-DIR-007
 
@@ -100,7 +100,7 @@ Viewer-level users SHALL retain read access surfaces while admin-only surfaces (
 
 **Status:** ✅ Complete
 
-**Covered by:** `McpServer.UI.Core/Authorization/McpArea.cs`, `McpServer.UI.Core/Authorization/McpActionKeys.cs`, `McpServer.Director/Auth/DirectorAuthorizationPolicyService.cs`, `McpServer.Director/Screens/MainScreen.cs`, `McpServer.UI.Core/Handlers/*Handlers.cs`
+**Covered by:** `McpServerManager.UI.Core/Authorization/McpArea.cs`, `McpServerManager.UI.Core/Authorization/McpActionKeys.cs`, `McpServerManager.Director/Auth/DirectorAuthorizationPolicyService.cs`, `McpServerManager.Director/Screens/MainScreen.cs`, `McpServerManager.UI.Core/Handlers/*Handlers.cs`
 
 ### TR-MCP-DIR-008
 
@@ -110,4 +110,4 @@ Main shell rendering SHALL iterate registrations dynamically and avoid hardcoded
 
 **Status:** ✅ Complete
 
-**Covered by:** `McpServer.UI.Core/Navigation/ITabRegistry.cs`, `McpServer.Director/DirectorTabRegistry.cs`, `McpServer.Director/Screens/MainScreen.cs`, `McpServer.Director/DirectorServiceRegistration.cs`
+**Covered by:** `McpServerManager.UI.Core/Navigation/ITabRegistry.cs`, `McpServerManager.Director/DirectorTabRegistry.cs`, `McpServerManager.Director/Screens/MainScreen.cs`, `McpServerManager.Director/DirectorServiceRegistration.cs`

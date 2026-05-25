@@ -72,7 +72,7 @@ The Director CLI caches tokens locally and automatically refreshes them when exp
 
 ### Usage in Code
 
-**CLI Implementation**: `src/McpServer.Director/Auth/OidcAuthService.cs`
+**CLI Implementation**: `src/McpServerManager.Director/Auth/OidcAuthService.cs`
 
 The Director CLI discovers OIDC configuration from the MCP server:
 
@@ -139,7 +139,7 @@ The Authorization Code Flow is the standard OAuth 2.0 flow for browser-based app
 
 ### Usage in Code
 
-**Web UI Configuration**: `src/McpServer.Web/appsettings.Development.json`
+**Web UI Configuration**: `src/McpServerManager.Web/appsettings.Development.json`
 
 ```json
 {
@@ -155,7 +155,7 @@ The Authorization Code Flow is the standard OAuth 2.0 flow for browser-based app
 }
 ```
 
-**Code Reference**: `src/McpServer.Web/Program.cs`
+**Code Reference**: `src/McpServerManager.Web/Program.cs`
 
 The Web UI uses ASP.NET Core's OpenID Connect middleware to handle the Authorization Code Flow automatically. The middleware:
 - Redirects unauthenticated requests to Keycloak

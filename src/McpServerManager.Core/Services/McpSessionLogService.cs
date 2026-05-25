@@ -149,6 +149,23 @@ public sealed class McpSessionLogService
             }
         }
 
+        if (dto.Commits != null)
+        {
+            foreach (var commit in dto.Commits)
+            {
+                entry.Commits.Add(new UnifiedCommit
+                {
+                    Sha = commit.Sha ?? "",
+                    Branch = commit.Branch ?? "",
+                    Message = commit.Message ?? "",
+                    Author = commit.Author ?? "",
+                    Timestamp = commit.Timestamp ?? "",
+                    FilesChanged = new System.Collections.ObjectModel.ObservableCollection<string>(
+                        commit.FilesChanged ?? new List<string>())
+                });
+            }
+        }
+
         return entry;
     }
 

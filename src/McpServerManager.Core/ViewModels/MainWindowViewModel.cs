@@ -78,7 +78,7 @@ public partial class MainWindowViewModel : McpServerManager.UI.Core.ViewModels.M
     {
         var voiceSettingsService = VoiceChatSettingsService.Instance;
         var savedVoiceSettings = voiceSettingsService.Load();
-        var vm = new VoiceConversationViewModel(McpVoiceService)
+        var vm = new VoiceConversationViewModel(McpVoiceService, clipboardService: CoreClipboardService)
         {
             Language = savedVoiceSettings.Language,
             ResolveWorkspacePath = ResolveActiveWorkspacePath,

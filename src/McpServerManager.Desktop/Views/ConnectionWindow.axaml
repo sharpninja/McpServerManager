@@ -10,7 +10,7 @@
         Width="420" Height="400"
         WindowStartupLocation="CenterScreen"
         CanResize="False"
-        SystemDecorations="Full">
+        WindowDecorations="Full">
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">

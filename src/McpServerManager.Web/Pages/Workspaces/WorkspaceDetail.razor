@@ -1,0 +1,505 @@
+@page "/workspaces/detail"
+
+@inject WorkspaceDetailViewModel ViewModel
+@inject WorkspacePolicyViewModel PolicyViewModel
+@inject WorkspaceListViewModel ListViewModel
+@inject IAuthorizationPolicyService AuthPolicy
+@inject WebCommandTarget CommandTarget
+
+<PageTitle>Workspace Detail</PageTitle>
+
+<div class="detail-layout">
+    <aside class="detail-sidebar">
+        <div class="sidebar-header">Workspaces</div>
+        @foreach (var ws in ListViewModel.Workspaces)
+        {
+            <a class="sidebar-item @(string.Equals(ws.WorkspacePath, WorkspacePath, StringComparison.OrdinalIgnoreCase) ? "active" : "")"
+               href="/workspaces/detail?path=@Uri.EscapeDataString(ws.WorkspacePath)">
+                <span class="color-fg-muted f6">@(ws.IsPrimary ? "Primary" : ws.IsEnabled ? "Enabled" : "Disabled")</span>
+                <br />@ws.Name
+            </a>
+        }
+    </aside>
+
+    <div class="detail-main">
+        <DetailItemToolbar Items="GetNavigationItems()"
+                           CurrentKey="@WorkspacePath"
+                           ItemTypeLabel="Workspace"
+                           AriaLabel="Workspace item navigation"
+                           IgnoreKeyCase="true" />
+
+        @if (string.IsNullOrWhiteSpace(WorkspacePath) && !New)
+        {
+            <PrimerBlankslate Heading="No workspace selected" Description="Choose a workspace from the workspace list to view details." />
+        }
+        else if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+        {
+            <PrimerFlash Variant="danger" Title="Failed to load workspace">@ViewModel.ErrorMessage</PrimerFlash>
+        }
+        else if (ViewModel.IsBusy || _isLoadingWorkspace)
+        {
+            <p class="color-fg-muted">Loading workspace details...</p>
+        }
+        else if (ViewModel.Detail is null && !ViewModel.IsNewDraft)
+        {
+            <PrimerBlankslate Heading="Workspace not found" Description="The requested workspace could not be loaded." />
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(ViewModel.MutationMessage))
+            {
+                <PrimerFlash Variant="@(ViewModel.MutationMessage.Contains("failed", StringComparison.OrdinalIgnoreCase) ? "danger" : "success")" Title="Result">@ViewModel.MutationMessage</PrimerFlash>
+            }
+
+            <div class="Box detail-card-section">
+                <div class="Box-header detail-card-section__header">
+                    <button type="button"
+                            class="detail-card-expander"
+                            aria-expanded="@IsSectionExpanded(WorkspaceSectionKey).ToString().ToLowerInvariant()"
+                            @onclick='() => ToggleSection(WorkspaceSectionKey)'>
+                        <span class="h3 mb-0">@WorkspaceHeading</span>
+                        <span class="detail-card-expander__icon" aria-hidden="true">@GetSectionIcon(WorkspaceSectionKey)</span>
+                    </button>
+                    @if (CanSave)
+                    {
+                        <div class="detail-card-expander__actions">
+                            <button class="btn btn-primary btn-sm" @onclick="SaveAsync" disabled="@ViewModel.IsBusy">@(ViewModel.IsNewDraft ? "Create" : "Save")</button>
+                            @if (CanDelete)
+                            {
+                                <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@ViewModel.IsBusy">Delete</button>
+                            }
+                        </div>
+                    }
+                </div>
+                @if (IsSectionExpanded(WorkspaceSectionKey))
+                {
+                    <div class="Box-body">
+                        <div class="detail-field-grid">
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-block">Path</label>
+                                @if (ViewModel.IsNewDraft && CanCreate)
+                                {
+                                    <input class="form-control" @bind="ViewModel.EditorWorkspacePath" />
+                                }
+                                else
+                                {
+                                    <code>@ViewModel.EditorWorkspacePath</code>
+                                }
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Name</label>
+                                @if (CanEditWorkspaceFields)
+                                {
+                                    <input class="form-control" @bind="ViewModel.EditorName" />
+                                }
+                                else
+                                {
+                                    <span>@WorkspaceHeading</span>
+                                }
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Tunnel Provider</label>
+                                @if (CanEditWorkspaceFields)
+                                {
+                                    <input class="form-control" @bind="ViewModel.EditorTunnelProvider" />
+                                }
+                                else
+                                {
+                                    <span>@DisplayOptional(ViewModel.Detail?.TunnelProvider)</span>
+                                }
+                            </div>
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-block">Todo Path</label>
+                                @if (CanEditWorkspaceFields)
+                                {
+                                    <input class="form-control" @bind="ViewModel.EditorTodoPath" />
+                                }
+                                else
+                                {
+                                    <code>@(ViewModel.Detail?.TodoPath ?? ViewModel.EditorTodoPath)</code>
+                                }
+                            </div>
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-block">Data Directory</label>
+                                @if (CanEditWorkspaceFields)
+                                {
+                                    <input class="form-control" @bind="ViewModel.EditorDataDirectory" />
+                                }
+                                else
+                                {
+                                    <span>@DisplayOptional(ViewModel.Detail?.DataDirectory)</span>
+                                }
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Run As</label>
+                                @if (CanEditWorkspaceFields)
+                                {
+                                    <input class="form-control" @bind="ViewModel.EditorRunAs" />
+                                }
+                                else
+                                {
+                                    <span>@DisplayOptional(ViewModel.Detail?.RunAs)</span>
+                                }
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Enabled</label>
+                                @if (CanEditWorkspaceFields)
+                                {
+                                    <label class="d-flex flex-items-center gap-2">
+                                        <input type="checkbox" @bind="ViewModel.EditorIsEnabled" /> Enabled
+                                    </label>
+                                }
+                                else
+                                {
+                                    <span>@(ViewModel.Detail?.IsEnabled == true ? "Yes" : "No")</span>
+                                }
+                            </div>
+                            <div>
+                                <label class="text-small text-bold d-block">Primary</label>
+                                @if (CanEditWorkspaceFields)
+                                {
+                                    <label class="d-flex flex-items-center gap-2">
+                                        <input type="checkbox" @bind="ViewModel.EditorIsPrimary" /> Primary
+                                    </label>
+                                }
+                                else
+                                {
+                                    <span>@(ViewModel.Detail?.IsPrimary == true ? "Yes" : "No")</span>
+                                }
+                            </div>
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-block">Prompt Template</label>
+                                @if (CanEditWorkspaceFields)
+                                {
+                                    <textarea class="form-control" rows="4" data-testid="workspace-prompt-template" @bind="ViewModel.EditorPromptTemplateText"></textarea>
+                                }
+                                else
+                                {
+                                    <pre class="Box p-2">@DisplayPrompt(ViewModel.Detail?.PromptTemplate)</pre>
+                                }
+                            </div>
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-block">Status Prompt</label>
+                                @if (CanEditWorkspaceFields)
+                                {
+                                    <textarea class="form-control" rows="4" data-testid="workspace-status-prompt" @bind="ViewModel.EditorStatusPromptText"></textarea>
+                                }
+                                else
+                                {
+                                    <pre class="Box p-2">@DisplayPrompt(ViewModel.Detail?.StatusPrompt)</pre>
+                                }
+                            </div>
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-block">Implement Prompt</label>
+                                @if (CanEditWorkspaceFields)
+                                {
+                                    <textarea class="form-control" rows="4" data-testid="workspace-implement-prompt" @bind="ViewModel.EditorImplementPromptText"></textarea>
+                                }
+                                else
+                                {
+                                    <pre class="Box p-2">@DisplayPrompt(ViewModel.Detail?.ImplementPrompt)</pre>
+                                }
+                            </div>
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-block">Plan Prompt</label>
+                                @if (CanEditWorkspaceFields)
+                                {
+                                    <textarea class="form-control" rows="4" data-testid="workspace-plan-prompt" @bind="ViewModel.EditorPlanPromptText"></textarea>
+                                }
+                                else
+                                {
+                                    <pre class="Box p-2">@DisplayPrompt(ViewModel.Detail?.PlanPrompt)</pre>
+                                }
+                            </div>
+                            @if (!ViewModel.IsNewDraft && ViewModel.Detail is not null)
+                            {
+                                <div>
+                                    <label class="text-small text-bold d-block">Created</label>
+                                    <span>@ViewModel.Detail.DateTimeCreated.ToLocalTime().ToString("g")</span>
+                                </div>
+                                <div>
+                                    <label class="text-small text-bold d-block">Modified</label>
+                                    <span>@ViewModel.Detail.DateTimeModified.ToLocalTime().ToString("g")</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="Box detail-card-section">
+                <div class="Box-header detail-card-section__header">
+                    <button type="button"
+                            class="detail-card-expander"
+                            aria-expanded="@IsSectionExpanded(PolicySectionKey).ToString().ToLowerInvariant()"
+                            @onclick='() => ToggleSection(PolicySectionKey)'>
+                        <span class="h4 mb-0">Policy</span>
+                        <span class="detail-card-expander__icon" aria-hidden="true">@GetSectionIcon(PolicySectionKey)</span>
+                    </button>
+                </div>
+                @if (IsSectionExpanded(PolicySectionKey))
+                {
+                    <div class="Box-body">
+                        @if (!string.IsNullOrWhiteSpace(PolicyViewModel.ErrorMessage))
+                        {
+                            <PrimerFlash Variant="danger" Title="Policy save failed">@PolicyViewModel.ErrorMessage</PrimerFlash>
+                        }
+                        <div class="detail-field-grid detail-field-grid--compact">
+                            @if (CanEditPolicy)
+                            {
+                                <div>
+                                    <label class="text-small text-bold d-block">Banned Licenses</label>
+                                    <textarea class="form-control" rows="4" data-testid="workspace-banned-licenses" @bind="_bannedLicensesText"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-small text-bold d-block">Banned Countries</label>
+                                    <textarea class="form-control" rows="4" data-testid="workspace-banned-countries" @bind="_bannedCountriesText"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-small text-bold d-block">Banned Organizations</label>
+                                    <textarea class="form-control" rows="4" data-testid="workspace-banned-organizations" @bind="_bannedOrganizationsText"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-small text-bold d-block">Banned Individuals</label>
+                                    <textarea class="form-control" rows="4" data-testid="workspace-banned-individuals" @bind="_bannedIndividualsText"></textarea>
+                                </div>
+                            }
+                            else
+                            {
+                                <div>
+                                    <strong>Banned Licenses</strong>
+                                    @RenderStringList(ViewModel.Detail?.BannedLicenses ?? [])
+                                </div>
+                                <div>
+                                    <strong>Banned Countries</strong>
+                                    @RenderStringList(ViewModel.Detail?.BannedCountriesOfOrigin ?? [])
+                                </div>
+                                <div>
+                                    <strong>Banned Organizations</strong>
+                                    @RenderStringList(ViewModel.Detail?.BannedOrganizations ?? [])
+                                </div>
+                                <div>
+                                    <strong>Banned Individuals</strong>
+                                    @RenderStringList(ViewModel.Detail?.BannedIndividuals ?? [])
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "path")]
+    public string? WorkspacePath { get; set; }
+
+    [SupplyParameterFromQuery(Name = "new")]
+    public bool New { get; set; }
+
+    private string? _loadedPath;
+    private HashSet<string> _expandedSections = CreateDefaultExpandedSections();
+    private bool _loadedNewDraft;
+    private string _bannedLicensesText = string.Empty;
+    private string _bannedCountriesText = string.Empty;
+    private string _bannedOrganizationsText = string.Empty;
+    private string _bannedIndividualsText = string.Empty;
+    private bool _isLoadingWorkspace;
+
+    private const string WorkspaceSectionKey = "workspace";
+    private const string PolicySectionKey = "policy";
+
+    private bool CanEdit => AuthPolicy.CanExecuteAction(McpServerManager.UI.Core.Authorization.McpActionKeys.WorkspaceUpdate);
+    private bool CanCreate => AuthPolicy.CanExecuteAction(McpServerManager.UI.Core.Authorization.McpActionKeys.WorkspaceCreate);
+    private bool CanEditPolicy => AuthPolicy.CanExecuteAction(McpServerManager.UI.Core.Authorization.McpActionKeys.WorkspaceUpdatePolicy);
+    private bool CanDelete => !ViewModel.IsNewDraft && AuthPolicy.CanExecuteAction(McpServerManager.UI.Core.Authorization.McpActionKeys.WorkspaceDelete);
+    private bool CanEditWorkspaceFields => ViewModel.IsNewDraft ? CanCreate : CanEdit;
+    private bool CanSaveWorkspace => ViewModel.IsNewDraft ? CanCreate : CanEdit;
+    private bool CanSave => CanSaveWorkspace || (!ViewModel.IsNewDraft && CanEditPolicy);
+    private string WorkspaceHeading => ViewModel.IsNewDraft ? "New Workspace" : ViewModel.Detail?.Name ?? "Workspace";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ListViewModel.Workspaces.Count == 0)
+        {
+            await CommandTarget.RunAsync(() => ListViewModel.LoadAsync()).ConfigureAwait(true);
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (New)
+        {
+            if (_loadedNewDraft)
+                return;
+
+            _loadedPath = null;
+            _loadedNewDraft = true;
+            _isLoadingWorkspace = false;
+            ViewModel.BeginNewDraft();
+            PolicyViewModel.ClearPolicy();
+            SyncPolicyTextFromViewModel();
+            ResetExpandedSections();
+            return;
+        }
+
+        if (!_loadedNewDraft && string.Equals(_loadedPath, WorkspacePath, StringComparison.Ordinal))
+            return;
+
+        _loadedNewDraft = false;
+        _loadedPath = WorkspacePath;
+        if (string.IsNullOrWhiteSpace(WorkspacePath))
+        {
+            _isLoadingWorkspace = false;
+            PolicyViewModel.ClearPolicy();
+            SyncPolicyTextFromViewModel();
+            return;
+        }
+
+        _isLoadingWorkspace = true;
+        try
+        {
+            await CommandTarget.RunAsync(async () =>
+            {
+                ViewModel.WorkspacePath = WorkspacePath;
+                await ViewModel.LoadAsync().ConfigureAwait(true);
+                HydratePolicyFromDetail();
+            }).ConfigureAwait(true);
+        }
+        finally
+        {
+            _isLoadingWorkspace = false;
+        }
+        ResetExpandedSections();
+    }
+
+    private async Task SaveAsync() => await CommandTarget.RunAsync(async () =>
+    {
+        if (CanSaveWorkspace)
+            await ViewModel.SaveAsync().ConfigureAwait(true);
+
+        if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+            return;
+
+        if (CanEditPolicy && !string.IsNullOrWhiteSpace(ViewModel.EditorWorkspacePath))
+        {
+            SyncPolicyTextToViewModel();
+            PolicyViewModel.WorkspacePathOverride = ViewModel.EditorWorkspacePath;
+            await PolicyViewModel.SaveAsync().ConfigureAwait(true);
+        }
+
+        if (string.IsNullOrWhiteSpace(ViewModel.WorkspacePath))
+            return;
+
+        await ViewModel.LoadAsync().ConfigureAwait(true);
+        HydratePolicyFromDetail();
+    }).ConfigureAwait(true);
+
+    private async Task DeleteAsync() => await CommandTarget.RunAsync(() => ViewModel.DeleteAsync()).ConfigureAwait(true);
+
+    private IReadOnlyList<DetailNavigationItem> GetNavigationItems()
+        => ListViewModel.Workspaces
+            .Select(ws => new DetailNavigationItem(
+                ws.WorkspacePath,
+                $"/workspaces/detail?path={Uri.EscapeDataString(ws.WorkspacePath)}",
+                ws.Name,
+                GetWorkspaceStatusText(ws)))
+            .ToArray();
+
+    private static string GetWorkspaceStatusText(WorkspaceSummary workspace)
+        => workspace.IsPrimary ? "Primary" : workspace.IsEnabled ? "Enabled" : "Disabled";
+
+    private bool IsSectionExpanded(string section)
+        => _expandedSections.Contains(section);
+
+    private void ToggleSection(string section)
+    {
+        if (!_expandedSections.Add(section))
+        {
+            _expandedSections.Remove(section);
+        }
+    }
+
+    private void ResetExpandedSections()
+        => _expandedSections = CreateDefaultExpandedSections();
+
+    private static HashSet<string> CreateDefaultExpandedSections()
+        => new(StringComparer.Ordinal)
+        {
+            WorkspaceSectionKey,
+            PolicySectionKey
+        };
+
+    private string GetSectionIcon(string section)
+        => IsSectionExpanded(section) ? "▾" : "▸";
+
+    private void HydratePolicyFromDetail()
+    {
+        if (ViewModel.Detail is null)
+        {
+            PolicyViewModel.ClearPolicy();
+            SyncPolicyTextFromViewModel();
+            return;
+        }
+
+        PolicyViewModel.LoadFromDetail(ViewModel.Detail);
+        SyncPolicyTextFromViewModel();
+    }
+
+    private void SyncPolicyTextFromViewModel()
+    {
+        _bannedLicensesText = ToLineText(PolicyViewModel.BannedLicenses);
+        _bannedCountriesText = ToLineText(PolicyViewModel.BannedCountriesOfOrigin);
+        _bannedOrganizationsText = ToLineText(PolicyViewModel.BannedOrganizations);
+        _bannedIndividualsText = ToLineText(PolicyViewModel.BannedIndividuals);
+    }
+
+    private void SyncPolicyTextToViewModel()
+    {
+        ReplaceCollection(PolicyViewModel.BannedLicenses, _bannedLicensesText);
+        ReplaceCollection(PolicyViewModel.BannedCountriesOfOrigin, _bannedCountriesText);
+        ReplaceCollection(PolicyViewModel.BannedOrganizations, _bannedOrganizationsText);
+        ReplaceCollection(PolicyViewModel.BannedIndividuals, _bannedIndividualsText);
+    }
+
+    private static string ToLineText(IEnumerable<string> values)
+        => string.Join(Environment.NewLine, values);
+
+    private static void ReplaceCollection(System.Collections.ObjectModel.ObservableCollection<string> collection, string? text)
+    {
+        collection.Clear();
+        foreach (var line in (text ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            collection.Add(line);
+    }
+
+    private static string DisplayPrompt(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "(not set)" : value;
+
+    private static string DisplayOptional(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "(not set)" : value;
+
+    private static RenderFragment RenderStringList(IReadOnlyList<string> values) => builder =>
+    {
+        if (values.Count == 0)
+        {
+            builder.OpenElement(0, "p");
+            builder.AddAttribute(1, "class", "color-fg-muted mb-0");
+            builder.AddContent(2, "None");
+            builder.CloseElement();
+            return;
+        }
+
+        builder.OpenElement(3, "ul");
+        builder.AddAttribute(4, "class", "mb-0");
+        for (var i = 0; i < values.Count; i++)
+        {
+            builder.OpenElement(10 + i, "li");
+            builder.AddContent(20 + i, values[i]);
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+    };
+}

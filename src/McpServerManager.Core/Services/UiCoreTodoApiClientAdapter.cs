@@ -113,6 +113,30 @@ internal sealed class UiCoreTodoApiClientAdapter : ITodoApiClient
         }
     }
 
+    public async Task<TodoMutationOutcome> MoveTodoAsync(MoveTodoCommand command, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _service.MoveAsync(command.TodoId, command.TargetWorkspacePath, cancellationToken);
+            return UiCoreMessageMapper.ToTodoMutationOutcome(result);
+        }
+        catch (McpNotFoundException ex)
+        {
+            _logger.LogWarning("{ExceptionDetail}", ex.ToString());
+            return new TodoMutationOutcome(false, ex.Message, null, TodoMutationFailureKind.NotFound);
+        }
+        catch (McpConflictException ex)
+        {
+            _logger.LogWarning("{ExceptionDetail}", ex.ToString());
+            return new TodoMutationOutcome(false, ex.Message, null, TodoMutationFailureKind.Conflict);
+        }
+        catch (McpValidationException ex)
+        {
+            _logger.LogWarning("{ExceptionDetail}", ex.ToString());
+            return new TodoMutationOutcome(false, ex.Message, null, TodoMutationFailureKind.Validation);
+        }
+    }
+
     public async Task<TodoRequirementsAnalysis> AnalyzeTodoRequirementsAsync(string todoId, CancellationToken cancellationToken = default)
     {
         var result = await _service.AnalyzeRequirementsAsync(todoId, cancellationToken);

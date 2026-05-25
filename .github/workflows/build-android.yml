@@ -228,7 +228,7 @@ jobs:
             | 🪟 Windows | `McpServerManager-${{ needs.version.outputs.semver }}-win-x64.msix` |
             | 🐧 Linux | `mcpservermanager_${{ needs.version.outputs.semver }}_amd64.deb` |
             | 💻 Director CLI | `SharpNinja.McpServer.Director.${{ needs.version.outputs.semver }}.nupkg` |
-            | 🌐 Web App | `McpServer.Web-${{ needs.version.outputs.semver }}.zip` |
+            | 🌐 Web App | `McpServerManager.Web-${{ needs.version.outputs.semver }}.zip` |
 
             ### Android APK
             - **Version Code**: ${{ needs.version.outputs.version-code }}

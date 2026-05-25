@@ -69,28 +69,28 @@ function Assert-ProjectReference {
 
     $content = Get-Content -LiteralPath $projectPath -Raw
     if ($content -notmatch $ProjectReferencePattern) {
-        Add-Finding -Rule $Rule -Description $Description -File $ProjectRelativePath -Line 1 -Text "Missing expected McpServer.UI.Core project reference."
+        Add-Finding -Rule $Rule -Description $Description -File $ProjectRelativePath -Line 1 -Text "Missing expected McpServerManager.UI.Core project reference."
     }
 }
 
 $projectReferenceChecks = @(
     @{
         Rule = "UIM001"
-        Description = "McpServerManager.Core must reference McpServer.UI.Core."
+        Description = "McpServerManager.Core must reference McpServerManager.UI.Core."
         ProjectRelativePath = "src/McpServerManager.Core/McpServerManager.Core.csproj"
-        ProjectReferencePattern = "<ProjectReference\s+Include=""(?:\.\.\\){1,2}(?:lib\\McpServer\\src\\)?McpServer\.UI\.Core\\McpServer\.UI\.Core\.csproj""\s*/?>"
+        ProjectReferencePattern = "<ProjectReference\s+Include=""(?:\.\.\\){1,2}McpServerManager\.UI\.Core\\McpServerManager\.UI\.Core\.csproj""\s*/?>"
     },
     @{
         Rule = "UIM002"
-        Description = "McpServer.Web must reference McpServer.UI.Core."
-        ProjectRelativePath = "src/McpServer.Web/McpServer.Web.csproj"
-        ProjectReferencePattern = "<ProjectReference\s+Include=""(?:\.\.\\){1,2}(?:lib\\McpServer\\src\\)?McpServer\.UI\.Core\\McpServer\.UI\.Core\.csproj""\s*/?>"
+        Description = "McpServerManager.Web must reference McpServerManager.UI.Core."
+        ProjectRelativePath = "src/McpServerManager.Web/McpServerManager.Web.csproj"
+        ProjectReferencePattern = "<ProjectReference\s+Include=""(?:\.\.\\){1,2}McpServerManager\.UI\.Core\\McpServerManager\.UI\.Core\.csproj""\s*/?>"
     },
     @{
         Rule = "UIM003"
-        Description = "McpServer.Director must reference McpServer.UI.Core."
-        ProjectRelativePath = "src/McpServer.Director/McpServer.Director.csproj"
-        ProjectReferencePattern = "<ProjectReference\s+Include=""(?:\.\.\\){1,2}(?:lib\\McpServer\\src\\)?McpServer\.UI\.Core\\McpServer\.UI\.Core\.csproj""\s*/?>"
+        Description = "McpServerManager.Director must reference McpServerManager.UI.Core."
+        ProjectRelativePath = "src/McpServerManager.Director/McpServerManager.Director.csproj"
+        ProjectReferencePattern = "<ProjectReference\s+Include=""(?:\.\.\\){1,2}McpServerManager\.UI\.Core\\McpServerManager\.UI\.Core\.csproj""\s*/?>"
     }
 )
 
@@ -114,7 +114,7 @@ else {
             if ($classMatches.Count -eq 0) {
                 Add-Finding `
                     -Rule "UIM101" `
-                    -Description "Host ViewModel wrappers must inherit a McpServer.UI.Core.ViewModels base type." `
+                    -Description "Host ViewModel wrappers must inherit a McpServerManager.UI.Core.ViewModels base type." `
                     -File (To-RelativePath $_.FullName) `
                     -Line 1 `
                     -Text "No inheriting ViewModel declaration found."
@@ -124,10 +124,10 @@ else {
             foreach ($match in $classMatches) {
                 $baseList = $match.Matches[0].Groups["base"].Value
                 $primaryBase = ($baseList -split ",")[0].Trim()
-                if (-not $primaryBase.StartsWith("McpServer.UI.Core.ViewModels.", [StringComparison]::Ordinal)) {
+                if (-not $primaryBase.StartsWith("McpServerManager.UI.Core.ViewModels.", [StringComparison]::Ordinal)) {
                     Add-Finding `
                         -Rule "UIM101" `
-                        -Description "Host ViewModel wrappers must inherit a McpServer.UI.Core.ViewModels base type." `
+                        -Description "Host ViewModel wrappers must inherit a McpServerManager.UI.Core.ViewModels base type." `
                         -File (To-RelativePath $_.FullName) `
                         -Line $match.LineNumber `
                         -Text $match.Line.Trim()
@@ -139,17 +139,17 @@ else {
 $managerStructuralChecks = @(
     @{
         Rule = "UIM102"
-        Description = "McpServerManager.Core ViewModelBase must inherit McpServer.UI.Core ViewModelBase."
+        Description = "McpServerManager.Core ViewModelBase must inherit McpServerManager.UI.Core ViewModelBase."
         File = "src/McpServerManager.Core/ViewModels/ViewModelBase.cs"
-        Pattern = 'public\s+class\s+ViewModelBase\s*:\s*McpServer\.UI\.Core\.ViewModels\.ViewModelBase'
-        MissingText = "ViewModelBase does not inherit McpServer.UI.Core.ViewModels.ViewModelBase."
+        Pattern = 'public\s+class\s+ViewModelBase\s*:\s*McpServerManager\.UI\.Core\.ViewModels\.ViewModelBase'
+        MissingText = "ViewModelBase does not inherit McpServerManager.UI.Core.ViewModels.ViewModelBase."
     },
     @{
         Rule = "UIM103"
-        Description = "McpServerManager.Core EditorTab must inherit McpServer.UI.Core EditorTab."
+        Description = "McpServerManager.Core EditorTab must inherit McpServerManager.UI.Core EditorTab."
         File = "src/McpServerManager.Core/ViewModels/EditorTab.cs"
-        Pattern = 'public\s+class\s+EditorTab\s*:\s*McpServer\.UI\.Core\.ViewModels\.EditorTab'
-        MissingText = "EditorTab does not inherit McpServer.UI.Core.ViewModels.EditorTab."
+        Pattern = 'public\s+class\s+EditorTab\s*:\s*McpServerManager\.UI\.Core\.ViewModels\.EditorTab'
+        MissingText = "EditorTab does not inherit McpServerManager.UI.Core.ViewModels.EditorTab."
     }
 )
 
@@ -168,13 +168,15 @@ foreach ($check in $managerStructuralChecks) {
 $noViewModelZones = @(
     @{
         Rule = "UIM201"
-        Description = "McpServer.Director must not declare local *ViewModel classes."
-        RelativePath = "src/McpServer.Director"
+        Description = "McpServerManager.Director must not declare local *ViewModel classes."
+        RelativePath = "src/McpServerManager.Director"
+        AllowedNames = @()
     },
     @{
         Rule = "UIM202"
-        Description = "McpServer.Web must not declare local *ViewModel classes."
-        RelativePath = "src/McpServer.Web"
+        Description = "McpServerManager.Web must not declare local *ViewModel classes except approved host-specific wrappers."
+        RelativePath = "src/McpServerManager.Web"
+        AllowedNames = @("WebVoiceConversationViewModel")
     }
 )
 
@@ -186,9 +188,14 @@ foreach ($zone in $noViewModelZones) {
     }
 
     $zoneMatches = Get-ChildItem -LiteralPath $zonePath -Recurse -Filter "*.cs" -File |
-        Select-String -Pattern '\bclass\s+[A-Za-z0-9_]+ViewModel\b'
+        Select-String -Pattern '\bclass\s+(?<name>[A-Za-z0-9_]+ViewModel)\b'
 
     foreach ($zoneMatch in $zoneMatches) {
+        $className = $zoneMatch.Matches[0].Groups["name"].Value
+        if ($zone.AllowedNames -contains $className) {
+            continue
+        }
+
         Add-Finding `
             -Rule $zone.Rule `
             -Description $zone.Description `

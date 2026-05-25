@@ -1,4 +1,6 @@
 using Android.App;
+using Android.Runtime;
+using Avalonia.Android;
 
 [assembly: UsesPermission(Android.Manifest.Permission.Internet)]
 [assembly: UsesPermission(Android.Manifest.Permission.RecordAudio)]
@@ -13,9 +15,9 @@ namespace McpServerManager.Android;
 #else
 [Application(NetworkSecurityConfig = "@xml/network_security_config")]
 #endif
-public class MainApplication : global::Android.App.Application
+public class MainApplication : AvaloniaAndroidApplication<App>
 {
-    public MainApplication(nint handle, global::Android.Runtime.JniHandleOwnership transfer)
+    public MainApplication(nint handle, JniHandleOwnership transfer)
         : base(handle, transfer)
     {
     }

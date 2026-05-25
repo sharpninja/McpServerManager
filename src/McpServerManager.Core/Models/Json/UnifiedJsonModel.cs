@@ -84,6 +84,10 @@ namespace McpServerManager.Core.Models.Json
         public ObservableCollection<UnifiedProcessingDialogItem> ProcessingDialog { get; set; } = new ObservableCollection<UnifiedProcessingDialogItem>();
         public bool HasProcessingDialog => ProcessingDialog?.Count > 0;
 
+        // Git commits recorded by the agent for this turn.
+        public ObservableCollection<UnifiedCommit> Commits { get; set; } = new ObservableCollection<UnifiedCommit>();
+        public bool HasCommits => Commits?.Count > 0;
+
         /// <summary>Original source object for the "Original JSON" viewer. Not serialized to avoid object cycle when building the JSON tree.</summary>
         [JsonIgnore]
         public object? OriginalTurn { get; set; }
@@ -121,6 +125,35 @@ namespace McpServerManager.Core.Models.Json
                 return Timestamp;
             }
         }
+    }
+
+    public class UnifiedCommit
+    {
+        public string Sha { get; set; } = "";
+        public string Branch { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string Author { get; set; } = "";
+        public string Timestamp { get; set; } = "";
+        public ObservableCollection<string> FilesChanged { get; set; } = new ObservableCollection<string>();
+
+        public string ShortSha => string.IsNullOrWhiteSpace(Sha)
+            ? ""
+            : Sha.Length <= 12 ? Sha : Sha.Substring(0, 12);
+
+        public string TimestampDisplay
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(Timestamp)) return "";
+                if (DateTimeOffset.TryParse(Timestamp, out var dto))
+                    return dto.LocalDateTime.ToString("g");
+                if (DateTime.TryParse(Timestamp, out var dt))
+                    return dt.ToString("g");
+                return Timestamp;
+            }
+        }
+
+        public string FilesChangedDisplay => FilesChanged.Count == 0 ? "" : string.Join(", ", FilesChanged);
     }
 
     /// <summary>Export path and content for the unified model JSON schema.</summary>

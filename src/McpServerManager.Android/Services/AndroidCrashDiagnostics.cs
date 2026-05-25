@@ -886,7 +886,9 @@ public static class AndroidCrashDiagnostics
 
         try
         {
-            return checked((int)thread.Id);
+            return OperatingSystem.IsAndroidVersionAtLeast(36)
+                ? checked((int)thread.ThreadId())
+                : null;
         }
         catch
         {
@@ -998,7 +1000,8 @@ public static class AndroidCrashDiagnostics
                 exception,
                 "Default Android uncaught-exception handler captured a fatal thread termination.");
 
-            _innerHandler?.UncaughtException(thread, exception);
+            if (_innerHandler != null && thread != null && exception != null)
+                _innerHandler.UncaughtException(thread, exception);
         }
     }
 

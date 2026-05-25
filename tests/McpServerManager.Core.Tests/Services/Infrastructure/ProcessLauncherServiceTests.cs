@@ -11,7 +11,7 @@ public sealed class ProcessLauncherServiceTests
     [Fact]
     public async Task RunAsync_EchoCommand_CapturesStdout()
     {
-        var result = await _sut.RunAsync("cmd.exe", "/c echo hello");
+        var result = await _sut.RunAsync("cmd.exe", "/c echo hello", ct: TestContext.Current.CancellationToken);
 
         result.ExitCode.Should().Be(0);
         result.StandardOutput.Trim().Should().Be("hello");
@@ -21,7 +21,7 @@ public sealed class ProcessLauncherServiceTests
     [Fact]
     public async Task RunAsync_NonZeroExit_ReportsExitCode()
     {
-        var result = await _sut.RunAsync("cmd.exe", "/c exit 42");
+        var result = await _sut.RunAsync("cmd.exe", "/c exit 42", ct: TestContext.Current.CancellationToken);
 
         result.ExitCode.Should().Be(42);
     }
@@ -29,7 +29,7 @@ public sealed class ProcessLauncherServiceTests
     [Fact]
     public async Task RunAsync_StderrOutput_CapturesStderr()
     {
-        var result = await _sut.RunAsync("cmd.exe", "/c echo error 1>&2");
+        var result = await _sut.RunAsync("cmd.exe", "/c echo error 1>&2", ct: TestContext.Current.CancellationToken);
 
         result.StandardError.Trim().Should().Be("error");
     }
@@ -38,7 +38,7 @@ public sealed class ProcessLauncherServiceTests
     public async Task RunAsync_WithWorkingDirectory_UsesIt()
     {
         var tempDir = Path.GetTempPath();
-        var result = await _sut.RunAsync("cmd.exe", "/c cd", workingDirectory: tempDir);
+        var result = await _sut.RunAsync("cmd.exe", "/c cd", workingDirectory: tempDir, ct: TestContext.Current.CancellationToken);
 
         result.ExitCode.Should().Be(0);
         // cd output should contain the temp dir path

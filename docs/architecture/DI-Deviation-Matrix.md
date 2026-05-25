@@ -9,7 +9,7 @@ identity, or UI shell behavior genuinely require it.
 
 | Area | Steady state |
 | :--- | :--- |
-| Canonical registration contract | `src/McpServer.UI.Core/Hosting/McpHostBuilderExtensions.cs` via `AddMcpHost(...)` |
+| Canonical registration contract | `src/McpServerManager.UI.Core/Hosting/McpHostBuilderExtensions.cs` via `AddMcpHost(...)` |
 | Shared leaf registration | `AddUiCore(...)` |
 | Host identity abstraction | `IHostIdentityProvider` |
 | Host context abstraction | `IMcpHostContext` |

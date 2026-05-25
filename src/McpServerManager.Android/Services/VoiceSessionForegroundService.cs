@@ -77,10 +77,7 @@ public sealed class VoiceSessionForegroundService : Service
                 return StartCommandResult.Sticky;
             }
 
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
-                StartForeground(NotificationId, notification, global::Android.Content.PM.ForegroundService.TypeMicrophone);
-            else
-                StartForeground(NotificationId, notification);
+            StartForeground(NotificationId, notification, global::Android.Content.PM.ForegroundService.TypeMicrophone);
 
             return StartCommandResult.Sticky;
         }
@@ -112,7 +109,7 @@ public sealed class VoiceSessionForegroundService : Service
             : statusText;
 
         var pendingIntent = CreateLaunchPendingIntent();
-        var builder = new Notification.Builder(this)
+        var builder = new Notification.Builder(this, ChannelId)
             .SetSmallIcon(global::Android.Resource.Drawable.IcDialogInfo)
             .SetContentTitle("Voice Chat Active")
             .SetContentText(contentText)
@@ -122,11 +119,6 @@ public sealed class VoiceSessionForegroundService : Service
 
         if (pendingIntent != null)
             builder.SetContentIntent(pendingIntent);
-
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-            builder.SetChannelId(ChannelId);
-        else
-            builder.SetPriority((int)NotificationPriority.Low);
 
         return builder.Build();
     }
@@ -156,9 +148,6 @@ public sealed class VoiceSessionForegroundService : Service
 
     private static void EnsureChannel(NotificationManager manager)
     {
-        if (Build.VERSION.SdkInt < BuildVersionCodes.O)
-            return;
-
         if (manager.GetNotificationChannel(ChannelId) != null)
             return;
 
@@ -171,11 +160,6 @@ public sealed class VoiceSessionForegroundService : Service
 
     private void StopForegroundCompat()
     {
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.N)
-            StopForeground(StopForegroundFlags.Remove);
-        else
-#pragma warning disable CS0618
-            StopForeground(true);
-#pragma warning restore CS0618
+        StopForeground(StopForegroundFlags.Remove);
     }
 }

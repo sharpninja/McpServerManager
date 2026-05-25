@@ -9,9 +9,9 @@ public partial class VoiceConversationViewModel : McpServerManager.UI.Core.ViewM
 {
     public VoiceConversationViewModel(
         McpServerManager.UI.Core.Services.McpVoiceConversationService service,
-        ILogger<McpServerManager.UI.Core.ViewModels.VoiceConversationViewModel>? logger = null)
-        : base(service, logger)
+        ILogger<McpServerManager.UI.Core.ViewModels.VoiceConversationViewModel>? logger = null,
+        McpServerManager.UI.Core.Services.IClipboardService? clipboardService = null)
+        : base(service, logger, clipboardService)
     {
     }
 }
-
