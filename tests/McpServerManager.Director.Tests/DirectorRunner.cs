@@ -15,9 +15,12 @@ internal static class DirectorRunner
     /// <summary>Current target framework for Director CLI test invocations.</summary>
     internal const string TargetFramework = "net10.0";
 
+    /// <summary>Current build configuration for Director CLI test invocations.</summary>
+    private static readonly string Configuration = GetBuildConfiguration();
+
     /// <summary>Path to the built <c>director.dll</c>.</summary>
     private static readonly string DirectorDll = Path.GetFullPath(
-        Path.Combine(RepoRoot, "src", "McpServerManager.Director", "bin", "Debug", TargetFramework, "director.dll"));
+        Path.Combine(RepoRoot, "src", "McpServerManager.Director", "bin", Configuration, TargetFramework, "director.dll"));
 
     /// <summary>Default per-command timeout in milliseconds.</summary>
     private const int DefaultTimeoutMs = 30_000;
@@ -83,6 +86,23 @@ internal static class DirectorRunner
         // Fallback — assume standard repo layout relative to bin output.
         return Path.GetFullPath(
             Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+    }
+
+    private static string GetBuildConfiguration()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            if (string.Equals(dir.Name, "Debug", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(dir.Name, "Release", StringComparison.OrdinalIgnoreCase))
+            {
+                return dir.Name;
+            }
+
+            dir = dir.Parent;
+        }
+
+        return "Debug";
     }
 }
 

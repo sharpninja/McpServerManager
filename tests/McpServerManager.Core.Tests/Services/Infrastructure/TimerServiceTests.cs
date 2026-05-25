@@ -49,14 +49,23 @@ public sealed class TimerServiceTests
     public async Task Stop_PreventsSubsequentFiring()
     {
         int count = 0;
+        var firedTwice = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var handle = _sut.CreateRecurring(
-            TimeSpan.FromMilliseconds(50),
-            _ => { Interlocked.Increment(ref count); return Task.CompletedTask; });
+            TimeSpan.FromMilliseconds(500),
+            _ =>
+            {
+                if (Interlocked.Increment(ref count) >= 2)
+                {
+                    firedTwice.TrySetResult();
+                }
 
-        await Task.Delay(150, TestContext.Current.CancellationToken);
+                return Task.CompletedTask;
+            });
+
+        await firedTwice.Task.WaitAsync(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
         handle.Stop();
         int snapshot = count;
-        await Task.Delay(200, TestContext.Current.CancellationToken);
+        await Task.Delay(700, TestContext.Current.CancellationToken);
 
         count.Should().Be(snapshot);
     }

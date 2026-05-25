@@ -18,10 +18,10 @@
     <PackageReference Include="FluentAvaloniaUI" Version="2.5.1" />
 
     <PackageReference Include="Handlebars.Net" Version="2.1.6" />
+    <PackageReference Include="SharpNinja.McpServer.Client" Version="0.2.98" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Client\McpServer.Client.csproj" />
     <ProjectReference Include="..\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj" />
     <ProjectReference Include="..\..\lib\Markdown.Avalonia\Markdown.Avalonia\Markdown.Avalonia.csproj" />
   </ItemGroup>

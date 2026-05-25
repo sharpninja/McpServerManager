@@ -21,10 +21,9 @@
     <PackageReference Include="Avalonia" Version="12.0.3" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Markdig" Version="0.40.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Client\McpServer.Client.csproj" />
-    <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Cqrs.Mvvm\McpServer.Cqrs.Mvvm.csproj" />
+    <PackageReference Include="SharpNinja.McpServer.Client" Version="0.2.98" />
+    <PackageReference Include="SharpNinja.McpServer.Cqrs" Version="0.2.98" />
+    <PackageReference Include="SharpNinja.McpServer.Cqrs.Mvvm" Version="0.2.98" />
   </ItemGroup>
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">

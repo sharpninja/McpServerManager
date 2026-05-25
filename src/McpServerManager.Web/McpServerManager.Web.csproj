@@ -16,8 +16,8 @@
     <PackageReference Include="BlazorMonaco" Version="3.4.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.0" />
     <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
-    <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Client\McpServer.Client.csproj" />
+    <PackageReference Include="SharpNinja.McpServer.Client" Version="0.2.98" />
+    <PackageReference Include="SharpNinja.McpServer.Cqrs" Version="0.2.98" />
     <ProjectReference Include="..\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj" />
-    <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Cqrs\McpServer.Cqrs.csproj" />
   </ItemGroup>
 </Project>

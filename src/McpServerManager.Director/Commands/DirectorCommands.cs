@@ -705,7 +705,7 @@ internal static class DirectorCommands
 
     /// <summary>
     /// Verifies the HMAC-SHA256 marker signature using the canonical payload format
-    /// from MarkerFileService.BuildSignaturePayload (lib/McpServer/src/McpServer.Services/Services/MarkerFileService.cs:288).
+    /// from the upstream McpServer MarkerFileService.BuildSignaturePayload implementation.
     /// </summary>
     internal static bool VerifyMarkerSignature(Dictionary<string, string> fields, out string error)
     {

@@ -5,6 +5,7 @@ namespace McpServerManager.Director.Tests;
 /// and <c>config clear-default-url</c> commands.
 /// These commands do NOT require the MCP server.
 /// </summary>
+[Collection("Director config commands")]
 public sealed class ConfigCommandTests
 {
     [Fact]

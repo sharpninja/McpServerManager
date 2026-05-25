@@ -233,7 +233,7 @@ internal sealed class RequirementsApiClientAdapter : IRequirementsApiClient
     public async Task<GeneratedRequirementsDocument> GenerateAsync(GenerateRequirementsDocumentQuery query, CancellationToken cancellationToken = default)
     {
         var client = await GetClientAsync(cancellationToken).ConfigureAwait(true);
-        var result = await client.Requirements.GenerateAsync(query.Doc, cancellationToken).ConfigureAwait(true);
+        var result = await client.Requirements.GenerateAsync(query.Doc, cancellationToken: cancellationToken).ConfigureAwait(true);
         return new GeneratedRequirementsDocument(result.Content, result.ContentType);
     }
 
