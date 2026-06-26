@@ -76,6 +76,7 @@ internal static class DirectorServiceRegistration
         services.AddSingleton<ITemplateApiClient>(_ => new TemplateApiClientAdapter(directorContext));
         services.AddSingleton<IAgentApiClient>(_ => new AgentApiClientAdapter(directorContext));
         services.AddSingleton<IAgentPoolApiClient>(_ => new AgentPoolApiClientAdapter(directorContext));
+        services.AddSingleton<ITriageApiClient>(_ => new TriageApiClientAdapter(directorContext));
         services.AddSingleton<IToolRegistryApiClient>(_ => new ToolRegistryApiClientAdapter(directorContext));
         services.AddSingleton<IGitHubApiClient>(_ => new GitHubApiClientAdapter(directorContext));
         services.AddSingleton<IRequirementsApiClient>(_ => new RequirementsApiClientAdapter(directorContext));

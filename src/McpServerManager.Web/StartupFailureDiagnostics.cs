@@ -17,7 +17,7 @@ internal static class StartupFailureDiagnostics
             ?? effectiveListenUrls
             ?? "the configured HTTP endpoint";
 
-        return $"Startup failed because another process is already listening on {endpointDescription}. Launch this process with --urls or ASPNETCORE_URLS to force a fixed address, or let mcp-web choose the next available loopback port starting at {WebListenUrlSelector.DefaultStartPort}.";
+        return $"Startup failed because another process is already listening on {endpointDescription}. Stop the process using {WebListenUrlSelector.DefaultListenUrl}, or launch this process with --urls or ASPNETCORE_URLS to force a fixed address and make sure that address is registered as an OIDC redirect URI.";
     }
 
     internal static bool IsAddressAlreadyInUse(Exception exception)

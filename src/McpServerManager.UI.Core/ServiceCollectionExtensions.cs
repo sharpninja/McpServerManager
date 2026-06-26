@@ -40,10 +40,12 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<Services.ISpeechFilterService, Services.NoOpSpeechFilterService>();
         services.TryAddSingleton<Services.IUiDispatcherService, Services.ImmediateUiDispatcherService>();
         services.TryAddSingleton<Services.IConnectionAuthService, Services.NoOpConnectionAuthService>();
+        services.TryAddScoped<Services.IDeviceAuthorizationLoginService, Services.DeviceAuthorizationLoginService>();
         services.TryAddSingleton<Services.IChatWindowService, Services.NoOpChatWindowService>();
         services.TryAddSingleton<Services.IVoiceConversationService, Services.NoOpVoiceConversationService>();
         services.TryAddSingleton<Services.ITimerService, Services.NoOpTimerService>();
         services.TryAddSingleton<Services.IHealthApiClient, Services.NoOpHealthApiClient>();
+        services.TryAddSingleton<Services.ITriageApiClient, Services.NoOpTriageApiClient>();
 
         // Register shared workspace context as singleton so all ViewModels observe the same instance
         services.AddSingleton<WorkspaceContextViewModel>();
@@ -115,6 +117,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<WorkspaceAgentDetailViewModel>();
         services.AddTransient<AgentEventsViewModel>();
         services.AddTransient<AgentPoolViewModel>();
+        services.AddTransient<TriageViewModel>();
         services.AddTransient<EventStreamViewModel>();
         services.AddTransient<ConfigurationViewModel>();
         services.AddTransient<MainWindowViewModel>();

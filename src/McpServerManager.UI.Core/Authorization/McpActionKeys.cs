@@ -213,6 +213,9 @@ public static class McpActionKeys
     /// <summary>Agent-pool enqueue action.</summary>
     public const string AgentPoolQueueEnqueue = "agentpool.queue.enqueue";
 
+    /// <summary>Triage dashboard and detail read action.</summary>
+    public const string TriageRead = "triage.read";
+
     /// <summary>Template list query action.</summary>
     public const string TemplateList = "template.list";
 

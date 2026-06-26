@@ -305,9 +305,11 @@ internal sealed class TodoScreen : View
     private void RebuildTableFromViewModel()
         => _ = Task.Run(() => RebuildTableFromViewModelAsync());
 
-    private async Task RebuildTableFromViewModelAsync()
+    private async Task RebuildTableFromViewModelAsync(string? preferredTodoId = null)
     {
-        var previouslySelectedTodoId = GetSelectedTodoId();
+        var previouslySelectedTodoId = string.IsNullOrWhiteSpace(preferredTodoId)
+            ? GetSelectedTodoId()
+            : preferredTodoId;
 
         var allItems = _listViewModel.Items.ToList();
         var visibleItems = _showCompletedItems
@@ -378,6 +380,45 @@ internal sealed class TodoScreen : View
 
         _lastAutoDetailTodoId = todoId;
         await LoadTodoDetailAsync(todoId, autoLoaded: false).ConfigureAwait(true);
+    }
+
+    public async Task SelectTodoAsync(string todoId)
+    {
+        if (string.IsNullOrWhiteSpace(todoId))
+        {
+            SetStatus("✗ TODO ID is required.");
+            return;
+        }
+
+        SetStatus($"⏳ Loading TODO '{todoId}'...");
+        try
+        {
+            _isLoadingExplicitly = true;
+            _showCompletedItems = false;
+            _listViewModel.Keyword = null;
+            _listViewModel.Priority = null;
+            _listViewModel.Section = null;
+            _listViewModel.TodoId = todoId.Trim();
+            _listViewModel.Done = false;
+
+            Application.Invoke(() => _sectionFilter.Text = "");
+            UpdateShowCompletedToggleButtonText();
+
+            await _listViewModel.LoadAsync().ConfigureAwait(true);
+            await RebuildTableFromViewModelAsync(todoId.Trim()).ConfigureAwait(true);
+
+            if (_rows.Any(row => string.Equals(row.Id, todoId.Trim(), StringComparison.OrdinalIgnoreCase)))
+                await LoadTodoDetailAsync(todoId.Trim(), autoLoaded: false).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("{ExceptionDetail}", ex.ToString());
+            SetStatus($"✗ {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingExplicitly = false;
+        }
     }
 
     public async Task SaveEditorAsync()

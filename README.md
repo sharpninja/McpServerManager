@@ -61,7 +61,6 @@ Use NUKE from the repo root as the authoritative build/deploy entry point for lo
 .\build.ps1 DeployAll --deploy-selection Director,WebUi,DesktopMsix
 .\build.ps1 DeployAll --what-if
 .\build.ps1 DeployAll --configuration Debug --deploy-selection Director,WebUi
-.\build.ps1 BuildAndInstallVsix --what-if
 ```
 
 ```bash
@@ -80,7 +79,7 @@ Current target names:
 Behavior notes:
 - `build.ps1` and `build.sh` are the primary entry points; they invoke `build\Build.csproj` with the repo root wired up for NUKE.
 - When invoked with no arguments, the root wrappers forward `--help` so you see NUKE help instead of accidentally running a default target.
-- For convenience, the wrappers treat the first bare argument as `--target`, so commands like `.\build.ps1 BuildAndInstallVsix --what-if` work without spelling out `--target`.
+- For convenience, the wrappers treat the first bare argument as `--target`, so commands like `.\build.ps1 DeployAll --what-if` work without spelling out `--target`.
 - `.github\workflows\build-android.yml` is intentionally thin: the workflow restores tools and runner prerequisites, then delegates versioning, packaging, release, F-Droid, and Pages assembly to NUKE targets.
 - The build is best-effort for deploy-all: unavailable targets are skipped and reported in the final summary.
 - `--what-if` is the standard dry-run mechanism for NUKE-backed targets.
@@ -102,4 +101,3 @@ On WSL with WSLg enabled (Windows 11), the app window should appear on the Windo
 2. **Run from project**: `cd src/McpServerManager && dotnet run -c Debug`
 3. **Or use the script**: From repo root, `chmod +x run-wslg.sh && ./run-wslg.sh`
 4. **Taskbar**: The window may show in the Windows taskbar; click it to bring it to front.
-

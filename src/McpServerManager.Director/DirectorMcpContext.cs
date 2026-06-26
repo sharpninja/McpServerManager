@@ -168,6 +168,63 @@ internal sealed class DirectorMcpContext : IMcpHostContext, IDisposable
         return client;
     }
 
+    public async Task<T> UseWorkspaceApiClientAsync<T>(
+        string? workspacePath,
+        Func<McpServerClient, CancellationToken, Task<T>> operation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        if (string.IsNullOrWhiteSpace(workspacePath))
+        {
+            var controlClient = await GetRequiredControlApiClientAsync(cancellationToken).ConfigureAwait(true);
+            return await operation(controlClient, cancellationToken).ConfigureAwait(true);
+        }
+
+        var normalizedWorkspacePath = workspacePath.Trim();
+        McpHttpClient? controlRef;
+        McpHttpClient? activeRef;
+        lock (_gate)
+        {
+            controlRef = _controlClient;
+            activeRef = _activeWorkspaceClient;
+        }
+
+        if (activeRef is not null &&
+            string.Equals(activeRef.WorkspacePath, normalizedWorkspacePath, StringComparison.OrdinalIgnoreCase))
+        {
+            var activeClient = await GetRequiredActiveWorkspaceApiClientAsync(cancellationToken).ConfigureAwait(true);
+            return await operation(activeClient, cancellationToken).ConfigureAwait(true);
+        }
+
+        McpHttpClient? seedClient = null;
+        try
+        {
+            if (controlRef is not null)
+            {
+                seedClient = new McpHttpClient(controlRef.BaseUrl, controlRef.ApiKey ?? string.Empty, normalizedWorkspacePath);
+                seedClient.TrySetCachedBearerToken();
+            }
+            else
+            {
+                seedClient = McpHttpClient.FromMarkerOnly(normalizedWorkspacePath);
+                seedClient?.TrySetCachedBearerToken();
+            }
+
+            if (seedClient is null)
+                throw new InvalidOperationException($"Workspace marker not found at '{normalizedWorkspacePath}'.");
+
+            var client = CreateTypedClient(seedClient)
+                         ?? throw new InvalidOperationException($"Unable to create MCP client for workspace '{normalizedWorkspacePath}'.");
+            await EnsureInitializedAsync(client, cancellationToken).ConfigureAwait(true);
+            return await operation(client, cancellationToken).ConfigureAwait(true);
+        }
+        finally
+        {
+            seedClient?.Dispose();
+        }
+    }
+
     public McpHttpClient GetRequiredControlHttpClient()
         => ControlClient
            ?? throw new InvalidOperationException(

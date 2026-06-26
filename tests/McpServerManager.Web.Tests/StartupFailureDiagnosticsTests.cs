@@ -26,12 +26,13 @@ public sealed class StartupFailureDiagnosticsTests
             "Failed to bind to address http://[::]:7147: address already in use.",
             new SocketException((int)SocketError.AddressAlreadyInUse));
 
-        var hint = StartupFailureDiagnostics.BuildOperatorHint(exception, "http://127.0.0.1:8901");
+        var hint = StartupFailureDiagnostics.BuildOperatorHint(exception, "http://localhost:39984");
 
         Assert.NotNull(hint);
         Assert.Contains("http://[::]:7147", hint, StringComparison.Ordinal);
         Assert.Contains("--urls", hint, StringComparison.Ordinal);
-        Assert.Contains("8901", hint, StringComparison.Ordinal);
+        Assert.Contains("http://localhost:39984", hint, StringComparison.Ordinal);
+        Assert.Contains("OIDC redirect URI", hint, StringComparison.Ordinal);
     }
 
     [Fact]

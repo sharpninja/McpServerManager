@@ -128,8 +128,6 @@ partial class Build : NukeBuild
     readonly string ExpectedRepoUrl = string.Empty;
 
     // Targets sorted alphabetically by name (updated for consistent help output)
-    Target BuildAndInstallVsix => _ => _.Executes(RunBuildAndInstallVsixTarget);
-
     Target BuildAndroidPackage => _ => _.Executes(RunBuildAndroidPackageTarget);
 
     Target BuildDesktopDeb => _ => _.Executes(RunBuildDesktopDebTarget);
@@ -146,8 +144,6 @@ partial class Build : NukeBuild
 
     Target DeployAndroid => _ => _.Executes(RunDeployAndroidTarget);
 
-    Target DeployMcpTodoExtension => _ => _.Executes(RunDeployMcpTodoExtensionTarget);
-
     Target GenerateFdroidRepo => _ => _.Executes(RunGenerateFdroidRepoTarget);
 
     Target InstallMcpServerMcpTodoVsix => _ => _.Executes(RunInstallMcpServerMcpTodoVsixTarget);
@@ -157,8 +153,6 @@ partial class Build : NukeBuild
     Target ListVsix => _ => _.Executes(RunListVsixTarget);
 
     Target PackDirectorTool => _ => _.Executes(RunPackDirectorToolTarget);
-
-    Target PackageVsix => _ => _.Executes(RunPackageVsixTarget);
 
     Target PreparePagesArtifact => _ => _.Executes(RunPreparePagesArtifactTarget);
 

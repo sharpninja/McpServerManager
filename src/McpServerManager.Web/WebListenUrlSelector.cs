@@ -5,7 +5,8 @@ namespace McpServerManager.Web;
 
 internal static class WebListenUrlSelector
 {
-    internal const int DefaultStartPort = 8901;
+    internal const int DefaultStartPort = 39984;
+    internal const string DefaultListenUrl = "http://localhost:39984";
 
     private static readonly string[] EnvironmentVariableNames =
     [
@@ -30,7 +31,7 @@ internal static class WebListenUrlSelector
             return new WebListenUrlSelection(explicitUrls, IsExplicit: true);
         }
 
-        return new WebListenUrlSelection(FindAvailableLoopbackUrl(DefaultStartPort), IsExplicit: false);
+        return new WebListenUrlSelection(DefaultListenUrl, IsExplicit: false);
     }
 
     internal static string? TryGetExplicitListenUrls(
@@ -100,7 +101,7 @@ internal static class WebListenUrlSelector
         {
             if (IsLoopbackPortAvailable(port))
             {
-                return $"http://127.0.0.1:{port}";
+                return $"http://localhost:{port}";
             }
         }
 

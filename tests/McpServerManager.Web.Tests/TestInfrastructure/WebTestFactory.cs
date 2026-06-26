@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -39,8 +40,10 @@ internal static class WebTestFactory
     /// When non-null, registers a <see cref="TestAuthHandler"/> that returns this principal
     /// as the authenticated user and overrides the default auth scheme accordingly.
     /// </param>
-    public static McpWebTestFactory Create(ClaimsPrincipal? authenticatedUser = null)
-        => new(authenticatedUser);
+    public static McpWebTestFactory Create(
+        ClaimsPrincipal? authenticatedUser = null,
+        IDeviceAuthorizationLoginService? deviceLoginService = null)
+        => new(authenticatedUser, deviceLoginService);
 
     /// <summary>Builds an authenticated <see cref="ClaimsPrincipal"/> with the given roles.</summary>
     public static ClaimsPrincipal BuildUser(string name = "test-user", params string[] roles)
@@ -60,10 +63,14 @@ internal static class WebTestFactory
 internal sealed class McpWebTestFactory : WebApplicationFactory<Program>
 {
     private readonly ClaimsPrincipal? _authenticatedUser;
+    private readonly IDeviceAuthorizationLoginService? _deviceLoginService;
 
-    public McpWebTestFactory(ClaimsPrincipal? authenticatedUser = null)
+    public McpWebTestFactory(
+        ClaimsPrincipal? authenticatedUser = null,
+        IDeviceAuthorizationLoginService? deviceLoginService = null)
     {
         _authenticatedUser = authenticatedUser;
+        _deviceLoginService = deviceLoginService;
     }
 
     /// <inheritdoc />
@@ -107,6 +114,11 @@ internal sealed class McpWebTestFactory : WebApplicationFactory<Program>
             // and override the Scoped registration from the app.
             services.AddSingleton<IHealthApiClient>(new HealthApiClientStub());
             services.AddSingleton<IWorkspaceApiClient>(new WorkspaceApiClientStub());
+            if (_deviceLoginService is not null)
+            {
+                services.RemoveAll<IDeviceAuthorizationLoginService>();
+                services.AddSingleton(_deviceLoginService);
+            }
 
             // Stub out OIDC discovery so no real HTTP calls are made to the provider.
             services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>

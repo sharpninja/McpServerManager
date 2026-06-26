@@ -24,7 +24,6 @@
     "ExecutableTarget": {
       "type": "string",
       "enum": [
-        "BuildAndInstallVsix",
         "BuildAndroidPackage",
         "BuildDesktopDeb",
         "BuildDesktopMsix",
@@ -33,12 +32,10 @@
         "CollectAndroidCrashArtifacts",
         "DeployAll",
         "DeployAndroid",
-        "DeployMcpTodoExtension",
         "GenerateFdroidRepo",
         "InstallMcpServerMcpTodoVsix",
         "LaunchVsCodeExtension",
         "ListVsix",
-        "PackageVsix",
         "PackDirectorTool",
         "PreparePagesArtifact",
         "PublishWebZip",

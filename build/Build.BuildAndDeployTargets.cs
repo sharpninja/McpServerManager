@@ -56,7 +56,7 @@ partial class Build
         Console.Error.Flush();
     }
 
-    private DeploymentResult RunDeploySelection(string selection, int index, int total)
+    private DeploymentResult RunDeploySelection(string selection, int index, int total, string? packageVersionOverride = null)
     {
         Log.Information($"DeployAll target {index}/{total} starting: {selection}");
         Console.Out.Flush();
@@ -66,10 +66,10 @@ partial class Build
         switch (selection)
         {
             case "Director":
-                result = DeployDirectorCore();
+                result = DeployDirectorCore(packageVersionOverride);
                 break;
             case "WebUi":
-                result = DeployWebUiCore();
+                result = DeployWebUiCore(packageVersionOverride);
                 break;
             case "AndroidPhone":
                 result = DeployAndroidSelection("AndroidPhone", false, AndroidPhoneSerial);
@@ -146,6 +146,34 @@ partial class Build
         return selections;
     }
 
+    private static bool IsDotnetToolDeploySelection(string selection)
+        => string.Equals(selection, "Director", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(selection, "WebUi", StringComparison.OrdinalIgnoreCase);
+
+    private string? ResolveDeployAllDotnetToolPackageVersionOverride(IReadOnlyCollection<string> selections)
+    {
+        if (!selections.Any(IsDotnetToolDeploySelection))
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(PackageVersion))
+        {
+            return ResolveVersionDetails(PackageVersion).SemVer;
+        }
+
+        if (!SkipVersionBump)
+        {
+            var bumpedVersion = RunBumpGitVersionPatch();
+            if (WhatIf)
+            {
+                return ResolveVersionDetails(bumpedVersion).SemVer;
+            }
+        }
+
+        return ResolveVersionDetails(PackageVersion).SemVer;
+    }
+
     private void ShowDeploySummary(List<DeploymentResult> results)
     {
         Log.Information("Deployment summary");
@@ -170,19 +198,20 @@ partial class Build
         string nupkgDirectory,
         bool installAfterPack,
         bool skipVersionBumpValue,
-        bool skipProcessStopValue)
+        bool skipProcessStopValue,
+        string? packageVersionOverride = null)
     {
         if (!File.Exists(projectPath))
         {
             throw new FileNotFoundException($"Project not found: {projectPath}");
         }
 
-        if (!skipVersionBumpValue)
+        if (!skipVersionBumpValue && string.IsNullOrWhiteSpace(packageVersionOverride))
         {
             RunBumpGitVersionPatch();
         }
 
-        var version = ResolveVersionDetails(PackageVersion);
+        var version = ResolveVersionDetails(string.IsNullOrWhiteSpace(packageVersionOverride) ? PackageVersion : packageVersionOverride);
         if (!skipProcessStopValue && !string.IsNullOrWhiteSpace(toolCommand) && !WhatIf)
         {
             foreach (var process in Process.GetProcesses())
@@ -680,7 +709,7 @@ partial class Build
         return runtimeId;
     }
 
-    private DeploymentResult DeployDirectorCore()
+    private DeploymentResult DeployDirectorCore(string? packageVersionOverride = null)
     {
         try
         {
@@ -700,8 +729,9 @@ partial class Build
                 "director",
                 "nupkg",
                 installAfterPack: true,
-                skipVersionBumpValue: SkipVersionBump,
-                skipProcessStopValue: SkipProcessStop);
+                skipVersionBumpValue: SkipVersionBump || !string.IsNullOrWhiteSpace(packageVersionOverride),
+                skipProcessStopValue: SkipProcessStop,
+                packageVersionOverride: packageVersionOverride);
 
             return CreateDeploymentResult("Director", WhatIf ? "WhatIf" : "Success", WhatIf ? $"Would install Director from {nupkgPath}." : $"Installed Director from {nupkgPath}.");
         }
@@ -711,7 +741,7 @@ partial class Build
         }
     }
 
-    private DeploymentResult DeployWebUiCore()
+    private DeploymentResult DeployWebUiCore(string? packageVersionOverride = null)
     {
         try
         {
@@ -731,8 +761,9 @@ partial class Build
                 "mcp-web",
                 "nupkg",
                 installAfterPack: true,
-                skipVersionBumpValue: SkipVersionBump,
-                skipProcessStopValue: true);
+                skipVersionBumpValue: SkipVersionBump || !string.IsNullOrWhiteSpace(packageVersionOverride),
+                skipProcessStopValue: true,
+                packageVersionOverride: packageVersionOverride);
 
             return CreateDeploymentResult("WebUi", WhatIf ? "WhatIf" : "Success", WhatIf ? $"Would install WebUi from {nupkgPath}." : $"Installed WebUi from {nupkgPath}.");
         }
@@ -816,7 +847,7 @@ partial class Build
         });
     }
 
-    private void RunBumpGitVersionPatch()
+    private string RunBumpGitVersionPatch()
     {
         var gitVersionPath = Path.Combine(RepoRootPath, "GitVersion.yml");
         if (!File.Exists(gitVersionPath))
@@ -838,7 +869,7 @@ partial class Build
 
         if (!ShouldExecuteAction($"Update GitVersion.yml next-version to {nextVersion}"))
         {
-            return;
+            return nextVersion;
         }
 
         var updated = Regex.Replace(
@@ -847,6 +878,7 @@ partial class Build
             match => $"{match.Groups[1].Value}{nextVersion}");
         File.WriteAllText(gitVersionPath, updated);
         InvokeGit(new List<string> { "add", "GitVersion.yml" }, false);
+        return nextVersion;
     }
 
     private void RunUpdateDotnetToolTarget()
@@ -976,11 +1008,16 @@ partial class Build
         Log.Information($"DeployAll requested selections: {requested}");
         Log.Information($"DeployAll expanded selections ({selections.Count}): {string.Join(", ", selections)}");
         Log.Information($"DeployAll configuration: Configuration={Configuration}, WhatIf={WhatIf}, PackageVersion={(string.IsNullOrWhiteSpace(PackageVersion) ? "<auto>" : PackageVersion)}");
+        var dotnetToolPackageVersionOverride = ResolveDeployAllDotnetToolPackageVersionOverride(selections);
+        if (!string.IsNullOrWhiteSpace(dotnetToolPackageVersionOverride))
+        {
+            Log.Information($"DeployAll dotnet tool package version: {dotnetToolPackageVersionOverride}");
+        }
 
         var results = new List<DeploymentResult>();
         for (var i = 0; i < selections.Count; i++)
         {
-            results.Add(RunDeploySelection(selections[i], i + 1, selections.Count));
+            results.Add(RunDeploySelection(selections[i], i + 1, selections.Count, dotnetToolPackageVersionOverride));
         }
 
         ShowDeploySummary(results);

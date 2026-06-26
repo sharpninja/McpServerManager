@@ -3,9 +3,11 @@ using McpServer.Cqrs;
 using McpServerManager.Director.Auth;
 using McpServerManager.Director.Helpers;
 using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Navigation;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Terminal.Gui;
 
@@ -231,6 +233,15 @@ internal sealed class MainScreen : Window
             "Agent Pool",
             McpRoles.AgentManager,
             _ => new AgentPoolScreen(_agentPoolVm),
+            HasWorkspaceOrControl));
+
+        _tabRegistry.RegisterTab(new TabRegistration(
+            McpArea.Triage,
+            "Triage",
+            McpRoles.Viewer,
+            sp => new TriageScreen(
+                sp.GetRequiredService<TriageViewModel>(),
+                OpenTriageTodoAsync),
             HasWorkspaceOrControl));
 
         _tabRegistry.RegisterTab(new TabRegistration(
@@ -558,6 +569,47 @@ internal sealed class MainScreen : Window
     private void RefreshCurrentTab()
         => RefreshTab(_tabView.SelectedTab);
 
+    private async Task OpenTriageTodoAsync(OpenTriageTodoItem item)
+    {
+        if (string.IsNullOrWhiteSpace(item.WorkspacePath))
+        {
+            UpdateWorkspaceContextStatus($"Cannot open TODO {item.TodoId}: workspace path is missing.");
+            return;
+        }
+
+        if (!_directorContext.TrySetActiveWorkspace(item.WorkspacePath, out var error))
+        {
+            UpdateWorkspaceContextStatus($"Context switch failed: {error}");
+            return;
+        }
+
+        _workspaceContextVm.ActiveWorkspacePath = _directorContext.ActiveWorkspacePath;
+
+        TodoScreen? todoScreen = null;
+        Application.Invoke(() =>
+        {
+            var tab = _tabView.Tabs.FirstOrDefault(t =>
+                string.Equals(t.DisplayText?.ToString(), "TODO", StringComparison.OrdinalIgnoreCase));
+            if (tab is null)
+            {
+                UpdateWorkspaceContextStatus($"Cannot open TODO {item.TodoId}: TODO tab is not available.");
+                return;
+            }
+
+            _tabView.SelectedTab = tab;
+            todoScreen = tab.View as TodoScreen;
+            UpdateWorkspaceContextStatus();
+        });
+
+        if (todoScreen is null)
+        {
+            UpdateWorkspaceContextStatus($"Cannot open TODO {item.TodoId}: TODO screen is not available.");
+            return;
+        }
+
+        await todoScreen.SelectTodoAsync(item.TodoId).ConfigureAwait(true);
+    }
+
     private void RefreshTab(Tab? tab)
         => RefreshTabView(tab?.View);
 
@@ -602,6 +654,12 @@ internal sealed class MainScreen : Window
         if (view is AgentPoolScreen aps)
         {
             _ = Task.Run(aps.LoadAsync);
+            return;
+        }
+
+        if (view is TriageScreen triage)
+        {
+            _ = Task.Run(triage.LoadAsync);
             return;
         }
 

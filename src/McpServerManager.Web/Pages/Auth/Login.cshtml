@@ -1,2 +1,107 @@
 @page "/login"
 @model McpServerManager.Web.Pages.Auth.LoginModel
+@{
+    Layout = null;
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MCP Server Sign In</title>
+    @if (!string.IsNullOrWhiteSpace(Model.CompleteUrl))
+    {
+        <meta http-equiv="refresh" content="5;url=@Model.CompleteUrl" />
+    }
+    <style>
+        :root {
+            color-scheme: dark light;
+            font-family: "Segoe UI", system-ui, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background: #202124;
+            color: #f5f5f5;
+        }
+
+        main {
+            width: min(680px, calc(100vw - 48px));
+            padding: 32px;
+            border: 1px solid #5f6368;
+            border-radius: 8px;
+            background: #2b2c2f;
+        }
+
+        code {
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: #111315;
+            color: #8ab4f8;
+            font-size: 1.25rem;
+            letter-spacing: .08em;
+        }
+
+        a {
+            color: #8ab4f8;
+        }
+
+        .Actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .Button {
+            padding: 10px 14px;
+            border: 1px solid #8ab4f8;
+            border-radius: 6px;
+            text-decoration: none;
+        }
+
+        .Error {
+            color: #f28b82;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <h1>MCP Server Sign In</h1>
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <p class="Error">@Model.ErrorMessage</p>
+        @if (!string.IsNullOrWhiteSpace(Model.CompleteUrl))
+        {
+            <p>The login attempt is still active. Complete sign in in the browser, then continue.</p>
+            <div class="Actions">
+                <a class="Button" id="continue-link" href="@Model.CompleteUrl">Continue</a>
+            </div>
+        }
+    }
+    else
+    {
+        <p>
+            @if (Model.BrowserOpened)
+            {
+                <span>The sign-in page was opened in your browser.</span>
+            }
+            else
+            {
+                <span>Open the sign-in page and enter the code below.</span>
+            }
+        </p>
+        <p><code>@Model.UserCode</code></p>
+        <p><a id="verification-link" href="@Model.VerificationUrl" target="_blank" rel="noopener">Open sign-in page</a></p>
+        <p>This page will continue automatically after sign in completes.</p>
+        <div class="Actions">
+            <a class="Button" id="continue-link" href="@Model.CompleteUrl">Continue</a>
+        </div>
+    }
+</main>
+</body>
+</html>

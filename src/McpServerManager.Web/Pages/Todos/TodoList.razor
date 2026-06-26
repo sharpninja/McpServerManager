@@ -3,12 +3,17 @@
 
 @inject TodoListViewModel ViewModel
 @inject WebCommandTarget CommandTarget
+@inject WorkspaceContextViewModel WorkspaceContext
 
 <PageTitle>Todo List</PageTitle>
 
 <h1 class="h2 mb-3">Todo List</h1>
 
 <form method="get" class="Box p-3 mb-3">
+    @if (!string.IsNullOrWhiteSpace(WorkspacePath))
+    {
+        <input type="hidden" name="workspacePath" value="@WorkspacePath" />
+    }
     <div class="d-flex flex-wrap gap-3">
         <label class="d-flex flex-column">
             <span class="text-small color-fg-muted">Section</span>
@@ -78,26 +83,30 @@ else
 }
 
 @code {
-    [SupplyParameterFromQuery]
+    [SupplyParameterFromQuery(Name = "section")]
     public string? Section { get; set; }
 
-    [SupplyParameterFromQuery]
+    [SupplyParameterFromQuery(Name = "priority")]
     public string? Priority { get; set; }
 
-    [SupplyParameterFromQuery]
+    [SupplyParameterFromQuery(Name = "done")]
     public bool? Done { get; set; }
+
+    [SupplyParameterFromQuery(Name = "workspacePath")]
+    public string? WorkspacePath { get; set; }
 
     private string? _lastQueryKey;
 
     protected override async Task OnParametersSetAsync()
     {
-        var queryKey = $"{Section}|{Priority}|{Done}";
+        var queryKey = $"{Section}|{Priority}|{Done}|{WorkspacePath}";
         if (string.Equals(queryKey, _lastQueryKey, StringComparison.Ordinal))
             return;
 
         _lastQueryKey = queryKey;
         var loadTask = CommandTarget.RunAsync(async () =>
         {
+            ApplyWorkspaceFromQuery();
             ViewModel.Section = Section;
             ViewModel.Priority = Priority;
             ViewModel.Done = Done ?? false;
@@ -124,10 +133,21 @@ else
     private string BuildFilterQueryString()
     {
         var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(WorkspacePath)) parts.Add($"workspacePath={Uri.EscapeDataString(WorkspacePath)}");
         if (!string.IsNullOrWhiteSpace(Section)) parts.Add($"section={Uri.EscapeDataString(Section)}");
         if (!string.IsNullOrWhiteSpace(Priority)) parts.Add($"priority={Uri.EscapeDataString(Priority)}");
         if (Done.HasValue) parts.Add($"done={Done.Value.ToString().ToLowerInvariant()}");
         return string.Join("&", parts);
+    }
+
+    private void ApplyWorkspaceFromQuery()
+    {
+        if (string.IsNullOrWhiteSpace(WorkspacePath))
+            return;
+
+        var normalized = WorkspacePath.Trim();
+        if (!string.Equals(WorkspaceContext.ActiveWorkspacePath, normalized, StringComparison.Ordinal))
+            WorkspaceContext.ActiveWorkspacePath = normalized;
     }
 
     private static readonly string[] PriorityOrder = ["critical", "high", "medium", "low"];
@@ -149,4 +169,3 @@ else
             _ => "default",
         };
 }
-

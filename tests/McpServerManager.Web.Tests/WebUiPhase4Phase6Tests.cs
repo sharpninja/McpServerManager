@@ -157,12 +157,16 @@ public sealed class WebUiPhase4Phase6Tests
         string? callbackValue = null;
         var cut = ctx.Render<WorkspacePicker>(parameters => parameters
             .Add(x => x.SelectedWorkspaceChanged, Microsoft.AspNetCore.Components.EventCallback.Factory.Create<string?>(this, value => callbackValue = value)));
+        cut.WaitForAssertion(() => Assert.Contains("Secondary", cut.Markup, StringComparison.Ordinal));
 
         var select = cut.Find("select");
         select.Change("E:/ws/secondary");
 
-        Assert.Equal("E:/ws/secondary", workspaceContext.ActiveWorkspacePath);
-        Assert.Equal("E:/ws/secondary", callbackValue);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("E:/ws/secondary", workspaceContext.ActiveWorkspacePath);
+            Assert.Equal("E:/ws/secondary", callbackValue);
+        });
     }
 
     private static Bunit.BunitContext CreateTestContext(Action<IServiceCollection>? configureServices = null)

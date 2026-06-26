@@ -17,6 +17,9 @@ public enum McpArea
     /// <summary>Agent definitions, workspace agents, and related events.</summary>
     Agents,
 
+    /// <summary>Triage queues, research runs, and triage-created TODOs.</summary>
+    Triage,
+
     /// <summary>TODO management and prompt helpers.</summary>
     Todo,
 

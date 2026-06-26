@@ -4,6 +4,7 @@
 @inject TodoListViewModel ListViewModel
 @inject IAuthorizationPolicyService AuthPolicy
 @inject WebCommandTarget CommandTarget
+@inject WorkspaceContextViewModel WorkspaceContext
 
 <PageTitle>Todo Detail</PageTitle>
 
@@ -16,7 +17,7 @@
             @foreach (var item in group)
             {
                 <a class="sidebar-item @(string.Equals(item.Id, TodoId, StringComparison.Ordinal) ? "active" : "")"
-                   href="/todos/@Uri.EscapeDataString(item.Id)">
+                   href="@GetTodoHref(item.Id)">
                     <span class="text-bold">@item.Id</span>
                     <br /><span class="color-fg-muted f6">@item.Title</span>
                 </a>
@@ -150,7 +151,19 @@
     [Parameter]
     public string TodoId { get; set; } = string.Empty;
 
-    private string? _loadedId;
+    [SupplyParameterFromQuery(Name = "workspacePath")]
+    public string? WorkspacePath { get; set; }
+
+    [SupplyParameterFromQuery(Name = "done")]
+    public bool? Done { get; set; }
+
+    [SupplyParameterFromQuery(Name = "section")]
+    public string? Section { get; set; }
+
+    [SupplyParameterFromQuery(Name = "priority")]
+    public string? Priority { get; set; }
+
+    private string? _loadedKey;
     private HashSet<string> _expandedSections = CreateDefaultExpandedSections();
 
     private const string EditorSectionKey = "editor";
@@ -163,6 +176,7 @@
     private static IEnumerable<IGrouping<string, TodoListItem>> GroupByPriority(
         IEnumerable<TodoListItem> items)
         => items
+            .Where(static item => item is not null)
             .OrderBy(i => i.Id, StringComparer.OrdinalIgnoreCase)
             .GroupBy(i => i.Priority ?? "low")
             .OrderBy(g => Array.IndexOf(PriorityOrder, g.Key.ToLowerInvariant()) is var idx && idx < 0 ? int.MaxValue : idx);
@@ -172,28 +186,26 @@
             .SelectMany(static group => group)
             .Select(item => new DetailNavigationItem(
                 item.Id,
-                $"/todos/{Uri.EscapeDataString(item.Id)}",
+                GetTodoHref(item.Id),
                 item.Id,
                 item.Title))
             .ToArray();
 
     protected override async Task OnParametersSetAsync()
     {
-        if (ListViewModel.Items.Count == 0)
-        {
-            await CommandTarget.RunAsync(async () =>
-            {
-                ListViewModel.Done = false;
-                await ListViewModel.LoadAsync().ConfigureAwait(true);
-            }).ConfigureAwait(true);
-        }
-
-        if (string.Equals(_loadedId, TodoId, StringComparison.Ordinal))
+        var loadKey = $"{TodoId}|{WorkspacePath}|{Done}|{Section}|{Priority}";
+        if (string.Equals(_loadedKey, loadKey, StringComparison.Ordinal))
             return;
 
-        _loadedId = TodoId;
+        _loadedKey = loadKey;
+
         await CommandTarget.RunAsync(async () =>
         {
+            ApplyWorkspaceFromQuery();
+            ListViewModel.Section = Section;
+            ListViewModel.Priority = Priority;
+            ListViewModel.Done = Done ?? false;
+            await ListViewModel.LoadAsync().ConfigureAwait(true);
             ViewModel.TodoId = TodoId;
             await ViewModel.LoadAsync().ConfigureAwait(true);
         }).ConfigureAwait(true);
@@ -275,4 +287,32 @@
 
     private string GetSectionIcon(string section)
         => IsSectionExpanded(section) ? "▾" : "▸";
+
+    private string GetTodoHref(string id)
+    {
+        var qs = BuildFilterQueryString();
+        return string.IsNullOrEmpty(qs)
+            ? $"/todos/{Uri.EscapeDataString(id)}"
+            : $"/todos/{Uri.EscapeDataString(id)}?{qs}";
+    }
+
+    private string BuildFilterQueryString()
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(WorkspacePath)) parts.Add($"workspacePath={Uri.EscapeDataString(WorkspacePath)}");
+        if (!string.IsNullOrWhiteSpace(Section)) parts.Add($"section={Uri.EscapeDataString(Section)}");
+        if (!string.IsNullOrWhiteSpace(Priority)) parts.Add($"priority={Uri.EscapeDataString(Priority)}");
+        if (Done.HasValue) parts.Add($"done={Done.Value.ToString().ToLowerInvariant()}");
+        return string.Join("&", parts);
+    }
+
+    private void ApplyWorkspaceFromQuery()
+    {
+        if (string.IsNullOrWhiteSpace(WorkspacePath))
+            return;
+
+        var normalized = WorkspacePath.Trim();
+        if (!string.Equals(WorkspaceContext.ActiveWorkspacePath, normalized, StringComparison.Ordinal))
+            WorkspaceContext.ActiveWorkspacePath = normalized;
+    }
 }

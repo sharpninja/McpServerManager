@@ -27,6 +27,15 @@ public sealed class WebListenUrlSelectorTests
     }
 
     [Fact]
+    public void ResolveSelection_UsesRegisteredOidcCallbackOrigin_ByDefault()
+    {
+        var selection = WebListenUrlSelector.ResolveSelection([], _ => null);
+
+        Assert.False(selection.IsExplicit);
+        Assert.Equal("http://localhost:39984", selection.Urls);
+    }
+
+    [Fact]
     public void FindAvailableLoopbackUrl_SkipsOccupiedStartPort()
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0);
@@ -37,6 +46,6 @@ public sealed class WebListenUrlSelectorTests
         var selectedPort = new Uri(selectedUrl).Port;
 
         Assert.True(selectedPort > occupiedPort);
-        Assert.StartsWith("http://127.0.0.1:", selectedUrl, StringComparison.Ordinal);
+        Assert.StartsWith("http://localhost:", selectedUrl, StringComparison.Ordinal);
     }
 }

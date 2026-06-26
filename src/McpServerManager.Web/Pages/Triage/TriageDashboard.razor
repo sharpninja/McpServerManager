@@ -1,0 +1,267 @@
+@page "/triage"
+@attribute [Authorize(Roles = "admin,agent-manager")]
+@inherits McpServerManager.Web.Components.UiDispatcherComponentBase
+
+@inject TriageViewModel ViewModel
+@inject WebCommandTarget CommandTarget
+@inject WorkspaceContextViewModel WorkspaceContext
+@inject NavigationManager Navigation
+
+<PageTitle>Triage</PageTitle>
+
+<div class="d-flex flex-justify-between flex-items-center mb-3">
+    <h1 class="h2 mb-0">Triage</h1>
+    <button type="button" class="btn btn-sm" @onclick="RefreshAsync" disabled="@ViewModel.IsLoading">
+        <OcticonIcon Name="sync" Size="16" /> Refresh
+    </button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+{
+    <PrimerFlash Variant="danger" Title="Failed to load triage">@ViewModel.ErrorMessage</PrimerFlash>
+}
+else if (ViewModel.IsLoading)
+{
+    <p class="color-fg-muted">Loading triage...</p>
+}
+else
+{
+    <p class="color-fg-muted mb-3">@ViewModel.StatusMessage</p>
+
+    <section class="Box mb-3">
+        <div class="Box-header">
+            <h2 class="h4 mb-0">Triage Queue <span class="Counter">@ViewModel.TriageQueue.Count</span></h2>
+        </div>
+        <PrimerDataTable TItem="TriageGroupSnapshot" Items="ViewModel.TriageQueue" ColumnCount="5" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+            <HeaderTemplate>
+                <tr>
+                    <th style="width:14%">Status</th>
+                    <th style="width:22%">Group</th>
+                    <th style="width:10%">Reports</th>
+                    <th style="width:38%">Title</th>
+                    <th style="width:16%"></th>
+                </tr>
+            </HeaderTemplate>
+            <RowTemplate Context="group">
+                <td><PrimerLabel Scheme="@GetStatusScheme(group.Status)" Text="@group.Status" /></td>
+                <td><code>@group.GroupId</code></td>
+                <td>@group.ReportCount</td>
+                <td>@(group.Title ?? group.Summary ?? "")</td>
+                <td><button type="button" class="btn btn-sm" @onclick="() => LoadGroupAsync(group.GroupId)">Details</button></td>
+            </RowTemplate>
+            <EmptyContent>
+                <span class="color-fg-muted">No triage queue items.</span>
+            </EmptyContent>
+        </PrimerDataTable>
+    </section>
+
+    <section class="Box mb-3">
+        <div class="Box-header">
+            <h2 class="h4 mb-0">Report Group Queue <span class="Counter">@ViewModel.ReportGroupQueue.Count</span></h2>
+        </div>
+        <PrimerDataTable TItem="TriageGroupSnapshot" Items="ViewModel.ReportGroupQueue" ColumnCount="5" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+            <HeaderTemplate>
+                <tr>
+                    <th style="width:14%">Status</th>
+                    <th style="width:22%">Group</th>
+                    <th style="width:10%">Reports</th>
+                    <th style="width:38%">Title</th>
+                    <th style="width:16%"></th>
+                </tr>
+            </HeaderTemplate>
+            <RowTemplate Context="group">
+                <td><PrimerLabel Scheme="@GetStatusScheme(group.Status)" Text="@group.Status" /></td>
+                <td><code>@group.GroupId</code></td>
+                <td>@group.ReportCount</td>
+                <td>@(group.Title ?? group.Summary ?? "")</td>
+                <td><button type="button" class="btn btn-sm" @onclick="() => LoadGroupAsync(group.GroupId)">Details</button></td>
+            </RowTemplate>
+            <EmptyContent>
+                <span class="color-fg-muted">No report group queue items.</span>
+            </EmptyContent>
+        </PrimerDataTable>
+    </section>
+
+    <section class="Box mb-3">
+        <div class="Box-header">
+            <h2 class="h4 mb-0">Run History <span class="Counter">@ViewModel.RunHistory.Count</span></h2>
+        </div>
+        <PrimerDataTable TItem="TriageRunSnapshot" Items="ViewModel.RunHistory" ColumnCount="6" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+            <HeaderTemplate>
+                <tr>
+                    <th style="width:12%">Status</th>
+                    <th style="width:20%">Run</th>
+                    <th style="width:20%">Group</th>
+                    <th style="width:12%">Reports</th>
+                    <th style="width:20%">Created TODO</th>
+                    <th style="width:16%"></th>
+                </tr>
+            </HeaderTemplate>
+            <RowTemplate Context="run">
+                <td><PrimerLabel Scheme="@GetStatusScheme(run.Status)" Text="@run.Status" /></td>
+                <td><code>@run.RunId</code></td>
+                <td><code>@run.GroupId</code></td>
+                <td>@run.ReportCount</td>
+                <td>@(run.CreatedTodoId ?? "")</td>
+                <td><button type="button" class="btn btn-sm" @onclick="() => LoadRunAsync(run.RunId)">Details</button></td>
+            </RowTemplate>
+            <EmptyContent>
+                <span class="color-fg-muted">No triage runs.</span>
+            </EmptyContent>
+        </PrimerDataTable>
+    </section>
+
+    <section class="Box mb-3">
+        <div class="Box-header">
+            <h2 class="h4 mb-0">Open Triage TODOs <span class="Counter">@ViewModel.OpenTriageTodos.Count</span></h2>
+        </div>
+        <PrimerDataTable TItem="OpenTriageTodoItem" Items="ViewModel.OpenTriageTodos" ColumnCount="7" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+            <HeaderTemplate>
+                <tr>
+                    <th style="width:16%">TODO</th>
+                    <th style="width:24%">Title</th>
+                    <th style="width:12%">Group</th>
+                    <th style="width:12%">Run</th>
+                    <th style="width:10%">Reports</th>
+                    <th style="width:18%">Workspace</th>
+                    <th style="width:8%"></th>
+                </tr>
+            </HeaderTemplate>
+            <RowTemplate Context="todo">
+                <td><code>@todo.TodoId</code></td>
+                <td>@todo.Title</td>
+                <td>@(todo.GroupStatus ?? todo.GroupId ?? "")</td>
+                <td>@(todo.RunStatus ?? todo.RunId ?? "")</td>
+                <td>@todo.ReportCount</td>
+                <td title="@todo.WorkspacePath">@Shorten(todo.WorkspacePath, 34)</td>
+                <td><button type="button" class="btn btn-sm" @onclick="() => OpenTodo(todo)">Open</button></td>
+            </RowTemplate>
+            <EmptyContent>
+                <span class="color-fg-muted">No open triage-created TODOs.</span>
+            </EmptyContent>
+        </PrimerDataTable>
+    </section>
+
+    @if (ViewModel.SelectedGroupDetail is not null || ViewModel.SelectedRunDetail is not null || ViewModel.SelectedReportDetail is not null)
+    {
+        <section class="Box mb-3">
+            <div class="Box-header">
+                <h2 class="h4 mb-0">Selection Detail</h2>
+            </div>
+            <div class="Box-body">
+                @if (ViewModel.SelectedGroupDetail is { } group)
+                {
+                    <h3 class="h5">Group @group.GroupId</h3>
+                    <p class="color-fg-muted">@group.Summary</p>
+                    <dl class="form-group m-0">
+                        <dt>Status</dt>
+                        <dd>@group.Status</dd>
+                        <dt>Workspace</dt>
+                        <dd>@group.WorkspacePath</dd>
+                        <dt>Reports</dt>
+                        <dd>@group.ReportCount</dd>
+                    </dl>
+                    @if (group.Reports.Count > 0)
+                    {
+                        <div class="mt-3">
+                            <h4 class="h6">Reports</h4>
+                            @foreach (var report in group.Reports)
+                            {
+                                <button type="button" class="btn-link d-block text-left" @onclick="() => LoadReportAsync(report.ReportId)">
+                                    @report.ReportId - @(report.Title ?? report.Summary ?? report.Status)
+                                </button>
+                            }
+                        </div>
+                    }
+                }
+
+                @if (ViewModel.SelectedRunDetail is { } run)
+                {
+                    <h3 class="h5 mt-3">Run @run.RunId</h3>
+                    <p class="color-fg-muted">@run.GroupSummary</p>
+                    @if (!string.IsNullOrWhiteSpace(run.Error))
+                    {
+                        <PrimerFlash Variant="danger" Title="Run error">@run.Error</PrimerFlash>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(run.ResponseJson))
+                    {
+                        <pre class="f6 overflow-auto" style="white-space: pre-wrap; max-height: 360px;">@run.ResponseJson</pre>
+                    }
+                }
+
+                @if (ViewModel.SelectedReportDetail is { } reportDetail)
+                {
+                    <h3 class="h5 mt-3">Report @reportDetail.ReportId</h3>
+                    <p>@reportDetail.Title</p>
+                    <p class="color-fg-muted">@reportDetail.Summary</p>
+                }
+            </div>
+        </section>
+    }
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "workspacePath")]
+    public string? WorkspacePath { get; set; }
+
+    private bool _hasLoadedParameters;
+    private string? _lastWorkspacePath;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_hasLoadedParameters && string.Equals(_lastWorkspacePath, WorkspacePath, StringComparison.Ordinal))
+            return;
+
+        _hasLoadedParameters = true;
+        _lastWorkspacePath = WorkspacePath;
+        await RefreshAsync().ConfigureAwait(true);
+    }
+
+    private async Task RefreshAsync()
+    {
+        await CommandTarget.RunAsync(async () =>
+        {
+            ApplyWorkspaceFromQuery();
+            ViewModel.WorkspacePathFilter = WorkspacePath;
+            await ViewModel.LoadAsync().ConfigureAwait(true);
+        }).ConfigureAwait(true);
+    }
+
+    private async Task LoadGroupAsync(string groupId)
+        => await CommandTarget.RunAsync(() => ViewModel.LoadGroupDetailAsync(groupId)).ConfigureAwait(true);
+
+    private async Task LoadRunAsync(string runId)
+        => await CommandTarget.RunAsync(() => ViewModel.LoadRunDetailAsync(runId)).ConfigureAwait(true);
+
+    private async Task LoadReportAsync(string reportId)
+        => await CommandTarget.RunAsync(() => ViewModel.LoadReportDetailAsync(reportId)).ConfigureAwait(true);
+
+    private void OpenTodo(OpenTriageTodoItem item)
+    {
+        WorkspaceContext.ActiveWorkspacePath = item.WorkspacePath;
+        Navigation.NavigateTo($"/todos/{Uri.EscapeDataString(item.TodoId)}?workspacePath={Uri.EscapeDataString(item.WorkspacePath)}&done=false");
+    }
+
+    private void ApplyWorkspaceFromQuery()
+    {
+        if (string.IsNullOrWhiteSpace(WorkspacePath))
+            return;
+
+        var normalized = WorkspacePath.Trim();
+        if (!string.Equals(WorkspaceContext.ActiveWorkspacePath, normalized, StringComparison.Ordinal))
+            WorkspaceContext.ActiveWorkspacePath = normalized;
+    }
+
+    private static string GetStatusScheme(string status)
+        => status.ToLowerInvariant() switch
+        {
+            "failed" or "error" => "danger",
+            "completed" or "done" => "success",
+            "running" or "processing" => "accent",
+            "queued" or "pending" or "collecting" => "attention",
+            _ => "default",
+        };
+
+    private static string Shorten(string value, int maxLength)
+        => value.Length <= maxLength ? value : value[..Math.Max(0, maxLength - 3)] + "...";
+}

@@ -136,6 +136,24 @@ internal sealed class WebMcpContext : IMcpHostContext
         CancellationToken cancellationToken = default)
         => UseApiClientAsync(GetRequiredActiveWorkspaceApiClientAsync, operation, "active workspace", cancellationToken);
 
+    public Task<T> UseWorkspaceApiClientAsync<T>(
+        string? workspacePath,
+        Func<McpServerClient, CancellationToken, Task<T>> operation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        var normalizedWorkspacePath = NormalizeWorkspacePath(workspacePath);
+        if (string.IsNullOrWhiteSpace(normalizedWorkspacePath))
+            return UseControlApiClientAsync(operation, cancellationToken);
+
+        return UseApiClientAsync(
+            ct => CreateWorkspaceApiClientAsync(normalizedWorkspacePath, ct),
+            operation,
+            $"workspace '{normalizedWorkspacePath}'",
+            cancellationToken);
+    }
+
     public Task UseActiveWorkspaceApiClientAsync(
         Func<McpServerClient, CancellationToken, Task> operation,
         CancellationToken cancellationToken = default)
@@ -162,6 +180,9 @@ internal sealed class WebMcpContext : IMcpHostContext
 
         if (!string.IsNullOrWhiteSpace(bearerToken))
         {
+            if (string.IsNullOrWhiteSpace(client.BearerToken))
+                client.BearerToken = bearerToken;
+
             return;
         }
 
@@ -426,6 +447,13 @@ internal sealed class WebMcpContext : IMcpHostContext
             WorkspacePath = workspacePath,
             Timeout = TimeSpan.FromMinutes(10),
         });
+
+    private async Task<McpServerClient> CreateWorkspaceApiClientAsync(string workspacePath, CancellationToken cancellationToken)
+    {
+        var client = CreateTypedClient(BaseUrl, _apiKey, workspacePath);
+        await EnsureInitializedAsync(client, cancellationToken).ConfigureAwait(true);
+        return client;
+    }
 
     private static string? NormalizeWorkspacePath(string? workspacePath)
         => string.IsNullOrWhiteSpace(workspacePath) ? null : workspacePath.Trim();

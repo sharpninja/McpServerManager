@@ -5,6 +5,7 @@ using McpServerManager.UI.Core.Authorization;
 using McpServerManager.UI.Core.Commands;
 using McpServerManager.UI.Core.Hosting;
 using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.Services.Infrastructure;
 using McpServerManager.Web.Adapters;
 using McpServerManager.Web.Authorization;
 using McpServerManager.Web.Services;
@@ -20,6 +21,7 @@ internal static class WebServiceRegistration
     {
         // IHttpContextAccessor required by WebRoleContext and BearerTokenAccessor.
         services.AddHttpContextAccessor();
+        services.AddMemoryCache();
 
         // Register WebRoleContext BEFORE AddUiCore so it wins over the AllowAllRoleContext TryAdd fallback.
         services.TryAddSingleton<IRoleContext, WebRoleContext>();
@@ -45,6 +47,11 @@ internal static class WebServiceRegistration
         services.RemoveAll<IUiDispatcherService>();
         services.AddScoped<IUiDispatcherService, BlazorUiDispatcherService>();
 
+        services.RemoveAll<IConnectionAuthService>();
+        services.AddScoped<IConnectionAuthService, HttpConnectionAuthService>();
+        services.RemoveAll<IProcessLauncherService>();
+        services.AddScoped<IProcessLauncherService, ProcessLauncherService>();
+
         services.RemoveAll<WorkspaceAutoSelector>();
         services.AddScoped<WorkspaceAutoSelector>();
 
@@ -62,6 +69,7 @@ internal static class WebServiceRegistration
         services.AddScoped<IAuthConfigApiClient, AuthConfigApiClientAdapter>();
         services.AddScoped<IConfigurationApiClient, ConfigurationApiClientAdapter>();
         services.AddScoped<IAgentApiClient, AgentApiClientAdapter>();
+        services.AddScoped<ITriageApiClient, TriageApiClientAdapter>();
         services.AddScoped<ISseSubscriptionService, SseSubscriptionService>();
         services.AddScoped<WebVoiceConversationViewModel>();
 
