@@ -136,3 +136,14 @@ Placeholder requirement backfilled for TODO link FR-TEST-001.
 
 Placeholder requirement backfilled for TODO link FR-TEST-002.
 
+## FR-TRIAGE-001 Triage dashboard tab
+
+Show the triage queue, report group queue, run history with results, and open TODO items created by triage in Director and MCP Web.
+**Acceptance Criteria:**
+- [ ] Director and MCP Web expose a Triage tab/page with triage queue, report group queue, run history, and open triage-created TODO sections.
+- [ ] Open triage-created TODO rows navigate to the TODO view in the TODO's workspace and select the target TODO.
+
+## FR-TRIAGE-002 Web triage multi-row grouping
+
+MCP Web triage dashboard must let users select multiple triage rows or groups and move/consolidate them into report groups without leaving the triage page.
+

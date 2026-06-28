@@ -3,7 +3,6 @@ using CqrsDispatcher = McpServer.Cqrs.Dispatcher;
 using UiCoreWorkspaceDetailViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceDetailViewModel;
 using UiCoreWorkspaceGlobalPromptViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceGlobalPromptViewModel;
 using UiCoreWorkspaceHealthProbeViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceHealthProbeViewModel;
-using UiCoreWorkspaceListViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceListViewModel;
 
 namespace McpServerManager.Core.ViewModels;
 
@@ -17,12 +16,12 @@ public partial class WorkspaceViewModel : McpServerManager.UI.Core.ViewModels.Wo
     internal WorkspaceViewModel(IClipboardService clipboardService, McpServerManager.UI.Core.Services.UiCoreHostRuntime runtime)
         : base(
             clipboardService,
-            runtime.GetRequiredService<UiCoreWorkspaceListViewModel>(),
             runtime.GetRequiredService<UiCoreWorkspaceDetailViewModel>(),
             runtime.GetRequiredService<UiCoreWorkspaceGlobalPromptViewModel>(),
             runtime.GetRequiredService<UiCoreWorkspaceHealthProbeViewModel>(),
             runtime.GetRequiredService<McpServerManager.UI.Core.Services.ITimerService>(),
-            runtime.GetRequiredService<McpServerManager.UI.Core.Services.IUiDispatcherService>())
+            runtime.GetRequiredService<McpServerManager.UI.Core.Services.IUiDispatcherService>(),
+            runtime.GetRequiredService<CqrsDispatcher>())
     {
         _dispatcher = runtime.GetRequiredService<CqrsDispatcher>();
     }
@@ -32,4 +31,3 @@ public partial class WorkspaceViewModel : McpServerManager.UI.Core.ViewModels.Wo
         CheckSelectedWorkspaceHealthCommand.NotifyCanExecuteChanged();
     }
 }
-

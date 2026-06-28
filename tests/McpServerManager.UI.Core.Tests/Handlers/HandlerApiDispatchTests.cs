@@ -1,6 +1,8 @@
 using System.Reflection;
 using McpServer.Cqrs;
 using McpServerManager.UI.Core.Authorization;
+using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.Tests.TestInfrastructure;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -53,9 +55,9 @@ public sealed class HandlerApiDispatchTests
             .OrderByDescending(c => c.GetParameters().Length)
             .First();
 
-        var apiClientSubstitutes = new List<object>();
+        var dependencySubstitutes = new List<object>();
         var args = constructor.GetParameters()
-            .Select(p => ResolveDependency(p.ParameterType, apiClientSubstitutes))
+            .Select(p => ResolveDependency(p.ParameterType, dependencySubstitutes))
             .ToArray();
 
         var handler = constructor.Invoke(args);
@@ -71,11 +73,11 @@ public sealed class HandlerApiDispatchTests
         Assert.NotNull(resultValue);
         Assert.StartsWith("McpServer.Cqrs.Result`1", resultValue!.GetType().FullName, StringComparison.Ordinal);
 
-        var totalApiCalls = apiClientSubstitutes.Sum(s => SubstituteExtensions.ReceivedCalls(s).Count());
-        Assert.True(totalApiCalls > 0, $"Expected API client call for {handlerType.FullName}.");
+        var totalDependencyCalls = dependencySubstitutes.Sum(s => SubstituteExtensions.ReceivedCalls(s).Count());
+        Assert.True(totalDependencyCalls > 0, $"Expected service or API client call for {handlerType.FullName}.");
     }
 
-    private static object ResolveDependency(Type dependencyType, List<object> apiClientSubstitutes)
+    private static object ResolveDependency(Type dependencyType, List<object> dependencySubstitutes)
     {
         if (dependencyType == typeof(IAuthorizationPolicyService))
             return new ConfigurableAuthorizationPolicyService(defaultAllow: true);
@@ -90,7 +92,28 @@ public sealed class HandlerApiDispatchTests
         if (dependencyType.IsInterface && dependencyType.Name.EndsWith("ApiClient", StringComparison.Ordinal))
         {
             var substitute = Substitute.For([dependencyType], Array.Empty<object>());
-            apiClientSubstitutes.Add(substitute);
+            dependencySubstitutes.Add(substitute);
+            return substitute;
+        }
+
+        if (dependencyType == typeof(IChatWindowService))
+        {
+            var substitute = Substitute.For<IChatWindowService>();
+            substitute.LoadPromptsAsync(Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult<IReadOnlyList<PromptTemplate>>([new PromptTemplate { Name = "sample", Template = "sample" }]));
+            substitute.LoadModelsAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult(new ChatLoadModelsResult(true, ["sample"], "sample")));
+            substitute.PopulatePromptAsync(Arg.Any<PromptTemplate?>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult("sample"));
+            substitute.SubmitPromptAsync(Arg.Any<PromptTemplate?>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult(new ChatPreparedPromptResult(false, "sample")));
+            substitute.SendMessageAsync(Arg.Any<ChatSendRequest>(), Arg.Any<IProgress<string>?>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult(new ChatSendMessageResult(true, "sample", false)));
+            substitute.OpenAgentConfigAsync(Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult(new ChatFileOpenResult(true, "sample")));
+            substitute.OpenPromptTemplatesAsync(Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult(new ChatFileOpenResult(true, "sample")));
+            dependencySubstitutes.Add(substitute);
             return substitute;
         }
 

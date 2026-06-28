@@ -106,10 +106,10 @@ else
         _lastQueryKey = queryKey;
         var loadTask = CommandTarget.RunAsync(async () =>
         {
-            ApplyWorkspaceFromQuery();
             ViewModel.Section = Section;
             ViewModel.Priority = Priority;
             ViewModel.Done = Done ?? false;
+            ApplyWorkspaceFromQuery();
             await ViewModel.LoadAsync().ConfigureAwait(true);
         });
 

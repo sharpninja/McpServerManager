@@ -1,3 +1,4 @@
+using McpServer.Cqrs;
 using Microsoft.Extensions.Logging;
 
 namespace McpServerManager.Core.ViewModels;
@@ -9,9 +10,10 @@ public partial class VoiceConversationViewModel : McpServerManager.UI.Core.ViewM
 {
     public VoiceConversationViewModel(
         McpServerManager.UI.Core.Services.McpVoiceConversationService service,
+        Dispatcher dispatcher,
         ILogger<McpServerManager.UI.Core.ViewModels.VoiceConversationViewModel>? logger = null,
         McpServerManager.UI.Core.Services.IClipboardService? clipboardService = null)
-        : base(service, logger, clipboardService)
+        : base(service, dispatcher, logger, clipboardService)
     {
     }
 }

@@ -20,7 +20,7 @@ public partial class ChatWindowViewModel : McpServerManager.UI.Core.ViewModels.C
         string? initialModelFromConfig = null,
         Action<string?>? onModelChanged = null)
         : base(
-            new ChatWindowServiceAdapter(dispatcher),
+            dispatcher,
             getContext,
             initialModelFromConfig,
             onModelChanged,

@@ -18,13 +18,13 @@ public sealed class ChatWindowViewModelTests
     public async Task LoadPromptsAsync_DispatchesLoadChatPromptsQuery_AndPopulatesTemplates()
     {
         var prompts = new[] { new PromptTemplate { Name = "t1", Template = "hi" } };
-        var (dispatcher, vm) = ViewModelDispatchTestHelper.CreateChatWindow();
-
-        ViewModelDispatchTestHelper.SetupQueryResult<LoadChatPromptsQuery, IReadOnlyList<PromptTemplate>>(dispatcher, prompts);
+        var (_, vm, chatService) = ViewModelDispatchTestHelper.CreateChatWindow();
+        chatService.LoadPromptsAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<PromptTemplate>>(prompts));
 
         await vm.LoadPromptsAsync();
 
-        await dispatcher.Received(1).QueryAsync(Arg.Is<LoadChatPromptsQuery>(q => q != null), Arg.Any<CancellationToken>());
+        await chatService.Received(1).LoadPromptsAsync(Arg.Any<CancellationToken>());
         Assert.Single(vm.PromptTemplates);
         Assert.Equal("t1", vm.PromptTemplates[0].Name);
     }
@@ -33,13 +33,13 @@ public sealed class ChatWindowViewModelTests
     public async Task LoadModelsAsync_DispatchesLoadChatModelsQuery_AndPopulatesModels()
     {
         var modelsResult = new ChatLoadModelsResult(true, new[] { "llama3" }, "llama3");
-        var (dispatcher, vm) = ViewModelDispatchTestHelper.CreateChatWindow(initialModel: "llama3");
-
-        ViewModelDispatchTestHelper.SetupQueryResult<LoadChatModelsQuery, ChatLoadModelsResult>(dispatcher, modelsResult);
+        var (_, vm, chatService) = ViewModelDispatchTestHelper.CreateChatWindow(initialModel: "llama3");
+        chatService.LoadModelsAsync("llama3", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(modelsResult));
 
         await vm.LoadModelsAsync();
 
-        await dispatcher.Received(1).QueryAsync(Arg.Any<LoadChatModelsQuery>(), Arg.Any<CancellationToken>());
+        await chatService.Received(1).LoadModelsAsync("llama3", Arg.Any<CancellationToken>());
         Assert.Contains("llama3", vm.AvailableModels);
         Assert.Equal("llama3", vm.SelectedModel);
     }
@@ -47,8 +47,9 @@ public sealed class ChatWindowViewModelTests
     [Fact]
     public async Task PopulatePrompt_DispatchesPopulateChatPromptQuery_AndSetsCurrentInput()
     {
-        var (dispatcher, vm) = ViewModelDispatchTestHelper.CreateChatWindow();
-        ViewModelDispatchTestHelper.SetupQueryResult<PopulateChatPromptQuery, string>(dispatcher, "populated prompt");
+        var (_, vm, chatService) = ViewModelDispatchTestHelper.CreateChatWindow();
+        chatService.PopulatePromptAsync(Arg.Any<PromptTemplate>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult("populated prompt"));
 
         var prompt = new PromptTemplate { Name = "p1", Template = "template" };
         // Call the protected for test via reflection or make internal for test; here assume accessible or test via public wrapper
@@ -57,7 +58,7 @@ public sealed class ChatWindowViewModelTests
             .Invoke(vm, new object?[] { prompt })!;
         await task;
 
-        await dispatcher.Received(1).QueryAsync(Arg.Any<PopulateChatPromptQuery>(), Arg.Any<CancellationToken>());
+        await chatService.Received(1).PopulatePromptAsync(prompt, Arg.Any<CancellationToken>());
         Assert.Equal("populated prompt", vm.CurrentInput);
     }
 }

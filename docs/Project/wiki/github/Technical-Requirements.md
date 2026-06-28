@@ -188,3 +188,14 @@
 
 **TR-TEST-001** — Placeholder requirement backfilled for TODO link TR-TEST-001.
 
+## TR-TRIAGE-ACTIONS-001
+
+**Typed triage grouping actions** — The Web triage page must call typed McpServer.Client triage endpoints for moving reports to a new group, moving reports to an existing group, and combining multiple groups.
+
+## TR-TRIAGE-CLIENT-001
+
+**Typed triage client endpoints** — Use SharpNinja.McpServer.Client 1.2.0 typed TriageClient endpoints for dashboard, groups, reports, runs, and triage-created TODO queries.
+**Acceptance Criteria:**
+- [ ] Direct SharpNinja.McpServer.Client package references are upgraded to 1.2.0.
+- [ ] UI queries call TriageClient.GetDashboardAsync, QueryGroupsAsync, GetGroupAsync, GetReportAsync, QueryRunsAsync, GetRunAsync, and QueryCreatedTodosAsync.
+

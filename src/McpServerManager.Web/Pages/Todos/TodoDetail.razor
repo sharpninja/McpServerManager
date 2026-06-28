@@ -203,10 +203,10 @@
 
         await CommandTarget.RunAsync(async () =>
         {
-            ApplyWorkspaceFromQuery();
             ListViewModel.Section = Section;
             ListViewModel.Priority = Priority;
             ListViewModel.Done = Done ?? false;
+            ApplyWorkspaceFromQuery();
             await ListViewModel.LoadAsync().ConfigureAwait(true);
             ViewModel.TodoId = TodoId;
             await ViewModel.LoadAsync().ConfigureAwait(true);
