@@ -32,18 +32,20 @@ else
         <div class="Box-header">
             <h2 class="h4 mb-0">Triage Queue <span class="Counter">@ViewModel.TriageQueue.Count</span></h2>
         </div>
-        <PrimerDataTable TItem="TriageGroupSnapshot" Items="ViewModel.TriageQueue" ColumnCount="5" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+        <PrimerDataTable TItem="TriageGroupSnapshot" Items="ViewModel.TriageQueue" ColumnCount="6" Class="Table--full-width" style="width:100%; table-layout:fixed;">
             <HeaderTemplate>
                 <tr>
-                    <th style="width:14%">Status</th>
-                    <th style="width:22%">Group</th>
-                    <th style="width:10%">Reports</th>
-                    <th style="width:38%">Title</th>
-                    <th style="width:16%"></th>
+                    <th style="width:11%">Status</th>
+                    <th style="width:18%">Timestamp</th>
+                    <th style="width:20%">Group</th>
+                    <th style="width:8%">Reports</th>
+                    <th style="width:31%">Title</th>
+                    <th style="width:12%"></th>
                 </tr>
             </HeaderTemplate>
             <RowTemplate Context="group">
                 <td><PrimerLabel Scheme="@GetStatusScheme(group.Status)" Text="@group.Status" /></td>
+                <td class="text-mono text-small"><time datetime="@FormatMachineTimestamp(group.QuietDeadlineUtc)">@FormatTimestamp(group.QuietDeadlineUtc)</time></td>
                 <td><code>@group.GroupId</code></td>
                 <td>@group.ReportCount</td>
                 <td>@(group.Title ?? group.Summary ?? "")</td>
@@ -59,18 +61,20 @@ else
         <div class="Box-header">
             <h2 class="h4 mb-0">Report Group Queue <span class="Counter">@ViewModel.ReportGroupQueue.Count</span></h2>
         </div>
-        <PrimerDataTable TItem="TriageGroupSnapshot" Items="ViewModel.ReportGroupQueue" ColumnCount="5" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+        <PrimerDataTable TItem="TriageGroupSnapshot" Items="ViewModel.ReportGroupQueue" ColumnCount="6" Class="Table--full-width" style="width:100%; table-layout:fixed;">
             <HeaderTemplate>
                 <tr>
-                    <th style="width:14%">Status</th>
-                    <th style="width:22%">Group</th>
-                    <th style="width:10%">Reports</th>
-                    <th style="width:38%">Title</th>
-                    <th style="width:16%"></th>
+                    <th style="width:11%">Status</th>
+                    <th style="width:18%">Timestamp</th>
+                    <th style="width:20%">Group</th>
+                    <th style="width:8%">Reports</th>
+                    <th style="width:31%">Title</th>
+                    <th style="width:12%"></th>
                 </tr>
             </HeaderTemplate>
             <RowTemplate Context="group">
                 <td><PrimerLabel Scheme="@GetStatusScheme(group.Status)" Text="@group.Status" /></td>
+                <td class="text-mono text-small"><time datetime="@FormatMachineTimestamp(group.QuietDeadlineUtc)">@FormatTimestamp(group.QuietDeadlineUtc)</time></td>
                 <td><code>@group.GroupId</code></td>
                 <td>@group.ReportCount</td>
                 <td>@(group.Title ?? group.Summary ?? "")</td>
@@ -86,19 +90,21 @@ else
         <div class="Box-header">
             <h2 class="h4 mb-0">Run History <span class="Counter">@ViewModel.RunHistory.Count</span></h2>
         </div>
-        <PrimerDataTable TItem="TriageRunSnapshot" Items="ViewModel.RunHistory" ColumnCount="6" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+        <PrimerDataTable TItem="TriageRunSnapshot" Items="ViewModel.RunHistory" ColumnCount="7" Class="Table--full-width" style="width:100%; table-layout:fixed;">
             <HeaderTemplate>
                 <tr>
-                    <th style="width:12%">Status</th>
-                    <th style="width:20%">Run</th>
-                    <th style="width:20%">Group</th>
-                    <th style="width:12%">Reports</th>
-                    <th style="width:20%">Created TODO</th>
-                    <th style="width:16%"></th>
+                    <th style="width:10%">Status</th>
+                    <th style="width:18%">Timestamp</th>
+                    <th style="width:18%">Run</th>
+                    <th style="width:18%">Group</th>
+                    <th style="width:8%">Reports</th>
+                    <th style="width:16%">Created TODO</th>
+                    <th style="width:12%"></th>
                 </tr>
             </HeaderTemplate>
             <RowTemplate Context="run">
                 <td><PrimerLabel Scheme="@GetStatusScheme(run.Status)" Text="@run.Status" /></td>
+                <td class="text-mono text-small"><time datetime="@FormatMachineTimestamp(run.StartedUtc)">@FormatTimestamp(run.StartedUtc)</time></td>
                 <td><code>@run.RunId</code></td>
                 <td><code>@run.GroupId</code></td>
                 <td>@run.ReportCount</td>
@@ -115,20 +121,22 @@ else
         <div class="Box-header">
             <h2 class="h4 mb-0">Open Triage TODOs <span class="Counter">@ViewModel.OpenTriageTodos.Count</span></h2>
         </div>
-        <PrimerDataTable TItem="OpenTriageTodoItem" Items="ViewModel.OpenTriageTodos" ColumnCount="7" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+        <PrimerDataTable TItem="OpenTriageTodoItem" Items="ViewModel.OpenTriageTodos" ColumnCount="8" Class="Table--full-width" style="width:100%; table-layout:fixed;">
             <HeaderTemplate>
                 <tr>
-                    <th style="width:16%">TODO</th>
-                    <th style="width:24%">Title</th>
-                    <th style="width:12%">Group</th>
-                    <th style="width:12%">Run</th>
-                    <th style="width:10%">Reports</th>
-                    <th style="width:18%">Workspace</th>
+                    <th style="width:13%">TODO</th>
+                    <th style="width:18%">Timestamp</th>
+                    <th style="width:20%">Title</th>
+                    <th style="width:10%">Group</th>
+                    <th style="width:10%">Run</th>
+                    <th style="width:7%">Reports</th>
+                    <th style="width:14%">Workspace</th>
                     <th style="width:8%"></th>
                 </tr>
             </HeaderTemplate>
             <RowTemplate Context="todo">
                 <td><code>@todo.TodoId</code></td>
+                <td class="text-mono text-small"><time datetime="@FormatMachineTimestamp(todo.CreatedAtUtc)">@FormatTimestamp(todo.CreatedAtUtc)</time></td>
                 <td>@todo.Title</td>
                 <td>@(todo.GroupStatus ?? todo.GroupId ?? "")</td>
                 <td>@(todo.RunStatus ?? todo.RunId ?? "")</td>
@@ -264,4 +272,10 @@ else
 
     private static string Shorten(string value, int maxLength)
         => value.Length <= maxLength ? value : value[..Math.Max(0, maxLength - 3)] + "...";
+
+    private static string FormatTimestamp(DateTimeOffset value)
+        => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");
+
+    private static string FormatMachineTimestamp(DateTimeOffset value)
+        => value.ToLocalTime().ToString("O");
 }

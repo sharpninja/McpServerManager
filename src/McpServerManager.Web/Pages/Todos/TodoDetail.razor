@@ -104,7 +104,9 @@
                         <MonacoEditor @bind-Value="ViewModel.EditorMarkdownText"
                                       Language="markdown"
                                       ReadOnly="@(!CanEdit)"
-                                      Height="600" />
+                                      Height="600"
+                                      MaxViewportOffset="340"
+                                      Class="todo-editor-frame" />
                     </div>
                 }
             </div>

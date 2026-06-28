@@ -1,0 +1,15 @@
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\ViewModels\WorkspaceViewModel.cs(14,7): warning CS0105: The using directive for 'McpServerManager.UI.Core.Messages' appeared previously in this namespace [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Handlers\VoiceHandlers.cs(10,23): error CS0101: The namespace 'McpServerManager.UI.Core.Handlers' already contains a definition for 'CreateVoiceSessionCommandHandler' [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Handlers\CreateVoiceSessionCommandHandler.cs(9,23): error CS0311: The type 'McpServerManager.UI.Core.Messages.CreateVoiceSessionCommand' cannot be used as type parameter 'TCommand' in the generic type or method 'ICommandHandler<TCommand, TResult>'. There is no implicit reference conversion from 'McpServerManager.UI.Core.Messages.CreateVoiceSessionCommand' to 'McpServer.Cqrs.ICommand<string>'. [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Handlers\VoiceHandlers.cs(23,49): error CS0111: Type 'CreateVoiceSessionCommandHandler' already defines a member called 'HandleAsync' with the same parameter types [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+
+Build FAILED.
+
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\ViewModels\WorkspaceViewModel.cs(14,7): warning CS0105: The using directive for 'McpServerManager.UI.Core.Messages' appeared previously in this namespace [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Handlers\VoiceHandlers.cs(10,23): error CS0101: The namespace 'McpServerManager.UI.Core.Handlers' already contains a definition for 'CreateVoiceSessionCommandHandler' [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Handlers\CreateVoiceSessionCommandHandler.cs(9,23): error CS0311: The type 'McpServerManager.UI.Core.Messages.CreateVoiceSessionCommand' cannot be used as type parameter 'TCommand' in the generic type or method 'ICommandHandler<TCommand, TResult>'. There is no implicit reference conversion from 'McpServerManager.UI.Core.Messages.CreateVoiceSessionCommand' to 'McpServer.Cqrs.ICommand<string>'. [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Handlers\VoiceHandlers.cs(23,49): error CS0111: Type 'CreateVoiceSessionCommandHandler' already defines a member called 'HandleAsync' with the same parameter types [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+    1 Warning(s)
+    3 Error(s)
+
+Time Elapsed 00:00:07.33

@@ -1,7 +1,7 @@
 @using BlazorMonaco
 @using BlazorMonaco.Editor
 
-<div style="height: @(Height)px; position: relative;">
+<div class="@WrapperClass" style="@WrapperStyle">
     <StandaloneCodeEditor @ref="_editor"
                           Id="@_elementId"
                           ConstructionOptions="GetOptions"
@@ -35,6 +35,32 @@
     /// <summary>Editor height in pixels.</summary>
     [Parameter]
     public int Height { get; set; } = 600;
+
+    /// <summary>Optional viewport offset used to cap the editor height.</summary>
+    [Parameter]
+    public int? MaxViewportOffset { get; set; }
+
+    /// <summary>Additional CSS class applied to the editor frame.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string WrapperClass => string.IsNullOrWhiteSpace(Class)
+        ? "monaco-editor-frame"
+        : $"monaco-editor-frame {Class}";
+
+    private string WrapperStyle
+    {
+        get
+        {
+            if (MaxViewportOffset is { } offset && offset > 0)
+            {
+                var maxHeight = $"calc(100dvh - {offset}px)";
+                return $"height: min({Height}px, {maxHeight}); max-height: {maxHeight}; position: relative; overflow: hidden;";
+            }
+
+            return $"height: {Height}px; position: relative; overflow: hidden;";
+        }
+    }
 
     private StandaloneEditorConstructionOptions GetOptions(StandaloneCodeEditor editor) => new()
     {

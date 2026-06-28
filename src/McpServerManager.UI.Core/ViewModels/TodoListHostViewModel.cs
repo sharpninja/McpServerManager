@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
+using McpServer.Cqrs;
 using McpServer.Cqrs.Mvvm;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Models;
@@ -31,6 +32,7 @@ public partial class TodoListHostViewModel : ViewModelBase
     private readonly ILogger<TodoListHostViewModel> _logger;
 
     private readonly IClipboardService _clipboardService;
+    private readonly Dispatcher _dispatcher;
     private readonly UiCoreTodoListViewModel _listVm;
     private readonly UiCoreTodoDetailViewModel _detailVm;
     private readonly UiCoreWorkspaceContextViewModel _workspaceContext;
@@ -90,6 +92,7 @@ public partial class TodoListHostViewModel : ViewModelBase
 
     public TodoListHostViewModel(
         IClipboardService clipboardService,
+        Dispatcher dispatcher,
         UiCoreTodoListViewModel listVm,
         UiCoreTodoDetailViewModel detailVm,
         UiCoreWorkspaceContextViewModel workspaceContext,
@@ -98,6 +101,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         ILogger<TodoListHostViewModel>? logger = null)
     {
         _clipboardService = clipboardService ?? throw new ArgumentNullException(nameof(clipboardService));
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _listVm = listVm ?? throw new ArgumentNullException(nameof(listVm));
         _listVm.Done = false; // default to open items only
         _detailVm = detailVm ?? throw new ArgumentNullException(nameof(detailVm));
@@ -159,7 +163,7 @@ public partial class TodoListHostViewModel : ViewModelBase
     {
         if (SelectedEntry?.Item is { } item)
         {
-            await _clipboardService.SetTextAsync(item.Id);
+            await _clipboardService.SetTextAsync(item.Id).ConfigureAwait(true);
             StatusText = "Copied " + item.Id;
         }
     }

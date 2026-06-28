@@ -210,11 +210,7 @@ public partial class ConnectionViewModel : ViewModelBase
         if (_lastMcpBaseUrl != null && _lastOidcAuthority != null)
         {
             _logger.LogInformation("Performing OIDC logout via revocation/end-session API");
-            var success = await _connectionAuthService.TryLogoutAsync(
-                _lastMcpBaseUrl,
-                _lastOidcAuthority,
-                _lastOidcClientId,
-                token).ConfigureAwait(true);
+            var success = await _connectionAuthService.TryLogoutAsync(_lastMcpBaseUrl!, _lastOidcAuthority, null, _oidcBearerToken).ConfigureAwait(true);
             _logger.LogInformation("OIDC API logout result: {Success}", success);
         }
         else

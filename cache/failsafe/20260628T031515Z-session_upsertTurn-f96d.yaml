@@ -1,0 +1,5 @@
+method: client.SessionLog.UpsertTurnAsync
+label: session_upsertTurn
+timestamp: 20260628T031515Z
+params:
+  {"type":"request","payload":{"requestId":"req-20260628T031514Z-36716","method":"client.SessionLog.UpsertTurnAsync","params":{"agent":"Codex","sessionId":"Codex-20260628T030948Z","turn":{"requestId":"req-20260628T031432Z-prompt-a21b","timestamp":"2026-06-28T03:14:32Z","queryText":"User prompt","queryTitle":"User prompt","response":"Acknowledged hard constraint: do not edit the sibling McpServer checkout. Future work will be limited to F:\\GitHub\\McpServerManager and checked-out submodule paths under that workspace; if endpoint/client source is unavailable there, report that blocker instead of editing the sibling.","status":"completed","model":"codex","tokenCount":0}}}}

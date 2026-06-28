@@ -1,0 +1,4 @@
+Test run for F:\GitHub\McpServerManager\tests\McpServerManager.UI.Core.Tests\bin\Debug\net10.0\McpServerManager.UI.Core.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   299, Skipped:     0, Total:   299, Duration: 1 s - McpServerManager.UI.Core.Tests.dll (net10.0)

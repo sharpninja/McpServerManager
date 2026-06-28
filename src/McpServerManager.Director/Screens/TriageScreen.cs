@@ -230,11 +230,12 @@ internal sealed class TriageScreen : View
     {
         var table = new System.Data.DataTable();
         table.Columns.Add("Status", typeof(string));
+        table.Columns.Add("Timestamp", typeof(string));
         table.Columns.Add("Group", typeof(string));
         table.Columns.Add("Reports", typeof(int));
         table.Columns.Add("Title", typeof(string));
         foreach (var row in rows)
-            table.Rows.Add(row.Status, Shorten(row.GroupId, 24), row.ReportCount, Shorten(row.Title ?? row.Summary ?? "", 46));
+            table.Rows.Add(row.Status, FormatTimestamp(row.QuietDeadlineUtc), Shorten(row.GroupId, 24), row.ReportCount, Shorten(row.Title ?? row.Summary ?? "", 46));
         return new DataTableSource(table);
     }
 
@@ -242,11 +243,12 @@ internal sealed class TriageScreen : View
     {
         var table = new System.Data.DataTable();
         table.Columns.Add("Status", typeof(string));
+        table.Columns.Add("Timestamp", typeof(string));
         table.Columns.Add("Run", typeof(string));
         table.Columns.Add("Group", typeof(string));
         table.Columns.Add("Todo", typeof(string));
         foreach (var row in rows)
-            table.Rows.Add(row.Status, Shorten(row.RunId, 24), Shorten(row.GroupId, 24), row.CreatedTodoId ?? "");
+            table.Rows.Add(row.Status, FormatTimestamp(row.StartedUtc), Shorten(row.RunId, 24), Shorten(row.GroupId, 24), row.CreatedTodoId ?? "");
         return new DataTableSource(table);
     }
 
@@ -254,11 +256,12 @@ internal sealed class TriageScreen : View
     {
         var table = new System.Data.DataTable();
         table.Columns.Add("TODO", typeof(string));
+        table.Columns.Add("Timestamp", typeof(string));
         table.Columns.Add("Title", typeof(string));
         table.Columns.Add("Status", typeof(string));
         table.Columns.Add("Workspace", typeof(string));
         foreach (var row in rows)
-            table.Rows.Add(Shorten(row.TodoId, 24), Shorten(row.Title, 42), row.GroupStatus ?? row.RunStatus ?? "", Shorten(row.WorkspacePath, 36));
+            table.Rows.Add(Shorten(row.TodoId, 24), FormatTimestamp(row.CreatedAtUtc), Shorten(row.Title, 42), row.GroupStatus ?? row.RunStatus ?? "", Shorten(row.WorkspacePath, 36));
         return new DataTableSource(table);
     }
 
@@ -276,7 +279,7 @@ internal sealed class TriageScreen : View
             $"Status: {group.Status}",
             $"Workspace: {group.WorkspacePath ?? ""}",
             $"Reports: {group.ReportCount}",
-            $"Quiet deadline: {group.QuietDeadlineUtc:u}",
+            $"Quiet deadline: {FormatTimestamp(group.QuietDeadlineUtc)}",
             $"Created TODO: {group.CreatedTodoId ?? ""}",
             $"Title: {group.Title ?? ""}",
             $"Summary: {group.Summary ?? ""}",
@@ -301,8 +304,8 @@ internal sealed class TriageScreen : View
             $"Group: {run.GroupId} [{run.GroupStatus ?? ""}]",
             $"Workspace: {run.WorkspacePath ?? ""}",
             $"Reports: {run.ReportCount}",
-            $"Started: {run.StartedUtc:u}",
-            $"Completed: {run.CompletedUtc:u}",
+            $"Started: {FormatTimestamp(run.StartedUtc)}",
+            $"Completed: {FormatTimestamp(run.CompletedUtc)}",
             $"Created TODO: {run.CreatedTodoId ?? ""}",
             $"Group title: {run.GroupTitle ?? ""}",
             $"Group summary: {run.GroupSummary ?? ""}",
@@ -328,7 +331,7 @@ internal sealed class TriageScreen : View
             $"Section: {todo.Section ?? ""}",
             $"Group: {todo.GroupId ?? ""} [{todo.GroupStatus ?? ""}]",
             $"Run: {todo.RunId ?? ""} [{todo.RunStatus ?? ""}]",
-            $"Created: {todo.CreatedAtUtc:u}",
+            $"Created: {FormatTimestamp(todo.CreatedAtUtc)}",
             $"Reports: {todo.ReportCount}",
             $"Group title: {todo.GroupTitle ?? ""}",
             $"Group summary: {todo.GroupSummary ?? ""}",
@@ -348,4 +351,10 @@ internal sealed class TriageScreen : View
 
     private static string Shorten(string value, int maxLength)
         => value.Length <= maxLength ? value : value[..Math.Max(0, maxLength - 3)] + "...";
+
+    private static string FormatTimestamp(DateTimeOffset value)
+        => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");
+
+    private static string FormatTimestamp(DateTimeOffset? value)
+        => value.HasValue ? FormatTimestamp(value.Value) : string.Empty;
 }

@@ -4,8 +4,11 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
+using McpServer.Cqrs;
+using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Models;
 using McpServerManager.UI.Core.Services;
+using ChatPreparedPromptMessageResult = McpServerManager.UI.Core.Messages.ChatPreparedPromptResult;
 
 namespace McpServerManager.UI.Core.ViewModels;
 
@@ -18,7 +21,7 @@ public partial class ChatWindowViewModel : ViewModelBase
         @"(?<!\(|\[)https?://[^\s)\]`""<>]+",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    private readonly IChatWindowService _chatService;
+    private readonly Dispatcher _dispatcher;
     private readonly IUiDispatcherService _uiDispatcher;
     private readonly Func<string> _getContext;
     private readonly Action<string?>? _onModelChanged;
@@ -47,13 +50,13 @@ public partial class ChatWindowViewModel : ViewModelBase
     /// Creates a chat window ViewModel.
     /// </summary>
     public ChatWindowViewModel(
-        IChatWindowService chatService,
+        Dispatcher dispatcher,
         Func<string>? getContext = null,
         string? initialModelFromConfig = null,
         Action<string?>? onModelChanged = null,
         IUiDispatcherService? uiDispatcher = null)
     {
-        _chatService = chatService ?? throw new ArgumentNullException(nameof(chatService));
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _uiDispatcher = uiDispatcher ?? new ImmediateUiDispatcherService();
         _getContext = getContext ?? (() => string.Empty);
         _initialModelFromConfig = initialModelFromConfig;
@@ -63,14 +66,20 @@ public partial class ChatWindowViewModel : ViewModelBase
     /// <summary>
     /// Opens the agent config file in default editor.
     /// </summary>
-    public Task<ChatFileOpenResult> OpenAgentConfigAsync(CancellationToken cancellationToken = default)
-        => _chatService.OpenAgentConfigAsync(cancellationToken);
+    public async Task<ChatFileOpenResult> OpenAgentConfigAsync(CancellationToken cancellationToken = default)
+    {
+        var res = await _dispatcher.SendAsync(new OpenChatAgentConfigCommand(), cancellationToken).ConfigureAwait(true);
+        return res.IsSuccess ? res.Value! : new ChatFileOpenResult(false, null, res.Error);
+    }
 
     /// <summary>
     /// Opens the prompt templates file in default editor.
     /// </summary>
-    public Task<ChatFileOpenResult> OpenPromptTemplatesAsync(CancellationToken cancellationToken = default)
-        => _chatService.OpenPromptTemplatesAsync(cancellationToken);
+    public async Task<ChatFileOpenResult> OpenPromptTemplatesAsync(CancellationToken cancellationToken = default)
+    {
+        var res = await _dispatcher.SendAsync(new OpenChatPromptTemplatesCommand(), cancellationToken).ConfigureAwait(true);
+        return res.IsSuccess ? res.Value! : new ChatFileOpenResult(false, null, res.Error);
+    }
 
     /// <summary>
     /// Loads prompt templates from backing service.
@@ -82,7 +91,8 @@ public partial class ChatWindowViewModel : ViewModelBase
     /// </summary>
     public async Task LoadPromptsAsync(CancellationToken cancellationToken = default)
     {
-        var prompts = await _chatService.LoadPromptsAsync(cancellationToken).ConfigureAwait(true);
+        var res = await _dispatcher.QueryAsync(new LoadChatPromptsQuery(), cancellationToken).ConfigureAwait(true);
+        var prompts = res.IsSuccess ? res.Value : Array.Empty<PromptTemplate>();
         DispatchToUi(() =>
         {
             PromptTemplates.Clear();
@@ -101,7 +111,8 @@ public partial class ChatWindowViewModel : ViewModelBase
     /// </summary>
     public async Task LoadModelsAsync(CancellationToken cancellationToken = default)
     {
-        var result = await _chatService.LoadModelsAsync(_initialModelFromConfig, cancellationToken).ConfigureAwait(true);
+        var res = await _dispatcher.QueryAsync(new LoadChatModelsQuery(_initialModelFromConfig), cancellationToken).ConfigureAwait(true);
+        var result = res.IsSuccess ? res.Value! : new ChatLoadModelsResult(false, Array.Empty<string>(), null);
         DispatchToUi(() =>
         {
             AvailableModels.Clear();
@@ -131,7 +142,8 @@ public partial class ChatWindowViewModel : ViewModelBase
     /// </summary>
     protected async Task PopulatePrompt(PromptTemplate? prompt)
     {
-        var promptText = await _chatService.PopulatePromptAsync(prompt).ConfigureAwait(true);
+        var res = await _dispatcher.QueryAsync(new PopulateChatPromptQuery(prompt), default).ConfigureAwait(true);
+        var promptText = res.IsSuccess ? res.Value : string.Empty;
         if (string.IsNullOrEmpty(promptText))
             return;
 
@@ -143,7 +155,8 @@ public partial class ChatWindowViewModel : ViewModelBase
     /// </summary>
     protected async Task SubmitPromptAsync(PromptTemplate? prompt)
     {
-        var prepared = await _chatService.SubmitPromptAsync(prompt).ConfigureAwait(true);
+        var res = await _dispatcher.QueryAsync(new SubmitChatPromptQuery(prompt), default).ConfigureAwait(true);
+        var prepared = res.IsSuccess ? res.Value! : new ChatPreparedPromptMessageResult(false, string.Empty);
         if (!prepared.ShouldSend)
             return;
 
@@ -211,10 +224,9 @@ public partial class ChatWindowViewModel : ViewModelBase
 
         try
         {
-            var request = new ChatSendRequest(text, context, SelectedModel);
-            var result = await _chatService
-                .SendMessageAsync(request, progress, token)
-                .ConfigureAwait(true);
+            var cmd = new SendChatMessageCommand(text, context, SelectedModel);
+            var res = await _dispatcher.SendAsync(cmd, token).ConfigureAwait(true);
+            var result = res.IsSuccess ? res.Value! : new ChatSendMessageResult(false, string.Empty, false, res.Error);
 
             if (token.IsCancellationRequested && !result.WasCancelled)
                 return;

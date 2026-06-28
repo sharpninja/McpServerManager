@@ -13,6 +13,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using McpServerManager.UI.Core.Models;
 using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.Messages;
+using McpServer.Cqrs;
 
 namespace McpServerManager.UI.Core.ViewModels;
 
@@ -30,6 +32,7 @@ public partial class VoiceConversationViewModel : ViewModelBase
     };
 
     private readonly IVoiceConversationService _voiceService;
+    private readonly Dispatcher _dispatcher;
     private CancellationTokenSource? _activeTurnCts;
 
     [ObservableProperty] private string _sessionId = string.Empty;
@@ -81,10 +84,12 @@ public partial class VoiceConversationViewModel : ViewModelBase
     /// </summary>
     public VoiceConversationViewModel(
         IVoiceConversationService service,
+        Dispatcher dispatcher,
         ILogger<VoiceConversationViewModel>? logger = null,
         IClipboardService? clipboardService = null)
     {
         _voiceService = service ?? throw new ArgumentNullException(nameof(service));
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _logger = logger ?? NullLogger<VoiceConversationViewModel>.Instance;
         _clipboardService = clipboardService ?? new NoOpClipboardService();
     }
@@ -116,7 +121,8 @@ public partial class VoiceConversationViewModel : ViewModelBase
             StatusText = "Looking for existing voice session...";
             try
             {
-                var existing = await _voiceService.FindExistingSessionAsync(deviceId).ConfigureAwait(true);
+                var res = await _dispatcher.SendAsync(new CreateVoiceSessionCommand { ClientName = ClientName, Language = Language }, default).ConfigureAwait(true);
+                var existing = res.IsSuccess && res.Value != null ? new { SessionId = res.Value.SessionId, Language = res.Value.Language ?? Language, LastTurnId = string.Empty, TurnCounter = 0, TranscriptCount = 0 } : null;
                 if (existing is not null)
                 {
                     SessionId = existing.SessionId;
@@ -138,15 +144,16 @@ public partial class VoiceConversationViewModel : ViewModelBase
             // No existing session — create a new one
             GlobalStatusChanged?.Invoke("Creating voice session...");
             StatusText = "Creating voice session...";
-            var response = await _voiceService.CreateSessionAsync(new McpVoiceSessionCreateRequest
+            var response = await _dispatcher.SendAsync(new CreateVoiceSessionCommand
             {
-                Language = Language,
                 ClientName = string.IsNullOrWhiteSpace(ClientName) ? "RequestTracker.Android" : ClientName.Trim(),
+                Language = Language,
                 DeviceId = deviceId
-            }).ConfigureAwait(true);
+            }, default).ConfigureAwait(true);
 
-            SessionId = response.SessionId;
-            Language = string.IsNullOrWhiteSpace(response.Language) ? Language : response.Language;
+            var sessionInfo = response.IsSuccess ? response.Value : null;
+            SessionId = sessionInfo?.SessionId ?? string.Empty;
+            Language = string.IsNullOrWhiteSpace(sessionInfo?.Language) ? Language : sessionInfo!.Language;
             IsSessionActive = true;
             TranscriptItems.Clear();
             LastToolCalls.Clear();
@@ -198,33 +205,41 @@ public partial class VoiceConversationViewModel : ViewModelBase
         {
             GlobalStatusChanged?.Invoke("Submitting voice turn...");
             StatusText = "Submitting voice turn...";
-            var response = await _voiceService.SubmitTurnAsync(
-                SessionId,
-                new McpVoiceTurnRequest
-                {
-                    UserTranscriptText = text,
-                    Language = Language,
-                    ClientTimestampUtc = DateTimeOffset.UtcNow.ToString("O")
-                },
-                ct).ConfigureAwait(true);
+            var response = await _dispatcher.SendAsync(new SubmitVoiceTurnCommand
+            {
+                SessionId = SessionId,
+                UserTranscriptText = text,
+                Language = Language
+            }, ct).ConfigureAwait(true);
 
-            LastTurnId = response.TurnId ?? string.Empty;
-            LastLatencyMs = response.LatencyMs;
-            AssistantDisplayText = response.AssistantDisplayText ?? string.Empty;
-            AssistantSpeakText = response.AssistantSpeakText ?? string.Empty;
+            var turn = response.IsSuccess ? response.Value : null;
+            LastTurnId = turn?.TurnId ?? string.Empty;
+            LastLatencyMs = turn?.LatencyMs ?? 0;
+            AssistantDisplayText = turn?.AssistantDisplayText ?? string.Empty;
+            AssistantSpeakText = turn?.AssistantSpeakText ?? string.Empty;
 
             LastToolCalls.Clear();
-            if (response.ToolCalls != null)
+            if (turn?.ToolCalls != null)
             {
-                foreach (var toolCall in response.ToolCalls)
-                    LastToolCalls.Add(toolCall);
+                foreach (var tc in turn.ToolCalls)
+                    LastToolCalls.Add(new McpVoiceToolCallRecord
+                    {
+                        TurnId = tc.TurnId,
+                        ToolName = tc.ToolName,
+                        Step = tc.Step,
+                        ArgumentsJson = tc.ArgumentsJson,
+                        Status = tc.Status,
+                        IsMutation = tc.IsMutation,
+                        ResultSummary = tc.ResultSummary,
+                        Error = tc.Error
+                    });
             }
 
             await RefreshTranscriptAsyncInternal(ct).ConfigureAwait(true);
 
-            StatusText = string.Equals(response.Status, "completed", StringComparison.OrdinalIgnoreCase)
-                ? $"Voice turn completed ({response.LatencyMs} ms)"
-                : $"Voice turn {response.Status}: {response.Error ?? "no details"}";
+            StatusText = string.Equals(turn?.Status, "completed", StringComparison.OrdinalIgnoreCase)
+                ? $"Voice turn completed ({turn?.LatencyMs ?? 0} ms)"
+                : $"Voice turn {turn?.Status}: {turn?.Error ?? "no details"}";
             GlobalStatusChanged?.Invoke(StatusText);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -498,10 +513,13 @@ public partial class VoiceConversationViewModel : ViewModelBase
         IsBusy = true;
         try
         {
-            var status = await _voiceService.GetStatusAsync(SessionId).ConfigureAwait(true);
-            IsSessionActive = true;
-            LastTurnId = status.LastTurnId ?? LastTurnId;
-            StatusText = $"{status.Status} (turn active: {status.IsTurnActive})";
+            var status = await _dispatcher.QueryAsync(new GetVoiceStatusQuery(SessionId), default).ConfigureAwait(true);
+            if (status.IsSuccess && status.Value != null)
+            {
+                IsSessionActive = true;
+                LastTurnId = status.Value.LastTurnId ?? LastTurnId;
+                StatusText = $"{status.Value.Status} (turn active: {status.Value.IsTurnActive})";
+            }
             GlobalStatusChanged?.Invoke(StatusText);
         }
         catch (Exception ex)
@@ -529,8 +547,8 @@ public partial class VoiceConversationViewModel : ViewModelBase
         try
         {
             _activeTurnCts?.Cancel();
-            var result = await _voiceService.InterruptAsync(SessionId).ConfigureAwait(true);
-            StatusText = result.Interrupted ? "Interrupt sent." : "No active turn to interrupt.";
+            var result = await _dispatcher.SendAsync(new InterruptVoiceCommand(SessionId), default).ConfigureAwait(true);
+            StatusText = (result.IsSuccess && result.Value != null && result.Value.Interrupted) ? "Interrupt sent." : "No active turn to interrupt.";
             GlobalStatusChanged?.Invoke(StatusText);
         }
         catch (Exception ex)
@@ -553,8 +571,8 @@ public partial class VoiceConversationViewModel : ViewModelBase
 
         try
         {
-            var sent = await _voiceService.SendEscapeAsync(SessionId).ConfigureAwait(true);
-            StatusText = sent ? "ESC sent to Copilot." : "No active interactive session.";
+            var result = await _dispatcher.SendAsync(new InterruptVoiceCommand(SessionId), default).ConfigureAwait(true);
+            StatusText = (result.IsSuccess && result.Value != null && result.Value.Interrupted) ? "ESC sent to Copilot." : "No active interactive session.";
             GlobalStatusChanged?.Invoke(StatusText);
         }
         catch (Exception ex)
@@ -580,7 +598,7 @@ public partial class VoiceConversationViewModel : ViewModelBase
         try
         {
             _activeTurnCts?.Cancel();
-            await _voiceService.DeleteSessionAsync(SessionId).ConfigureAwait(true);
+            await _dispatcher.SendAsync(new DeleteVoiceSessionCommand(SessionId), default).ConfigureAwait(true);
             ClearSessionState();
             StatusText = "Voice session ended.";
             GlobalStatusChanged?.Invoke(StatusText);
@@ -609,10 +627,20 @@ public partial class VoiceConversationViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(SessionId))
             return;
 
-        var response = await _voiceService.GetTranscriptAsync(SessionId, cancellationToken).ConfigureAwait(true);
+        var response = await _dispatcher.QueryAsync(new GetVoiceTranscriptQuery(SessionId), default).ConfigureAwait(true);
         TranscriptItems.Clear();
-        foreach (var item in response.Items.OrderBy(i => i.TimestampUtc, StringComparer.Ordinal))
-            TranscriptItems.Add(item);
+        if (response.IsSuccess && response.Value?.Items != null)
+        {
+            foreach (var item in response.Value.Items.OrderBy(i => i.TimestampUtc, StringComparer.Ordinal))
+                TranscriptItems.Add(new McpVoiceTranscriptEntry
+                {
+                    TimestampUtc = item.TimestampUtc,
+                    TurnId = item.TurnId,
+                    Role = item.Role,
+                    Category = item.Category,
+                    Text = item.Text
+                });
+        }
     }
 
     private async Task RefreshTranscriptSnapshotForExportAsync(CancellationToken cancellationToken)

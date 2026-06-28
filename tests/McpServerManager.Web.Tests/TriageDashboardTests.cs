@@ -39,7 +39,7 @@ public sealed class TriageDashboardTests
     [Fact]
     public void TriageDashboard_RendersOpenTriageTodos()
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = new DateTimeOffset(2026, 6, 27, 18, 0, 0, TimeSpan.Zero);
         var triageApi = new TriageApiClientStub
         {
             Dashboard = CreateDashboard(now),
@@ -58,6 +58,10 @@ public sealed class TriageDashboardTests
         Assert.Contains("TODO-77", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Investigate triage finding", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("TargetWorkspace", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Timestamp", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(SortableTimestamp(now.AddMinutes(5)), cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(SortableTimestamp(now.AddMinutes(-2)), cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(SortableTimestamp(now.AddMinutes(-1)), cut.Markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -226,6 +230,9 @@ public sealed class TriageDashboardTests
             GroupSummary: "Collecting summary",
             ReportCount: 1,
             QuietDeadlineUtc: now.AddMinutes(5));
+
+    private static string SortableTimestamp(DateTimeOffset value)
+        => value.ToUniversalTime().ToString("u");
 
     private sealed class TriageApiClientStub : ITriageApiClient
     {

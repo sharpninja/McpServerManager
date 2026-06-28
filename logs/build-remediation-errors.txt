@@ -1,0 +1,17 @@
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\ViewModels\WorkspaceViewModel.cs(14,7): warning CS0105: The using directive for 'McpServerManager.UI.Core.Messages' appeared previously in this namespace [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Messages\VoiceMessages.cs(7,22): error CS0101: The namespace 'McpServerManager.UI.Core.Messages' already contains a definition for 'CreateVoiceSessionCommand' [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Messages\VoiceMessages.cs(44,22): error CS0101: The namespace 'McpServerManager.UI.Core.Messages' already contains a definition for 'SubmitVoiceTurnCommand' [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Handlers\VoiceHandlers.cs(10,23): error CS0101: The namespace 'McpServerManager.UI.Core.Handlers' already contains a definition for 'CreateVoiceSessionCommandHandler' [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Handlers\VoiceHandlers.cs(23,49): error CS0111: Type 'CreateVoiceSessionCommandHandler' already defines a member called 'HandleAsync' with the same parameter types [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+
+Build FAILED.
+
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\ViewModels\WorkspaceViewModel.cs(14,7): warning CS0105: The using directive for 'McpServerManager.UI.Core.Messages' appeared previously in this namespace [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Messages\VoiceMessages.cs(7,22): error CS0101: The namespace 'McpServerManager.UI.Core.Messages' already contains a definition for 'CreateVoiceSessionCommand' [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Messages\VoiceMessages.cs(44,22): error CS0101: The namespace 'McpServerManager.UI.Core.Messages' already contains a definition for 'SubmitVoiceTurnCommand' [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Handlers\VoiceHandlers.cs(10,23): error CS0101: The namespace 'McpServerManager.UI.Core.Handlers' already contains a definition for 'CreateVoiceSessionCommandHandler' [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\Handlers\VoiceHandlers.cs(23,49): error CS0111: Type 'CreateVoiceSessionCommandHandler' already defines a member called 'HandleAsync' with the same parameter types [F:\GitHub\McpServerManager\src\McpServerManager.UI.Core\McpServerManager.UI.Core.csproj]
+    1 Warning(s)
+    4 Error(s)
+
+Time Elapsed 00:00:10.47

@@ -1,4 +1,5 @@
 using System;
+using McpServer.Cqrs;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
@@ -12,9 +13,10 @@ public sealed class WebVoiceConversationViewModel : VoiceConversationViewModel
 
     public WebVoiceConversationViewModel(
         IVoiceConversationService service,
+        Dispatcher dispatcher,
         WorkspaceContextViewModel workspaceContext,
         ILogger<VoiceConversationViewModel>? logger = null)
-        : base(service, logger)
+        : base(service, dispatcher, logger)
     {
         ClientName = "RequestTracker.Web";
         StatusText = SessionReadyStatusText;

@@ -27,6 +27,7 @@ using McpServerManager.UI.Core.Models;
 using McpServerManager.UI.Core.Models.Json;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.Commands;
+using McpServerManager.UI.Core.Messages;
 using StatusViewModel = McpServerManager.UI.Core.ViewModels.StatusViewModel;
 using UiCoreWorkspaceCatalogChangeEvent = McpServerManager.UI.Core.ViewModels.WorkspaceCatalogChangeEvent;
 using UiCoreWorkspaceCatalogChangeKind = McpServerManager.UI.Core.ViewModels.WorkspaceCatalogChangeKind;
@@ -1242,8 +1243,22 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
 
         try
         {
-            var query = await _mcpWorkspaceService.QueryAsync().ConfigureAwait(true);
-            var options = BuildWorkspaceConnectionOptions(query.Items);
+            var result = await _dispatcher.QueryAsync(new ListWorkspacesQuery(), default).ConfigureAwait(true);
+            var options = new List<WorkspaceConnectionOption>();
+            if (result.IsSuccess && result.Value?.Items != null)
+            {
+                foreach (var s in result.Value.Items)
+                    options.Add(new WorkspaceConnectionOption
+                    {
+                        Key = s.WorkspacePath,
+                        WorkspaceKey = s.WorkspacePath,
+                        WorkspaceRootPath = s.WorkspacePath,
+                        DisplayName = s.Name ?? s.WorkspacePath,
+                        BaseUrl = _defaultMcpBaseUri.ToString(),
+                        IsPrimary = s.IsPrimary,
+                        IsEnabled = true
+                    });
+            }
             DispatchToUi(() => ApplyWorkspaceConnectionOptions(options, preferredSelection, preferredBaseUrl));
         }
         catch (Exception ex)
@@ -2125,7 +2140,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     {
         if (!string.IsNullOrEmpty(text))
         {
-            await _clipboardService.SetTextAsync(text);
+            await _clipboardService.SetTextAsync(text).ConfigureAwait(true);
             SetStatus($"Copied: {text}");
         }
     }
@@ -2142,7 +2157,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         try
         {
             var json = JsonSerializer.Serialize(entry.OriginalTurn, new JsonSerializerOptions { WriteIndented = true });
-            await _clipboardService.SetTextAsync(json);
+            await _clipboardService.SetTextAsync(json).ConfigureAwait(true);
             SetStatus("Copied original JSON to clipboard.");
         }
         catch (Exception ex)

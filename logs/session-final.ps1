@@ -1,0 +1,11 @@
+Import-Module .\McpSession.psm1
+Initialize-McpSession
+$ts = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ')
+$s = [PSCustomObject]@{ sourceType="GrokCode"; sessionId="GrokCode-20260627T021310Z-remediate-viewmodel-logic-cqrs"; title="Remediate all ViewModel logic code not in CQRS issues"; model="grok-4.3-2026"; started=(Get-Date).ToUniversalTime().ToString("o"); lastUpdated=(Get-Date).ToUniversalTime().ToString("o"); status="in_progress"; entries=[System.Collections.Generic.List[object]]::new() }
+$entry = Add-McpSessionEntry -Session $s -RequestId "req-$ts-004-remediation-complete" -QueryTitle "Remediation complete: junk removed, build+tests green" -QueryText "Fixed all 22+ mangled 'remediated to CQRS' placeholders across 7 ViewModels by replacing with proper service or dispatcher calls. Removed duplicate voice defs. Added using, fixed clipboard API SetTextAsync, type mappings for results. Verified: grep zero matches for bad pattern. UI.Core build succeeded. 2x clean test runs 299/299 pass 0 fail." -Status "completed" -Tags @("remediation","cqrs","byrd","green-tests")
+Add-McpAction -Entry $entry -Description "Removed all instances of broken SubscribeToEventsQuery // remediated placeholders (22 total). Proper delegation to _chatService, _connectionAuthService, _clipboardService.SetTextAsync, _dispatcher with correct *Command/*Query from Messages." -Type "design_decision" -Status "completed" -FilePath "src/McpServerManager.UI.Core/ViewModels/"
+Add-McpAction -Entry $entry -Description "GREP src/ for 'remediated to CQRS' returned ZERO matches. Per AGENTS.md refactoring verification rule satisfied." -Type "commit" -Status "completed"
+Add-McpAction -Entry $entry -Description "2 clean test runs captured: 299 passed, 0 failed, 0 skipped on McpServerManager.UI.Core.Tests after fixes." -Type "commit" -Status "completed" -FilePath "tests/McpServerManager.UI.Core.Tests/"
+Add-McpAction -Entry $entry -Description "Updated session log and internal todo tracking. Code compiles, CQRS dispatch or service abstractions used for former direct/broken logic." -Type "design_decision" -Status "completed"
+Update-McpSessionLog -Session $s
+Write-Host "Final turn recorded. Remediation session complete."

@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using McpServerManager.UI.Core.Models;
 using McpServerManager.UI.Core.Services;
+using McpServer.Cqrs;
+using McpServerManager.UI.Core.Messages;
 using UiCoreWorkspaceDetailViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceDetailViewModel;
 using UiCoreWorkspaceGlobalPromptViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceGlobalPromptViewModel;
 using UiCoreWorkspaceHealthProbeViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceHealthProbeViewModel;
@@ -26,7 +28,7 @@ public partial class WorkspaceViewModel : ViewModelBase
     private readonly IClipboardService _clipboardService;
     private readonly ITimerService _timerService;
     private readonly IUiDispatcherService _uiDispatcher;
-    private readonly UiCoreWorkspaceListViewModel _listVm;
+    private readonly Dispatcher _dispatcher;
     private readonly UiCoreWorkspaceDetailViewModel _detailVm;
     private readonly UiCoreWorkspaceGlobalPromptViewModel _globalPromptVm;
     private readonly UiCoreWorkspaceHealthProbeViewModel _healthVm;
@@ -82,21 +84,21 @@ public partial class WorkspaceViewModel : ViewModelBase
 
     public WorkspaceViewModel(
         IClipboardService clipboardService,
-        UiCoreWorkspaceListViewModel listVm,
         UiCoreWorkspaceDetailViewModel detailVm,
         UiCoreWorkspaceGlobalPromptViewModel globalPromptVm,
         UiCoreWorkspaceHealthProbeViewModel healthVm,
         ITimerService timerService,
         IUiDispatcherService uiDispatcher,
+        Dispatcher dispatcher,
         ILogger<WorkspaceViewModel>? logger = null)
     {
         _clipboardService = clipboardService ?? throw new ArgumentNullException(nameof(clipboardService));
-        _listVm = listVm ?? throw new ArgumentNullException(nameof(listVm));
         _detailVm = detailVm ?? throw new ArgumentNullException(nameof(detailVm));
         _globalPromptVm = globalPromptVm ?? throw new ArgumentNullException(nameof(globalPromptVm));
         _healthVm = healthVm ?? throw new ArgumentNullException(nameof(healthVm));
         _timerService = timerService ?? throw new ArgumentNullException(nameof(timerService));
         _uiDispatcher = uiDispatcher ?? throw new ArgumentNullException(nameof(uiDispatcher));
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _logger = logger ?? NullLogger<WorkspaceViewModel>.Instance;
         NewWorkspace();
     }
@@ -139,9 +141,9 @@ public partial class WorkspaceViewModel : ViewModelBase
     {
     }
 
-    protected async Task LoadWorkspacesAsync() => await LoadWorkspacesCoreAsync(forceEditorReload: false);
+    protected internal async Task LoadWorkspacesAsync() => await LoadWorkspacesCoreAsync(forceEditorReload: false);
 
-    protected async Task RefreshAsync() => await LoadWorkspacesCoreAsync(forceEditorReload: true);
+    protected internal async Task RefreshAsync() => await LoadWorkspacesCoreAsync(forceEditorReload: true);
 
     protected async Task LoadGlobalPromptAsync() => await LoadGlobalPromptCoreAsync(updateStatusBar: true);
 
@@ -238,12 +240,76 @@ public partial class WorkspaceViewModel : ViewModelBase
     protected async Task SaveEditorAsync()
     {
         if (IsEditingExisting)
-            await UpdateExistingWorkspaceAsync();
+        {
+            var key = GetKeyForActions();
+            if (string.IsNullOrWhiteSpace(key)) return;
+            var cmd = new UpdateWorkspaceCommand
+            {
+                WorkspacePath = key,
+                Name = EditorName,
+                TodoPath = EditorTodoPath,
+                DataDirectory = EditorDataDirectory,
+                TunnelProvider = EditorTunnelProvider,
+                RunAs = EditorRunAs,
+                IsPrimary = EditorIsPrimary,
+                IsEnabled = EditorIsEnabled,
+                PromptTemplate = EditorPromptTemplateText,
+                StatusPrompt = EditorStatusPromptText,
+                ImplementPrompt = EditorImplementPromptText,
+                PlanPrompt = EditorPlanPromptText,
+            };
+            var result = await _dispatcher.SendAsync(cmd, default).ConfigureAwait(true);
+            if (!result.IsSuccess || result.Value == null || !result.Value.Success)
+            {
+                StatusText = "Save failed: " + (result.Value?.Error ?? result.Error ?? "unknown");
+                return;
+            }
+            if (result.Value.Item != null) PopulateEditor(result.Value.Item);
+            SetEditingWorkspaceKey(key);
+            StatusText = $"Saved {key}";
+            await LoadWorkspacesAsync();
+            SelectEntryByKey(key);
+            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Updated, key, result.Value.Item);
+        }
         else
-            await CreateWorkspaceAsync();
+        {
+            if (string.IsNullOrWhiteSpace(EditorWorkspacePath))
+            {
+                StatusText = "Workspace Path is required";
+                return;
+            }
+            var cmd = new CreateWorkspaceCommand
+            {
+                WorkspacePath = EditorWorkspacePath,
+                Name = EditorName,
+                TodoPath = EditorTodoPath,
+                DataDirectory = EditorDataDirectory,
+                TunnelProvider = EditorTunnelProvider,
+                RunAs = EditorRunAs,
+                IsPrimary = EditorIsPrimary,
+                IsEnabled = EditorIsEnabled,
+                PromptTemplate = EditorPromptTemplateText,
+                StatusPrompt = EditorStatusPromptText,
+                ImplementPrompt = EditorImplementPromptText,
+                PlanPrompt = EditorPlanPromptText,
+            };
+            var result = await _dispatcher.SendAsync(cmd, default).ConfigureAwait(true);
+            if (!result.IsSuccess || result.Value == null || !result.Value.Success)
+            {
+                StatusText = "Create failed: " + (result.Value?.Error ?? result.Error ?? "unknown");
+                return;
+            }
+            var key = result.Value.Item?.WorkspacePath ?? EditorWorkspacePath;
+            if (result.Value.Item != null) PopulateEditor(result.Value.Item);
+            SetEditingWorkspaceKey(key);
+            StatusText = $"Created {key}";
+            await LoadWorkspacesAsync();
+            SelectEntryByKey(key);
+            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Created, key, result.Value.Item);
+        }
     }
 
-    protected async Task DeleteSelectedAsync()
+    protected internal async Task DeleteSelectedAsync()
     {
         var key = GetKeyForActions();
         if (string.IsNullOrWhiteSpace(key))
@@ -251,13 +317,10 @@ public partial class WorkspaceViewModel : ViewModelBase
 
         try
         {
-            _detailVm.WorkspacePath = key;
-            _detailVm.EditorWorkspacePath = key;
-            _detailVm.IsNewDraft = false;
-            await _detailVm.DeleteAsync();
-            if (!string.IsNullOrWhiteSpace(_detailVm.ErrorMessage))
+            var result = await _dispatcher.SendAsync(new DeleteWorkspaceCommand(key), default).ConfigureAwait(true);
+            if (!result.IsSuccess || result.Value == null || !result.Value.Success)
             {
-                StatusText = "Delete failed: " + _detailVm.ErrorMessage;
+                StatusText = "Delete failed: " + (result.Value?.Error ?? result.Error ?? "unknown");
                 return;
             }
 
@@ -282,15 +345,14 @@ public partial class WorkspaceViewModel : ViewModelBase
 
         try
         {
-            _healthVm.WorkspacePath = key;
-            await _healthVm.GetStatusAsync();
-            if (!string.IsNullOrWhiteSpace(_healthVm.ErrorMessage))
+            var result = await _dispatcher.QueryAsync(new GetWorkspaceStatusQuery(key), default).ConfigureAwait(true);
+            if (!result.IsSuccess || result.Value == null)
             {
-                StatusText = "Error: " + _healthVm.ErrorMessage;
+                StatusText = "Error: " + (result.Error ?? "unknown");
                 return;
             }
-
-            ProcessStatusText = _healthVm.ProcessStatusText;
+            // map to process status text if needed
+            ProcessStatusText = result.Value.IsRunning ? $"Running pid {result.Value.Pid}" : "Stopped";
             StatusText = $"Status loaded for {key}";
         }
         catch (Exception ex)
@@ -301,7 +363,23 @@ public partial class WorkspaceViewModel : ViewModelBase
 
     protected async Task CheckSelectedWorkspaceHealthAsync()
     {
-        await CheckWorkspaceHealthForSelectionAsync(updateStatusText: true);
+        var key = GetKeyForActions();
+        if (string.IsNullOrWhiteSpace(key)) return;
+        try
+        {
+            var result = await _dispatcher.QueryAsync(new CheckWorkspaceHealthQuery(key), default).ConfigureAwait(true);
+            if (!result.IsSuccess || result.Value == null)
+            {
+                StatusText = "Error: " + (result.Error ?? "unknown");
+                return;
+            }
+            UpdateHealthIndicator(result.Value.Success, null);
+            StatusText = $"Health checked for {key}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = "Error: " + ex.Message;
+        }
     }
 
     protected bool CanCheckSelectedWorkspaceHealth() => !string.IsNullOrWhiteSpace(SelectedEntry?.Key);
@@ -314,15 +392,14 @@ public partial class WorkspaceViewModel : ViewModelBase
 
         try
         {
-            _healthVm.WorkspacePath = key;
-            await _healthVm.InitializeAsync();
-            if (!string.IsNullOrWhiteSpace(_healthVm.ErrorMessage))
+            var result = await _dispatcher.SendAsync(new InitWorkspaceCommand(key), default).ConfigureAwait(true);
+            if (!result.IsSuccess || result.Value == null)
             {
-                StatusText = "Init failed: " + _healthVm.ErrorMessage;
+                StatusText = "Init failed: " + (result.Error ?? "unknown");
                 return;
             }
 
-            var fileCount = _healthVm.LastInitInfo?.SeededDefinitions ?? 0;
+            var fileCount = result.Value.SeededDefinitions ?? 0;
             StatusText = $"Initialized {key} ({fileCount} files)";
         }
         catch (Exception ex)
@@ -339,16 +416,15 @@ public partial class WorkspaceViewModel : ViewModelBase
 
         try
         {
-            _healthVm.WorkspacePath = key;
-            await _healthVm.StartAsync();
-            if (!string.IsNullOrWhiteSpace(_healthVm.ErrorMessage))
+            var result = await _dispatcher.SendAsync(new StartWorkspaceCommand(key), default).ConfigureAwait(true);
+            if (!result.IsSuccess || result.Value == null)
             {
-                StatusText = $"Start failed for {key}: {_healthVm.ErrorMessage}";
+                StatusText = $"Start failed for {key}: {result.Error ?? "unknown"}";
                 return;
             }
 
-            ProcessStatusText = _healthVm.ProcessStatusText;
-            var state = _healthVm.LastProcessState;
+            ProcessStatusText = result.Value.IsRunning ? $"Running pid {result.Value.Pid}" : "";
+            var state = result.Value;
             if (!string.IsNullOrWhiteSpace(state?.Error))
                 StatusText = $"Start failed for {key}: {state.Error}";
             else if (state?.IsRunning == true)
@@ -370,15 +446,14 @@ public partial class WorkspaceViewModel : ViewModelBase
 
         try
         {
-            _healthVm.WorkspacePath = key;
-            await _healthVm.StopAsync();
-            if (!string.IsNullOrWhiteSpace(_healthVm.ErrorMessage))
+            var result = await _dispatcher.SendAsync(new StopWorkspaceCommand(key), default).ConfigureAwait(true);
+            if (!result.IsSuccess || result.Value == null)
             {
-                StatusText = $"Stop failed for {key}: {_healthVm.ErrorMessage}";
+                StatusText = $"Stop failed for {key}: {result.Error ?? "unknown"}";
                 return;
             }
 
-            ProcessStatusText = _healthVm.ProcessStatusText;
+            ProcessStatusText = result.Value.IsRunning ? $"Running pid {result.Value.Pid}" : "";
             StatusText = $"Stop requested for {key}";
         }
         catch (Exception ex)
@@ -393,7 +468,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(key))
             return;
 
-        await _clipboardService.SetTextAsync(key);
+        await _clipboardService.SetTextAsync(key).ConfigureAwait(true);
         StatusText = $"Copied {key}";
     }
 
@@ -545,19 +620,20 @@ public partial class WorkspaceViewModel : ViewModelBase
         var selectedKey = SelectedEntry?.Key ?? _editingWorkspaceKey;
         try
         {
-            await _listVm.LoadAsync();
-            if (!string.IsNullOrWhiteSpace(_listVm.ErrorMessage))
+            var result = await _dispatcher.QueryAsync(new ListWorkspacesQuery(), default).ConfigureAwait(true);
+            if (!result.IsSuccess || result.Value is null)
             {
                 _allEntries.Clear();
                 ApplyFilters();
-                StatusText = "Error: " + _listVm.ErrorMessage;
-                GlobalStatusChanged?.Invoke($"Workspace load failed: {_listVm.ErrorMessage}");
+                var err = result.Error ?? "Unknown error loading workspaces.";
+                StatusText = "Error: " + err;
+                GlobalStatusChanged?.Invoke($"Workspace load failed: {err}");
                 return;
             }
 
             _allEntries.Clear();
             _allEntries.AddRange(
-                _listVm.Workspaces
+                result.Value.Items
                     .Select(ToEntry)
                     .OrderBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase));
 
@@ -577,10 +653,10 @@ public partial class WorkspaceViewModel : ViewModelBase
             if (!_hasLoadedGlobalPrompt || forceEditorReload)
                 await LoadGlobalPromptCoreAsync(updateStatusBar: false);
 
-            StatusText = $"{_listVm.TotalCount} workspace(s){refreshNote}";
+            StatusText = $"{result.Value.TotalCount} workspace(s){refreshNote}";
             GlobalStatusChanged?.Invoke(forceEditorReload
-                ? $"Refreshed {_listVm.TotalCount} workspace(s)."
-                : $"Loaded {_listVm.TotalCount} workspace(s).");
+                ? $"Refreshed {result.Value.TotalCount} workspace(s)."
+                : $"Loaded {result.Value.TotalCount} workspace(s).");
         }
         catch (Exception ex)
         {
