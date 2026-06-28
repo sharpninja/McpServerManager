@@ -216,6 +216,9 @@ public static class McpActionKeys
     /// <summary>Triage dashboard and detail read action.</summary>
     public const string TriageRead = "triage.read";
 
+    /// <summary>Triage group edit action.</summary>
+    public const string TriageEdit = "triage.edit";
+
     /// <summary>Template list query action.</summary>
     public const string TemplateList = "template.list";
 

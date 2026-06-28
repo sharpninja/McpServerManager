@@ -67,6 +67,15 @@ public sealed class DirectorAuthorizationPolicyServiceTests
 
         Assert.True(policy.CanViewArea(McpArea.Triage));
         Assert.True(policy.CanExecuteAction(McpActionKeys.TriageRead));
+        Assert.False(policy.CanExecuteAction(McpActionKeys.TriageEdit));
+    }
+
+    [Fact]
+    public void AgentManagerRole_CanEditTriageGroups()
+    {
+        var policy = new DirectorAuthorizationPolicyService(new FakeRoleContext(roles: [McpRoles.AgentManager]));
+
+        Assert.True(policy.CanExecuteAction(McpActionKeys.TriageEdit));
     }
 
     [Fact]
@@ -92,6 +101,7 @@ public sealed class DirectorAuthorizationPolicyServiceTests
     [InlineData(McpActionKeys.RequirementsGenerate, McpRoles.Viewer)]
     [InlineData(McpActionKeys.ToolRegistryMutate, McpRoles.Admin)]
     [InlineData(McpActionKeys.TriageRead, McpRoles.Viewer)]
+    [InlineData(McpActionKeys.TriageEdit, McpRoles.AgentManager)]
     [InlineData(McpActionKeys.VoiceStatus, McpRoles.Viewer)]
     [InlineData(McpActionKeys.ConfigurationPatch, McpRoles.Admin)]
     public void GetRequiredRole_ForKnownActionKeys_ReturnsExpectedRole(string actionKey, string expectedRole)

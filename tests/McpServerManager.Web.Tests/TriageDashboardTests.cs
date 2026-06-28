@@ -1,4 +1,5 @@
 using Bunit;
+using AngleSharp.Dom;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.ViewModels;
@@ -120,6 +121,83 @@ public sealed class TriageDashboardTests
     }
 
     [Fact]
+    public void TriageDashboard_CreatesNewGroupFromSelectedTriageRows()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var triageApi = new TriageApiClientStub
+        {
+            Dashboard = CreateDashboard(now),
+            OpenTodos = new OpenTriageTodosResult([], 0, 0, 0)
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITriageApiClient>(triageApi));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Triage.TriageDashboard>();
+
+        cut.WaitForAssertion(() => Assert.Contains("group-collecting", cut.Markup, StringComparison.Ordinal));
+        cut.Find("input[aria-label='Select triage group group-collecting']").Change(true);
+        FindButton(cut, "New Group").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var selection = Assert.Single(triageApi.CreateSelections);
+            Assert.Equal(["group-collecting"], selection.GroupIds);
+            Assert.Empty(selection.ReportIds);
+        });
+    }
+
+    [Fact]
+    public void TriageDashboard_ConsolidatesSelectedTriageRowsIntoSelectedReportGroup()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var triageApi = new TriageApiClientStub
+        {
+            Dashboard = CreateDashboard(now),
+            OpenTodos = new OpenTriageTodosResult([], 0, 0, 0)
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITriageApiClient>(triageApi));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Triage.TriageDashboard>();
+
+        cut.WaitForAssertion(() => Assert.Contains("group-ready", cut.Markup, StringComparison.Ordinal));
+        cut.Find("input[aria-label='Select triage group group-collecting']").Change(true);
+        cut.Find("input[aria-label='Select report group group-ready']").Change(true);
+        FindButton(cut, "Move To Group").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var call = Assert.Single(triageApi.ConsolidateSelections);
+            Assert.Equal("group-ready", call.TargetGroupId);
+            Assert.Equal(["group-collecting"], call.Selection.GroupIds);
+        });
+    }
+
+    [Fact]
+    public void TriageDashboard_MergesSelectedGroups()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var triageApi = new TriageApiClientStub
+        {
+            Dashboard = CreateDashboard(now),
+            OpenTodos = new OpenTriageTodosResult([], 0, 0, 0)
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITriageApiClient>(triageApi));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Triage.TriageDashboard>();
+
+        cut.WaitForAssertion(() => Assert.Contains("group-ready", cut.Markup, StringComparison.Ordinal));
+        cut.Find("input[aria-label='Select triage group group-collecting']").Change(true);
+        cut.Find("input[aria-label='Select report group group-ready']").Change(true);
+        FindButton(cut, "Combine Groups").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var call = Assert.Single(triageApi.MergeSelections);
+            Assert.Equal("group-ready", call.TargetGroupId);
+            Assert.Equal(["group-collecting"], call.Selection.GroupIds);
+        });
+    }
+
+    [Fact]
     public void TodoDetail_DirectWorkspacePathQuery_SelectsWorkspaceBeforeLoading()
     {
         ListTodosQuery? listQuery = null;
@@ -189,7 +267,20 @@ public sealed class TriageDashboardTests
                     LastError: null,
                     Reports: [])
             ],
-            ReportGroupQueue: [],
+            ReportGroupQueue:
+            [
+                new TriageGroupSnapshot(
+                    "group-ready",
+                    "ready",
+                    ReportCount: 1,
+                    WorkspacePath,
+                    Title: "Ready group",
+                    Summary: "Ready summary",
+                    QuietDeadlineUtc: now.AddMinutes(3),
+                    CreatedTodoId: null,
+                    LastError: null,
+                    Reports: [])
+            ],
             RunHistory:
             [
                 new TriageRunSnapshot(
@@ -232,7 +323,11 @@ public sealed class TriageDashboardTests
             QuietDeadlineUtc: now.AddMinutes(5));
 
     private static string SortableTimestamp(DateTimeOffset value)
-        => value.ToUniversalTime().ToString("u");
+        => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");
+
+    private static IElement FindButton<TComponent>(IRenderedComponent<TComponent> cut, string text)
+        where TComponent : IComponent
+        => cut.FindAll("button").First(button => button.TextContent.Contains(text, StringComparison.Ordinal));
 
     private sealed class TriageApiClientStub : ITriageApiClient
     {
@@ -240,6 +335,9 @@ public sealed class TriageDashboardTests
         public OpenTriageTodosResult OpenTodos { get; init; } = new([], 0, 0, 0);
         public List<string?> DashboardWorkspacePaths { get; } = [];
         public List<string?> OpenTodoWorkspacePaths { get; } = [];
+        public List<TriageGroupSelectionSnapshot> CreateSelections { get; } = [];
+        public List<(string TargetGroupId, TriageGroupSelectionSnapshot Selection)> ConsolidateSelections { get; } = [];
+        public List<(string TargetGroupId, TriageGroupSelectionSnapshot Selection)> MergeSelections { get; } = [];
 
         public Task<TriageDashboardSnapshot> GetDashboardAsync(string? workspacePath, CancellationToken cancellationToken = default)
         {
@@ -267,6 +365,40 @@ public sealed class TriageDashboardTests
             OpenTodoWorkspacePaths.Add(workspacePath);
             return Task.FromResult(OpenTodos);
         }
+
+        public Task<TriageGroupEditResultSnapshot> CreateGroupFromSelectionAsync(TriageGroupSelectionSnapshot selection, CancellationToken cancellationToken = default)
+        {
+            CreateSelections.Add(selection);
+            return Task.FromResult(CreateEditResult(selection.GroupIds.FirstOrDefault() ?? "group-created"));
+        }
+
+        public Task<TriageGroupEditResultSnapshot> ConsolidateIntoGroupAsync(string targetGroupId, TriageGroupSelectionSnapshot selection, CancellationToken cancellationToken = default)
+        {
+            ConsolidateSelections.Add((targetGroupId, selection));
+            return Task.FromResult(CreateEditResult(targetGroupId));
+        }
+
+        public Task<TriageGroupEditResultSnapshot> MergeGroupsAsync(string targetGroupId, TriageGroupSelectionSnapshot selection, CancellationToken cancellationToken = default)
+        {
+            MergeSelections.Add((targetGroupId, selection));
+            return Task.FromResult(CreateEditResult(targetGroupId));
+        }
+
+        private static TriageGroupEditResultSnapshot CreateEditResult(string groupId)
+            => new(
+                new TriageGroupSnapshot(
+                    groupId,
+                    "ready",
+                    ReportCount: 2,
+                    WorkspacePath,
+                    Title: "Edited group",
+                    Summary: "Edited summary",
+                    QuietDeadlineUtc: DateTimeOffset.UtcNow,
+                    CreatedTodoId: null,
+                    LastError: null,
+                    Reports: []),
+                [],
+                MovedReportCount: 1);
     }
 
     private sealed class TodoApiClientStub : ITodoApiClient

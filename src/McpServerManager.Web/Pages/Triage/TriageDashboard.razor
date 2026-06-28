@@ -28,22 +28,45 @@ else
 {
     <p class="color-fg-muted mb-3">@ViewModel.StatusMessage</p>
 
+    <div class="d-flex flex-wrap flex-items-center gap-2 mb-3">
+        <button type="button" class="btn btn-sm" @onclick="CreateGroupFromSelectedAsync" disabled="@(!CanCreateNewGroup)">
+            <OcticonIcon Name="plus" Size="16" /> New Group
+        </button>
+        <button type="button" class="btn btn-sm" @onclick="ConsolidateIntoSelectedGroupAsync" disabled="@(!CanConsolidateToSelectedGroup)">
+            <OcticonIcon Name="repo-push" Size="16" /> Move To Group
+        </button>
+        <button type="button" class="btn btn-sm" @onclick="MergeSelectedGroupsAsync" disabled="@(!CanMergeSelectedGroups)">
+            <OcticonIcon Name="git-merge" Size="16" /> Combine Groups
+        </button>
+        <button type="button" class="btn btn-sm" @onclick="ClearSelections" disabled="@(SelectedGroupCount == 0)">
+            <OcticonIcon Name="x" Size="16" /> Clear
+        </button>
+    </div>
+
     <section class="Box mb-3">
         <div class="Box-header">
             <h2 class="h4 mb-0">Triage Queue <span class="Counter">@ViewModel.TriageQueue.Count</span></h2>
         </div>
-        <PrimerDataTable TItem="TriageGroupSnapshot" Items="ViewModel.TriageQueue" ColumnCount="6" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+        <PrimerDataTable TItem="TriageGroupSnapshot" Items="ViewModel.TriageQueue" ColumnCount="7" Class="Table--full-width" style="width:100%; table-layout:fixed;">
             <HeaderTemplate>
                 <tr>
-                    <th style="width:11%">Status</th>
+                    <th style="width:4%"></th>
+                    <th style="width:10%">Status</th>
                     <th style="width:18%">Timestamp</th>
                     <th style="width:20%">Group</th>
                     <th style="width:8%">Reports</th>
-                    <th style="width:31%">Title</th>
+                    <th style="width:28%">Title</th>
                     <th style="width:12%"></th>
                 </tr>
             </HeaderTemplate>
             <RowTemplate Context="group">
+                <td>
+                    <input type="checkbox"
+                           class="form-checkbox"
+                           aria-label="Select triage group @group.GroupId"
+                           checked="@IsTriageGroupSelected(group.GroupId)"
+                           @onchange="args => ToggleTriageGroup(group.GroupId, args)" />
+                </td>
                 <td><PrimerLabel Scheme="@GetStatusScheme(group.Status)" Text="@group.Status" /></td>
                 <td class="text-mono text-small"><time datetime="@FormatMachineTimestamp(group.QuietDeadlineUtc)">@FormatTimestamp(group.QuietDeadlineUtc)</time></td>
                 <td><code>@group.GroupId</code></td>
@@ -61,18 +84,26 @@ else
         <div class="Box-header">
             <h2 class="h4 mb-0">Report Group Queue <span class="Counter">@ViewModel.ReportGroupQueue.Count</span></h2>
         </div>
-        <PrimerDataTable TItem="TriageGroupSnapshot" Items="ViewModel.ReportGroupQueue" ColumnCount="6" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+        <PrimerDataTable TItem="TriageGroupSnapshot" Items="ViewModel.ReportGroupQueue" ColumnCount="7" Class="Table--full-width" style="width:100%; table-layout:fixed;">
             <HeaderTemplate>
                 <tr>
-                    <th style="width:11%">Status</th>
+                    <th style="width:4%"></th>
+                    <th style="width:10%">Status</th>
                     <th style="width:18%">Timestamp</th>
                     <th style="width:20%">Group</th>
                     <th style="width:8%">Reports</th>
-                    <th style="width:31%">Title</th>
+                    <th style="width:28%">Title</th>
                     <th style="width:12%"></th>
                 </tr>
             </HeaderTemplate>
             <RowTemplate Context="group">
+                <td>
+                    <input type="checkbox"
+                           class="form-checkbox"
+                           aria-label="Select report group @group.GroupId"
+                           checked="@IsReportGroupSelected(group.GroupId)"
+                           @onchange="args => ToggleReportGroup(group.GroupId, args)" />
+                </td>
                 <td><PrimerLabel Scheme="@GetStatusScheme(group.Status)" Text="@group.Status" /></td>
                 <td class="text-mono text-small"><time datetime="@FormatMachineTimestamp(group.QuietDeadlineUtc)">@FormatTimestamp(group.QuietDeadlineUtc)</time></td>
                 <td><code>@group.GroupId</code></td>
@@ -214,6 +245,16 @@ else
 
     private bool _hasLoadedParameters;
     private string? _lastWorkspacePath;
+    private readonly HashSet<string> _selectedTriageGroupIds = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _selectedReportGroupIds = new(StringComparer.Ordinal);
+
+    private int SelectedGroupCount => _selectedTriageGroupIds.Count + _selectedReportGroupIds.Count;
+
+    private bool CanCreateNewGroup => !ViewModel.IsLoading && _selectedTriageGroupIds.Count > 0;
+
+    private bool CanConsolidateToSelectedGroup => !ViewModel.IsLoading && _selectedTriageGroupIds.Count > 0 && _selectedReportGroupIds.Count == 1;
+
+    private bool CanMergeSelectedGroups => !ViewModel.IsLoading && SelectedGroupCount > 1;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -232,6 +273,61 @@ else
             ApplyWorkspaceFromQuery();
             ViewModel.WorkspacePathFilter = WorkspacePath;
             await ViewModel.LoadAsync().ConfigureAwait(true);
+            PruneSelections();
+        }).ConfigureAwait(true);
+    }
+
+    private async Task CreateGroupFromSelectedAsync()
+    {
+        var selectedGroups = SelectedTriageGroupIdsInDisplayOrder();
+        if (selectedGroups.Count == 0)
+            return;
+
+        await CommandTarget.RunAsync(async () =>
+        {
+            var result = await ViewModel.CreateGroupFromSelectionAsync(new TriageGroupSelectionSnapshot(selectedGroups, [])).ConfigureAwait(true);
+            if (result is not null)
+                ClearSelections();
+        }).ConfigureAwait(true);
+    }
+
+    private async Task ConsolidateIntoSelectedGroupAsync()
+    {
+        var sourceGroups = SelectedTriageGroupIdsInDisplayOrder();
+        if (sourceGroups.Count == 0 || _selectedReportGroupIds.Count != 1)
+            return;
+
+        var targetGroupId = SelectedReportGroupIdsInDisplayOrder()[0];
+        await CommandTarget.RunAsync(async () =>
+        {
+            var result = await ViewModel.ConsolidateIntoGroupAsync(
+                targetGroupId,
+                new TriageGroupSelectionSnapshot(sourceGroups.Where(id => !string.Equals(id, targetGroupId, StringComparison.Ordinal)).ToList(), [])).ConfigureAwait(true);
+            if (result is not null)
+                ClearSelections();
+        }).ConfigureAwait(true);
+    }
+
+    private async Task MergeSelectedGroupsAsync()
+    {
+        var orderedGroupIds = SelectedGroupIdsInDisplayOrder();
+        if (orderedGroupIds.Count < 2)
+            return;
+
+        var targetGroupId = SelectedReportGroupIdsInDisplayOrder().FirstOrDefault() ?? orderedGroupIds[0];
+        var sourceGroupIds = orderedGroupIds
+            .Where(id => !string.Equals(id, targetGroupId, StringComparison.Ordinal))
+            .ToList();
+        if (sourceGroupIds.Count == 0)
+            return;
+
+        await CommandTarget.RunAsync(async () =>
+        {
+            var result = await ViewModel.MergeGroupsAsync(
+                targetGroupId,
+                new TriageGroupSelectionSnapshot(sourceGroupIds, [])).ConfigureAwait(true);
+            if (result is not null)
+                ClearSelections();
         }).ConfigureAwait(true);
     }
 
@@ -249,6 +345,46 @@ else
         WorkspaceContext.ActiveWorkspacePath = item.WorkspacePath;
         Navigation.NavigateTo($"/todos/{Uri.EscapeDataString(item.TodoId)}?workspacePath={Uri.EscapeDataString(item.WorkspacePath)}&done=false");
     }
+
+    private bool IsTriageGroupSelected(string groupId) => _selectedTriageGroupIds.Contains(groupId);
+
+    private bool IsReportGroupSelected(string groupId) => _selectedReportGroupIds.Contains(groupId);
+
+    private void ToggleTriageGroup(string groupId, ChangeEventArgs args)
+        => SetSelection(_selectedTriageGroupIds, groupId, args);
+
+    private void ToggleReportGroup(string groupId, ChangeEventArgs args)
+        => SetSelection(_selectedReportGroupIds, groupId, args);
+
+    private void ClearSelections()
+    {
+        _selectedTriageGroupIds.Clear();
+        _selectedReportGroupIds.Clear();
+    }
+
+    private void PruneSelections()
+    {
+        _selectedTriageGroupIds.IntersectWith(ViewModel.TriageQueue.Select(group => group.GroupId));
+        _selectedReportGroupIds.IntersectWith(ViewModel.ReportGroupQueue.Select(group => group.GroupId));
+    }
+
+    private IReadOnlyList<string> SelectedTriageGroupIdsInDisplayOrder()
+        => ViewModel.TriageQueue
+            .Where(group => _selectedTriageGroupIds.Contains(group.GroupId))
+            .Select(group => group.GroupId)
+            .ToList();
+
+    private IReadOnlyList<string> SelectedReportGroupIdsInDisplayOrder()
+        => ViewModel.ReportGroupQueue
+            .Where(group => _selectedReportGroupIds.Contains(group.GroupId))
+            .Select(group => group.GroupId)
+            .ToList();
+
+    private IReadOnlyList<string> SelectedGroupIdsInDisplayOrder()
+        => SelectedReportGroupIdsInDisplayOrder()
+            .Concat(SelectedTriageGroupIdsInDisplayOrder())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
     private void ApplyWorkspaceFromQuery()
     {
@@ -278,4 +414,21 @@ else
 
     private static string FormatMachineTimestamp(DateTimeOffset value)
         => value.ToLocalTime().ToString("O");
+
+    private static void SetSelection(HashSet<string> selectedIds, string groupId, ChangeEventArgs args)
+    {
+        if (args.Value is bool isSelected && isSelected)
+        {
+            selectedIds.Add(groupId);
+            return;
+        }
+
+        if (args.Value is string value && bool.TryParse(value, out var parsed) && parsed)
+        {
+            selectedIds.Add(groupId);
+            return;
+        }
+
+        selectedIds.Remove(groupId);
+    }
 }

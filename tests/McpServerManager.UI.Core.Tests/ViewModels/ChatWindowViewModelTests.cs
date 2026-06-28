@@ -1,7 +1,9 @@
 using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.ViewModels;
 using McpServerManager.UI.Core.Tests.TestInfrastructure;
+using NSubstitute;
 using Xunit;
 
 namespace McpServerManager.UI.Core.Tests.ViewModels;
@@ -15,7 +17,7 @@ public sealed class ChatWindowViewModelTests
     [Fact]
     public async Task LoadPromptsAsync_DispatchesLoadChatPromptsQuery_AndPopulatesTemplates()
     {
-        var prompts = new[] { new PromptTemplate { Name = "t1", Content = "hi" } };
+        var prompts = new[] { new PromptTemplate { Name = "t1", Template = "hi" } };
         var (dispatcher, vm) = ViewModelDispatchTestHelper.CreateChatWindow();
 
         ViewModelDispatchTestHelper.SetupQueryResult<LoadChatPromptsQuery, IReadOnlyList<PromptTemplate>>(dispatcher, prompts);
@@ -48,10 +50,12 @@ public sealed class ChatWindowViewModelTests
         var (dispatcher, vm) = ViewModelDispatchTestHelper.CreateChatWindow();
         ViewModelDispatchTestHelper.SetupQueryResult<PopulateChatPromptQuery, string>(dispatcher, "populated prompt");
 
-        var prompt = new PromptTemplate { Name = "p1", Content = "template" };
+        var prompt = new PromptTemplate { Name = "p1", Template = "template" };
         // Call the protected for test via reflection or make internal for test; here assume accessible or test via public wrapper
-        await vm.GetType().GetMethod("PopulatePrompt", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)!
-            .Invoke(vm, new object?[] { prompt });
+        var task = (Task)vm.GetType()
+            .GetMethod("PopulatePrompt", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)!
+            .Invoke(vm, new object?[] { prompt })!;
+        await task;
 
         await dispatcher.Received(1).QueryAsync(Arg.Any<PopulateChatPromptQuery>(), Arg.Any<CancellationToken>());
         Assert.Equal("populated prompt", vm.CurrentInput);

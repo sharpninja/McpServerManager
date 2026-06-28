@@ -166,6 +166,36 @@ internal sealed class TriageApiClientAdapter : ITriageApiClient
         return new OpenTriageTodosResult(items, created.TotalCount, hidden, hydrationErrors);
     }
 
+    public async Task<TriageGroupEditResultSnapshot> CreateGroupFromSelectionAsync(TriageGroupSelectionSnapshot selection, CancellationToken cancellationToken = default)
+    {
+        var result = await _context.UseWorkspaceApiClientAsync(
+                ResolveWorkspacePath(null),
+                (client, ct) => client.Triage.CreateGroupFromSelectionAsync(MapSelection(selection), ct),
+                cancellationToken)
+            .ConfigureAwait(true);
+        return MapEditResult(result);
+    }
+
+    public async Task<TriageGroupEditResultSnapshot> ConsolidateIntoGroupAsync(string targetGroupId, TriageGroupSelectionSnapshot selection, CancellationToken cancellationToken = default)
+    {
+        var result = await _context.UseWorkspaceApiClientAsync(
+                ResolveWorkspacePath(null),
+                (client, ct) => client.Triage.ConsolidateIntoGroupAsync(targetGroupId, MapSelection(selection), ct),
+                cancellationToken)
+            .ConfigureAwait(true);
+        return MapEditResult(result);
+    }
+
+    public async Task<TriageGroupEditResultSnapshot> MergeGroupsAsync(string targetGroupId, TriageGroupSelectionSnapshot selection, CancellationToken cancellationToken = default)
+    {
+        var result = await _context.UseWorkspaceApiClientAsync(
+                ResolveWorkspacePath(null),
+                (client, ct) => client.Triage.MergeGroupsAsync(targetGroupId, MapSelection(selection), ct),
+                cancellationToken)
+            .ConfigureAwait(true);
+        return MapEditResult(result);
+    }
+
     private static TriageGroupSnapshot MapGroup(TriageGroupDetail item)
         => new(
             item.GroupId,
@@ -226,6 +256,18 @@ internal sealed class TriageApiClientAdapter : ITriageApiClient
             createdTodo.GroupSummary,
             createdTodo.ReportCount,
             createdTodo.QuietDeadlineUtc);
+
+    private static TriageGroupEditResultSnapshot MapEditResult(TriageGroupEditResult result)
+        => new(MapGroup(result.Group), result.RemovedGroupIds, result.MovedReportCount);
+
+    private static TriageGroupSelectionRequest MapSelection(TriageGroupSelectionSnapshot selection)
+        => new()
+        {
+            GroupIds = selection.GroupIds.Count == 0 ? null : selection.GroupIds,
+            ReportIds = selection.ReportIds.Count == 0 ? null : selection.ReportIds,
+            Title = Normalize(selection.Title),
+            Summary = Normalize(selection.Summary),
+        };
 
     private static string? Normalize(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

@@ -99,6 +99,7 @@ internal sealed class DirectorAuthorizationPolicyService : IAuthorizationPolicyS
             [McpActionKeys.AgentPoolQueueResolve] = McpRoles.AgentManager,
             [McpActionKeys.AgentPoolQueueEnqueue] = McpRoles.AgentManager,
             [McpActionKeys.TriageRead] = McpRoles.Viewer,
+            [McpActionKeys.TriageEdit] = McpRoles.AgentManager,
             [McpActionKeys.TemplateList] = McpRoles.Viewer,
             [McpActionKeys.TemplateGet] = McpRoles.Viewer,
             [McpActionKeys.TemplateTest] = McpRoles.Viewer,

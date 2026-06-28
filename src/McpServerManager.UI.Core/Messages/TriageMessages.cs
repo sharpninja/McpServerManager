@@ -23,6 +23,18 @@ public sealed record GetTriageRunQuery(string RunId) : IQuery<TriageRunSnapshot?
 /// <summary>Query to load open TODOs created by triage.</summary>
 public sealed record QueryOpenTriageTodosQuery(string? WorkspacePath) : IQuery<OpenTriageTodosResult>;
 
+/// <summary>Command to create a new triage group from selected groups or reports.</summary>
+public sealed record CreateTriageGroupFromSelectionCommand(TriageGroupSelectionSnapshot Selection)
+    : ICommand<TriageGroupEditResultSnapshot>;
+
+/// <summary>Command to move selected groups or reports into an existing triage group.</summary>
+public sealed record ConsolidateTriageSelectionIntoGroupCommand(string TargetGroupId, TriageGroupSelectionSnapshot Selection)
+    : ICommand<TriageGroupEditResultSnapshot>;
+
+/// <summary>Command to merge selected source groups into an existing triage group.</summary>
+public sealed record MergeTriageGroupsCommand(string TargetGroupId, TriageGroupSelectionSnapshot Selection)
+    : ICommand<TriageGroupEditResultSnapshot>;
+
 /// <summary>Dashboard projection for triage queues and run history.</summary>
 public sealed record TriageDashboardSnapshot(
     IReadOnlyList<TriageGroupSnapshot> TriageQueue,
@@ -36,6 +48,19 @@ public sealed record TriageGroupQuerySnapshot(IReadOnlyList<TriageGroupSnapshot>
 
 /// <summary>Query result for triage runs.</summary>
 public sealed record TriageRunQuerySnapshot(IReadOnlyList<TriageRunSnapshot> Items, int TotalCount);
+
+/// <summary>Selected triage groups or reports for group edit operations.</summary>
+public sealed record TriageGroupSelectionSnapshot(
+    IReadOnlyList<string> GroupIds,
+    IReadOnlyList<string> ReportIds,
+    string? Title = null,
+    string? Summary = null);
+
+/// <summary>Result returned after moving or merging triage reports.</summary>
+public sealed record TriageGroupEditResultSnapshot(
+    TriageGroupSnapshot Group,
+    IReadOnlyList<string> RemovedGroupIds,
+    int MovedReportCount);
 
 /// <summary>Read-only triage group row/detail projection.</summary>
 public sealed record TriageGroupSnapshot(

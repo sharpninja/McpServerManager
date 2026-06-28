@@ -174,6 +174,78 @@ internal sealed class QueryOpenTriageTodosQueryHandler : IQueryHandler<QueryOpen
             _logger);
 }
 
+/// <summary>Handles <see cref="CreateTriageGroupFromSelectionCommand"/>.</summary>
+internal sealed class CreateTriageGroupFromSelectionCommandHandler : ICommandHandler<CreateTriageGroupFromSelectionCommand, TriageGroupEditResultSnapshot>
+{
+    private readonly ITriageApiClient _client;
+    private readonly IAuthorizationPolicyService _authorizationPolicy;
+    private readonly ILogger<CreateTriageGroupFromSelectionCommandHandler> _logger;
+
+    public CreateTriageGroupFromSelectionCommandHandler(
+        ITriageApiClient client,
+        IAuthorizationPolicyService authorizationPolicy,
+        ILogger<CreateTriageGroupFromSelectionCommandHandler> logger)
+    {
+        _client = client;
+        _authorizationPolicy = authorizationPolicy;
+        _logger = logger;
+    }
+
+    public Task<Result<TriageGroupEditResultSnapshot>> HandleAsync(CreateTriageGroupFromSelectionCommand command, CallContext context)
+        => TriageHandlerHelpers.HandleEditAsync(
+            () => _client.CreateGroupFromSelectionAsync(command.Selection, context.CancellationToken),
+            _authorizationPolicy,
+            _logger);
+}
+
+/// <summary>Handles <see cref="ConsolidateTriageSelectionIntoGroupCommand"/>.</summary>
+internal sealed class ConsolidateTriageSelectionIntoGroupCommandHandler : ICommandHandler<ConsolidateTriageSelectionIntoGroupCommand, TriageGroupEditResultSnapshot>
+{
+    private readonly ITriageApiClient _client;
+    private readonly IAuthorizationPolicyService _authorizationPolicy;
+    private readonly ILogger<ConsolidateTriageSelectionIntoGroupCommandHandler> _logger;
+
+    public ConsolidateTriageSelectionIntoGroupCommandHandler(
+        ITriageApiClient client,
+        IAuthorizationPolicyService authorizationPolicy,
+        ILogger<ConsolidateTriageSelectionIntoGroupCommandHandler> logger)
+    {
+        _client = client;
+        _authorizationPolicy = authorizationPolicy;
+        _logger = logger;
+    }
+
+    public Task<Result<TriageGroupEditResultSnapshot>> HandleAsync(ConsolidateTriageSelectionIntoGroupCommand command, CallContext context)
+        => TriageHandlerHelpers.HandleEditAsync(
+            () => _client.ConsolidateIntoGroupAsync(command.TargetGroupId, command.Selection, context.CancellationToken),
+            _authorizationPolicy,
+            _logger);
+}
+
+/// <summary>Handles <see cref="MergeTriageGroupsCommand"/>.</summary>
+internal sealed class MergeTriageGroupsCommandHandler : ICommandHandler<MergeTriageGroupsCommand, TriageGroupEditResultSnapshot>
+{
+    private readonly ITriageApiClient _client;
+    private readonly IAuthorizationPolicyService _authorizationPolicy;
+    private readonly ILogger<MergeTriageGroupsCommandHandler> _logger;
+
+    public MergeTriageGroupsCommandHandler(
+        ITriageApiClient client,
+        IAuthorizationPolicyService authorizationPolicy,
+        ILogger<MergeTriageGroupsCommandHandler> logger)
+    {
+        _client = client;
+        _authorizationPolicy = authorizationPolicy;
+        _logger = logger;
+    }
+
+    public Task<Result<TriageGroupEditResultSnapshot>> HandleAsync(MergeTriageGroupsCommand command, CallContext context)
+        => TriageHandlerHelpers.HandleEditAsync(
+            () => _client.MergeGroupsAsync(command.TargetGroupId, command.Selection, context.CancellationToken),
+            _authorizationPolicy,
+            _logger);
+}
+
 internal static class TriageHandlerHelpers
 {
     public static async Task<Result<T>> HandleReadAsync<T>(
@@ -184,6 +256,31 @@ internal static class TriageHandlerHelpers
         if (!authorizationPolicy.CanExecuteAction(McpActionKeys.TriageRead))
         {
             var requiredRole = authorizationPolicy.GetRequiredRole(McpActionKeys.TriageRead);
+            return Result<T>.Failure(string.IsNullOrWhiteSpace(requiredRole)
+                ? "Permission denied."
+                : $"Permission denied: requires {requiredRole}.");
+        }
+
+        try
+        {
+            var result = await operation().ConfigureAwait(true);
+            return Result<T>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("{ExceptionDetail}", ex.ToString());
+            return Result<T>.Failure(ex);
+        }
+    }
+
+    public static async Task<Result<T>> HandleEditAsync<T>(
+        Func<Task<T>> operation,
+        IAuthorizationPolicyService authorizationPolicy,
+        ILogger logger)
+    {
+        if (!authorizationPolicy.CanExecuteAction(McpActionKeys.TriageEdit))
+        {
+            var requiredRole = authorizationPolicy.GetRequiredRole(McpActionKeys.TriageEdit);
             return Result<T>.Failure(string.IsNullOrWhiteSpace(requiredRole)
                 ? "Permission denied."
                 : $"Permission denied: requires {requiredRole}.");

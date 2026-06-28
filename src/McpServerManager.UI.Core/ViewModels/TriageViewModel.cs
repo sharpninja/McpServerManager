@@ -248,6 +248,24 @@ public sealed partial class TriageViewModel : ObservableObject
         return result.Value;
     }
 
+    /// <summary>Creates a new group from the selected triage groups or reports.</summary>
+    public Task<TriageGroupEditResultSnapshot?> CreateGroupFromSelectionAsync(TriageGroupSelectionSnapshot selection, CancellationToken ct = default)
+        => ExecuteEditAsync(
+            () => _dispatcher.SendAsync(new CreateTriageGroupFromSelectionCommand(selection), ct),
+            ct);
+
+    /// <summary>Moves selected triage groups or reports into an existing group.</summary>
+    public Task<TriageGroupEditResultSnapshot?> ConsolidateIntoGroupAsync(string targetGroupId, TriageGroupSelectionSnapshot selection, CancellationToken ct = default)
+        => ExecuteEditAsync(
+            () => _dispatcher.SendAsync(new ConsolidateTriageSelectionIntoGroupCommand(targetGroupId, selection), ct),
+            ct);
+
+    /// <summary>Merges selected source groups into an existing target group.</summary>
+    public Task<TriageGroupEditResultSnapshot?> MergeGroupsAsync(string targetGroupId, TriageGroupSelectionSnapshot selection, CancellationToken ct = default)
+        => ExecuteEditAsync(
+            () => _dispatcher.SendAsync(new MergeTriageGroupsCommand(targetGroupId, selection), ct),
+            ct);
+
     private string? ResolveWorkspacePath()
     {
         if (!string.IsNullOrWhiteSpace(WorkspacePathFilter))
@@ -268,6 +286,36 @@ public sealed partial class TriageViewModel : ObservableObject
             ? $", hydration errors: {TodoHydrationErrorCount}"
             : string.Empty;
         return $"Loaded triage for {scope}: {TriageQueue.Count} collecting, {ReportGroupQueue.Count} grouped, {RunHistory.Count} runs, {OpenTriageTodos.Count} open TODOs{hidden}{hydration}.";
+    }
+
+    private async Task<TriageGroupEditResultSnapshot?> ExecuteEditAsync(
+        Func<Task<Result<TriageGroupEditResultSnapshot>>> operation,
+        CancellationToken ct)
+    {
+        ErrorMessage = null;
+        StatusMessage = "Updating triage groups...";
+
+        try
+        {
+            var result = await operation().ConfigureAwait(true);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                ErrorMessage = result.Error ?? "Failed to update triage groups.";
+                StatusMessage = "Triage update failed.";
+                return null;
+            }
+
+            await LoadAsync(ct).ConfigureAwait(true);
+            StatusMessage = $"Moved {result.Value.MovedReportCount} reports into group '{result.Value.Group.GroupId}'.";
+            return result.Value;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("{ExceptionDetail}", ex.ToString());
+            ErrorMessage = ex.Message;
+            StatusMessage = "Triage update failed.";
+            return null;
+        }
     }
 
     private void ClampSelections()

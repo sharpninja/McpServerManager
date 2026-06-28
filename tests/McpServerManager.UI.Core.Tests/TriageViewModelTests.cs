@@ -136,6 +136,42 @@ public sealed class TriageViewModelTests
         await api.DidNotReceive().GetDashboardAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task CreateGroupFromSelectionAsync_DispatchesEditAndRefreshesDashboard()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var createdGroup = CreateGroup("group-created", "ready", now);
+        var api = Substitute.For<ITriageApiClient>();
+        api.CreateGroupFromSelectionAsync(
+                Arg.Is<TriageGroupSelectionSnapshot>(selection =>
+                    selection.GroupIds.SequenceEqual(new[] { "group-collecting" }) &&
+                    selection.ReportIds.Count == 0),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new TriageGroupEditResultSnapshot(createdGroup, ["group-collecting"], 2)));
+        api.GetDashboardAsync(WorkspacePath, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new TriageDashboardSnapshot(
+                [],
+                [createdGroup],
+                [],
+                TotalGroupCount: 1,
+                TotalRunCount: 0)));
+        api.QueryOpenCreatedTodosAsync(WorkspacePath, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new OpenTriageTodosResult([], 0, 0, 0)));
+
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(api));
+        host.GetRequiredService<WorkspaceContextViewModel>().ActiveWorkspacePath = WorkspacePath;
+        var viewModel = host.GetRequiredService<TriageViewModel>();
+
+        var result = await viewModel.CreateGroupFromSelectionAsync(new TriageGroupSelectionSnapshot(["group-collecting"], []));
+
+        Assert.NotNull(result);
+        Assert.Equal("group-created", result.Group.GroupId);
+        Assert.Single(viewModel.ReportGroupQueue);
+        Assert.Contains("Moved 2 reports into group 'group-created'.", viewModel.StatusMessage, StringComparison.Ordinal);
+        await api.Received(1).CreateGroupFromSelectionAsync(Arg.Any<TriageGroupSelectionSnapshot>(), Arg.Any<CancellationToken>());
+        await api.Received(1).GetDashboardAsync(WorkspacePath, Arg.Any<CancellationToken>());
+    }
+
     private static TriageGroupSnapshot CreateGroup(string groupId, string status, DateTimeOffset now)
         => new(
             groupId,
