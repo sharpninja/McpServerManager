@@ -266,6 +266,13 @@ public sealed partial class TriageViewModel : ObservableObject
             () => _dispatcher.SendAsync(new MergeTriageGroupsCommand(targetGroupId, selection), ct),
             ct);
 
+    /// <summary>Resubmits a failed triage group for another AI triage run.</summary>
+    public Task<TriageGroupSnapshot?> ResubmitFailedGroupAsync(string groupId, CancellationToken ct = default)
+        => ExecuteRetryAsync(
+            () => _dispatcher.SendAsync(new RetryTriageGroupCommand(groupId), ct),
+            groupId,
+            ct);
+
     private string? ResolveWorkspacePath()
     {
         if (!string.IsNullOrWhiteSpace(WorkspacePathFilter))
@@ -280,7 +287,7 @@ public sealed partial class TriageViewModel : ObservableObject
     {
         var scope = string.IsNullOrWhiteSpace(workspacePath) ? "all workspaces" : workspacePath;
         var hidden = HiddenCompletedOrMissingTodoCount > 0
-            ? $", hidden stale/completed: {HiddenCompletedOrMissingTodoCount}"
+            ? $", completed/unavailable TODOs: {HiddenCompletedOrMissingTodoCount}"
             : string.Empty;
         var hydration = TodoHydrationErrorCount > 0
             ? $", hydration errors: {TodoHydrationErrorCount}"
@@ -314,6 +321,40 @@ public sealed partial class TriageViewModel : ObservableObject
             _logger.LogError("{ExceptionDetail}", ex.ToString());
             ErrorMessage = ex.Message;
             StatusMessage = "Triage update failed.";
+            return null;
+        }
+    }
+
+    private async Task<TriageGroupSnapshot?> ExecuteRetryAsync(
+        Func<Task<Result<TriageGroupSnapshot>>> operation,
+        string groupId,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(groupId))
+            return null;
+
+        ErrorMessage = null;
+        StatusMessage = "Resubmitting triage group...";
+
+        try
+        {
+            var result = await operation().ConfigureAwait(true);
+            if (!result.IsSuccess || result.Value is null)
+            {
+                ErrorMessage = result.Error ?? "Failed to resubmit triage group.";
+                StatusMessage = "Triage resubmit failed.";
+                return null;
+            }
+
+            await LoadAsync(ct).ConfigureAwait(true);
+            StatusMessage = $"Resubmitted triage group '{result.Value.GroupId}'.";
+            return result.Value;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("{ExceptionDetail}", ex.ToString());
+            ErrorMessage = ex.Message;
+            StatusMessage = "Triage resubmit failed.";
             return null;
         }
     }

@@ -246,6 +246,30 @@ internal sealed class MergeTriageGroupsCommandHandler : ICommandHandler<MergeTri
             _logger);
 }
 
+/// <summary>Handles <see cref="RetryTriageGroupCommand"/>.</summary>
+internal sealed class RetryTriageGroupCommandHandler : ICommandHandler<RetryTriageGroupCommand, TriageGroupSnapshot>
+{
+    private readonly ITriageApiClient _client;
+    private readonly IAuthorizationPolicyService _authorizationPolicy;
+    private readonly ILogger<RetryTriageGroupCommandHandler> _logger;
+
+    public RetryTriageGroupCommandHandler(
+        ITriageApiClient client,
+        IAuthorizationPolicyService authorizationPolicy,
+        ILogger<RetryTriageGroupCommandHandler> logger)
+    {
+        _client = client;
+        _authorizationPolicy = authorizationPolicy;
+        _logger = logger;
+    }
+
+    public Task<Result<TriageGroupSnapshot>> HandleAsync(RetryTriageGroupCommand command, CallContext context)
+        => TriageHandlerHelpers.HandleEditAsync(
+            () => _client.RetryGroupAsync(command.GroupId, context.CancellationToken),
+            _authorizationPolicy,
+            _logger);
+}
+
 internal static class TriageHandlerHelpers
 {
     public static async Task<Result<T>> HandleReadAsync<T>(

@@ -4,7 +4,7 @@ using Terminal.Gui;
 
 namespace McpServerManager.Director.Screens;
 
-/// <summary>Read-only triage dashboard screen.</summary>
+/// <summary>Triage dashboard screen.</summary>
 internal sealed class TriageScreen : View
 {
     private readonly TriageViewModel _viewModel;
@@ -64,7 +64,7 @@ internal sealed class TriageScreen : View
         };
         Add(runHistoryFrame);
 
-        var openTodosFrame = CreateTableFrame("Open Triage TODOs", Pos.Percent(50), secondTop, secondHeight, out _openTodosTable);
+        var openTodosFrame = CreateTableFrame("Triage-Created TODOs", Pos.Percent(50), secondTop, secondHeight, out _openTodosTable);
         _openTodosTable.SelectedCellChanged += (_, _) =>
         {
             _viewModel.SelectedOpenTodoIndex = _openTodosTable.SelectedRow;
@@ -111,7 +111,10 @@ internal sealed class TriageScreen : View
         var openTodoButton = new Button { X = Pos.Right(refreshButton) + 2, Y = Pos.AnchorEnd(1), Text = "Open TODO" };
         openTodoButton.Accepting += (_, _) => _ = Task.Run(OpenSelectedTodoAsync);
 
-        Add(refreshButton, openTodoButton);
+        var resubmitButton = new Button { X = Pos.Right(openTodoButton) + 2, Y = Pos.AnchorEnd(1), Text = "Resubmit Run" };
+        resubmitButton.Accepting += (_, _) => _ = Task.Run(ResubmitSelectedRunAsync);
+
+        Add(refreshButton, openTodoButton, resubmitButton);
     }
 
     public async Task LoadAsync()
@@ -162,11 +165,38 @@ internal sealed class TriageScreen : View
         var item = GetSelected(_todoRows, _openTodosTable.SelectedRow);
         if (item is null)
         {
-            SetStatus("Select an open triage TODO first.");
+            SetStatus("Select a triage-created TODO first.");
+            return;
+        }
+
+        if (!item.CanOpen)
+        {
+            SetStatus("Selected triage-created TODO details are unavailable.");
             return;
         }
 
         await _openTodoAsync(item).ConfigureAwait(true);
+    }
+
+    private async Task ResubmitSelectedRunAsync()
+    {
+        var item = GetSelected(_runRows, _runHistoryTable.SelectedRow);
+        if (item is null)
+        {
+            SetStatus("Select a failed triage run first.");
+            return;
+        }
+
+        if (!CanResubmitRun(item))
+        {
+            SetStatus("Selected triage run is not failed.");
+            return;
+        }
+
+        var result = await _viewModel.ResubmitFailedGroupAsync(item.GroupId).ConfigureAwait(true);
+        if (result is not null)
+            RebuildTables();
+        SetStatus(_viewModel.StatusMessage);
     }
 
     private void ShowSelectedOpenTodoDetail()
@@ -331,6 +361,8 @@ internal sealed class TriageScreen : View
             $"Section: {todo.Section ?? ""}",
             $"Group: {todo.GroupId ?? ""} [{todo.GroupStatus ?? ""}]",
             $"Run: {todo.RunId ?? ""} [{todo.RunStatus ?? ""}]",
+            $"Done: {todo.Done}",
+            $"Can open: {todo.CanOpen}",
             $"Created: {FormatTimestamp(todo.CreatedAtUtc)}",
             $"Reports: {todo.ReportCount}",
             $"Group title: {todo.GroupTitle ?? ""}",
@@ -351,6 +383,11 @@ internal sealed class TriageScreen : View
 
     private static string Shorten(string value, int maxLength)
         => value.Length <= maxLength ? value : value[..Math.Max(0, maxLength - 3)] + "...";
+
+    private static bool CanResubmitRun(TriageRunSnapshot run)
+        => !string.IsNullOrWhiteSpace(run.GroupId) &&
+           (string.Equals(run.Status, "failed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(run.Status, "error", StringComparison.OrdinalIgnoreCase));
 
     private static string FormatTimestamp(DateTimeOffset value)
         => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");

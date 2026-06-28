@@ -34,6 +34,9 @@ public interface ITriageApiClient
 
     /// <summary>Merges selected source groups into an existing triage group.</summary>
     Task<TriageGroupEditResultSnapshot> MergeGroupsAsync(string targetGroupId, TriageGroupSelectionSnapshot selection, CancellationToken cancellationToken = default);
+
+    /// <summary>Retries a failed triage group.</summary>
+    Task<TriageGroupSnapshot> RetryGroupAsync(string groupId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Empty fallback for hosts that do not expose triage UI.</summary>
@@ -68,4 +71,7 @@ internal sealed class NoOpTriageApiClient : ITriageApiClient
 
     public Task<TriageGroupEditResultSnapshot> MergeGroupsAsync(string targetGroupId, TriageGroupSelectionSnapshot selection, CancellationToken cancellationToken = default)
         => Task.FromException<TriageGroupEditResultSnapshot>(new NotSupportedException("Triage edits are not available."));
+
+    public Task<TriageGroupSnapshot> RetryGroupAsync(string groupId, CancellationToken cancellationToken = default)
+        => Task.FromException<TriageGroupSnapshot>(new NotSupportedException("Triage edits are not available."));
 }

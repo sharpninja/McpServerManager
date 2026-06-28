@@ -1,5 +1,0 @@
-method: client.SessionLog.UpsertTurnAsync
-label: session_upsertTurn
-timestamp: 20260628T033338Z
-params:
-  {"type":"request","payload":{"requestId":"req-20260628T033337Z-25501","method":"client.SessionLog.UpsertTurnAsync","params":{"agent":"Codex","sessionId":"Codex-20260628T030948Z","turn":{"requestId":"req-20260628T033320Z-prompt-7547","timestamp":"2026-06-28T03:33:20Z","queryText":"User prompt","queryTitle":"User prompt","response":"Commit-sync requested. Paused in-progress triage endpoint/client work and am awaiting explicit acknowledgement before staging, committing, or pushing dirty files.","status":"completed","model":"codex","tokenCount":0}}}}

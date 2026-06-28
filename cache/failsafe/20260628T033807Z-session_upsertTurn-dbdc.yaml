@@ -1,5 +1,0 @@
-method: client.SessionLog.UpsertTurnAsync
-label: session_upsertTurn
-timestamp: 20260628T033807Z
-params:
-  {"type":"request","payload":{"requestId":"req-20260628T033806Z-16473","method":"client.SessionLog.UpsertTurnAsync","params":{"agent":"Codex","sessionId":"Codex-20260628T030948Z","turn":{"requestId":"req-20260628T033503Z-prompt-7e42","timestamp":"2026-06-28T03:35:03Z","queryText":"User prompt","queryTitle":"User prompt","response":"Commit-sync proceeded and work is stopping for restart. Submodule lib/McpServer was committed and pushed to Azure main at 6214f70d5afb04cfc1ddc1604e5ee2257dcc8c4f. Parent McpServerManager was committed and pushed to GitHub main at 0915dc9e557306c0e1d4e50e8e2744b170ca79f9. No validation was run because this was a restart checkpoint.","status":"completed","model":"codex","tokenCount":0}}}}

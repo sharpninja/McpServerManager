@@ -55,7 +55,7 @@ public sealed class TriageDashboardTests
         var cut = ctx.Render<McpServerManager.Web.Pages.Triage.TriageDashboard>();
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-77", cut.Markup, StringComparison.Ordinal));
-        Assert.Contains("Open Triage TODOs", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Triage-Created TODOs", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("TODO-77", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Investigate triage finding", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("TargetWorkspace", cut.Markup, StringComparison.Ordinal);
@@ -127,7 +127,8 @@ public sealed class TriageDashboardTests
         var triageApi = new TriageApiClientStub
         {
             Dashboard = CreateDashboard(now),
-            OpenTodos = new OpenTriageTodosResult([], 0, 0, 0)
+            OpenTodos = new OpenTriageTodosResult([], 0, 0, 0),
+            ApplyCreateResultToDashboard = true,
         };
 
         using var ctx = CreateTestContext(services => services.AddSingleton<ITriageApiClient>(triageApi));
@@ -142,6 +143,8 @@ public sealed class TriageDashboardTests
             var selection = Assert.Single(triageApi.CreateSelections);
             Assert.Equal(["group-collecting"], selection.GroupIds);
             Assert.Empty(selection.ReportIds);
+            Assert.DoesNotContain("Select triage group group-collecting", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("Select report group group-created", cut.Markup, StringComparison.Ordinal);
         });
     }
 
@@ -195,6 +198,92 @@ public sealed class TriageDashboardTests
             Assert.Equal("group-ready", call.TargetGroupId);
             Assert.Equal(["group-collecting"], call.Selection.GroupIds);
         });
+    }
+
+    /// <summary>TEST-TRIAGE-RESUBMIT-001: failed run history rows expose resubmit and retry the owning group.</summary>
+    [Fact]
+    public void TriageDashboard_ResubmitsFailedRunGroup()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var dashboard = CreateDashboard(now);
+        var failedRun = dashboard.RunHistory[0] with
+        {
+            RunId = "run-failed",
+            GroupId = "group-failed",
+            Status = "failed",
+            GroupStatus = "failed",
+            CreatedTodoId = null,
+            Error = "agent failed",
+        };
+        var triageApi = new TriageApiClientStub
+        {
+            Dashboard = dashboard with
+            {
+                RunHistory = [dashboard.RunHistory[0], failedRun],
+            },
+            OpenTodos = new OpenTriageTodosResult([], 0, 0, 0)
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITriageApiClient>(triageApi));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Triage.TriageDashboard>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("run-failed", cut.Markup, StringComparison.Ordinal);
+            Assert.Single(cut.FindAll("button"), button => button.TextContent.Contains("Resubmit", StringComparison.Ordinal));
+        });
+        FindButton(cut, "Resubmit").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(["group-failed"], triageApi.RetryGroupIds);
+            Assert.Contains("Resubmitted triage group 'group-failed'.", cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
+    /// <summary>TEST-TRIAGE-CREATEDTODOS-001: created TODO references render even when TODO hydration is unavailable.</summary>
+    [Fact]
+    public void TriageDashboard_RendersCreatedTodoReference_WhenTodoCannotBeOpened()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var triageApi = new TriageApiClientStub
+        {
+            Dashboard = CreateDashboard(now),
+            OpenTodos = new OpenTriageTodosResult(
+                [
+                    new OpenTriageTodoItem(
+                        TodoId: "BUG-TRIAGE-002",
+                        Title: "Created TODO details unavailable",
+                        WorkspacePath,
+                        Section: null,
+                        Priority: null,
+                        GroupId: "triage-group-1",
+                        RunId: "triage-run-1",
+                        GroupStatus: "completed",
+                        RunStatus: "completed",
+                        CreatedAtUtc: now.AddMinutes(-4),
+                        GroupTitle: "Created TODO details unavailable",
+                        GroupSummary: "TODO was created by triage but could not be hydrated.",
+                        ReportCount: 1,
+                        QuietDeadlineUtc: null,
+                        Done: false,
+                        CanOpen: false)
+                ],
+                TotalCreatedCount: 1,
+                HiddenCompletedOrMissingCount: 1,
+                HydrationErrorCount: 0)
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITriageApiClient>(triageApi));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Triage.TriageDashboard>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("BUG-TRIAGE-002", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("Created TODO details unavailable", cut.Markup, StringComparison.Ordinal);
+        });
+        var openButton = Assert.Single(cut.FindAll("button"), button => button.TextContent.Trim().Equals("Open", StringComparison.Ordinal));
+        Assert.True(openButton.HasAttribute("disabled"));
     }
 
     [Fact]
@@ -331,13 +420,15 @@ public sealed class TriageDashboardTests
 
     private sealed class TriageApiClientStub : ITriageApiClient
     {
-        public TriageDashboardSnapshot Dashboard { get; init; } = new([], [], [], 0, 0);
+        public TriageDashboardSnapshot Dashboard { get; set; } = new([], [], [], 0, 0);
         public OpenTriageTodosResult OpenTodos { get; init; } = new([], 0, 0, 0);
+        public bool ApplyCreateResultToDashboard { get; init; }
         public List<string?> DashboardWorkspacePaths { get; } = [];
         public List<string?> OpenTodoWorkspacePaths { get; } = [];
         public List<TriageGroupSelectionSnapshot> CreateSelections { get; } = [];
         public List<(string TargetGroupId, TriageGroupSelectionSnapshot Selection)> ConsolidateSelections { get; } = [];
         public List<(string TargetGroupId, TriageGroupSelectionSnapshot Selection)> MergeSelections { get; } = [];
+        public List<string> RetryGroupIds { get; } = [];
 
         public Task<TriageDashboardSnapshot> GetDashboardAsync(string? workspacePath, CancellationToken cancellationToken = default)
         {
@@ -369,7 +460,19 @@ public sealed class TriageDashboardTests
         public Task<TriageGroupEditResultSnapshot> CreateGroupFromSelectionAsync(TriageGroupSelectionSnapshot selection, CancellationToken cancellationToken = default)
         {
             CreateSelections.Add(selection);
-            return Task.FromResult(CreateEditResult(selection.GroupIds.FirstOrDefault() ?? "group-created"));
+            var result = CreateEditResult("group-created");
+            if (ApplyCreateResultToDashboard)
+            {
+                Dashboard = Dashboard with
+                {
+                    TriageQueue = Dashboard.TriageQueue
+                        .Where(group => !selection.GroupIds.Contains(group.GroupId, StringComparer.Ordinal))
+                        .ToList(),
+                    ReportGroupQueue = Dashboard.ReportGroupQueue.Concat([result.Group]).ToList(),
+                };
+            }
+
+            return Task.FromResult(result);
         }
 
         public Task<TriageGroupEditResultSnapshot> ConsolidateIntoGroupAsync(string targetGroupId, TriageGroupSelectionSnapshot selection, CancellationToken cancellationToken = default)
@@ -384,11 +487,27 @@ public sealed class TriageDashboardTests
             return Task.FromResult(CreateEditResult(targetGroupId));
         }
 
+        public Task<TriageGroupSnapshot> RetryGroupAsync(string groupId, CancellationToken cancellationToken = default)
+        {
+            RetryGroupIds.Add(groupId);
+            return Task.FromResult(new TriageGroupSnapshot(
+                groupId,
+                "retry_pending",
+                ReportCount: 1,
+                WorkspacePath,
+                Title: "Retried group",
+                Summary: "Retried summary",
+                QuietDeadlineUtc: DateTimeOffset.UtcNow,
+                CreatedTodoId: null,
+                LastError: null,
+                Reports: []));
+        }
+
         private static TriageGroupEditResultSnapshot CreateEditResult(string groupId)
             => new(
                 new TriageGroupSnapshot(
                     groupId,
-                    "ready",
+                    "queued",
                     ReportCount: 2,
                     WorkspacePath,
                     Title: "Edited group",

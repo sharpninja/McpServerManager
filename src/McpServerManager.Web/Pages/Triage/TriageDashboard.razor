@@ -140,7 +140,15 @@ else
                 <td><code>@run.GroupId</code></td>
                 <td>@run.ReportCount</td>
                 <td>@(run.CreatedTodoId ?? "")</td>
-                <td><button type="button" class="btn btn-sm" @onclick="() => LoadRunAsync(run.RunId)">Details</button></td>
+                <td>
+                    <div class="d-flex flex-wrap gap-1">
+                        <button type="button" class="btn btn-sm" @onclick="() => LoadRunAsync(run.RunId)">Details</button>
+                        @if (CanResubmitRun(run))
+                        {
+                            <button type="button" class="btn btn-sm btn-danger" @onclick="() => ResubmitRunGroupAsync(run.GroupId)" disabled="@ViewModel.IsLoading">Resubmit</button>
+                        }
+                    </div>
+                </td>
             </RowTemplate>
             <EmptyContent>
                 <span class="color-fg-muted">No triage runs.</span>
@@ -150,7 +158,7 @@ else
 
     <section class="Box mb-3">
         <div class="Box-header">
-            <h2 class="h4 mb-0">Open Triage TODOs <span class="Counter">@ViewModel.OpenTriageTodos.Count</span></h2>
+            <h2 class="h4 mb-0">Triage-Created TODOs <span class="Counter">@ViewModel.OpenTriageTodos.Count</span></h2>
         </div>
         <PrimerDataTable TItem="OpenTriageTodoItem" Items="ViewModel.OpenTriageTodos" ColumnCount="8" Class="Table--full-width" style="width:100%; table-layout:fixed;">
             <HeaderTemplate>
@@ -170,13 +178,13 @@ else
                 <td class="text-mono text-small"><time datetime="@FormatMachineTimestamp(todo.CreatedAtUtc)">@FormatTimestamp(todo.CreatedAtUtc)</time></td>
                 <td>@todo.Title</td>
                 <td>@(todo.GroupStatus ?? todo.GroupId ?? "")</td>
-                <td>@(todo.RunStatus ?? todo.RunId ?? "")</td>
+                <td>@(todo.Done ? "done" : todo.RunStatus ?? todo.RunId ?? "")</td>
                 <td>@todo.ReportCount</td>
                 <td title="@todo.WorkspacePath">@Shorten(todo.WorkspacePath, 34)</td>
-                <td><button type="button" class="btn btn-sm" @onclick="() => OpenTodo(todo)">Open</button></td>
+                <td><button type="button" class="btn btn-sm" @onclick="() => OpenTodo(todo)" disabled="@(!todo.CanOpen)">Open</button></td>
             </RowTemplate>
             <EmptyContent>
-                <span class="color-fg-muted">No open triage-created TODOs.</span>
+                <span class="color-fg-muted">No triage-created TODOs.</span>
             </EmptyContent>
         </PrimerDataTable>
     </section>
@@ -337,13 +345,19 @@ else
     private async Task LoadRunAsync(string runId)
         => await CommandTarget.RunAsync(() => ViewModel.LoadRunDetailAsync(runId)).ConfigureAwait(true);
 
+    private async Task ResubmitRunGroupAsync(string groupId)
+        => await CommandTarget.RunAsync(() => ViewModel.ResubmitFailedGroupAsync(groupId)).ConfigureAwait(true);
+
     private async Task LoadReportAsync(string reportId)
         => await CommandTarget.RunAsync(() => ViewModel.LoadReportDetailAsync(reportId)).ConfigureAwait(true);
 
     private void OpenTodo(OpenTriageTodoItem item)
     {
+        if (!item.CanOpen)
+            return;
+
         WorkspaceContext.ActiveWorkspacePath = item.WorkspacePath;
-        Navigation.NavigateTo($"/todos/{Uri.EscapeDataString(item.TodoId)}?workspacePath={Uri.EscapeDataString(item.WorkspacePath)}&done=false");
+        Navigation.NavigateTo($"/todos/{Uri.EscapeDataString(item.TodoId)}?workspacePath={Uri.EscapeDataString(item.WorkspacePath)}&done={item.Done.ToString().ToLowerInvariant()}");
     }
 
     private bool IsTriageGroupSelected(string groupId) => _selectedTriageGroupIds.Contains(groupId);
@@ -405,6 +419,11 @@ else
             "queued" or "pending" or "collecting" => "attention",
             _ => "default",
         };
+
+    private static bool CanResubmitRun(TriageRunSnapshot run)
+        => !string.IsNullOrWhiteSpace(run.GroupId) &&
+           (string.Equals(run.Status, "failed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(run.Status, "error", StringComparison.OrdinalIgnoreCase));
 
     private static string Shorten(string value, int maxLength)
         => value.Length <= maxLength ? value : value[..Math.Max(0, maxLength - 3)] + "...";

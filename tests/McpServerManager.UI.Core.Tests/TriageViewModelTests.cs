@@ -54,7 +54,7 @@ public sealed class TriageViewModelTests
         Assert.Equal(1, viewModel.HiddenCompletedOrMissingTodoCount);
         Assert.Equal(1, viewModel.TodoHydrationErrorCount);
         Assert.Equal("TODO-77", viewModel.SelectedOpenTodo?.TodoId);
-        Assert.Contains("hidden stale/completed: 1", viewModel.StatusMessage, StringComparison.Ordinal);
+        Assert.Contains("completed/unavailable TODOs: 1", viewModel.StatusMessage, StringComparison.Ordinal);
         Assert.Contains("hydration errors: 1", viewModel.StatusMessage, StringComparison.Ordinal);
         await api.Received(1).GetDashboardAsync(WorkspacePath, Arg.Any<CancellationToken>());
         await api.Received(1).QueryOpenCreatedTodosAsync(WorkspacePath, Arg.Any<CancellationToken>());
@@ -169,6 +169,39 @@ public sealed class TriageViewModelTests
         Assert.Single(viewModel.ReportGroupQueue);
         Assert.Contains("Moved 2 reports into group 'group-created'.", viewModel.StatusMessage, StringComparison.Ordinal);
         await api.Received(1).CreateGroupFromSelectionAsync(Arg.Any<TriageGroupSelectionSnapshot>(), Arg.Any<CancellationToken>());
+        await api.Received(1).GetDashboardAsync(WorkspacePath, Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>TEST-TRIAGE-RESUBMIT-001: failed triage groups can be resubmitted and the dashboard refreshes.</summary>
+    [Fact]
+    public async Task ResubmitFailedGroupAsync_DispatchesRetryAndRefreshesDashboard()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var retriedGroup = CreateGroup("group-failed", "retry_pending", now);
+        var api = Substitute.For<ITriageApiClient>();
+        api.RetryGroupAsync("group-failed", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(retriedGroup));
+        api.GetDashboardAsync(WorkspacePath, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new TriageDashboardSnapshot(
+                [],
+                [retriedGroup],
+                [],
+                TotalGroupCount: 1,
+                TotalRunCount: 0)));
+        api.QueryOpenCreatedTodosAsync(WorkspacePath, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new OpenTriageTodosResult([], 0, 0, 0)));
+
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(api));
+        host.GetRequiredService<WorkspaceContextViewModel>().ActiveWorkspacePath = WorkspacePath;
+        var viewModel = host.GetRequiredService<TriageViewModel>();
+
+        var result = await viewModel.ResubmitFailedGroupAsync("group-failed");
+
+        Assert.NotNull(result);
+        Assert.Equal("group-failed", result.GroupId);
+        Assert.Single(viewModel.ReportGroupQueue);
+        Assert.Contains("Resubmitted triage group 'group-failed'.", viewModel.StatusMessage, StringComparison.Ordinal);
+        await api.Received(1).RetryGroupAsync("group-failed", Arg.Any<CancellationToken>());
         await api.Received(1).GetDashboardAsync(WorkspacePath, Arg.Any<CancellationToken>());
     }
 

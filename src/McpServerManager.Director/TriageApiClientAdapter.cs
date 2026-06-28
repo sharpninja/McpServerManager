@@ -113,9 +113,16 @@ internal sealed class TriageApiClientAdapter : ITriageApiClient
 
             var todoId = Normalize(createdTodo.TodoId);
             var todoWorkspace = Normalize(createdTodo.WorkspacePath) ?? Normalize(workspacePath);
-            if (string.IsNullOrWhiteSpace(todoId) || string.IsNullOrWhiteSpace(todoWorkspace))
+            if (string.IsNullOrWhiteSpace(todoId))
             {
                 hydrationErrors++;
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(todoWorkspace))
+            {
+                hydrationErrors++;
+                items.Add(MapCreatedTodoReference(createdTodo, string.Empty, canOpen: false));
                 continue;
             }
 
@@ -128,7 +135,6 @@ internal sealed class TriageApiClientAdapter : ITriageApiClient
                 if (todo.Done)
                 {
                     hidden++;
-                    continue;
                 }
 
                 items.Add(MapOpenTodo(createdTodo, todo, todoWorkspace));
@@ -137,11 +143,13 @@ internal sealed class TriageApiClientAdapter : ITriageApiClient
             {
                 _logger.LogInformation("{ExceptionDetail}", ex.ToString());
                 hidden++;
+                items.Add(MapCreatedTodoReference(createdTodo, todoWorkspace, canOpen: false));
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogWarning("{ExceptionDetail}", ex.ToString());
                 hydrationErrors++;
+                items.Add(MapCreatedTodoReference(createdTodo, todoWorkspace, canOpen: false));
             }
         }
 
@@ -170,6 +178,14 @@ internal sealed class TriageApiClientAdapter : ITriageApiClient
             (client, ct) => client.Triage.MergeGroupsAsync(targetGroupId, MapSelection(selection), ct),
             cancellationToken).ConfigureAwait(true);
         return MapEditResult(result);
+    }
+
+    public async Task<TriageGroupSnapshot> RetryGroupAsync(string groupId, CancellationToken cancellationToken = default)
+    {
+        var result = await UseTriageClientAsync(
+            (client, ct) => client.Triage.RetryGroupAsync(groupId, ct),
+            cancellationToken).ConfigureAwait(true);
+        return MapGroup(result);
     }
 
     private async Task<T> UseTriageClientAsync<T>(
@@ -241,7 +257,28 @@ internal sealed class TriageApiClientAdapter : ITriageApiClient
             createdTodo.GroupTitle,
             createdTodo.GroupSummary,
             createdTodo.ReportCount,
-            createdTodo.QuietDeadlineUtc);
+            createdTodo.QuietDeadlineUtc,
+            todo.Done,
+            CanOpen: true);
+
+    private static OpenTriageTodoItem MapCreatedTodoReference(TriageCreatedTodoDetail createdTodo, string workspacePath, bool canOpen)
+        => new(
+            createdTodo.TodoId,
+            createdTodo.GroupTitle ?? createdTodo.GroupSummary ?? createdTodo.TodoId,
+            workspacePath,
+            Section: null,
+            Priority: null,
+            createdTodo.GroupId,
+            createdTodo.RunId,
+            createdTodo.GroupStatus,
+            createdTodo.RunStatus,
+            createdTodo.CreatedAtUtc,
+            createdTodo.GroupTitle,
+            createdTodo.GroupSummary,
+            createdTodo.ReportCount,
+            createdTodo.QuietDeadlineUtc,
+            Done: false,
+            CanOpen: canOpen);
 
     private static TriageGroupEditResultSnapshot MapEditResult(TriageGroupEditResult result)
         => new(MapGroup(result.Group), result.RemovedGroupIds, result.MovedReportCount);

@@ -1,0 +1,5 @@
+method: client.SessionLog.UpsertTurnAsync
+label: session_upsertTurn
+timestamp: 20260628T113100Z
+params:
+  {"type":"request","payload":{"requestId":"req-20260628T113100Z-34936","method":"client.SessionLog.UpsertTurnAsync","params":{"agent":"Codex","sessionId":"Codex-20260628T030948Z","turn":{"requestId":"req-20260628T053713Z-prompt-4361","timestamp":"2026-06-28T05:37:13Z","queryText":"process any leftover failsafe records","queryTitle":"process any leftover failsafe records","response":"'Implemented failed triage group resubmit in McpServerManager. Added shared UI.Core retry command and view-model method, wired Web and Director adapters to McpServerClient.Triage.RetryGroupAsync, added a Web Run History Resubmit button for failed/error runs, added a Director selected-run resubmit button, and covered the path with UI.Core and Web tests. Validation passed: TriageViewModelTests 6 passed, TriageDashboardTests 8 passed, Director build succeeded, git diff --check clean.'","status":"completed","model":"codex","tokenCount":0}}}}

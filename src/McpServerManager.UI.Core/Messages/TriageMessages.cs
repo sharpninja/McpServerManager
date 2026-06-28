@@ -35,6 +35,10 @@ public sealed record ConsolidateTriageSelectionIntoGroupCommand(string TargetGro
 public sealed record MergeTriageGroupsCommand(string TargetGroupId, TriageGroupSelectionSnapshot Selection)
     : ICommand<TriageGroupEditResultSnapshot>;
 
+/// <summary>Command to retry a failed triage group.</summary>
+public sealed record RetryTriageGroupCommand(string GroupId)
+    : ICommand<TriageGroupSnapshot>;
+
 /// <summary>Dashboard projection for triage queues and run history.</summary>
 public sealed record TriageDashboardSnapshot(
     IReadOnlyList<TriageGroupSnapshot> TriageQueue,
@@ -121,7 +125,9 @@ public sealed record OpenTriageTodoItem(
     string? GroupTitle,
     string? GroupSummary,
     int ReportCount,
-    DateTimeOffset? QuietDeadlineUtc);
+    DateTimeOffset? QuietDeadlineUtc,
+    bool Done = false,
+    bool CanOpen = true);
 
 /// <summary>Hydrated open TODO projection plus stale-reference counts.</summary>
 public sealed record OpenTriageTodosResult(

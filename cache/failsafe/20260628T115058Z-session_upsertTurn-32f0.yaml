@@ -1,0 +1,5 @@
+method: client.SessionLog.UpsertTurnAsync
+label: session_upsertTurn
+timestamp: 20260628T115058Z
+params:
+  {"type":"request","payload":{"requestId":"req-20260628T115058Z-11967","method":"client.SessionLog.UpsertTurnAsync","params":{"agent":"Codex","sessionId":"Codex-20260628T030948Z","turn":{"requestId":"req-20260628T114612Z-prompt-299b","timestamp":"2026-06-28T11:46:12Z","queryText":"User prompt","queryTitle":"User prompt","response":"Redeployed Director and MCP Web from F:\\GitHub\\McpServerManager using NUKE targets UpdateDirectorTool and UpdateWebUiTool with --skip-version-bump. Both targets succeeded. Global dotnet tools now list SharpNinja.McpServer.Director 0.6.12 and SharpNinja.McpServer.Web 0.6.12. Command shims resolve to C:\\Users\\kingd\\.dotnet\\tools\\director.exe and C:\\Users\\kingd\\.dotnet\\tools\\mcp-web.exe. No active mcp-web process was found after reinstall.","status":"completed","model":"codex","tokenCount":0}}}}
