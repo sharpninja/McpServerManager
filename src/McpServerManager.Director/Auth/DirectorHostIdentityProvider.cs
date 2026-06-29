@@ -14,7 +14,7 @@ internal sealed class DirectorHostIdentityProvider : IHostIdentityProvider
     public string? GetBearerToken()
     {
         _ = McpHttpClient.TryRefreshCachedToken();
-        var cached = TokenCache.Load();
+        var cached = TokenCache.Load(_context.ActiveWorkspacePath);
         if (cached is null || cached.IsExpired || string.IsNullOrWhiteSpace(cached.AccessToken))
             return null;
 

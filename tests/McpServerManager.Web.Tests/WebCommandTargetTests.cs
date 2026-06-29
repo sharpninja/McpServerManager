@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using McpServerManager.UI.Core.Commands;
 using Microsoft.Extensions.Configuration;
@@ -31,6 +32,21 @@ public sealed class WebCommandTargetTests
 
         Assert.True(invoked);
         Assert.True(string.IsNullOrEmpty(target.StatusMessage));
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenCancellationRequested_DoesNotInvokeActionOrThrow()
+    {
+        using var provider = CreateProvider();
+        var target = provider.GetRequiredService<WebCommandTarget>();
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+        var invoked = false;
+
+        await target.RunAsync(() => invoked = true, cancellationToken: cts.Token);
+
+        Assert.False(invoked);
+        Assert.Contains("cancel", target.StatusMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

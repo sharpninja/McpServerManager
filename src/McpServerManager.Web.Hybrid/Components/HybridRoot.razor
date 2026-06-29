@@ -1,0 +1,27 @@
+@using System.Reflection
+@using McpServerManager.UI.Core.Services
+@using McpServerManager.Web
+@inject WorkspaceAutoSelector WorkspaceAutoSelector
+
+@if (_workspaceReady)
+{
+    <Routes AdditionalAssemblies="AdditionalAssemblies" />
+}
+else
+{
+    <main class="app-content">
+        <p class="color-fg-muted">Loading workspace...</p>
+    </main>
+}
+
+@code {
+    private static readonly Assembly[] AdditionalAssemblies = [typeof(HybridRoot).Assembly];
+
+    private bool _workspaceReady;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await WorkspaceAutoSelector.EnsureWorkspaceSelectedAsync().ConfigureAwait(true);
+        _workspaceReady = true;
+    }
+}

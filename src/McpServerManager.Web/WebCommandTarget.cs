@@ -172,8 +172,19 @@ internal sealed class WebCommandTarget : ICommandTarget
             {
                 var message = result.Error ?? "Web command execution failed.";
                 StatusMessage = message;
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogDebug("Web command target operation cancelled.");
+                    return;
+                }
+
                 throw new InvalidOperationException(message);
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            StatusMessage = "Operation was cancelled.";
+            _logger.LogDebug("Web command target operation cancelled.");
         }
         catch (Exception ex)
         {

@@ -172,6 +172,8 @@ public sealed class WebUiPhase4Phase6Tests
     private static Bunit.BunitContext CreateTestContext(Action<IServiceCollection>? configureServices = null)
     {
         var ctx = new Bunit.BunitContext();
+        var quickGridModule = ctx.JSInterop.SetupModule("./_content/Microsoft.AspNetCore.Components.QuickGrid/QuickGrid.razor.js");
+        quickGridModule.SetupModule("init", _ => true);
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {

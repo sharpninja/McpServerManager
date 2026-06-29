@@ -156,23 +156,24 @@
                         }
                         else
                         {
-                            <PrimerDataTable TItem="TemplateVariableDetail" Items="ViewModel.Detail.Variables" ColumnCount="5" Class="Table--full-width">
-                                <HeaderTemplate>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Required</th>
-                                        <th>Description</th>
-                                        <th>Example</th>
-                                        <th>Default</th>
-                                    </tr>
-                                </HeaderTemplate>
-                                <RowTemplate Context="variable">
-                                    <td><code>@variable.Name</code></td>
-                                    <td>@(variable.Required ? "Yes" : "No")</td>
-                                    <td>@(variable.Description ?? string.Empty)</td>
-                                    <td><code>@(variable.Example ?? string.Empty)</code></td>
-                                    <td><code>@(variable.DefaultValue ?? string.Empty)</code></td>
-                                </RowTemplate>
+                            <PrimerDataTable TGridItem="TemplateVariableDetail" Items="ViewModel.Detail.Variables" Class="Table--full-width">
+                                <ChildContent>
+                                    <TemplateColumn Title="Name" Context="variable">
+                                        <code>@variable.Name</code>
+                                    </TemplateColumn>
+                                    <TemplateColumn Title="Required" Context="variable">
+                                        @(variable.Required ? "Yes" : "No")
+                                    </TemplateColumn>
+                                    <TemplateColumn Title="Description" Context="variable">
+                                        @(variable.Description ?? string.Empty)
+                                    </TemplateColumn>
+                                    <TemplateColumn Title="Example" Context="variable">
+                                        <code>@(variable.Example ?? string.Empty)</code>
+                                    </TemplateColumn>
+                                    <TemplateColumn Title="Default" Context="variable">
+                                        <code>@(variable.DefaultValue ?? string.Empty)</code>
+                                    </TemplateColumn>
+                                </ChildContent>
                             </PrimerDataTable>
                         }
                     </div>

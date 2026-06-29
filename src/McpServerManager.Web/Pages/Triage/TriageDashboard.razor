@@ -1,10 +1,12 @@
 @page "/triage"
 @attribute [Authorize(Roles = "admin,agent-manager")]
 @inherits McpServerManager.Web.Components.UiDispatcherComponentBase
+@using System.Globalization
 
 @inject TriageViewModel ViewModel
 @inject WebCommandTarget CommandTarget
 @inject WorkspaceContextViewModel WorkspaceContext
+@inject WorkspaceListViewModel WorkspaceListViewModel
 @inject NavigationManager Navigation
 
 <PageTitle>Triage</PageTitle>
@@ -26,6 +28,9 @@ else if (ViewModel.IsLoading)
 }
 else
 {
+    var runHistoryRows = FilteredRunHistory;
+    var openTriageTodoRows = FilteredOpenTriageTodos;
+
     <p class="color-fg-muted mb-3">@ViewModel.StatusMessage</p>
 
     <div class="d-flex flex-wrap flex-items-center gap-2 mb-3">
@@ -47,33 +52,32 @@ else
         <div class="Box-header">
             <h2 class="h4 mb-0">Triage Queue <span class="Counter">@ViewModel.TriageQueue.Count</span></h2>
         </div>
-        <PrimerDataTable TItem="TriageGroupSnapshot" Items="ViewModel.TriageQueue" ColumnCount="7" Class="Table--full-width" style="width:100%; table-layout:fixed;">
-            <HeaderTemplate>
-                <tr>
-                    <th style="width:4%"></th>
-                    <th style="width:10%">Status</th>
-                    <th style="width:18%">Timestamp</th>
-                    <th style="width:20%">Group</th>
-                    <th style="width:8%">Reports</th>
-                    <th style="width:28%">Title</th>
-                    <th style="width:12%"></th>
-                </tr>
-            </HeaderTemplate>
-            <RowTemplate Context="group">
-                <td>
+        <PrimerDataTable TGridItem="TriageGroupSnapshot" Items="ViewModel.TriageQueue" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+            <ChildContent>
+                <TemplateColumn Context="group">
                     <input type="checkbox"
                            class="form-checkbox"
                            aria-label="Select triage group @group.GroupId"
                            checked="@IsTriageGroupSelected(group.GroupId)"
                            @onchange="args => ToggleTriageGroup(group.GroupId, args)" />
-                </td>
-                <td><PrimerLabel Scheme="@GetStatusScheme(group.Status)" Text="@group.Status" /></td>
-                <td class="text-mono text-small"><time datetime="@FormatMachineTimestamp(group.QuietDeadlineUtc)">@FormatTimestamp(group.QuietDeadlineUtc)</time></td>
-                <td><code>@group.GroupId</code></td>
-                <td>@group.ReportCount</td>
-                <td>@(group.Title ?? group.Summary ?? "")</td>
-                <td><button type="button" class="btn btn-sm" @onclick="() => LoadGroupAsync(group.GroupId)">Details</button></td>
-            </RowTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Status" Context="group">
+                    <PrimerLabel Scheme="@GetStatusScheme(group.Status)" Text="@group.Status" />
+                </TemplateColumn>
+                <TemplateColumn Title="Timestamp" Context="group">
+                    <time class="text-mono text-small" datetime="@FormatMachineTimestamp(group.QuietDeadlineUtc)">@FormatTimestamp(group.QuietDeadlineUtc)</time>
+                </TemplateColumn>
+                <TemplateColumn Title="Group" Context="group">
+                    <code>@group.GroupId</code>
+                </TemplateColumn>
+                <PropertyColumn Property="@(group => group.ReportCount)" Title="Reports" />
+                <TemplateColumn Title="Title" Context="group">
+                    @(group.Title ?? group.Summary ?? "")
+                </TemplateColumn>
+                <TemplateColumn Context="group">
+                    <button type="button" class="btn btn-sm" aria-label="Load triage group @group.GroupId details" @onclick="() => LoadGroupAsync(group.GroupId)">Details</button>
+                </TemplateColumn>
+            </ChildContent>
             <EmptyContent>
                 <span class="color-fg-muted">No triage queue items.</span>
             </EmptyContent>
@@ -84,33 +88,32 @@ else
         <div class="Box-header">
             <h2 class="h4 mb-0">Report Group Queue <span class="Counter">@ViewModel.ReportGroupQueue.Count</span></h2>
         </div>
-        <PrimerDataTable TItem="TriageGroupSnapshot" Items="ViewModel.ReportGroupQueue" ColumnCount="7" Class="Table--full-width" style="width:100%; table-layout:fixed;">
-            <HeaderTemplate>
-                <tr>
-                    <th style="width:4%"></th>
-                    <th style="width:10%">Status</th>
-                    <th style="width:18%">Timestamp</th>
-                    <th style="width:20%">Group</th>
-                    <th style="width:8%">Reports</th>
-                    <th style="width:28%">Title</th>
-                    <th style="width:12%"></th>
-                </tr>
-            </HeaderTemplate>
-            <RowTemplate Context="group">
-                <td>
+        <PrimerDataTable TGridItem="TriageGroupSnapshot" Items="ViewModel.ReportGroupQueue" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+            <ChildContent>
+                <TemplateColumn Context="group">
                     <input type="checkbox"
                            class="form-checkbox"
                            aria-label="Select report group @group.GroupId"
                            checked="@IsReportGroupSelected(group.GroupId)"
                            @onchange="args => ToggleReportGroup(group.GroupId, args)" />
-                </td>
-                <td><PrimerLabel Scheme="@GetStatusScheme(group.Status)" Text="@group.Status" /></td>
-                <td class="text-mono text-small"><time datetime="@FormatMachineTimestamp(group.QuietDeadlineUtc)">@FormatTimestamp(group.QuietDeadlineUtc)</time></td>
-                <td><code>@group.GroupId</code></td>
-                <td>@group.ReportCount</td>
-                <td>@(group.Title ?? group.Summary ?? "")</td>
-                <td><button type="button" class="btn btn-sm" @onclick="() => LoadGroupAsync(group.GroupId)">Details</button></td>
-            </RowTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Status" Context="group">
+                    <PrimerLabel Scheme="@GetStatusScheme(group.Status)" Text="@group.Status" />
+                </TemplateColumn>
+                <TemplateColumn Title="Timestamp" Context="group">
+                    <time class="text-mono text-small" datetime="@FormatMachineTimestamp(group.QuietDeadlineUtc)">@FormatTimestamp(group.QuietDeadlineUtc)</time>
+                </TemplateColumn>
+                <TemplateColumn Title="Group" Context="group">
+                    <code>@group.GroupId</code>
+                </TemplateColumn>
+                <PropertyColumn Property="@(group => group.ReportCount)" Title="Reports" />
+                <TemplateColumn Title="Title" Context="group">
+                    @(group.Title ?? group.Summary ?? "")
+                </TemplateColumn>
+                <TemplateColumn Context="group">
+                    <button type="button" class="btn btn-sm" aria-label="Load triage group @group.GroupId details" @onclick="() => LoadGroupAsync(group.GroupId)">Details</button>
+                </TemplateColumn>
+            </ChildContent>
             <EmptyContent>
                 <span class="color-fg-muted">No report group queue items.</span>
             </EmptyContent>
@@ -119,37 +122,87 @@ else
 
     <section class="Box mb-3">
         <div class="Box-header">
-            <h2 class="h4 mb-0">Run History <span class="Counter">@ViewModel.RunHistory.Count</span></h2>
+            <h2 class="h4 mb-0">
+                Run History <span class="Counter">@runHistoryRows.Count</span>
+                @if (runHistoryRows.Count != ViewModel.RunHistory.Count)
+                {
+                    <span class="text-normal color-fg-muted text-small">of @ViewModel.RunHistory.Count</span>
+                }
+            </h2>
         </div>
-        <PrimerDataTable TItem="TriageRunSnapshot" Items="ViewModel.RunHistory" ColumnCount="7" Class="Table--full-width" style="width:100%; table-layout:fixed;">
-            <HeaderTemplate>
-                <tr>
-                    <th style="width:10%">Status</th>
-                    <th style="width:18%">Timestamp</th>
-                    <th style="width:18%">Run</th>
-                    <th style="width:18%">Group</th>
-                    <th style="width:8%">Reports</th>
-                    <th style="width:16%">Created TODO</th>
-                    <th style="width:12%"></th>
-                </tr>
-            </HeaderTemplate>
-            <RowTemplate Context="run">
-                <td><PrimerLabel Scheme="@GetStatusScheme(run.Status)" Text="@run.Status" /></td>
-                <td class="text-mono text-small"><time datetime="@FormatMachineTimestamp(run.StartedUtc)">@FormatTimestamp(run.StartedUtc)</time></td>
-                <td><code>@run.RunId</code></td>
-                <td><code>@run.GroupId</code></td>
-                <td>@run.ReportCount</td>
-                <td>@(run.CreatedTodoId ?? "")</td>
-                <td>
+        <div class="Box-body border-bottom">
+            <div class="d-flex flex-wrap gap-2">
+                <label class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">Status</span>
+                    <select class="form-select input-sm" aria-label="Filter run history status" @bind="_runStatusFilter">
+                        <option value="">All</option>
+                        @foreach (var status in RunStatusFilterOptions)
+                        {
+                            <option value="@status">@status</option>
+                        }
+                    </select>
+                </label>
+                <div class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">Timestamp</span>
                     <div class="d-flex flex-wrap gap-1">
-                        <button type="button" class="btn btn-sm" @onclick="() => LoadRunAsync(run.RunId)">Details</button>
+                        <input type="datetime-local" class="form-control input-sm" aria-label="Filter run history timestamp from" title="From" value="@_runTimestampFromFilter" @onchange="args => _runTimestampFromFilter = args.Value?.ToString() ?? string.Empty" />
+                        <input type="datetime-local" class="form-control input-sm" aria-label="Filter run history timestamp to" title="To" value="@_runTimestampToFilter" @onchange="args => _runTimestampToFilter = args.Value?.ToString() ?? string.Empty" />
+                    </div>
+                </div>
+                <label class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">Run</span>
+                    <input class="form-control input-sm" aria-label="Filter run history run" @bind="_runIdFilter" @bind:event="oninput" />
+                </label>
+                <label class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">Group</span>
+                    <input class="form-control input-sm" aria-label="Filter run history group" @bind="_runGroupFilter" @bind:event="oninput" />
+                </label>
+                <div class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">Reports</span>
+                    <div class="d-flex flex-wrap gap-1">
+                        <input type="number" min="0" step="1" class="form-control input-sm" style="max-width: 6rem;" aria-label="Filter run history reports min" placeholder="Min" @bind="_runReportsMinFilter" />
+                        <input type="number" min="0" step="1" class="form-control input-sm" style="max-width: 6rem;" aria-label="Filter run history reports max" placeholder="Max" @bind="_runReportsMaxFilter" />
+                    </div>
+                </div>
+                <label class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">Created TODO</span>
+                    <input class="form-control input-sm" aria-label="Filter run history created TODO" @bind="_runCreatedTodoFilter" @bind:event="oninput" />
+                </label>
+                <div class="d-flex flex-items-end">
+                    <button type="button" class="btn btn-sm" @onclick="ClearRunFilters" disabled="@(!HasRunFilters)">
+                        <OcticonIcon Name="x" Size="16" /> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+        <PrimerDataTable TGridItem="TriageRunSnapshot" Items="runHistoryRows" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+            <ChildContent>
+                <TemplateColumn Title="Status" Context="run" Sortable="true" SortBy="@RunStatusSort">
+                    <PrimerLabel Scheme="@GetStatusScheme(run.Status)" Text="@run.Status" />
+                </TemplateColumn>
+                <TemplateColumn Title="Timestamp" Context="run" Sortable="true" SortBy="@RunTimestampSort" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending">
+                    <time class="text-mono text-small" datetime="@FormatMachineTimestamp(run.StartedUtc)">@FormatTimestamp(run.StartedUtc)</time>
+                </TemplateColumn>
+                <TemplateColumn Title="Run" Context="run" Sortable="true" SortBy="@RunIdSort">
+                    <code>@run.RunId</code>
+                </TemplateColumn>
+                <TemplateColumn Title="Group" Context="run" Sortable="true" SortBy="@RunGroupSort">
+                    <code>@run.GroupId</code>
+                </TemplateColumn>
+                <PropertyColumn Property="@(run => run.ReportCount)" Title="Reports" Sortable="true" />
+                <TemplateColumn Title="Created TODO" Context="run" Sortable="true" SortBy="@RunCreatedTodoSort">
+                    @(run.CreatedTodoId ?? "")
+                </TemplateColumn>
+                <TemplateColumn Context="run">
+                    <div class="d-flex flex-wrap gap-1">
+                        <button type="button" class="btn btn-sm" aria-label="Load triage run @run.RunId details" @onclick="() => LoadRunAsync(run.RunId)">Details</button>
                         @if (CanResubmitRun(run))
                         {
                             <button type="button" class="btn btn-sm btn-danger" @onclick="() => ResubmitRunGroupAsync(run.GroupId)" disabled="@ViewModel.IsLoading">Resubmit</button>
                         }
                     </div>
-                </td>
-            </RowTemplate>
+                </TemplateColumn>
+            </ChildContent>
             <EmptyContent>
                 <span class="color-fg-muted">No triage runs.</span>
             </EmptyContent>
@@ -158,31 +211,98 @@ else
 
     <section class="Box mb-3">
         <div class="Box-header">
-            <h2 class="h4 mb-0">Triage-Created TODOs <span class="Counter">@ViewModel.OpenTriageTodos.Count</span></h2>
+            <h2 class="h4 mb-0">
+                Triage-Created TODOs <span class="Counter">@openTriageTodoRows.Count</span>
+                @if (openTriageTodoRows.Count != ViewModel.OpenTriageTodos.Count)
+                {
+                    <span class="text-normal color-fg-muted text-small">of @ViewModel.OpenTriageTodos.Count</span>
+                }
+            </h2>
         </div>
-        <PrimerDataTable TItem="OpenTriageTodoItem" Items="ViewModel.OpenTriageTodos" ColumnCount="8" Class="Table--full-width" style="width:100%; table-layout:fixed;">
-            <HeaderTemplate>
-                <tr>
-                    <th style="width:13%">TODO</th>
-                    <th style="width:18%">Timestamp</th>
-                    <th style="width:20%">Title</th>
-                    <th style="width:10%">Group</th>
-                    <th style="width:10%">Run</th>
-                    <th style="width:7%">Reports</th>
-                    <th style="width:14%">Workspace</th>
-                    <th style="width:8%"></th>
-                </tr>
-            </HeaderTemplate>
-            <RowTemplate Context="todo">
-                <td><code>@todo.TodoId</code></td>
-                <td class="text-mono text-small"><time datetime="@FormatMachineTimestamp(todo.CreatedAtUtc)">@FormatTimestamp(todo.CreatedAtUtc)</time></td>
-                <td>@todo.Title</td>
-                <td>@(todo.GroupStatus ?? todo.GroupId ?? "")</td>
-                <td>@(todo.Done ? "done" : todo.RunStatus ?? todo.RunId ?? "")</td>
-                <td>@todo.ReportCount</td>
-                <td title="@todo.WorkspacePath">@Shorten(todo.WorkspacePath, 34)</td>
-                <td><button type="button" class="btn btn-sm" @onclick="() => OpenTodo(todo)" disabled="@(!todo.CanOpen)">Open</button></td>
-            </RowTemplate>
+        <div class="Box-body border-bottom">
+            <div class="d-flex flex-wrap gap-2">
+                <label class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">TODO</span>
+                    <input class="form-control input-sm" aria-label="Filter triage-created TODO ID" @bind="_todoIdFilter" @bind:event="oninput" />
+                </label>
+                <div class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">Timestamp</span>
+                    <div class="d-flex flex-wrap gap-1">
+                        <input type="datetime-local" class="form-control input-sm" aria-label="Filter triage-created TODO timestamp from" title="From" value="@_todoTimestampFromFilter" @onchange="args => _todoTimestampFromFilter = args.Value?.ToString() ?? string.Empty" />
+                        <input type="datetime-local" class="form-control input-sm" aria-label="Filter triage-created TODO timestamp to" title="To" value="@_todoTimestampToFilter" @onchange="args => _todoTimestampToFilter = args.Value?.ToString() ?? string.Empty" />
+                    </div>
+                </div>
+                <label class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">Title</span>
+                    <input class="form-control input-sm" aria-label="Filter triage-created TODO title" @bind="_todoTitleFilter" @bind:event="oninput" />
+                </label>
+                <label class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">Group</span>
+                    <select class="form-select input-sm" aria-label="Filter triage-created TODO group" @bind="_todoGroupFilter">
+                        <option value="">All</option>
+                        @foreach (var group in TodoGroupFilterOptions)
+                        {
+                            <option value="@group">@group</option>
+                        }
+                    </select>
+                </label>
+                <label class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">Run</span>
+                    <select class="form-select input-sm" aria-label="Filter triage-created TODO run" @bind="_todoRunFilter">
+                        <option value="">All</option>
+                        @foreach (var run in TodoRunFilterOptions)
+                        {
+                            <option value="@run">@run</option>
+                        }
+                    </select>
+                </label>
+                <div class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">Reports</span>
+                    <div class="d-flex flex-wrap gap-1">
+                        <input type="number" min="0" step="1" class="form-control input-sm" style="max-width: 6rem;" aria-label="Filter triage-created TODO reports min" placeholder="Min" @bind="_todoReportsMinFilter" />
+                        <input type="number" min="0" step="1" class="form-control input-sm" style="max-width: 6rem;" aria-label="Filter triage-created TODO reports max" placeholder="Max" @bind="_todoReportsMaxFilter" />
+                    </div>
+                </div>
+                <label class="d-flex flex-column">
+                    <span class="text-small color-fg-muted">Workspace</span>
+                    <select class="form-select input-sm" aria-label="Filter triage-created TODO workspace" @bind="_todoWorkspaceFilter">
+                        <option value="">All</option>
+                        @foreach (var workspace in TodoWorkspaceFilterOptions)
+                        {
+                            <option value="@workspace.WorkspacePath">@WorkspaceOptionText(workspace)</option>
+                        }
+                    </select>
+                </label>
+                <div class="d-flex flex-items-end">
+                    <button type="button" class="btn btn-sm" @onclick="ClearTodoFilters" disabled="@(!HasTodoFilters)">
+                        <OcticonIcon Name="x" Size="16" /> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+        <PrimerDataTable TGridItem="OpenTriageTodoItem" Items="openTriageTodoRows" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+            <ChildContent>
+                <TemplateColumn Title="TODO" Context="todo" Sortable="true" SortBy="@TodoIdSort">
+                    <code>@todo.TodoId</code>
+                </TemplateColumn>
+                <TemplateColumn Title="Timestamp" Context="todo" Sortable="true" SortBy="@TodoTimestampSort" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending">
+                    <time class="text-mono text-small" datetime="@FormatMachineTimestamp(todo.CreatedAtUtc)">@FormatTimestamp(todo.CreatedAtUtc)</time>
+                </TemplateColumn>
+                <PropertyColumn Property="@(todo => todo.Title)" Title="Title" Sortable="true" />
+                <TemplateColumn Title="Group" Context="todo" Sortable="true" SortBy="@TodoGroupSort">
+                    @TodoGroupText(todo)
+                </TemplateColumn>
+                <TemplateColumn Title="Run" Context="todo" Sortable="true" SortBy="@TodoRunSort">
+                    @TodoRunText(todo)
+                </TemplateColumn>
+                <PropertyColumn Property="@(todo => todo.ReportCount)" Title="Reports" Sortable="true" />
+                <TemplateColumn Title="Workspace" Context="todo" Sortable="true" SortBy="@TodoWorkspaceSort">
+                    <span title="@todo.WorkspacePath">@Shorten(todo.WorkspacePath, 34)</span>
+                </TemplateColumn>
+                <TemplateColumn Context="todo">
+                    <button type="button" class="btn btn-sm" @onclick="() => OpenTodo(todo)" disabled="@(!todo.CanOpen)">Open</button>
+                </TemplateColumn>
+            </ChildContent>
             <EmptyContent>
                 <span class="color-fg-muted">No triage-created TODOs.</span>
             </EmptyContent>
@@ -214,7 +334,7 @@ else
                             <h4 class="h6">Reports</h4>
                             @foreach (var report in group.Reports)
                             {
-                                <button type="button" class="btn-link d-block text-left" @onclick="() => LoadReportAsync(report.ReportId)">
+                                <button type="button" class="btn-link d-block text-left" aria-label="Load triage report @report.ReportId details" @onclick="() => LoadReportAsync(report.ReportId)">
                                     @report.ReportId - @(report.Title ?? report.Summary ?? report.Status)
                                 </button>
                             }
@@ -264,6 +384,99 @@ else
 
     private bool CanMergeSelectedGroups => !ViewModel.IsLoading && SelectedGroupCount > 1;
 
+    private string _runStatusFilter = string.Empty;
+    private string _runTimestampFromFilter = string.Empty;
+    private string _runTimestampToFilter = string.Empty;
+    private string _runIdFilter = string.Empty;
+    private string _runGroupFilter = string.Empty;
+    private string _runReportsMinFilter = string.Empty;
+    private string _runReportsMaxFilter = string.Empty;
+    private string _runCreatedTodoFilter = string.Empty;
+
+    private string _todoIdFilter = string.Empty;
+    private string _todoTimestampFromFilter = string.Empty;
+    private string _todoTimestampToFilter = string.Empty;
+    private string _todoTitleFilter = string.Empty;
+    private string _todoGroupFilter = string.Empty;
+    private string _todoRunFilter = string.Empty;
+    private string _todoReportsMinFilter = string.Empty;
+    private string _todoReportsMaxFilter = string.Empty;
+    private string _todoWorkspaceFilter = string.Empty;
+    private static readonly string[] LocalDateTimeFilterFormats = ["yyyy-MM-ddTHH:mm", "yyyy-MM-ddTHH:mm:ss"];
+
+    private static readonly GridSort<TriageRunSnapshot> RunStatusSort =
+        GridSort<TriageRunSnapshot>.ByAscending(run => run.Status);
+
+    private static readonly GridSort<TriageRunSnapshot> RunTimestampSort =
+        GridSort<TriageRunSnapshot>.ByAscending(run => run.StartedUtc);
+
+    private static readonly GridSort<TriageRunSnapshot> RunIdSort =
+        GridSort<TriageRunSnapshot>.ByAscending(run => run.RunId);
+
+    private static readonly GridSort<TriageRunSnapshot> RunGroupSort =
+        GridSort<TriageRunSnapshot>.ByAscending(run => run.GroupId);
+
+    private static readonly GridSort<TriageRunSnapshot> RunCreatedTodoSort =
+        GridSort<TriageRunSnapshot>.ByAscending(run => run.CreatedTodoId ?? string.Empty);
+
+    private static readonly GridSort<OpenTriageTodoItem> TodoIdSort =
+        GridSort<OpenTriageTodoItem>.ByAscending(todo => todo.TodoId);
+
+    private static readonly GridSort<OpenTriageTodoItem> TodoTimestampSort =
+        GridSort<OpenTriageTodoItem>.ByAscending(todo => todo.CreatedAtUtc);
+
+    private static readonly GridSort<OpenTriageTodoItem> TodoGroupSort =
+        GridSort<OpenTriageTodoItem>.ByAscending(todo => todo.GroupStatus ?? todo.GroupId ?? string.Empty);
+
+    private static readonly GridSort<OpenTriageTodoItem> TodoRunSort =
+        GridSort<OpenTriageTodoItem>.ByAscending(todo => todo.Done ? "done" : todo.RunStatus ?? todo.RunId ?? string.Empty);
+
+    private static readonly GridSort<OpenTriageTodoItem> TodoWorkspaceSort =
+        GridSort<OpenTriageTodoItem>.ByAscending(todo => todo.WorkspacePath);
+
+    private IReadOnlyList<string> RunStatusFilterOptions
+        => DistinctSortedNonBlank(ViewModel.RunHistory.Select(run => run.Status));
+
+    private IReadOnlyList<string> TodoGroupFilterOptions
+        => DistinctSortedNonBlank(ViewModel.OpenTriageTodos.Select(TodoGroupText));
+
+    private IReadOnlyList<string> TodoRunFilterOptions
+        => DistinctSortedNonBlank(ViewModel.OpenTriageTodos.Select(TodoRunText));
+
+    private IReadOnlyList<WorkspaceSummary> TodoWorkspaceFilterOptions
+        => WorkspaceListViewModel.Workspaces
+            .Where(workspace => !string.IsNullOrWhiteSpace(workspace.WorkspacePath))
+            .OrderBy(workspace => workspace.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(workspace => workspace.WorkspacePath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private IReadOnlyList<TriageRunSnapshot> FilteredRunHistory
+        => ViewModel.RunHistory.Where(MatchesRunFilters).ToList();
+
+    private IReadOnlyList<OpenTriageTodoItem> FilteredOpenTriageTodos
+        => ViewModel.OpenTriageTodos.Where(MatchesTodoFilters).ToList();
+
+    private bool HasRunFilters =>
+        HasValue(_runStatusFilter) ||
+        HasValue(_runTimestampFromFilter) ||
+        HasValue(_runTimestampToFilter) ||
+        HasValue(_runIdFilter) ||
+        HasValue(_runGroupFilter) ||
+        HasValue(_runReportsMinFilter) ||
+        HasValue(_runReportsMaxFilter) ||
+        HasValue(_runCreatedTodoFilter);
+
+    private bool HasTodoFilters =>
+        HasValue(_todoIdFilter) ||
+        HasValue(_todoTimestampFromFilter) ||
+        HasValue(_todoTimestampToFilter) ||
+        HasValue(_todoTitleFilter) ||
+        HasValue(_todoGroupFilter) ||
+        HasValue(_todoRunFilter) ||
+        HasValue(_todoReportsMinFilter) ||
+        HasValue(_todoReportsMaxFilter) ||
+        HasValue(_todoWorkspaceFilter);
+
     protected override async Task OnParametersSetAsync()
     {
         if (_hasLoadedParameters && string.Equals(_lastWorkspacePath, WorkspacePath, StringComparison.Ordinal))
@@ -280,6 +493,7 @@ else
         {
             ApplyWorkspaceFromQuery();
             ViewModel.WorkspacePathFilter = WorkspacePath;
+            await WorkspaceListViewModel.LoadAsync().ConfigureAwait(true);
             await ViewModel.LoadAsync().ConfigureAwait(true);
             PruneSelections();
         }).ConfigureAwait(true);
@@ -376,6 +590,31 @@ else
         _selectedReportGroupIds.Clear();
     }
 
+    private void ClearRunFilters()
+    {
+        _runStatusFilter = string.Empty;
+        _runTimestampFromFilter = string.Empty;
+        _runTimestampToFilter = string.Empty;
+        _runIdFilter = string.Empty;
+        _runGroupFilter = string.Empty;
+        _runReportsMinFilter = string.Empty;
+        _runReportsMaxFilter = string.Empty;
+        _runCreatedTodoFilter = string.Empty;
+    }
+
+    private void ClearTodoFilters()
+    {
+        _todoIdFilter = string.Empty;
+        _todoTimestampFromFilter = string.Empty;
+        _todoTimestampToFilter = string.Empty;
+        _todoTitleFilter = string.Empty;
+        _todoGroupFilter = string.Empty;
+        _todoRunFilter = string.Empty;
+        _todoReportsMinFilter = string.Empty;
+        _todoReportsMaxFilter = string.Empty;
+        _todoWorkspaceFilter = string.Empty;
+    }
+
     private void PruneSelections()
     {
         _selectedTriageGroupIds.IntersectWith(ViewModel.TriageQueue.Select(group => group.GroupId));
@@ -424,6 +663,96 @@ else
         => !string.IsNullOrWhiteSpace(run.GroupId) &&
            (string.Equals(run.Status, "failed", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(run.Status, "error", StringComparison.OrdinalIgnoreCase));
+
+    private bool MatchesRunFilters(TriageRunSnapshot run)
+        => MatchesExactFilter(run.Status, _runStatusFilter) &&
+           MatchesDateTimeRange(run.StartedUtc, _runTimestampFromFilter, _runTimestampToFilter) &&
+           ContainsFilter(run.RunId, _runIdFilter) &&
+           ContainsAnyFilter(_runGroupFilter, run.GroupId, run.GroupStatus, run.GroupTitle, run.GroupSummary) &&
+           MatchesIntRange(run.ReportCount, _runReportsMinFilter, _runReportsMaxFilter) &&
+           ContainsFilter(run.CreatedTodoId, _runCreatedTodoFilter);
+
+    private bool MatchesTodoFilters(OpenTriageTodoItem todo)
+        => ContainsFilter(todo.TodoId, _todoIdFilter) &&
+           MatchesDateTimeRange(todo.CreatedAtUtc, _todoTimestampFromFilter, _todoTimestampToFilter) &&
+           ContainsAnyFilter(_todoTitleFilter, todo.Title, todo.GroupTitle, todo.GroupSummary) &&
+           MatchesExactFilter(TodoGroupText(todo), _todoGroupFilter) &&
+           MatchesExactFilter(TodoRunText(todo), _todoRunFilter) &&
+           MatchesIntRange(todo.ReportCount, _todoReportsMinFilter, _todoReportsMaxFilter) &&
+           MatchesExactFilter(todo.WorkspacePath, _todoWorkspaceFilter);
+
+    private static IReadOnlyList<string> DistinctSortedNonBlank(IEnumerable<string?> values)
+        => values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private static bool MatchesExactFilter(string? value, string filter)
+        => !HasValue(filter) || string.Equals(value?.Trim(), filter.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private static bool MatchesDateTimeRange(DateTimeOffset value, string fromFilter, string toFilter)
+    {
+        var localValue = value.ToLocalTime().DateTime;
+        if (TryParseLocalDateTimeFilter(fromFilter, out var from) && localValue < from)
+            return false;
+
+        if (TryParseLocalDateTimeFilter(toFilter, out var to) && localValue > to.AddMinutes(1).AddTicks(-1))
+            return false;
+
+        return true;
+    }
+
+    private static bool MatchesIntRange(int value, string minFilter, string maxFilter)
+    {
+        if (TryParseIntFilter(minFilter, out var min) && value < min)
+            return false;
+
+        if (TryParseIntFilter(maxFilter, out var max) && value > max)
+            return false;
+
+        return true;
+    }
+
+    private static bool TryParseLocalDateTimeFilter(string value, out DateTime result)
+    {
+        if (!HasValue(value))
+        {
+            result = default;
+            return false;
+        }
+
+        var trimmed = value.Trim();
+        return DateTime.TryParseExact(trimmed, LocalDateTimeFilterFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out result) ||
+               DateTime.TryParse(trimmed, CultureInfo.CurrentCulture, DateTimeStyles.None, out result);
+    }
+
+    private static bool TryParseIntFilter(string value, out int result)
+    {
+        result = default;
+        return HasValue(value) && int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out result);
+    }
+
+    private static bool ContainsAnyFilter(string filter, params string?[] values)
+        => !HasValue(filter) || values.Any(value => ContainsFilter(value, filter));
+
+    private static bool ContainsFilter(string? value, string filter)
+        => !HasValue(filter) || (!string.IsNullOrWhiteSpace(value) && value.Contains(filter.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    private static bool HasValue(string value)
+        => !string.IsNullOrWhiteSpace(value);
+
+    private static string TodoGroupText(OpenTriageTodoItem todo)
+        => todo.GroupStatus ?? todo.GroupId ?? string.Empty;
+
+    private static string TodoRunText(OpenTriageTodoItem todo)
+        => todo.Done ? "done" : todo.RunStatus ?? todo.RunId ?? string.Empty;
+
+    private static string WorkspaceOptionText(WorkspaceSummary workspace)
+        => string.IsNullOrWhiteSpace(workspace.Name)
+            ? workspace.WorkspacePath
+            : $"{workspace.Name} - {workspace.WorkspacePath}";
 
     private static string Shorten(string value, int maxLength)
         => value.Length <= maxLength ? value : value[..Math.Max(0, maxLength - 3)] + "...";

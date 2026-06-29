@@ -1,84 +1,55 @@
-﻿using System.Text.Json;
+using McpServerManager.UI.Core.Auth;
 
 namespace McpServerManager.Director.Auth;
 
 /// <summary>
-/// Cached OAuth token data, persisted to <c>~/.mcpserver/tokens.json</c>.
+/// Cached OAuth token data used by legacy Director auth call sites.
 /// </summary>
-internal sealed class CachedToken
+internal sealed class CachedToken : WorkspaceAuthToken
 {
-    /// <summary>JWT access token.</summary>
-    public string AccessToken { get; set; } = "";
-
-    /// <summary>Refresh token for obtaining new access tokens.</summary>
-    public string RefreshToken { get; set; } = "";
-
-    /// <summary>UTC timestamp when the access token expires.</summary>
-    public DateTime ExpiresAtUtc { get; set; }
-
-    /// <summary>Keycloak authority this token was issued by.</summary>
-    public string Authority { get; set; } = "";
-
-    /// <summary>OIDC token endpoint used to mint/refresh this token (may be an MCP proxy endpoint).</summary>
-    public string TokenEndpoint { get; set; } = "";
-
-    /// <summary>OIDC client id used to mint/refresh this token.</summary>
-    public string ClientId { get; set; } = "mcp-director";
-
-    /// <summary>Whether the access token has expired (with 30-second buffer).</summary>
-    public bool IsExpired => DateTime.UtcNow >= ExpiresAtUtc.AddSeconds(-30);
+    /// <summary>Whether the access token is expired.</summary>
+    public new bool IsExpired => IsExpired(DateTimeOffset.UtcNow);
 }
 
 /// <summary>
-/// Manages reading and writing cached OAuth tokens to <c>~/.mcpserver/tokens.json</c>.
+/// Director compatibility wrapper over the shared workspace token cache.
 /// </summary>
 internal static class TokenCache
 {
-    private static readonly string s_cacheDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".mcpserver");
+    private static readonly FileWorkspaceAuthTokenCache s_cache = new();
 
-    private static readonly string s_cachePath = Path.Combine(s_cacheDir, "tokens.json");
-
-    private static readonly JsonSerializerOptions s_jsonOpts = new()
+    /// <summary>Loads a valid cached token, or returns null if none exists. Expired tokens are deleted.</summary>
+    public static CachedToken? Load(string? workspacePath = null)
     {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
-
-    /// <summary>Loads the cached token, or returns null if none exists.</summary>
-    public static CachedToken? Load()
-    {
-        if (!File.Exists(s_cachePath))
-            return null;
-
-        try
-        {
-            var json = File.ReadAllText(s_cachePath);
-            return JsonSerializer.Deserialize<CachedToken>(json, s_jsonOpts);
-        }
-        catch
-        {
-            return null;
-        }
+        var token = s_cache.TryReadValid(workspacePath);
+        return token is null ? null : ToCachedToken(token);
     }
 
-    /// <summary>Saves a token to the cache file.</summary>
-    public static void Save(CachedToken token)
+    /// <summary>Saves a token to the workspace cache.</summary>
+    public static void Save(CachedToken token, string? workspacePath = null)
     {
-        Directory.CreateDirectory(s_cacheDir);
-        var json = JsonSerializer.Serialize(token, s_jsonOpts);
-        File.WriteAllText(s_cachePath, json);
+        s_cache.Save(workspacePath, token);
     }
 
     /// <summary>Deletes the cached token file.</summary>
-    public static void Clear()
+    public static void Clear(string? workspacePath = null)
     {
-        if (File.Exists(s_cachePath))
-            File.Delete(s_cachePath);
+        s_cache.Clear(workspacePath);
     }
 
     /// <summary>Returns the cache file path for display purposes.</summary>
-    public static string GetCachePath() => s_cachePath;
+    public static string GetCachePath(string? workspacePath = null)
+        => s_cache.TryGetCachePath(workspacePath) ?? "(no active workspace token cache)";
+
+    private static CachedToken ToCachedToken(WorkspaceAuthToken token)
+        => new()
+        {
+            AccessToken = token.AccessToken,
+            RefreshToken = token.RefreshToken,
+            ExpiresAtUtc = token.ExpiresAtUtc,
+            Authority = token.Authority,
+            TokenEndpoint = token.TokenEndpoint,
+            ClientId = token.ClientId,
+            TokenType = token.TokenType
+        };
 }

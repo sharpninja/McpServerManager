@@ -1,6 +1,7 @@
+@using System.Reflection
 @using McpServerManager.Web.Components.Auth
 
-<Router AppAssembly="@typeof(Program).Assembly">
+<Router AppAssembly="@typeof(Program).Assembly" AdditionalAssemblies="AdditionalAssemblies">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
             <NotAuthorized>
@@ -31,3 +32,8 @@
         </LayoutView>
     </NotFound>
 </Router>
+
+@code {
+    [Parameter]
+    public IEnumerable<Assembly>? AdditionalAssemblies { get; set; }
+}

@@ -307,7 +307,7 @@ internal sealed class TokenInfo
     public IReadOnlyList<string> Roles { get; set; } = [];
 
     /// <summary>When the token expires.</summary>
-    public DateTime ExpiresAtUtc { get; set; }
+    public DateTimeOffset ExpiresAtUtc { get; set; }
 
     /// <summary>Whether the token is expired.</summary>
     public bool IsExpired { get; set; }

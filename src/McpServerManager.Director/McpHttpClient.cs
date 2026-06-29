@@ -59,7 +59,7 @@ internal sealed class McpHttpClient : IDisposable
     /// </summary>
     public bool TrySetCachedBearerToken()
     {
-        var cached = Auth.TokenCache.Load();
+        var cached = Auth.TokenCache.Load(WorkspacePath);
         if (cached is null)
             return false;
 
@@ -96,7 +96,7 @@ internal sealed class McpHttpClient : IDisposable
     /// </summary>
     internal static bool TryRefreshCachedToken()
     {
-        var cached = Auth.TokenCache.Load();
+        var cached = Auth.TokenCache.Load(workspacePath: null);
         if (cached is null)
             return false;
 

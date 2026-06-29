@@ -38,23 +38,19 @@
         }
         else
         {
-            <PrimerDataTable TItem="AgentDefinitionSummaryItem" Items="DefinitionListViewModel.Items" ColumnCount="4" Class="Table--full-width">
-                <HeaderTemplate>
-                    <tr>
-                        <th>Agent ID</th>
-                        <th>Display Name</th>
-                        <th>Built-in</th>
-                        <th></th>
-                    </tr>
-                </HeaderTemplate>
-                <RowTemplate Context="item">
-                    <td><code>@item.Id</code></td>
-                    <td>@item.DisplayName</td>
-                    <td><PrimerLabel Scheme="@(item.IsBuiltIn ? "done" : "default")" Text="@(item.IsBuiltIn ? "Yes" : "No")" /></td>
-                    <td>
+            <PrimerDataTable TGridItem="AgentDefinitionSummaryItem" Items="DefinitionListViewModel.Items" Class="Table--full-width">
+                <ChildContent>
+                    <TemplateColumn Title="Agent ID" Context="item">
+                        <code>@item.Id</code>
+                    </TemplateColumn>
+                    <PropertyColumn Property="@(item => item.DisplayName)" Title="Display Name" />
+                    <TemplateColumn Title="Built-in" Context="item">
+                        <PrimerLabel Scheme="@(item.IsBuiltIn ? "done" : "default")" Text="@(item.IsBuiltIn ? "Yes" : "No")" />
+                    </TemplateColumn>
+                    <TemplateColumn Context="item">
                         <button class="btn btn-sm" type="button" @onclick="() => LoadDefinitionDetailAsync(item.Id)">Details</button>
-                    </td>
-                </RowTemplate>
+                    </TemplateColumn>
+                </ChildContent>
             </PrimerDataTable>
         }
     </div>
@@ -111,27 +107,25 @@
         }
         else
         {
-            <PrimerDataTable TItem="WorkspaceAgentItem" Items="WorkspaceAgentListViewModel.Items" ColumnCount="6" Class="Table--full-width">
-                <HeaderTemplate>
-                    <tr>
-                        <th>Agent ID</th>
-                        <th>Workspace</th>
-                        <th>Enabled</th>
-                        <th>Banned</th>
-                        <th>Isolation</th>
-                        <th></th>
-                    </tr>
-                </HeaderTemplate>
-                <RowTemplate Context="item">
-                    <td><code>@item.AgentId</code></td>
-                    <td><code>@item.WorkspacePath</code></td>
-                    <td><PrimerLabel Scheme="@(item.Enabled ? "success" : "attention")" Text="@(item.Enabled ? "Yes" : "No")" /></td>
-                    <td><PrimerLabel Scheme="@(item.Banned ? "danger" : "done")" Text="@(item.Banned ? "Yes" : "No")" /></td>
-                    <td>@item.AgentIsolation</td>
-                    <td>
+            <PrimerDataTable TGridItem="WorkspaceAgentItem" Items="WorkspaceAgentListViewModel.Items" Class="Table--full-width">
+                <ChildContent>
+                    <TemplateColumn Title="Agent ID" Context="item">
+                        <code>@item.AgentId</code>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Workspace" Context="item">
+                        <code>@item.WorkspacePath</code>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Enabled" Context="item">
+                        <PrimerLabel Scheme="@(item.Enabled ? "success" : "attention")" Text="@(item.Enabled ? "Yes" : "No")" />
+                    </TemplateColumn>
+                    <TemplateColumn Title="Banned" Context="item">
+                        <PrimerLabel Scheme="@(item.Banned ? "danger" : "done")" Text="@(item.Banned ? "Yes" : "No")" />
+                    </TemplateColumn>
+                    <PropertyColumn Property="@(item => item.AgentIsolation)" Title="Isolation" />
+                    <TemplateColumn Context="item">
                         <button class="btn btn-sm" type="button" @onclick="() => LoadWorkspaceAgentDetailAsync(item.AgentId, item.WorkspacePath)">Details</button>
-                    </td>
-                </RowTemplate>
+                    </TemplateColumn>
+                </ChildContent>
             </PrimerDataTable>
         }
     </div>

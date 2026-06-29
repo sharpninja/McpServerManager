@@ -416,12 +416,42 @@ table.Table th {
     border-bottom: 1px solid var(--borderColor-default, #d0d7de) !important;
 }
 
+table.Table th .col-title {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: inherit;
+    font-weight: inherit;
+    padding: 0;
+    text-align: left;
+}
+
+table.Table th .col-title:hover {
+    color: var(--fgColor-accent, #0969da);
+}
+
+table.Table th .sort-indicator {
+    color: var(--fgColor-muted, #656d76);
+}
+
 table.Table tbody tr {
     border-bottom: 1px solid var(--borderColor-muted, #d8dee4) !important;
 }
 
 table.Table tbody tr:last-child {
     border-bottom: none !important;
+}
+
+.primer-quickgrid-empty {
+    width: 100%;
+    padding: 8px 16px;
+    color: var(--fgColor-muted, #656d76);
+    border-bottom: 1px solid var(--borderColor-muted, #d8dee4);
 }
 
 /* ── Monaco editor container ── */

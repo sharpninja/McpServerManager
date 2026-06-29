@@ -1,59 +1,44 @@
-@typeparam TItem
+@typeparam TGridItem
+@attribute [CascadingTypeParameter(nameof(TGridItem))]
 
-<table class="@this.CssClass" @attributes="AdditionalAttributes">
-    @if (this.HeaderTemplate is not null)
-    {
-        <thead>
-            @this.HeaderTemplate
-        </thead>
-    }
-    <tbody>
-        @if (this.RowTemplate is not null && this.Items is { Count: > 0 })
-        {
-            @foreach (var item in this.Items)
-            {
-                <tr class="@this.RowClass?.Invoke(item)">
-                    @this.RowTemplate(item)
-                </tr>
-            }
-        }
-        else if (this.EmptyContent is not null)
-        {
-            <tr>
-                <td colspan="@this.SafeColumnCount">
-                    @this.EmptyContent
-                </td>
-            </tr>
-        }
-        else
-        {
-            <tr>
-                <td colspan="@this.SafeColumnCount" class="color-fg-muted">No data available.</td>
-            </tr>
-        }
-    </tbody>
-</table>
+@if (this.Items is { Count: > 0 })
+{
+    <QuickGrid TGridItem="TGridItem"
+               Items="@this.QueryableItems"
+               Class="@this.CssClass"
+               RowClass="@this.RowClass"
+               @attributes="this.AdditionalAttributes">
+        @this.ChildContent
+    </QuickGrid>
+}
+else if (this.EmptyContent is not null)
+{
+    <div class="@this.EmptyClass">
+        @this.EmptyContent
+    </div>
+}
+else
+{
+    <div class="@this.EmptyClass">No data available.</div>
+}
 
 @code {
-    [Parameter] public IReadOnlyList<TItem>? Items { get; set; }
+    [Parameter] public IReadOnlyList<TGridItem>? Items { get; set; }
 
-    [Parameter] public RenderFragment? HeaderTemplate { get; set; }
-
-    [Parameter] public RenderFragment<TItem>? RowTemplate { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
 
     [Parameter] public RenderFragment? EmptyContent { get; set; }
-
-    [Parameter] public int ColumnCount { get; set; } = 1;
 
     [Parameter] public string? Class { get; set; }
 
     /// <summary>Optional callback to compute a CSS class for each row's <c>&lt;tr&gt;</c> element.</summary>
-    [Parameter] public Func<TItem, string?>? RowClass { get; set; }
+    [Parameter] public Func<TGridItem, string?>? RowClass { get; set; }
 
     [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string CssClass => string.Join(' ', new[] { "Table", this.Class }.Where(static value => !string.IsNullOrWhiteSpace(value)));
 
-    private int SafeColumnCount => Math.Max(this.ColumnCount, 1);
-}
+    private string EmptyClass => string.Join(' ', new[] { "Table", "primer-quickgrid-empty", this.Class }.Where(static value => !string.IsNullOrWhiteSpace(value)));
 
+    private IQueryable<TGridItem> QueryableItems => (this.Items ?? Array.Empty<TGridItem>()).AsQueryable();
+}

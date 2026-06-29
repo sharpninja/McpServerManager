@@ -7,6 +7,7 @@
 @inject TodoListViewModel TodoListVm
 @inject SessionLogListViewModel SessionLogListVm
 @inject WebCommandTarget CommandTarget
+@implements IAsyncDisposable
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -65,33 +66,25 @@ else
         }
         else
         {
-            <PrimerDataTable TItem="WorkspaceSummary"
+            <PrimerDataTable TGridItem="WorkspaceSummary"
                              Items="WorkspaceListVm.Workspaces"
-                             ColumnCount="3"
                              Class="Table--full-width"
                              RowClass="GetWorkspaceRowClass"
                              style="width:100%; table-layout:fixed;">
-                <HeaderTemplate>
-                    <tr>
-                        <th style="width:40px"></th>
-                        <th>Workspace</th>
-                        <th style="width:120px"></th>
-                    </tr>
-                </HeaderTemplate>
-                <RowTemplate Context="ws">
-                    <td>
+                <ChildContent>
+                    <TemplateColumn Context="ws">
                         @if (IsActive(ws.WorkspacePath))
                         {
                             <OcticonIcon Name="check-circle" Size="16" Class="color-fg-success" AriaLabel="Active workspace" />
                         }
-                    </td>
-                    <td>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Workspace" Context="ws">
                         <div class="dashboard-workspace-cell">
                             <span class="text-bold">@ws.Name</span>
                             <span class="dashboard-workspace-path color-fg-muted f6" title="@ws.WorkspacePath">@ws.WorkspacePath</span>
                         </div>
-                    </td>
-                    <td class="text-right">
+                    </TemplateColumn>
+                    <TemplateColumn Context="ws">
                         @if (IsActive(ws.WorkspacePath))
                         {
                             <span class="btn btn-sm btn-primary disabled" aria-disabled="true">Selected</span>
@@ -100,8 +93,8 @@ else
                         {
                             <button class="btn btn-sm" @onclick="() => SelectWorkspace(ws.WorkspacePath)">Select</button>
                         }
-                    </td>
-                </RowTemplate>
+                    </TemplateColumn>
+                </ChildContent>
             </PrimerDataTable>
         }
     </div>
@@ -123,37 +116,28 @@ else
             }
             else
             {
-                <PrimerDataTable TItem="TodoListItem"
+                <PrimerDataTable TGridItem="TodoListItem"
                                  Items="GetDashboardTodoItems()"
-                                 ColumnCount="4"
                                  Class="Table--full-width"
                                  style="width:100%; table-layout:fixed;">
-                    <HeaderTemplate>
-                        <tr>
-                            <th style="width:110px;">ID</th>
-                            <th>Title</th>
-                            <th style="width:100px;">Priority</th>
-                            <th style="width:90px;"></th>
-                        </tr>
-                    </HeaderTemplate>
-                    <RowTemplate Context="todo">
-                        <td>
+                    <ChildContent>
+                        <TemplateColumn Title="ID" Context="todo">
                             <a class="Link--primary" href="@GetTodoDetailHref(todo.Id)">
                                 <code class="f6">@todo.Id</code>
                             </a>
-                        </td>
-                        <td>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Title" Context="todo">
                             <a class="Link--primary dashboard-link-truncate" href="@GetTodoDetailHref(todo.Id)" title="@todo.Title">
                                 @todo.Title
                             </a>
-                        </td>
-                        <td>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Priority" Context="todo">
                             <PrimerLabel Scheme="@GetPriorityScheme(todo.Priority)" Text="@todo.Priority" />
-                        </td>
-                        <td class="text-right">
+                        </TemplateColumn>
+                        <TemplateColumn Context="todo">
                             <a class="btn btn-sm" href="@GetTodoDetailHref(todo.Id)">Details</a>
-                        </td>
-                    </RowTemplate>
+                        </TemplateColumn>
+                    </ChildContent>
                 </PrimerDataTable>
                 @if (TodoListVm.TotalCount > 10)
                 {
@@ -178,31 +162,23 @@ else
             }
             else
             {
-                <PrimerDataTable TItem="SessionLogSummary"
+                <PrimerDataTable TGridItem="SessionLogSummary"
                                  Items="GetDashboardSessionItems()"
-                                 ColumnCount="3"
                                  Class="Table--full-width"
                                  style="width:100%; table-layout:fixed;">
-                    <HeaderTemplate>
-                        <tr>
-                            <th>Session</th>
-                            <th style="width:150px;">Updated</th>
-                            <th style="width:90px;"></th>
-                        </tr>
-                    </HeaderTemplate>
-                    <RowTemplate Context="log">
-                        <td>
+                    <ChildContent>
+                        <TemplateColumn Title="Session" Context="log">
                             <a class="Link--primary dashboard-link-truncate" href="@GetSessionDetailHref(log.SessionId)" title="@log.Title">
                                 @log.Title
                             </a>
-                        </td>
-                        <td>
+                        </TemplateColumn>
+                        <TemplateColumn Title="Updated" Context="log">
                             <span class="color-fg-muted f6">@FormatTimestamp(log.LastUpdated)</span>
-                        </td>
-                        <td class="text-right">
+                        </TemplateColumn>
+                        <TemplateColumn Context="log">
                             <a class="btn btn-sm" href="@GetSessionDetailHref(log.SessionId)">Details</a>
-                        </td>
-                    </RowTemplate>
+                        </TemplateColumn>
+                    </ChildContent>
                 </PrimerDataTable>
                 @if (SessionLogListVm.TotalCount > 10)
                 {
@@ -215,27 +191,47 @@ else
 }
 
 @code {
+    private readonly CancellationTokenSource _disposeCts = new();
+    private bool _disposed;
+
     protected override async Task OnInitializedAsync()
     {
-        await CommandTarget.RunAsync(async () =>
+        var ct = _disposeCts.Token;
+
+        try
         {
-            await ViewModel.LoadAsync().ConfigureAwait(true);
-            await WorkspaceListVm.LoadAsync().ConfigureAwait(true);
-        }).ConfigureAwait(true);
-        await LoadWorkspaceDataAsync();
+            await CommandTarget.RunAsync(async () =>
+            {
+                ct.ThrowIfCancellationRequested();
+                await ViewModel.LoadAsync(ct).ConfigureAwait(true);
+                await WorkspaceListVm.LoadAsync(ct).ConfigureAwait(true);
+            }, cancellationToken: ct).ConfigureAwait(true);
+
+            if (_disposed || ct.IsCancellationRequested)
+                return;
+
+            await LoadWorkspaceDataAsync(ct).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
     }
 
-    private async Task LoadWorkspaceDataAsync()
+    private async Task LoadWorkspaceDataAsync(CancellationToken ct = default)
     {
+        if (_disposed || ct.IsCancellationRequested)
+            return;
+
         await CommandTarget.RunAsync(async () =>
         {
+            ct.ThrowIfCancellationRequested();
             TodoListVm.Done ??= false;
             SessionLogListVm.Limit = 50;
             SessionLogListVm.Offset = 0;
             await Task.WhenAll(
-                TodoListVm.LoadAsync(),
-                SessionLogListVm.LoadAsync()).ConfigureAwait(true);
-        }).ConfigureAwait(true);
+                TodoListVm.LoadAsync(ct),
+                SessionLogListVm.LoadAsync(ct)).ConfigureAwait(true);
+        }, cancellationToken: ct).ConfigureAwait(true);
     }
 
     private static readonly string[] PriorityOrder = ["critical", "high", "medium", "low"];
@@ -272,8 +268,24 @@ else
 
     private async Task SelectWorkspace(string workspacePath)
     {
-        await CommandTarget.RunAsync(() => WorkspaceContext.ActiveWorkspacePath = workspacePath).ConfigureAwait(true);
-        await LoadWorkspaceDataAsync();
+        var ct = _disposeCts.Token;
+        if (_disposed || ct.IsCancellationRequested)
+            return;
+
+        await CommandTarget.RunAsync(() => WorkspaceContext.ActiveWorkspacePath = workspacePath, cancellationToken: ct).ConfigureAwait(true);
+
+        if (_disposed || ct.IsCancellationRequested)
+            return;
+
+        await LoadWorkspaceDataAsync(ct).ConfigureAwait(true);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        _disposeCts.Cancel();
+        _disposeCts.Dispose();
+        return ValueTask.CompletedTask;
     }
 
     private static string GetHealthScheme(string? status)
@@ -314,4 +326,3 @@ else
     private static string FormatTimestamp(string? value)
         => DateTimeOffset.TryParse(value, out var dto) ? dto.ToLocalTime().ToString("g") : value ?? "";
 }
-

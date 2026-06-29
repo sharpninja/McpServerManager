@@ -138,6 +138,8 @@ public sealed class AgentListPageTests
     private static Bunit.BunitContext CreateTestContext(IWorkspaceApiClient workspaceApiClient, IAgentApiClient agentApiClient)
     {
         var ctx = new Bunit.BunitContext();
+        var quickGridModule = ctx.JSInterop.SetupModule("./_content/Microsoft.AspNetCore.Components.QuickGrid/QuickGrid.razor.js");
+        quickGridModule.SetupModule("init", _ => true);
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {

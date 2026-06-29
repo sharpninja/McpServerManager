@@ -72,36 +72,33 @@
                     <div class="Box-header">
                         <h3 class="h4 mb-0">Turns</h3>
                     </div>
-                    <PrimerDataTable TItem="McpServerManager.UI.Core.Messages.SessionLogTurnDetail"
+                    <PrimerDataTable TGridItem="McpServerManager.UI.Core.Messages.SessionLogTurnDetail"
                                      Items="ViewModel.Detail.Turns"
-                                     ColumnCount="6"
                                      Class="Table--full-width"
                                      RowClass="GetTurnRowClass"
                                      style="width:100%; table-layout:fixed;">
-                        <HeaderTemplate>
-                            <tr>
-                                <th style="width:56px;">#</th>
-                                <th>Title</th>
-                                <th style="width:180px;">Request ID</th>
-                                <th style="width:100px;">Status</th>
-                                <th style="width:140px;">Timestamp</th>
-                                <th style="width:90px;"></th>
-                            </tr>
-                        </HeaderTemplate>
-                        <RowTemplate Context="turn">
-                            <td>@(GetTurnIndex(turn) + 1)</td>
-                            <td>
+                        <ChildContent>
+                            <TemplateColumn Title="#" Context="turn">
+                                @(GetTurnIndex(turn) + 1)
+                            </TemplateColumn>
+                            <TemplateColumn Title="Title" Context="turn">
                                 <span class="dashboard-link-truncate" title="@GetTurnHeading(turn)">
                                     @GetTurnHeading(turn)
                                 </span>
-                            </td>
-                            <td><code>@turn.RequestId</code></td>
-                            <td>@(turn.Status ?? "(unknown)")</td>
-                            <td>@FormatTimestamp(turn.Timestamp)</td>
-                            <td class="text-right">
+                            </TemplateColumn>
+                            <TemplateColumn Title="Request ID" Context="turn">
+                                <code>@turn.RequestId</code>
+                            </TemplateColumn>
+                            <TemplateColumn Title="Status" Context="turn">
+                                @(turn.Status ?? "(unknown)")
+                            </TemplateColumn>
+                            <TemplateColumn Title="Timestamp" Context="turn">
+                                @FormatTimestamp(turn.Timestamp)
+                            </TemplateColumn>
+                            <TemplateColumn Context="turn">
                                 <button class="btn btn-sm" @onclick="() => SelectTurn(GetTurnIndex(turn))">Details</button>
-                            </td>
-                        </RowTemplate>
+                            </TemplateColumn>
+                        </ChildContent>
                     </PrimerDataTable>
                 </div>
 
@@ -227,25 +224,24 @@
                                 }
                                 else
                                 {
-                                    <PrimerDataTable TItem="McpServerManager.UI.Core.Messages.SessionLogDialogDetail"
+                                    <PrimerDataTable TGridItem="McpServerManager.UI.Core.Messages.SessionLogDialogDetail"
                                                      Items="SelectedTurn.ProcessingDialog"
-                                                     ColumnCount="4"
                                                      Class="Table--full-width"
                                                      style="width:100%; table-layout:fixed;">
-                                        <HeaderTemplate>
-                                            <tr>
-                                                <th style="width:140px;">Timestamp</th>
-                                                <th style="width:100px;">Role</th>
-                                                <th style="width:120px;">Category</th>
-                                                <th>Content</th>
-                                            </tr>
-                                        </HeaderTemplate>
-                                        <RowTemplate Context="dialog">
-                                            <td>@FormatTimestamp(dialog.Timestamp)</td>
-                                            <td>@(dialog.Role ?? "(unknown)")</td>
-                                            <td>@(dialog.Category ?? "(unknown)")</td>
-                                            <td><span class="session-turn-dialog-content">@((dialog.Content ?? "(none)"))</span></td>
-                                        </RowTemplate>
+                                        <ChildContent>
+                                            <TemplateColumn Title="Timestamp" Context="dialog">
+                                                @FormatTimestamp(dialog.Timestamp)
+                                            </TemplateColumn>
+                                            <TemplateColumn Title="Role" Context="dialog">
+                                                @(dialog.Role ?? "(unknown)")
+                                            </TemplateColumn>
+                                            <TemplateColumn Title="Category" Context="dialog">
+                                                @(dialog.Category ?? "(unknown)")
+                                            </TemplateColumn>
+                                            <TemplateColumn Title="Content" Context="dialog">
+                                                <span class="session-turn-dialog-content">@((dialog.Content ?? "(none)"))</span>
+                                            </TemplateColumn>
+                                        </ChildContent>
                                     </PrimerDataTable>
                                 }
                             </div>
@@ -271,27 +267,25 @@
                                 }
                                 else
                                 {
-                                    <PrimerDataTable TItem="McpServerManager.UI.Core.Messages.SessionLogActionDetail"
+                                    <PrimerDataTable TGridItem="McpServerManager.UI.Core.Messages.SessionLogActionDetail"
                                                      Items="SelectedTurn.Actions"
-                                                     ColumnCount="5"
                                                      Class="Table--full-width"
                                                      style="width:100%; table-layout:fixed;">
-                                        <HeaderTemplate>
-                                            <tr>
-                                                <th style="width:56px;">#</th>
-                                                <th style="width:120px;">Type</th>
-                                                <th style="width:100px;">Status</th>
-                                                <th>Description</th>
-                                                <th style="width:180px;">File</th>
-                                            </tr>
-                                        </HeaderTemplate>
-                                        <RowTemplate Context="action">
-                                            <td>@action.Order</td>
-                                            <td>@(action.Type ?? "(unknown)")</td>
-                                            <td>@(action.Status ?? "(unknown)")</td>
-                                            <td>@(action.Description ?? "(none)")</td>
-                                            <td>@(action.FilePath ?? "(none)")</td>
-                                        </RowTemplate>
+                                        <ChildContent>
+                                            <PropertyColumn Property="@(action => action.Order)" Title="#" />
+                                            <TemplateColumn Title="Type" Context="action">
+                                                @(action.Type ?? "(unknown)")
+                                            </TemplateColumn>
+                                            <TemplateColumn Title="Status" Context="action">
+                                                @(action.Status ?? "(unknown)")
+                                            </TemplateColumn>
+                                            <TemplateColumn Title="Description" Context="action">
+                                                @(action.Description ?? "(none)")
+                                            </TemplateColumn>
+                                            <TemplateColumn Title="File" Context="action">
+                                                @(action.FilePath ?? "(none)")
+                                            </TemplateColumn>
+                                        </ChildContent>
                                     </PrimerDataTable>
                                 }
                             </div>
@@ -469,4 +463,3 @@
     private static string FormatTimestamp(string? value)
         => DateTimeOffset.TryParse(value, out var dto) ? dto.ToLocalTime().ToString("g") : value ?? "(unknown)";
 }
-

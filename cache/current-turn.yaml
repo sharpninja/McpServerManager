@@ -1,6 +1,6 @@
-turnRequestId: req-20260628T120209Z-prompt-55d2
-queryTitle: User prompt
-openedAt: 2026-06-28T12:02:09Z
+turnRequestId: req-20260629T102024Z-prompt-75ae
+queryTitle: Hybrid mcp-web finally started but needs immediate splash sc
+openedAt: 2026-06-29T10:20:25Z
 status: in_progress
 codeEdits: 0
 lastBuildStatus: unknown
@@ -8,5 +8,4 @@ auditActions: 0
 auditFiles: 0
 auditDialog: 0
 auditDecisions: 0
-queryText: |
-    User prompt
+queryText: Hybrid mcp-web finally started but needs immediate splash screen, first page error fixed, and real launch verification after build.

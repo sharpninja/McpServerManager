@@ -235,6 +235,7 @@ partial class Build
         EnsureDirectoryExists(outputDirectory);
 
         var targetFramework = ResolveTargetFramework(projectPath, "net10.0");
+        var toolTargetFramework = ResolveDotnetToolPackageTargetFramework(targetFramework);
         var publishDirectory = Path.Combine(Path.GetDirectoryName(projectPath)!, "bin", Configuration, targetFramework, "publish");
         var projectDocument = XDocument.Load(projectPath);
         var propertyGroups = projectDocument.Root?.Elements().Where(x => x.Name.LocalName == "PropertyGroup").ToList() ?? new List<XElement>();
@@ -314,11 +315,11 @@ partial class Build
                  <packageTypes>
                    <packageType name="DotnetTool" />
                  </packageTypes>
-               </metadata>
-               <files>
-                 <file src="{publishDirectory}\**" target="tools/{targetFramework}/any" />
-               </files>
-             </package>
+                </metadata>
+                <files>
+                  <file src="{publishDirectory}\**" target="tools/{toolTargetFramework}/any" />
+                </files>
+              </package>
              """,
             new UTF8Encoding(false));
 
@@ -381,6 +382,17 @@ partial class Build
         }
 
         return nupkgPath;
+    }
+
+    private static string ResolveDotnetToolPackageTargetFramework(string targetFramework)
+    {
+        if (string.IsNullOrWhiteSpace(targetFramework))
+            return "net10.0";
+
+        var windowsQualifierIndex = targetFramework.IndexOf("-windows", StringComparison.OrdinalIgnoreCase);
+        return windowsQualifierIndex > 0
+            ? targetFramework[..windowsQualifierIndex]
+            : targetFramework;
     }
 
     private string BuildAndroidPackageCore()
@@ -756,7 +768,7 @@ partial class Build
             }
 
             var nupkgPath = ExecuteDotnetToolPipeline(
-                Path.Combine(RepoRootPath, "src", "McpServerManager.Web", "McpServerManager.Web.csproj"),
+                Path.Combine(RepoRootPath, "src", "McpServerManager.Web.Hybrid", "McpServerManager.Web.Hybrid.csproj"),
                 "SharpNinja.McpServer.Web",
                 "mcp-web",
                 "nupkg",

@@ -56,21 +56,19 @@ else if (ViewModel.SearchResult is null || ViewModel.SearchResult.Chunks.Count =
 else
 {
     <p class="color-fg-muted">Found @ViewModel.SearchResult.Chunks.Count chunks.</p>
-    <PrimerDataTable TItem="ContextChunkView" Items="ViewModel.SearchResult.Chunks" ColumnCount="4" Class="Table--full-width">
-        <HeaderTemplate>
-            <tr>
-                <th>Document</th>
-                <th>Chunk</th>
-                <th>Score</th>
-                <th>Content</th>
-            </tr>
-        </HeaderTemplate>
-        <RowTemplate Context="chunk">
-            <td><code>@chunk.DocumentId</code></td>
-            <td>@chunk.ChunkIndex</td>
-            <td>@chunk.Score.ToString("0.000")</td>
-            <td>@GetExcerpt(chunk.Content)</td>
-        </RowTemplate>
+    <PrimerDataTable TGridItem="ContextChunkView" Items="ViewModel.SearchResult.Chunks" Class="Table--full-width">
+        <ChildContent>
+            <TemplateColumn Title="Document" Context="chunk">
+                <code>@chunk.DocumentId</code>
+            </TemplateColumn>
+            <PropertyColumn Property="@(chunk => chunk.ChunkIndex)" Title="Chunk" />
+            <TemplateColumn Title="Score" Context="chunk">
+                @chunk.Score.ToString("0.000")
+            </TemplateColumn>
+            <TemplateColumn Title="Content" Context="chunk">
+                @GetExcerpt(chunk.Content)
+            </TemplateColumn>
+        </ChildContent>
     </PrimerDataTable>
 }
 
@@ -117,4 +115,3 @@ else
         return content.Length <= maxLength ? content : $"{content[..maxLength]}...";
     }
 }
-

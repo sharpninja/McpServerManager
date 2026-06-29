@@ -45,7 +45,7 @@
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\lib\McpServer\src\McpServer.Client\McpServer.Client.csproj" />
+    <PackageReference Include="SharpNinja.McpServer.Client" Version="1.3.1" />
     <ProjectReference Include="..\..\lib\Markdown.Avalonia\Markdown.Avalonia\Markdown.Avalonia.csproj" />
     <ProjectReference Include="..\McpServerManager.Core\McpServerManager.Core.csproj" />
   </ItemGroup>

@@ -15,7 +15,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace McpServerManager.Web;
 
-internal static class WebServiceRegistration
+public static class WebServiceRegistration
 {
     public static IServiceCollection AddWebServices(this IServiceCollection services)
     {

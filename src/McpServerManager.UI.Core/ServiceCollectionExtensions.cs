@@ -1,6 +1,7 @@
 using System.Reflection;
 using McpServer.Cqrs;
 using McpServer.Cqrs.Mvvm;
+using McpServerManager.UI.Core.Auth;
 using McpServerManager.UI.Core.Authorization;
 using McpServerManager.UI.Core.Behaviors;
 using McpServerManager.UI.Core.Services;
@@ -46,6 +47,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<Services.ITimerService, Services.NoOpTimerService>();
         services.TryAddSingleton<Services.IHealthApiClient, Services.NoOpHealthApiClient>();
         services.TryAddSingleton<Services.ITriageApiClient, Services.NoOpTriageApiClient>();
+        services.TryAddSingleton<IWorkspaceAuthTokenCache, FileWorkspaceAuthTokenCache>();
 
         // Register shared workspace context as singleton so all ViewModels observe the same instance
         services.AddSingleton<WorkspaceContextViewModel>();

@@ -1,18 +1,22 @@
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
+using YamlDotNet.Serialization;
 
 namespace McpServerManager.Director.Tests;
 
 /// <summary>
-/// xUnit fixture that launches the MCP server (<c>McpServer.Support.Mcp</c>) on a random
-/// available port, creates a temporary workspace directory with an
+/// xUnit fixture that launches a deterministic loopback MCP-compatible health endpoint
+/// on a random available port, creates a temporary workspace directory with an
 /// <c>AGENTS-README-FIRST.yaml</c> marker file, and tears everything down on dispose.
 /// </summary>
 public sealed class McpServerFixture : IAsyncLifetime
 {
-    private Process? _serverProcess;
+    private const string ApiKey = "test-api-key";
+    private HttpListener? _listener;
+    private CancellationTokenSource? _listenerCts;
+    private Task? _listenerTask;
     private string? _workspaceDir;
     private string? _baseUrl;
     private bool _ownsWorkspaceDir;
@@ -27,98 +31,32 @@ public sealed class McpServerFixture : IAsyncLifetime
     /// <summary>The base URL of the running MCP server.</summary>
     public string BaseUrl => _baseUrl ?? $"http://localhost:{_port}";
 
-    /// <summary>Path to the built MCP server DLL.</summary>
-    private static readonly string McpServerDll = Path.GetFullPath(
-        Path.Combine(DirectorRunner.RepoRoot, "lib", "McpServer", "src",
-            "McpServer.Support.Mcp", "bin", "Debug", DirectorRunner.TargetFramework, "McpServer.Support.Mcp.dll"));
-
     public async ValueTask InitializeAsync()
     {
-        if (!File.Exists(McpServerDll) && await TryUseWorkspaceServerAsync().ConfigureAwait(true))
-            return;
-
         _port = GetAvailablePort();
         _workspaceDir = Path.Combine(Path.GetTempPath(), $"mcp-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_workspaceDir);
         _ownsWorkspaceDir = true;
         _baseUrl = $"http://localhost:{_port}";
 
-        WriteAppSettings(_workspaceDir, _port);
-
-        // Start the MCP server process.
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"exec \"{McpServerDll}\"",
-            WorkingDirectory = _workspaceDir,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-        psi.Environment["ASPNETCORE_ENVIRONMENT"] = "Test";
-        psi.Environment["PORT"] = _port.ToString();
-        psi.Environment["NO_COLOR"] = "1";
-
-        _serverProcess = Process.Start(psi)
-            ?? throw new InvalidOperationException("Failed to start MCP server process.");
-
-        // Consume stdout/stderr asynchronously so the process doesn't block on buffer limits.
-        var stdoutBuilder = new System.Text.StringBuilder();
-        var stderrBuilder = new System.Text.StringBuilder();
-        _serverProcess.OutputDataReceived += (_, e) => { if (e.Data is not null) stdoutBuilder.AppendLine(e.Data); };
-        _serverProcess.ErrorDataReceived += (_, e) => { if (e.Data is not null) stderrBuilder.AppendLine(e.Data); };
-        _serverProcess.BeginOutputReadLine();
-        _serverProcess.BeginErrorReadLine();
-
-        // Wait for the /health endpoint to respond (up to 30 seconds).
-        using var httpClient = new HttpClient
-        {
-            BaseAddress = new Uri(BaseUrl),
-            Timeout = TimeSpan.FromSeconds(5),
-        };
-        var deadline = DateTime.UtcNow.AddSeconds(30);
-        while (DateTime.UtcNow < deadline)
-        {
-            if (_serverProcess.HasExited)
-            {
-                throw new InvalidOperationException(
-                    $"MCP server exited with code {_serverProcess.ExitCode} before becoming healthy.\nStdout: {stdoutBuilder}\nStderr: {stderrBuilder}");
-            }
-
-            try
-            {
-                var response = await httpClient.GetAsync("/health");
-                if (response.IsSuccessStatusCode)
-                {
-                    await WriteMarkerFileAsync(httpClient);
-                    return;
-                }
-            }
-            catch (Exception) when (!_serverProcess.HasExited)
-            {
-                // Server not ready yet — retry.
-            }
-
-            await Task.Delay(500);
-        }
-
-        // If we get here, the server didn't start in time.
-        try { _serverProcess.Kill(entireProcessTree: true); } catch { /* best effort */ }
-
-        throw new TimeoutException(
-            $"MCP server did not become healthy within 30 seconds on port {_port}.\nStdout: {stdoutBuilder}\nStderr: {stderrBuilder}");
+        StartHealthEndpoint();
+        await WaitForHealthAsync().ConfigureAwait(true);
+        await WriteMarkerFileAsync().ConfigureAwait(true);
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_serverProcess is { HasExited: false } proc)
+        _listenerCts?.Cancel();
+        _listener?.Stop();
+        _listener?.Close();
+
+        if (_listenerTask is not null)
         {
-            try { proc.Kill(entireProcessTree: true); } catch { /* best effort */ }
-            try { await proc.WaitForExitAsync(new CancellationTokenSource(5000).Token); } catch { /* best effort */ }
+            try { await _listenerTask.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true); }
+            catch { /* best effort */ }
         }
 
-        _serverProcess?.Dispose();
+        _listenerCts?.Dispose();
 
         if (_ownsWorkspaceDir && _workspaceDir is not null)
         {
@@ -126,114 +64,117 @@ public sealed class McpServerFixture : IAsyncLifetime
         }
     }
 
-    private async Task<bool> TryUseWorkspaceServerAsync()
+    private void StartHealthEndpoint()
     {
-        var markerPath = Path.Combine(DirectorRunner.RepoRoot, "AGENTS-README-FIRST.yaml");
-        if (!File.Exists(markerPath))
-            return false;
+        _listener = new HttpListener();
+        _listener.Prefixes.Add($"{BaseUrl.TrimEnd('/')}/");
+        _listener.Start();
 
-        var marker = await File.ReadAllLinesAsync(markerPath).ConfigureAwait(true);
-        var baseUrl = GetMarkerValue(marker, "baseUrl");
-        var workspacePath = GetMarkerValue(marker, "workspacePath");
-        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(workspacePath))
-            return false;
+        _listenerCts = new CancellationTokenSource();
+        _listenerTask = Task.Run(() => RunHealthEndpointAsync(_listener, _listenerCts.Token));
+    }
 
+    private async Task WaitForHealthAsync()
+    {
         using var httpClient = new HttpClient
         {
-            BaseAddress = new Uri(baseUrl),
+            BaseAddress = new Uri(BaseUrl),
             Timeout = TimeSpan.FromSeconds(5),
         };
-
-        try
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(30);
+        while (DateTimeOffset.UtcNow < deadline)
         {
-            var response = await httpClient.GetAsync("/health").ConfigureAwait(true);
-            if (!response.IsSuccessStatusCode)
-                return false;
-        }
-        catch
-        {
-            return false;
-        }
-
-        _workspaceDir = workspacePath;
-        _baseUrl = baseUrl;
-        _port = new Uri(baseUrl).Port;
-        _ownsWorkspaceDir = false;
-        return true;
-    }
-
-    private static string? GetMarkerValue(IEnumerable<string> lines, string key)
-    {
-        foreach (var line in lines)
-        {
-            var parts = line.Split(':', 2);
-            if (parts.Length != 2)
-                continue;
-
-            if (string.Equals(parts[0].Trim(), key, StringComparison.OrdinalIgnoreCase))
-                return parts[1].Trim().Trim('"');
-        }
-
-        return null;
-    }
-
-    private async Task WriteMarkerFileAsync(HttpClient httpClient)
-    {
-        // Fetch the API key from the loopback endpoint.
-        var apiKey = "";
-        try
-        {
-            var apiKeyResponse = await httpClient.GetAsync("/api-key");
-            if (apiKeyResponse.IsSuccessStatusCode)
+            try
             {
-                var json = await apiKeyResponse.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.TryGetProperty("apiKey", out var keyProp))
-                    apiKey = keyProp.GetString() ?? "";
+                var response = await httpClient.GetAsync("/health").ConfigureAwait(true);
+                if (response.IsSuccessStatusCode)
+                    return;
             }
-        }
-        catch { /* proceed with empty key */ }
+            catch (HttpRequestException)
+            {
+                // Listener not ready yet. Retry until the deadline.
+            }
 
-        // Write the marker file in the workspace directory.
-        var markerLines = new[]
-        {
-            $"baseUrl: {BaseUrl}",
-            $"apiKey: {apiKey}",
-            $"workspacePath: {_workspaceDir}",
-        };
-        await File.WriteAllLinesAsync(
-            Path.Combine(_workspaceDir!, "AGENTS-README-FIRST.yaml"),
-            markerLines);
+            await Task.Delay(100).ConfigureAwait(true);
+        }
+
+        throw new TimeoutException($"Test health endpoint did not become ready within 30 seconds on port {_port}.");
     }
 
-    private static void WriteAppSettings(string dir, int port)
+    private static async Task RunHealthEndpointAsync(HttpListener listener, CancellationToken cancellationToken)
     {
-        var escapedDir = dir.Replace("\\", "/");
-        var yaml =
-$@"Mcp:
-  Port: {port}
-  DataSource: "":memory:""
-  DataDirectory: ""{escapedDir}""
-  RepoRoot: ""{escapedDir}""
-  TodoFilePath: TODO.yaml
-  SessionsPath: sessions
-  TodoStorage:
-    Provider: sqlite
-    SqliteDataSource: "":memory:""
-  Workspaces:
-  - WorkspacePath: ""{escapedDir}""
-    Name: TestWorkspace
-    IsPrimary: true
-    IsEnabled: true
-Embedding:
-  Enabled: false
-VectorIndex:
-  Enabled: false
-Logging:
-  LogLevel:
-    Default: Warning
-";
-        File.WriteAllText(Path.Combine(dir, "appsettings.yaml"), yaml);
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            HttpListenerContext context;
+            try
+            {
+                context = await listener.GetContextAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (HttpListenerException)
+            {
+                return;
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
+
+            await HandleRequestAsync(context).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task HandleRequestAsync(HttpListenerContext context)
+    {
+        var path = context.Request.Url?.AbsolutePath ?? string.Empty;
+        if (string.Equals(path, "/health", StringComparison.OrdinalIgnoreCase))
+        {
+            await WriteJsonAsync(context, new { status = "healthy", source = "Director test fixture" }).ConfigureAwait(false);
+            return;
+        }
+
+        if (string.Equals(path, "/api-key", StringComparison.OrdinalIgnoreCase))
+        {
+            await WriteJsonAsync(context, new { apiKey = ApiKey }).ConfigureAwait(false);
+            return;
+        }
+
+        context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+        context.Response.Close();
+    }
+
+    private static async Task WriteJsonAsync(HttpListenerContext context, object payload)
+    {
+        var json = JsonSerializer.Serialize(payload);
+        var bytes = Encoding.UTF8.GetBytes(json);
+        context.Response.StatusCode = (int)HttpStatusCode.OK;
+        context.Response.ContentType = "application/json";
+        context.Response.ContentEncoding = Encoding.UTF8;
+        context.Response.ContentLength64 = bytes.Length;
+        await context.Response.OutputStream.WriteAsync(bytes).ConfigureAwait(false);
+        context.Response.Close();
+    }
+
+    private async Task WriteMarkerFileAsync()
+    {
+        var marker = new Dictionary<string, string>
+        {
+            [nameof(BaseUrl)] = BaseUrl,
+            ["apiKey"] = ApiKey,
+            [nameof(WorkspaceDir)] = WorkspaceDir,
+        };
+        var normalizedMarker = new Dictionary<string, string>
+        {
+            ["baseUrl"] = marker[nameof(BaseUrl)],
+            ["apiKey"] = marker["apiKey"],
+            ["workspacePath"] = marker[nameof(WorkspaceDir)],
+        };
+        var serializer = new SerializerBuilder().Build();
+        var yaml = serializer.Serialize(normalizedMarker);
+        await File.WriteAllTextAsync(Path.Combine(_workspaceDir!, "AGENTS-README-FIRST.yaml"), yaml).ConfigureAwait(true);
     }
 
     private static int GetAvailablePort()

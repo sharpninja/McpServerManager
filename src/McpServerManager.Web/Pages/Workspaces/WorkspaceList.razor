@@ -38,37 +38,28 @@ else if (ViewModel.Workspaces.Count == 0)
 }
 else
 {
-    <PrimerDataTable TItem="WorkspaceSummary"
+    <PrimerDataTable TGridItem="WorkspaceSummary"
                      Items="ViewModel.Workspaces"
-                     ColumnCount="6"
                      Class="Table--full-width"
                      RowClass="GetRowClass">
-        <HeaderTemplate>
-            <tr>
-                <th></th>
-                <th>Name</th>
-                <th>Path</th>
-                <th>Enabled</th>
-                <th>Primary</th>
-                <th></th>
-            </tr>
-        </HeaderTemplate>
-        <RowTemplate Context="item">
-            <td style="width:32px">
+        <ChildContent>
+            <TemplateColumn Context="item">
                 @if (IsActive(item.WorkspacePath))
                 {
                     <OcticonIcon Name="check-circle" Size="16" Class="color-fg-success" AriaLabel="Active workspace" />
                 }
-            </td>
-            <td>@item.Name</td>
-            <td><code>@item.WorkspacePath</code></td>
-            <td>
+            </TemplateColumn>
+            <PropertyColumn Property="@(item => item.Name)" Title="Name" />
+            <TemplateColumn Title="Path" Context="item">
+                <code>@item.WorkspacePath</code>
+            </TemplateColumn>
+            <TemplateColumn Title="Enabled" Context="item">
                 <PrimerLabel Scheme="@(item.IsEnabled ? "success" : "attention")" Text="@(item.IsEnabled ? "Yes" : "No")" />
-            </td>
-            <td>
+            </TemplateColumn>
+            <TemplateColumn Title="Primary" Context="item">
                 <PrimerLabel Scheme="@(item.IsPrimary ? "done" : "default")" Text="@(item.IsPrimary ? "Primary" : "Secondary")" />
-            </td>
-            <td class="text-right">
+            </TemplateColumn>
+            <TemplateColumn Context="item">
                 @if (IsActive(item.WorkspacePath))
                 {
                     <span class="btn btn-sm btn-primary disabled" aria-disabled="true">Selected</span>
@@ -78,8 +69,8 @@ else
                     <button class="btn btn-sm" @onclick="() => SelectWorkspace(item.WorkspacePath)">Select</button>
                 }
                 <a class="btn btn-sm ml-1" href="@GetWorkspaceDetailHref(item.WorkspacePath)">Details</a>
-            </td>
-        </RowTemplate>
+            </TemplateColumn>
+        </ChildContent>
     </PrimerDataTable>
 }
 

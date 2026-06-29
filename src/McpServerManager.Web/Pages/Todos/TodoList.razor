@@ -58,25 +58,20 @@ else
                 <PrimerLabel Scheme="@GetPriorityScheme(group.Key)" Text="@group.Key" />
                 <span class="color-fg-muted f5 ml-2">(@group.Count())</span>
             </h3>
-            <PrimerDataTable TItem="TodoListItem" Items="@(new System.Collections.ObjectModel.ObservableCollection<TodoListItem>(group))" ColumnCount="5" Class="Table--full-width" style="width:100%; table-layout:fixed;">
-                <HeaderTemplate>
-                    <tr>
-                        <th style="width:15%">ID</th>
-                        <th style="width:45%">Title</th>
-                        <th style="width:15%">Section</th>
-                        <th style="width:10%">Status</th>
-                        <th style="width:15%"></th>
-                    </tr>
-                </HeaderTemplate>
-                <RowTemplate Context="item">
-                    <td><code>@item.Id</code></td>
-                    <td>@item.Title</td>
-                    <td>@item.Section</td>
-                    <td>
+            <PrimerDataTable TGridItem="TodoListItem" Items="@group.ToList()" Class="Table--full-width" style="width:100%; table-layout:fixed;">
+                <ChildContent>
+                    <TemplateColumn Title="ID" Context="item">
+                        <code>@item.Id</code>
+                    </TemplateColumn>
+                    <PropertyColumn Property="@(item => item.Title)" Title="Title" />
+                    <PropertyColumn Property="@(item => item.Section)" Title="Section" />
+                    <TemplateColumn Title="Status" Context="item">
                         <PrimerLabel Scheme="@(item.Done ? "success" : "attention")" Text="@(item.Done ? "Done" : "Open")" />
-                    </td>
-                    <td><a class="btn btn-sm" href="@GetTodoDetailHref(item.Id)">Details</a></td>
-                </RowTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Context="item">
+                        <a class="btn btn-sm" href="@GetTodoDetailHref(item.Id)">Details</a>
+                    </TemplateColumn>
+                </ChildContent>
             </PrimerDataTable>
         </div>
     }

@@ -41,30 +41,26 @@ else if (ViewModel.Items.Count == 0)
 }
 else
 {
-    <PrimerDataTable TItem="TemplateListItem" Items="ViewModel.Items" ColumnCount="6" Class="Table--full-width">
-        <HeaderTemplate>
-            <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Category</th>
-                <th>Tags</th>
-                <th>Description</th>
-                <th></th>
-            </tr>
-        </HeaderTemplate>
-        <RowTemplate Context="item">
-            <td><code>@item.Id</code></td>
-            <td>@item.Title</td>
-            <td>@item.Category</td>
-            <td>@string.Join(", ", item.Tags)</td>
-            <td>@(item.Description ?? string.Empty)</td>
-            <td>
+    <PrimerDataTable TGridItem="TemplateListItem" Items="ViewModel.Items" Class="Table--full-width">
+        <ChildContent>
+            <TemplateColumn Title="ID" Context="item">
+                <code>@item.Id</code>
+            </TemplateColumn>
+            <PropertyColumn Property="@(item => item.Title)" Title="Title" />
+            <PropertyColumn Property="@(item => item.Category)" Title="Category" />
+            <TemplateColumn Title="Tags" Context="item">
+                @string.Join(", ", item.Tags)
+            </TemplateColumn>
+            <TemplateColumn Title="Description" Context="item">
+                @(item.Description ?? string.Empty)
+            </TemplateColumn>
+            <TemplateColumn Context="item">
                 <div class="d-flex gap-1">
                     <a class="btn btn-sm" href="@GetDetailHref(item.Id)">Details</a>
                     <a class="btn btn-sm" href="@GetTestHref(item.Id)">Test</a>
                 </div>
-            </td>
-        </RowTemplate>
+            </TemplateColumn>
+        </ChildContent>
     </PrimerDataTable>
 }
 
@@ -102,4 +98,3 @@ else
     private static string GetTestHref(string templateId)
         => $"/templates/test?templateId={Uri.EscapeDataString(templateId)}";
 }
-

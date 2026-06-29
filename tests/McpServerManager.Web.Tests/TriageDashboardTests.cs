@@ -1,5 +1,6 @@
 using Bunit;
 using AngleSharp.Dom;
+using System.Globalization;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.ViewModels;
@@ -63,6 +64,232 @@ public sealed class TriageDashboardTests
         Assert.Contains(SortableTimestamp(now.AddMinutes(5)), cut.Markup, StringComparison.Ordinal);
         Assert.Contains(SortableTimestamp(now.AddMinutes(-2)), cut.Markup, StringComparison.Ordinal);
         Assert.Contains(SortableTimestamp(now.AddMinutes(-1)), cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TriageDashboard_UsesDataTypedFiltersForRunHistoryAndCreatedTodos()
+    {
+        var now = new DateTimeOffset(2026, 6, 27, 18, 0, 0, TimeSpan.Zero);
+        var triageApi = new TriageApiClientStub
+        {
+            Dashboard = CreateDashboardWithRuns(now),
+            OpenTodos = new OpenTriageTodosResult(
+                CreateOpenTodosForFiltering(now),
+                TotalCreatedCount: 3,
+                HiddenCompletedOrMissingCount: 0,
+                HydrationErrorCount: 0)
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITriageApiClient>(triageApi));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Triage.TriageDashboard>();
+
+        cut.WaitForAssertion(() => Assert.Contains("run-target", cut.Markup, StringComparison.Ordinal));
+
+        Assert.Equal("select", cut.Find("[aria-label='Filter run history status']").LocalName);
+        Assert.Equal("datetime-local", cut.Find("input[aria-label='Filter run history timestamp from']").GetAttribute("type"));
+        Assert.Equal("datetime-local", cut.Find("input[aria-label='Filter run history timestamp to']").GetAttribute("type"));
+        Assert.Equal("number", cut.Find("input[aria-label='Filter run history reports min']").GetAttribute("type"));
+        Assert.Equal("number", cut.Find("input[aria-label='Filter run history reports max']").GetAttribute("type"));
+        Assert.Equal("select", cut.Find("[aria-label='Filter triage-created TODO group']").LocalName);
+        Assert.Equal("select", cut.Find("[aria-label='Filter triage-created TODO run']").LocalName);
+        Assert.Equal("datetime-local", cut.Find("input[aria-label='Filter triage-created TODO timestamp from']").GetAttribute("type"));
+        Assert.Equal("datetime-local", cut.Find("input[aria-label='Filter triage-created TODO timestamp to']").GetAttribute("type"));
+        Assert.Equal("number", cut.Find("input[aria-label='Filter triage-created TODO reports min']").GetAttribute("type"));
+        Assert.Equal("number", cut.Find("input[aria-label='Filter triage-created TODO reports max']").GetAttribute("type"));
+        Assert.Equal("select", cut.Find("[aria-label='Filter triage-created TODO workspace']").LocalName);
+
+        cut.Find("select[aria-label='Filter run history status']").Change("failed");
+        cut.Find("input[aria-label='Filter run history timestamp from']").Change(DateTimeLocal(now.AddMinutes(-10)));
+        cut.Find("input[aria-label='Filter run history timestamp to']").Change(DateTimeLocal(now.AddMinutes(-10)));
+        cut.Find("input[aria-label='Filter run history run']").Input("target");
+        cut.Find("input[aria-label='Filter run history group']").Input("group-target");
+        cut.Find("input[aria-label='Filter run history reports min']").Change("3");
+        cut.Find("input[aria-label='Filter run history reports max']").Change("3");
+        cut.Find("input[aria-label='Filter run history created TODO']").Input("BUG-1");
+
+        cut.Find("input[aria-label='Filter triage-created TODO ID']").Input("TODO-B");
+        cut.Find("input[aria-label='Filter triage-created TODO timestamp from']").Change(DateTimeLocal(now.AddMinutes(-3)));
+        cut.Find("input[aria-label='Filter triage-created TODO timestamp to']").Change(DateTimeLocal(now.AddMinutes(-3)));
+        cut.Find("input[aria-label='Filter triage-created TODO title']").Input("Beta");
+        cut.Find("select[aria-label='Filter triage-created TODO group']").Change("completed");
+        cut.Find("select[aria-label='Filter triage-created TODO run']").Change("triage-run-beta");
+        cut.Find("input[aria-label='Filter triage-created TODO reports min']").Change("2");
+        cut.Find("input[aria-label='Filter triage-created TODO reports max']").Change("2");
+        cut.Find("select[aria-label='Filter triage-created TODO workspace']").Change(@"F:\GitHub\BetaWorkspace");
+
+        Assert.Contains("run-target", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("run-alpha", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("run-zeta", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("TODO-B", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("TODO-A", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("TODO-C", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TriageDashboard_SortsRunHistoryAndCreatedTodosByVisibleColumns()
+    {
+        var now = new DateTimeOffset(2026, 6, 27, 18, 0, 0, TimeSpan.Zero);
+        var triageApi = new TriageApiClientStub
+        {
+            Dashboard = CreateDashboardWithRuns(now),
+            OpenTodos = new OpenTriageTodosResult(
+                CreateOpenTodosForFiltering(now),
+                TotalCreatedCount: 3,
+                HiddenCompletedOrMissingCount: 0,
+                HydrationErrorCount: 0)
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITriageApiClient>(triageApi));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Triage.TriageDashboard>();
+
+        cut.WaitForAssertion(() => Assert.Contains("run-target", cut.Markup, StringComparison.Ordinal));
+        Click(cut, () => FindSortButton(cut, "Run History", "Reports"));
+        AssertMarkupOrder(cut.Markup, "run-alpha", "run-zeta", "run-target");
+
+        Click(cut, () => FindSortButton(cut, "Run History", "Reports"));
+        AssertMarkupOrder(cut.Markup, "run-target", "run-zeta", "run-alpha");
+
+        Click(cut, () => FindSortButton(cut, "Triage-Created TODOs", "Reports"));
+        AssertMarkupOrder(cut.Markup, "TODO-A", "TODO-B", "TODO-C");
+
+        Click(cut, () => FindSortButton(cut, "Triage-Created TODOs", "Reports"));
+        AssertMarkupOrder(cut.Markup, "TODO-C", "TODO-B", "TODO-A");
+    }
+
+    [Fact]
+    public void TriageDashboard_RendersGridSortControlsWithoutRazorArtifacts()
+    {
+        var now = new DateTimeOffset(2026, 6, 27, 18, 0, 0, TimeSpan.Zero);
+        var triageApi = new TriageApiClientStub
+        {
+            Dashboard = CreateDashboardWithRuns(now),
+            OpenTodos = new OpenTriageTodosResult(
+                CreateOpenTodosForFiltering(now),
+                TotalCreatedCount: 3,
+                HiddenCompletedOrMissingCount: 0,
+                HydrationErrorCount: 0)
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITriageApiClient>(triageApi));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Triage.TriageDashboard>();
+
+        cut.WaitForAssertion(() => Assert.Contains("run-target", cut.Markup, StringComparison.Ordinal));
+        Assert.DoesNotContain("RunSortSuffix", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("TodoSortSuffix", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("RunSortColumn", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("TodoSortColumn", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("descending", FindSortHeader(cut, "Run History", "Timestamp").GetAttribute("aria-sort"));
+        Assert.Equal("descending", FindSortHeader(cut, "Triage-Created TODOs", "Timestamp").GetAttribute("aria-sort"));
+
+        Click(cut, () => FindSortButton(cut, "Run History", "Reports"));
+        Assert.Equal("ascending", FindSortHeader(cut, "Run History", "Reports").GetAttribute("aria-sort"));
+        Click(cut, () => FindSortButton(cut, "Run History", "Reports"));
+        Assert.Equal("descending", FindSortHeader(cut, "Run History", "Reports").GetAttribute("aria-sort"));
+
+        Click(cut, () => FindSortButton(cut, "Triage-Created TODOs", "TODO"));
+        Assert.Equal("ascending", FindSortHeader(cut, "Triage-Created TODOs", "TODO").GetAttribute("aria-sort"));
+    }
+
+    [Fact]
+    public void TriageDashboard_RendersEmptyStates()
+    {
+        var triageApi = new TriageApiClientStub
+        {
+            Dashboard = new TriageDashboardSnapshot([], [], [], TotalGroupCount: 0, TotalRunCount: 0),
+            OpenTodos = new OpenTriageTodosResult(
+                [],
+                TotalCreatedCount: 0,
+                HiddenCompletedOrMissingCount: 0,
+                HydrationErrorCount: 0)
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITriageApiClient>(triageApi));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Triage.TriageDashboard>();
+
+        cut.WaitForAssertion(() => Assert.Contains("No triage queue items.", cut.Markup, StringComparison.Ordinal));
+        Assert.Contains("No report group queue items.", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("No triage runs.", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("No triage-created TODOs.", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TriageDashboard_RendersLoadError()
+    {
+        var triageApi = new TriageApiClientStub
+        {
+            DashboardException = new InvalidOperationException("dashboard unavailable"),
+            OpenTodos = new OpenTriageTodosResult([], 0, 0, 0)
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITriageApiClient>(triageApi));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Triage.TriageDashboard>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Failed to load triage", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("dashboard unavailable", cut.Markup, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void TriageDashboard_LoadsSelectedGroupRunAndReportDetails()
+    {
+        var now = new DateTimeOffset(2026, 6, 27, 18, 0, 0, TimeSpan.Zero);
+        var dashboard = CreateDashboard(now);
+        var reportDetail = new TriageReportSnapshot(
+            "report-detail",
+            "group-collecting",
+            "open",
+            "Report detail title",
+            "Report detail summary",
+            OriginalWorkspacePath: WorkspacePath,
+            WorkspacePath: WorkspacePath,
+            CreatedUtc: now.AddMinutes(-4));
+        var groupDetail = dashboard.TriageQueue[0] with
+        {
+            Summary = "Loaded group detail summary",
+            Reports = [reportDetail],
+        };
+        var runDetail = dashboard.RunHistory[0] with
+        {
+            GroupSummary = "Loaded run detail summary",
+            ResponseJson = """{"result":"ok"}""",
+        };
+        var triageApi = new TriageApiClientStub
+        {
+            Dashboard = dashboard,
+            OpenTodos = new OpenTriageTodosResult([], 0, 0, 0),
+            GroupDetail = groupDetail,
+            RunDetail = runDetail,
+            ReportDetail = reportDetail,
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITriageApiClient>(triageApi));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Triage.TriageDashboard>();
+
+        cut.WaitForAssertion(() => Assert.Contains("group-collecting", cut.Markup, StringComparison.Ordinal));
+        Click(cut, () => cut.Find("button[aria-label='Load triage group group-collecting details']"));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(["group-collecting"], triageApi.LoadedGroupIds);
+            Assert.Contains("Loaded group detail summary", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("report-detail", cut.Markup, StringComparison.Ordinal);
+        });
+
+        Click(cut, () => cut.Find("button[aria-label='Load triage report report-detail details']"));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(["report-detail"], triageApi.LoadedReportIds);
+            Assert.Contains("Report detail title", cut.Markup, StringComparison.Ordinal);
+        });
+
+        Click(cut, () => cut.Find("button[aria-label='Load triage run run-1 details']"));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(["run-1"], triageApi.LoadedRunIds);
+            Assert.Contains("Loaded run detail summary", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("result", cut.Markup, StringComparison.Ordinal);
+        });
     }
 
     [Fact]
@@ -334,6 +561,7 @@ public sealed class TriageDashboardTests
         ctx.Services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         ctx.Services.AddWebServices();
         ctx.Services.AddSingleton<IHealthApiClient>(new HealthApiClientStub());
+        ctx.Services.AddSingleton<IWorkspaceApiClient>(new WorkspaceApiClientStub());
         ctx.Services.AddSingleton<ITriageApiClient>(new TriageApiClientStub());
         ctx.Services.AddSingleton<ITodoApiClient>(new TodoApiClientStub());
         configureServices?.Invoke(ctx.Services);
@@ -394,6 +622,47 @@ public sealed class TriageDashboardTests
             TotalGroupCount: 1,
             TotalRunCount: 1);
 
+    private static TriageDashboardSnapshot CreateDashboardWithRuns(DateTimeOffset now)
+    {
+        var dashboard = CreateDashboard(now);
+        var template = dashboard.RunHistory[0];
+
+        return dashboard with
+        {
+            RunHistory =
+            [
+                template with
+                {
+                    RunId = "run-zeta",
+                    GroupId = "group-zeta",
+                    Status = "queued",
+                    ReportCount = 2,
+                    CreatedTodoId = null,
+                    StartedUtc = now.AddMinutes(-5),
+                },
+                template with
+                {
+                    RunId = "run-target",
+                    GroupId = "group-target",
+                    Status = "failed",
+                    ReportCount = 3,
+                    CreatedTodoId = "BUG-1",
+                    StartedUtc = now.AddMinutes(-10),
+                },
+                template with
+                {
+                    RunId = "run-alpha",
+                    GroupId = "group-alpha",
+                    Status = "completed",
+                    ReportCount = 1,
+                    CreatedTodoId = "BUG-ALPHA",
+                    StartedUtc = now.AddMinutes(-1),
+                },
+            ],
+            TotalRunCount = 3,
+        };
+    }
+
     private static OpenTriageTodoItem CreateOpenTodo(DateTimeOffset now)
         => new(
             TodoId: "TODO-77",
@@ -411,20 +680,111 @@ public sealed class TriageDashboardTests
             ReportCount: 1,
             QuietDeadlineUtc: now.AddMinutes(5));
 
+    private static IReadOnlyList<OpenTriageTodoItem> CreateOpenTodosForFiltering(DateTimeOffset now)
+        =>
+        [
+            CreateOpenTodo(now) with
+            {
+                TodoId = "TODO-C",
+                Title = "Charlie triage TODO",
+                WorkspacePath = @"F:\GitHub\CharlieWorkspace",
+                GroupId = "triage-group-charlie",
+                RunId = "triage-run-charlie",
+                GroupStatus = "ready",
+                RunStatus = "completed",
+                CreatedAtUtc = now.AddMinutes(-1),
+                ReportCount = 3,
+            },
+            CreateOpenTodo(now) with
+            {
+                TodoId = "TODO-A",
+                Title = "Alpha triage TODO",
+                WorkspacePath = @"F:\GitHub\AlphaWorkspace",
+                GroupId = "triage-group-alpha",
+                RunId = "triage-run-alpha",
+                GroupStatus = "ready",
+                RunStatus = "completed",
+                CreatedAtUtc = now.AddMinutes(-2),
+                ReportCount = 1,
+            },
+            CreateOpenTodo(now) with
+            {
+                TodoId = "TODO-B",
+                Title = "Beta triage TODO",
+                WorkspacePath = @"F:\GitHub\BetaWorkspace",
+                GroupId = "triage-group-beta",
+                RunId = "triage-run-beta",
+                GroupStatus = "completed",
+                RunStatus = null,
+                CreatedAtUtc = now.AddMinutes(-3),
+                ReportCount = 2,
+            },
+        ];
+
     private static string SortableTimestamp(DateTimeOffset value)
         => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz");
+
+    private static string DateTimeLocal(DateTimeOffset value)
+        => value.ToLocalTime().ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture);
 
     private static IElement FindButton<TComponent>(IRenderedComponent<TComponent> cut, string text)
         where TComponent : IComponent
         => cut.FindAll("button").First(button => button.TextContent.Contains(text, StringComparison.Ordinal));
 
+    private static void Click<TComponent>(IRenderedComponent<TComponent> cut, Func<IElement> findElement)
+        where TComponent : IComponent
+        => cut.InvokeAsync(() => findElement().Click()).GetAwaiter().GetResult();
+
+    private static IElement FindSortButton<TComponent>(IRenderedComponent<TComponent> cut, string sectionHeading, string columnTitle)
+        where TComponent : IComponent
+        => FindSection(cut, sectionHeading)
+            .QuerySelectorAll("thead button")
+            .First(button => button.TextContent.Contains(columnTitle, StringComparison.Ordinal));
+
+    private static IElement FindSortHeader<TComponent>(IRenderedComponent<TComponent> cut, string sectionHeading, string columnTitle)
+        where TComponent : IComponent
+    {
+        var button = FindSortButton(cut, sectionHeading, columnTitle);
+        for (var current = button.ParentElement; current is not null; current = current.ParentElement)
+        {
+            if (string.Equals(current.LocalName, "th", StringComparison.OrdinalIgnoreCase))
+                return current;
+        }
+
+        throw new InvalidOperationException($"Column '{columnTitle}' in section '{sectionHeading}' was not rendered inside a table header.");
+    }
+
+    private static IElement FindSection<TComponent>(IRenderedComponent<TComponent> cut, string heading)
+        where TComponent : IComponent
+        => cut.FindAll("section").First(section => section.TextContent.Contains(heading, StringComparison.Ordinal));
+
+    private static void AssertMarkupOrder(string markup, params string[] values)
+    {
+        var previousIndex = -1;
+        foreach (var value in values)
+        {
+            var index = markup.IndexOf(value, StringComparison.Ordinal);
+            Assert.True(index >= 0, $"Expected markup to contain '{value}'.");
+            Assert.True(index > previousIndex, $"Expected '{value}' to appear after the previous value.");
+            previousIndex = index;
+        }
+    }
+
     private sealed class TriageApiClientStub : ITriageApiClient
     {
         public TriageDashboardSnapshot Dashboard { get; set; } = new([], [], [], 0, 0);
         public OpenTriageTodosResult OpenTodos { get; init; } = new([], 0, 0, 0);
+        public Exception? DashboardException { get; init; }
+        public Exception? OpenTodosException { get; init; }
+        public TriageGroupSnapshot? GroupDetail { get; init; }
+        public TriageRunSnapshot? RunDetail { get; init; }
+        public TriageReportSnapshot? ReportDetail { get; init; }
         public bool ApplyCreateResultToDashboard { get; init; }
         public List<string?> DashboardWorkspacePaths { get; } = [];
         public List<string?> OpenTodoWorkspacePaths { get; } = [];
+        public List<string> LoadedGroupIds { get; } = [];
+        public List<string> LoadedRunIds { get; } = [];
+        public List<string> LoadedReportIds { get; } = [];
         public List<TriageGroupSelectionSnapshot> CreateSelections { get; } = [];
         public List<(string TargetGroupId, TriageGroupSelectionSnapshot Selection)> ConsolidateSelections { get; } = [];
         public List<(string TargetGroupId, TriageGroupSelectionSnapshot Selection)> MergeSelections { get; } = [];
@@ -433,6 +793,9 @@ public sealed class TriageDashboardTests
         public Task<TriageDashboardSnapshot> GetDashboardAsync(string? workspacePath, CancellationToken cancellationToken = default)
         {
             DashboardWorkspacePaths.Add(workspacePath);
+            if (DashboardException is not null)
+                throw DashboardException;
+
             return Task.FromResult(Dashboard);
         }
 
@@ -440,20 +803,40 @@ public sealed class TriageDashboardTests
             => Task.FromResult(new TriageGroupQuerySnapshot([], 0));
 
         public Task<TriageGroupSnapshot?> GetGroupAsync(string groupId, CancellationToken cancellationToken = default)
-            => Task.FromResult<TriageGroupSnapshot?>(null);
+        {
+            LoadedGroupIds.Add(groupId);
+            return Task.FromResult(GroupDetail?.GroupId == groupId
+                ? GroupDetail
+                : Dashboard.TriageQueue.Concat(Dashboard.ReportGroupQueue).FirstOrDefault(group => string.Equals(group.GroupId, groupId, StringComparison.Ordinal)));
+        }
 
         public Task<TriageReportSnapshot?> GetReportAsync(string reportId, CancellationToken cancellationToken = default)
-            => Task.FromResult<TriageReportSnapshot?>(null);
+        {
+            LoadedReportIds.Add(reportId);
+            return Task.FromResult(ReportDetail?.ReportId == reportId
+                ? ReportDetail
+                : Dashboard.TriageQueue.Concat(Dashboard.ReportGroupQueue)
+                    .SelectMany(group => group.Reports)
+                    .FirstOrDefault(report => string.Equals(report.ReportId, reportId, StringComparison.Ordinal)));
+        }
 
         public Task<TriageRunQuerySnapshot> QueryRunsAsync(string? status, string? groupId, string? workspacePath, CancellationToken cancellationToken = default)
             => Task.FromResult(new TriageRunQuerySnapshot([], 0));
 
         public Task<TriageRunSnapshot?> GetRunAsync(string runId, CancellationToken cancellationToken = default)
-            => Task.FromResult<TriageRunSnapshot?>(null);
+        {
+            LoadedRunIds.Add(runId);
+            return Task.FromResult(RunDetail?.RunId == runId
+                ? RunDetail
+                : Dashboard.RunHistory.FirstOrDefault(run => string.Equals(run.RunId, runId, StringComparison.Ordinal)));
+        }
 
         public Task<OpenTriageTodosResult> QueryOpenCreatedTodosAsync(string? workspacePath, CancellationToken cancellationToken = default)
         {
             OpenTodoWorkspacePaths.Add(workspacePath);
+            if (OpenTodosException is not null)
+                throw OpenTodosException;
+
             return Task.FromResult(OpenTodos);
         }
 
@@ -541,6 +924,33 @@ public sealed class TriageDashboardTests
         public IAsyncEnumerable<string> StreamTodoStatusPromptAsync(string todoId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public IAsyncEnumerable<string> StreamTodoImplementPromptAsync(string todoId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public IAsyncEnumerable<string> StreamTodoPlanPromptAsync(string todoId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+    }
+
+    private sealed class WorkspaceApiClientStub : IWorkspaceApiClient
+    {
+        public Task<ListWorkspacesResult> ListWorkspacesAsync(CancellationToken ct = default)
+            => Task.FromResult(new ListWorkspacesResult(
+                [
+                    new WorkspaceSummary(@"F:\GitHub\AlphaWorkspace", "Alpha Workspace", IsPrimary: false, IsEnabled: true),
+                    new WorkspaceSummary(@"F:\GitHub\BetaWorkspace", "Beta Workspace", IsPrimary: false, IsEnabled: true),
+                    new WorkspaceSummary(@"F:\GitHub\CharlieWorkspace", "Charlie Workspace", IsPrimary: false, IsEnabled: true),
+                    new WorkspaceSummary(WorkspacePath, "Target Workspace", IsPrimary: true, IsEnabled: true),
+                    new WorkspaceSummary(SelectedWorkspacePath, "Selected Workspace", IsPrimary: false, IsEnabled: true),
+                ],
+                TotalCount: 5));
+
+        public Task<WorkspaceDetail?> GetWorkspaceAsync(string workspacePath, CancellationToken ct = default) => Task.FromResult<WorkspaceDetail?>(null);
+        public Task<bool> UpdateWorkspacePolicyAsync(UpdateWorkspacePolicyCommand command, CancellationToken ct = default) => Task.FromResult(false);
+        public Task<WorkspaceMutationOutcome> CreateWorkspaceAsync(CreateWorkspaceCommand command, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceMutationOutcome> UpdateWorkspaceAsync(UpdateWorkspaceCommand command, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceMutationOutcome> DeleteWorkspaceAsync(DeleteWorkspaceCommand command, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceProcessState> GetWorkspaceStatusAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceProcessState> StartWorkspaceAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceProcessState> StopWorkspaceAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceHealthState> CheckWorkspaceHealthAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceGlobalPromptState> GetWorkspaceGlobalPromptAsync(CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceGlobalPromptState> UpdateWorkspaceGlobalPromptAsync(UpdateWorkspaceGlobalPromptCommand command, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceInitInfo> InitWorkspaceAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
     }
 
     private sealed class HealthApiClientStub : IHealthApiClient

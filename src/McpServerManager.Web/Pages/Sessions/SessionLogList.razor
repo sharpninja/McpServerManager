@@ -42,28 +42,24 @@ else if (ViewModel.Items.Count == 0)
 else
 {
     <p class="color-fg-muted">Showing @ViewModel.Items.Count of @ViewModel.TotalCount logs.</p>
-    <PrimerDataTable TItem="SessionLogSummary" Items="ViewModel.Items" ColumnCount="6" Class="Table--full-width">
-        <HeaderTemplate>
-            <tr>
-                <th>Session ID</th>
-                <th>Title</th>
-                <th>Agent</th>
-                <th>Status</th>
-                <th>Last Updated</th>
-                <th></th>
-            </tr>
-        </HeaderTemplate>
-        <RowTemplate Context="item">
-            <td><code>@item.SessionId</code></td>
-            <td>@item.Title</td>
-            <td>@item.SourceType</td>
-            <td>
+    <PrimerDataTable TGridItem="SessionLogSummary" Items="ViewModel.Items" Class="Table--full-width">
+        <ChildContent>
+            <TemplateColumn Title="Session ID" Context="item">
+                <code>@item.SessionId</code>
+            </TemplateColumn>
+            <PropertyColumn Property="@(item => item.Title)" Title="Title" />
+            <PropertyColumn Property="@(item => item.SourceType)" Title="Agent" />
+            <TemplateColumn Title="Status" Context="item">
                 <PrimerLabel Scheme="@(string.Equals(item.Status, "completed", StringComparison.OrdinalIgnoreCase) ? "success" : "attention")"
                              Text="@item.Status" />
-            </td>
-            <td>@FormatTimestamp(item.LastUpdated)</td>
-            <td><a class="btn btn-sm" href="@GetDetailHref(item.SessionId)">Details</a></td>
-        </RowTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Last Updated" Context="item">
+                @FormatTimestamp(item.LastUpdated)
+            </TemplateColumn>
+            <TemplateColumn Context="item">
+                <a class="btn btn-sm" href="@GetDetailHref(item.SessionId)">Details</a>
+            </TemplateColumn>
+        </ChildContent>
     </PrimerDataTable>
 }
 
@@ -117,4 +113,3 @@ else
     private static string FormatTimestamp(string? value)
         => DateTimeOffset.TryParse(value, out var dto) ? dto.ToLocalTime().ToString("g") : value ?? "(unknown)";
 }
-
