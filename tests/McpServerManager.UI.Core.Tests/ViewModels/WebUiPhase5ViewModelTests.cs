@@ -5,6 +5,7 @@ using McpServerManager.UI.Core.Tests.TestInfrastructure;
 using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using System.Text.Json;
 using Xunit;
 
 namespace McpServerManager.UI.Core.Tests.ViewModels;
@@ -346,6 +347,43 @@ public sealed class WebUiPhase5ViewModelTests
         Assert.NotNull(viewModel.Result);
         Assert.True(viewModel.Result!.Success);
         Assert.Equal("rendered", viewModel.Result.RenderedContent);
+    }
+
+    [Fact]
+    public async Task TemplateTestViewModel_BuildRequiredVariablesJsonAsync_UsesRequiredTemplateVariables()
+    {
+        var templateApi = Substitute.For<ITemplateApiClient>();
+        templateApi.GetTemplateAsync("tpl-1", Arg.Any<CancellationToken>())
+            .Returns(new TemplateDetail(
+                "tpl-1",
+                "Title",
+                "web",
+                [],
+                null,
+                "handlebars",
+                [
+                    new TemplateVariableDetail("id", null, true, "TODO-123", null),
+                    new TemplateVariableDetail("count", null, true, "2", null),
+                    new TemplateVariableDetail("enabled", null, true, "true", null),
+                    new TemplateVariableDetail("optional", null, false, "skip", null)
+                ],
+                "content"));
+
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(templateApi));
+        var viewModel = host.GetRequiredService<TemplateTestViewModel>();
+
+        var json = await viewModel.BuildRequiredVariablesJsonAsync("tpl-1");
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        Assert.Equal("TODO-123", root.GetProperty("id").GetString());
+        Assert.Equal(2, root.GetProperty("count").GetInt32());
+        Assert.True(root.GetProperty("enabled").GetBoolean());
+        Assert.False(root.TryGetProperty("optional", out _));
+
+        var missingJson = TemplateTestViewModel.BuildVariablesJson(["id"]);
+        using var missingDocument = JsonDocument.Parse(missingJson);
+        Assert.Equal(string.Empty, missingDocument.RootElement.GetProperty("id").GetString());
     }
 
     [Fact]

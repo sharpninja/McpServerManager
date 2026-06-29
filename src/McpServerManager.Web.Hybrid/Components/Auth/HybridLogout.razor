@@ -1,7 +1,41 @@
 @page "/logout"
+@using McpServerManager.UI.Core.Auth
+@using McpServerManager.UI.Core.Services
+@using McpServerManager.UI.Core.ViewModels
+@using McpServerManager.Web.Hybrid.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@inject IConnectionAuthService ConnectionAuthService
+@inject IWorkspaceAuthTokenCache TokenCache
+@inject WorkspaceContextViewModel WorkspaceContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 
 <PageTitle>Sign out</PageTitle>
 
 <PrimerBlankslate
-    Heading="No web session"
-    Description="The hybrid host does not maintain a browser cookie session." />
+    Heading="Signing out"
+    Description="Clearing cached workspace authentication." />
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var activeWorkspacePath = WorkspaceContext.ActiveWorkspacePath;
+        var token = TokenCache.TryReadValid(activeWorkspacePath);
+        if (token is not null)
+        {
+            var baseUrl = Configuration["McpServer:BaseUrl"] ?? "http://localhost:7147";
+            await ConnectionAuthService
+                .TryLogoutAsync(baseUrl, token.Authority, token.ClientId, token.AccessToken)
+                .ConfigureAwait(true);
+        }
+
+        TokenCache.Clear(activeWorkspacePath);
+
+        if (AuthStateProvider is HybridAuthenticationStateProvider hybridAuth)
+            hybridAuth.NotifyTokenChanged();
+
+        Navigation.NavigateTo("/", replace: true);
+    }
+}

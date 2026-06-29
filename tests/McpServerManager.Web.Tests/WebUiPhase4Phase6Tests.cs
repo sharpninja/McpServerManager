@@ -137,6 +137,59 @@ public sealed class WebUiPhase4Phase6Tests
     }
 
     [Fact]
+    public void Dashboard_UsesResponsiveColumnClasses_ForFixedLayoutTables()
+    {
+        var workspaceApi = new WorkspaceApiClientStub
+        {
+            OnListWorkspacesAsync = _ => Task.FromResult(
+                new ListWorkspacesResult(
+                    [
+                        new WorkspaceSummary(@"E:\\repo", "Repo", true, true),
+                        new WorkspaceSummary(@"E:\\wide", "Wide Workspace", false, true)
+                    ],
+                    2))
+        };
+        var todoApi = new TodoApiClientStub
+        {
+            OnListTodosAsync = (_, _) => Task.FromResult(
+                new ListTodosResult([new TodoListItem("TODO-001", "Task", "Architecture", "high", false, "2h")], 1))
+        };
+        var sessionApi = new SessionLogApiClientStub
+        {
+            OnListSessionLogsAsync = (_, _) => Task.FromResult(
+                new ListSessionLogsResult(
+                    [new SessionLogSummary("session-1", "Cursor", "Audit", "completed", "gpt", null, null, 1)],
+                    1,
+                    50,
+                    0))
+        };
+        var templateApi = new TemplateApiClientStub
+        {
+            OnListTemplatesAsync = (_, _, _, _) => Task.FromResult(
+                new ListTemplatesResult(
+                    [new TemplateListItem("tpl-1", "Template One", "web", [ "tag" ], "desc")],
+                    1))
+        };
+
+        using var ctx = CreateTestContext(services =>
+        {
+            services.AddSingleton<IWorkspaceApiClient>(workspaceApi);
+            services.AddSingleton<ITodoApiClient>(todoApi);
+            services.AddSingleton<ISessionLogApiClient>(sessionApi);
+            services.AddSingleton<ITemplateApiClient>(templateApi);
+        });
+
+        var cut = ctx.Render<McpServerManager.Web.Pages.Dashboard>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotEmpty(cut.FindAll("table.dashboard-workspaces-table"));
+            Assert.NotEmpty(cut.FindAll("table.dashboard-todos-table"));
+            Assert.NotEmpty(cut.FindAll("table.dashboard-sessions-table"));
+        });
+    }
+
+    [Fact]
     public void WorkspacePicker_PropagatesSelection_ToWorkspaceContext_AndCallback()
     {
         var workspaceApi = new WorkspaceApiClientStub

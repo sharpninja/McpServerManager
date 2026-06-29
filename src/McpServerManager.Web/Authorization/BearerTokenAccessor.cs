@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.ViewModels;
 
 namespace McpServerManager.Web.Authorization;
 
@@ -10,12 +12,19 @@ namespace McpServerManager.Web.Authorization;
 internal sealed class BearerTokenAccessor
 {
     private readonly IHttpContextAccessor _accessor;
+    private readonly IWorkspaceAuthTokenCache? _workspaceTokenCache;
+    private readonly WorkspaceContextViewModel? _workspaceContext;
 
     /// <summary>Initializes a new <see cref="BearerTokenAccessor"/>.</summary>
     /// <param name="accessor">ASP.NET Core HTTP context accessor.</param>
-    public BearerTokenAccessor(IHttpContextAccessor accessor)
+    public BearerTokenAccessor(
+        IHttpContextAccessor accessor,
+        IWorkspaceAuthTokenCache? workspaceTokenCache = null,
+        WorkspaceContextViewModel? workspaceContext = null)
     {
         _accessor = accessor;
+        _workspaceTokenCache = workspaceTokenCache;
+        _workspaceContext = workspaceContext;
     }
 
     /// <summary>
@@ -26,12 +35,11 @@ internal sealed class BearerTokenAccessor
     public async Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
     {
         var httpContext = _accessor.HttpContext;
-        if (httpContext is null)
-            return null;
+        if (httpContext is not null && httpContext.User.Identity?.IsAuthenticated == true)
+            return await httpContext.GetTokenAsync("access_token").ConfigureAwait(true);
 
-        if (httpContext.User.Identity?.IsAuthenticated != true)
-            return null;
-
-        return await httpContext.GetTokenAsync("access_token").ConfigureAwait(true);
+        return _workspaceTokenCache
+            ?.TryReadValid(_workspaceContext?.ActiveWorkspacePath)
+            ?.AccessToken;
     }
 }

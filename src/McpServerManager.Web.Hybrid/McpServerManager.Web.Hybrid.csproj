@@ -9,7 +9,7 @@
     <Nullable>enable</Nullable>
     <EnableDefaultCssItems>false</EnableDefaultCssItems>
     <MauiXamlInflator>SourceGen</MauiXamlInflator>
-    <ApplicationTitle>McpServerManager Web</ApplicationTitle>
+    <ApplicationTitle>MCP Server Manager</ApplicationTitle>
     <ApplicationId>com.sharpninja.mcpservermanager.web.hybrid</ApplicationId>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>

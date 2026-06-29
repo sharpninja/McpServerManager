@@ -121,6 +121,51 @@ body {
     text-overflow: ellipsis;
 }
 
+table.dashboard-workspaces-table th:nth-child(1),
+table.dashboard-workspaces-table td:nth-child(1) {
+    width: 3rem;
+    padding-left: 12px !important;
+    padding-right: 8px !important;
+    text-align: center;
+}
+
+table.dashboard-workspaces-table th:nth-child(2),
+table.dashboard-workspaces-table td:nth-child(2),
+table.dashboard-todos-table th:nth-child(2),
+table.dashboard-todos-table td:nth-child(2),
+table.dashboard-sessions-table th:nth-child(1),
+table.dashboard-sessions-table td:nth-child(1) {
+    width: auto;
+}
+
+table.dashboard-workspaces-table th:nth-child(3),
+table.dashboard-workspaces-table td:nth-child(3),
+table.dashboard-todos-table th:nth-child(4),
+table.dashboard-todos-table td:nth-child(4),
+table.dashboard-sessions-table th:nth-child(3),
+table.dashboard-sessions-table td:nth-child(3) {
+    width: 7rem;
+    padding-left: 8px !important;
+    padding-right: 16px !important;
+    text-align: right;
+    white-space: nowrap;
+}
+
+table.dashboard-todos-table th:nth-child(1),
+table.dashboard-todos-table td:nth-child(1) {
+    width: 11rem;
+}
+
+table.dashboard-todos-table th:nth-child(3),
+table.dashboard-todos-table td:nth-child(3) {
+    width: 8rem;
+}
+
+table.dashboard-sessions-table th:nth-child(2),
+table.dashboard-sessions-table td:nth-child(2) {
+    width: 12rem;
+}
+
 .dashboard-link-truncate {
     display: block;
     white-space: nowrap;

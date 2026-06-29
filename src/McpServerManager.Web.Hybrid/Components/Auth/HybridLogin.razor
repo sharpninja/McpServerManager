@@ -1,7 +1,155 @@
 @page "/login"
+@using McpServerManager.UI.Core.Auth
+@using McpServerManager.UI.Core.Services
+@using McpServerManager.UI.Core.ViewModels
+@using McpServerManager.Web.Hybrid.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Configuration
+@implements IDisposable
+@inject IConfiguration Configuration
+@inject IDeviceAuthorizationLoginService LoginService
+@inject IWorkspaceAuthTokenCache TokenCache
+@inject WorkspaceContextViewModel WorkspaceContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 
 <PageTitle>Sign in</PageTitle>
 
-<PrimerBlankslate
-    Heading="Desktop authentication"
-    Description="The hybrid host connects to the MCP server through local workspace credentials. Use MCP Web in a browser when OpenID Connect sign-in is required." />
+<div class="p-6">
+    <div class="Box mx-auto" style="max-width: 42rem;">
+        <div class="Box-header">
+            <h1 class="Box-title">Sign in</h1>
+        </div>
+        <div class="Box-body">
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <div class="flash flash-error mb-3" role="alert">
+                    <strong>Sign in failed</strong>
+                    <span class="ml-2">@_error</span>
+                </div>
+            }
+
+            <p class="color-fg-muted">@_status</p>
+
+            @if (_loginStart is not null)
+            {
+                <dl class="form-group">
+                    <dt>User code</dt>
+                    <dd><code class="f3">@_loginStart.Prompt.UserCode</code></dd>
+                    <dt>Verification URL</dt>
+                    <dd><a href="@_loginStart.VerificationUrl" target="_blank">@_loginStart.VerificationUrl</a></dd>
+                </dl>
+            }
+
+            <button type="button" class="btn btn-primary" disabled="@_isBusy" @onclick="StartLoginAsync">
+                @(_loginStart is null ? "Start Sign In" : "Retry")
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+    private DeviceAuthorizationLoginStart? _loginStart;
+    private string _status = "Starting sign in...";
+    private string? _error;
+    private bool _isBusy;
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (TokenCache.TryReadValid(WorkspaceContext.ActiveWorkspacePath) is not null)
+        {
+            NotifyTokenChanged();
+            Navigation.NavigateTo(GetReturnUrl(), replace: true);
+            return;
+        }
+
+        await StartLoginAsync().ConfigureAwait(true);
+    }
+
+    private async Task StartLoginAsync()
+    {
+        if (_isBusy)
+            return;
+
+        _isBusy = true;
+        _error = null;
+        _status = "Contacting identity server...";
+
+        try
+        {
+            var baseUrl = Configuration["McpServer:BaseUrl"] ?? "http://localhost:7147";
+            _loginStart = await LoginService.StartAsync(baseUrl, _cts.Token).ConfigureAwait(true);
+            _status = _loginStart.BrowserOpened
+                ? "Browser opened. Complete sign in with the displayed user code."
+                : "Open the verification URL and complete sign in with the displayed user code.";
+
+            await InvokeAsync(StateHasChanged).ConfigureAwait(true);
+
+            var result = await LoginService
+                .CompleteAsync(
+                    _loginStart,
+                    baseUrl,
+                    status =>
+                    {
+                        _status = status;
+                        _ = InvokeAsync(StateHasChanged);
+                    },
+                    _cts.Token)
+                .ConfigureAwait(true);
+
+            var token = WorkspaceAuthToken.FromAccessToken(
+                result.AccessToken,
+                result.ExpiresInSeconds,
+                authority: _loginStart.AuthConfig.Authority,
+                tokenEndpoint: _loginStart.AuthConfig.TokenEndpoint,
+                clientId: _loginStart.AuthConfig.ClientId,
+                tokenType: result.TokenType);
+
+            TokenCache.Save(WorkspaceContext.ActiveWorkspacePath, token);
+            NotifyTokenChanged();
+            Navigation.NavigateTo(GetReturnUrl(), replace: true);
+        }
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _status = "Sign in did not complete.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void NotifyTokenChanged()
+    {
+        if (AuthStateProvider is HybridAuthenticationStateProvider hybridAuth)
+            hybridAuth.NotifyTokenChanged();
+    }
+
+    private string GetReturnUrl()
+    {
+        if (string.IsNullOrWhiteSpace(ReturnUrl))
+            return "/";
+
+        if (!ReturnUrl.StartsWith("/", StringComparison.Ordinal) ||
+            ReturnUrl.StartsWith("//", StringComparison.Ordinal))
+        {
+            return "/";
+        }
+
+        return ReturnUrl;
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

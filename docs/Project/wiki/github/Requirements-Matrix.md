@@ -12,6 +12,7 @@ Traceability policy: see `Requirements-Traceability-Policy.md`.
 | FR6. | Tracked | Functional-Requirements.md |
 | FR7. | Tracked | Functional-Requirements.md |
 | FR8. | Tracked | Functional-Requirements.md |
+| FR-AUTH-CACHE-001 | Tracked | Functional-Requirements.md |
 | FR-GEN-001 | Tracked | Functional-Requirements.md |
 | FR-RTUI-001 | Tracked | Functional-Requirements.md |
 | FR-RTUI-002 | Tracked | Functional-Requirements.md |
@@ -40,6 +41,8 @@ Traceability policy: see `Requirements-Traceability-Policy.md`.
 | FR-TEST-002 | Tracked | Functional-Requirements.md |
 | FR-TRIAGE-001 | Tracked | Functional-Requirements.md |
 | FR-TRIAGE-002 | Tracked | Functional-Requirements.md |
+| FR-WEB-001 | Tracked | Functional-Requirements.md |
+| FR-WEB-HYBRID-TOOL-001 | Tracked | Functional-Requirements.md |
 | TR1. | Tracked | Technical-Requirements.md |
 | TR10. | Tracked | Technical-Requirements.md |
 | TR11. | Tracked | Technical-Requirements.md |
@@ -51,6 +54,7 @@ Traceability policy: see `Requirements-Traceability-Policy.md`.
 | TR7. | Tracked | Technical-Requirements.md |
 | TR8. | Tracked | Technical-Requirements.md |
 | TR9. | Tracked | Technical-Requirements.md |
+| TR-AUTH-CACHE-001 | Tracked | Technical-Requirements.md |
 | TR-GEN-YAML-001 | Tracked | Technical-Requirements.md |
 | TR-RTUI-001 | Tracked | Technical-Requirements.md |
 | TR-RTUI-002 | Tracked | Technical-Requirements.md |
@@ -89,5 +93,10 @@ Traceability policy: see `Requirements-Traceability-Policy.md`.
 | TR-TEST-001 | Tracked | Technical-Requirements.md |
 | TR-TRIAGE-ACTIONS-001 | Tracked | Technical-Requirements.md |
 | TR-TRIAGE-CLIENT-001 | Tracked | Technical-Requirements.md |
+| TR-WEB-HYBRID-001 | Tracked | Technical-Requirements.md |
+| TR-WEB-HYBRID-TOOL-001 | Tracked | Technical-Requirements.md |
+| TEST-AUTH-CACHE-001 | Tracked | Testing-Requirements.md |
 | TEST-TRIAGE-001 | Tracked | Testing-Requirements.md |
 | TEST-TRIAGE-002 | Tracked | Testing-Requirements.md |
+| TEST-WEB-001 | Tracked | Testing-Requirements.md |
+| TEST-WEB-HYBRID-TOOL-001 | Tracked | Testing-Requirements.md |

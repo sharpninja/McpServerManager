@@ -1,5 +1,6 @@
 using Bunit;
 using Bunit.TestDoubles;
+using AngleSharp.Html.Dom;
 using McpServer.Cqrs;
 using McpServerManager.UI.Core;
 using McpServerManager.UI.Core.Authorization;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.Json;
 using Xunit;
 
 namespace McpServerManager.Web.Tests;
@@ -132,6 +134,84 @@ public sealed class DetailItemToolbarTests
             var expanders = cut.FindAll("button.detail-card-expander");
             Assert.Equal(3, expanders.Count);
             Assert.All(expanders, button => Assert.Equal("true", button.GetAttribute("aria-expanded")));
+        });
+    }
+
+    [Fact]
+    public void TemplateTest_PopulatesRequiredVariablesJsonFromTemplate()
+    {
+        TestTemplateQuery? capturedQuery = null;
+        var detail = new TemplateDetail(
+            "todo-status-prompt",
+            "TODO status prompt",
+            "todo",
+            [],
+            null,
+            "handlebars",
+            [
+                new TemplateVariableDetail("id", null, true, "TODO-123", null),
+                new TemplateVariableDetail("done", null, true, "false", null),
+                new TemplateVariableDetail("optional", null, false, "skip", null)
+            ],
+            "Status for {{id}}");
+        var api = new TemplateApiClientStub
+        {
+            OnGetTemplateAsync = (_, _) => Task.FromResult<TemplateDetail?>(detail),
+            OnTestTemplateAsync = (query, _) =>
+            {
+                capturedQuery = query;
+                return Task.FromResult(new TemplateTestOutcome(true, "rendered", null, null));
+            }
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITemplateApiClient>(api));
+        ctx.Services.GetRequiredService<BunitNavigationManager>()
+            .NavigateTo("/templates/test?templateId=todo-status-prompt");
+        var cut = ctx.Render<McpServerManager.Web.Pages.Templates.TemplateTest>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(capturedQuery));
+        using var document = JsonDocument.Parse(capturedQuery!.VariablesJson);
+        var root = document.RootElement;
+        Assert.Equal("TODO-123", root.GetProperty("id").GetString());
+        Assert.False(root.GetProperty("done").GetBoolean());
+        Assert.False(root.TryGetProperty("optional", out _));
+        var variablesTextarea = Assert.IsAssignableFrom<IHtmlTextAreaElement>(cut.Find("textarea[name='variables']"));
+        Assert.Contains("\"id\": \"TODO-123\"", variablesTextarea.Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TemplateTest_PopulatesVariablesJsonFromMissingVariableResult()
+    {
+        var detail = new TemplateDetail(
+            "todo-status-prompt",
+            "TODO status prompt",
+            "todo",
+            [],
+            null,
+            "handlebars",
+            [],
+            "Status for {{id}}");
+        var api = new TemplateApiClientStub
+        {
+            OnGetTemplateAsync = (_, _) => Task.FromResult<TemplateDetail?>(detail),
+            OnTestTemplateAsync = (_, _) => Task.FromResult(new TemplateTestOutcome(
+                false,
+                null,
+                "Missing required variables: id",
+                ["id"]))
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITemplateApiClient>(api));
+        ctx.Services.GetRequiredService<BunitNavigationManager>()
+            .NavigateTo("/templates/test?templateId=todo-status-prompt");
+        var cut = ctx.Render<McpServerManager.Web.Pages.Templates.TemplateTest>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var variablesTextarea = Assert.IsAssignableFrom<IHtmlTextAreaElement>(cut.Find("textarea[name='variables']"));
+            var variablesJson = variablesTextarea.Value;
+            Assert.Contains("\"id\": \"\"", variablesJson, StringComparison.Ordinal);
+            Assert.Contains("Missing required variables: id", cut.Markup, StringComparison.Ordinal);
         });
     }
 
@@ -362,6 +442,7 @@ public sealed class DetailItemToolbarTests
     {
         public Func<string?, string?, string?, CancellationToken, Task<ListTemplatesResult>>? OnListTemplatesAsync { get; init; }
         public Func<string, CancellationToken, Task<TemplateDetail?>>? OnGetTemplateAsync { get; init; }
+        public Func<TestTemplateQuery, CancellationToken, Task<TemplateTestOutcome>>? OnTestTemplateAsync { get; init; }
 
         public Task<ListTemplatesResult> ListTemplatesAsync(string? category, string? tag, string? keyword, CancellationToken cancellationToken = default)
             => OnListTemplatesAsync?.Invoke(category, tag, keyword, cancellationToken) ?? Task.FromResult(new ListTemplatesResult([], 0));
@@ -372,7 +453,8 @@ public sealed class DetailItemToolbarTests
         public Task<TemplateMutationOutcome> CreateTemplateAsync(CreateTemplateCommand command, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<TemplateMutationOutcome> UpdateTemplateAsync(UpdateTemplateCommand command, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<TemplateMutationOutcome> DeleteTemplateAsync(string templateId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
-        public Task<TemplateTestOutcome> TestTemplateAsync(TestTemplateQuery query, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<TemplateTestOutcome> TestTemplateAsync(TestTemplateQuery query, CancellationToken cancellationToken = default)
+            => OnTestTemplateAsync?.Invoke(query, cancellationToken) ?? throw new NotImplementedException();
     }
 
     private sealed class WorkspaceApiClientStub : IWorkspaceApiClient

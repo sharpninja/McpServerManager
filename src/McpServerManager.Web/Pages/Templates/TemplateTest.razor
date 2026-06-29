@@ -18,8 +18,11 @@
             <textarea class="form-control" name="inline" rows="6">@InlineTemplate</textarea>
         </label>
         <label class="d-flex flex-column">
-            <span class="text-small color-fg-muted">Variables JSON</span>
-            <textarea class="form-control" name="variables" rows="6">@EffectiveVariablesJson</textarea>
+            <span class="d-flex flex-items-center flex-justify-between">
+                <span class="text-small color-fg-muted">Variables JSON</span>
+                <button class="btn btn-sm" type="button" @onclick="CreateRequiredVariablesJsonAsync">Create Required JSON</button>
+            </span>
+            <textarea @key="EffectiveVariablesJson" class="form-control" name="variables" rows="6">@EffectiveVariablesJson</textarea>
         </label>
         <div>
             <button class="btn btn-primary" type="submit">Run Test</button>
@@ -92,7 +95,7 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        EffectiveVariablesJson = string.IsNullOrWhiteSpace(VariablesJson) ? "{}" : VariablesJson;
+        EffectiveVariablesJson = await ResolveVariablesJsonAsync().ConfigureAwait(true);
 
         if (string.IsNullOrWhiteSpace(TemplateId) && string.IsNullOrWhiteSpace(InlineTemplate))
         {
@@ -111,6 +114,40 @@ else
         ViewModel.InlineTemplate = InlineTemplate;
         ViewModel.VariablesJson = EffectiveVariablesJson;
         await ViewModel.RunAsync().ConfigureAwait(true);
+
+        if (string.IsNullOrWhiteSpace(VariablesJson) &&
+            ViewModel.Result?.MissingVariables is { Count: > 0 } missingVariables)
+        {
+            EffectiveVariablesJson = TemplateTestViewModel.BuildVariablesJson(missingVariables);
+            ViewModel.VariablesJson = EffectiveVariablesJson;
+        }
+    }
+
+    private async Task<string> ResolveVariablesJsonAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(VariablesJson))
+            return VariablesJson;
+
+        if (!string.IsNullOrWhiteSpace(TemplateId) && string.IsNullOrWhiteSpace(InlineTemplate))
+            return await ViewModel.BuildRequiredVariablesJsonAsync(TemplateId).ConfigureAwait(true);
+
+        return "{}";
+    }
+
+    private async Task CreateRequiredVariablesJsonAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(TemplateId) && string.IsNullOrWhiteSpace(InlineTemplate))
+        {
+            var generatedJson = await ViewModel.BuildRequiredVariablesJsonAsync(TemplateId).ConfigureAwait(true);
+            if (!string.Equals(generatedJson, "{}", StringComparison.Ordinal) ||
+                ViewModel.Result?.MissingVariables is not { Count: > 0 })
+            {
+                EffectiveVariablesJson = generatedJson;
+                return;
+            }
+        }
+
+        if (ViewModel.Result?.MissingVariables is { Count: > 0 } missingVariables)
+            EffectiveVariablesJson = TemplateTestViewModel.BuildVariablesJson(missingVariables);
     }
 }
-

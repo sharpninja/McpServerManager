@@ -68,7 +68,7 @@ else
         {
             <PrimerDataTable TGridItem="WorkspaceSummary"
                              Items="WorkspaceListVm.Workspaces"
-                             Class="Table--full-width"
+                             Class="Table--full-width dashboard-workspaces-table"
                              RowClass="GetWorkspaceRowClass"
                              style="width:100%; table-layout:fixed;">
                 <ChildContent>
@@ -118,7 +118,7 @@ else
             {
                 <PrimerDataTable TGridItem="TodoListItem"
                                  Items="GetDashboardTodoItems()"
-                                 Class="Table--full-width"
+                                 Class="Table--full-width dashboard-todos-table"
                                  style="width:100%; table-layout:fixed;">
                     <ChildContent>
                         <TemplateColumn Title="ID" Context="todo">
@@ -164,7 +164,7 @@ else
             {
                 <PrimerDataTable TGridItem="SessionLogSummary"
                                  Items="GetDashboardSessionItems()"
-                                 Class="Table--full-width"
+                                 Class="Table--full-width dashboard-sessions-table"
                                  style="width:100%; table-layout:fixed;">
                     <ChildContent>
                         <TemplateColumn Title="Session" Context="log">

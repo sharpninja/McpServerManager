@@ -1,7 +1,9 @@
 @using System.Reflection
 @using McpServerManager.UI.Core.Services
 @using McpServerManager.Web
+@using Microsoft.Extensions.Logging
 @inject WorkspaceAutoSelector WorkspaceAutoSelector
+@inject ILogger<HybridRoot> Logger
 
 @if (_workspaceReady)
 {
@@ -9,9 +11,15 @@
 }
 else
 {
-    <main class="app-content">
-        <p class="color-fg-muted">Loading workspace...</p>
-    </main>
+    <div class="hybrid-splash" role="status" aria-live="polite">
+        <div class="hybrid-splash__panel">
+            <div class="hybrid-splash__mark" aria-hidden="true">M</div>
+            <div>
+                <h1 class="hybrid-splash__title">McpServer</h1>
+                <p class="hybrid-splash__status">Loading workspace...</p>
+            </div>
+        </div>
+    </div>
 }
 
 @code {
@@ -21,7 +29,17 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await WorkspaceAutoSelector.EnsureWorkspaceSelectedAsync().ConfigureAwait(true);
-        _workspaceReady = true;
+        try
+        {
+            await WorkspaceAutoSelector.EnsureWorkspaceSelectedAsync().ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Hybrid workspace auto-selection failed during startup.");
+        }
+        finally
+        {
+            _workspaceReady = true;
+        }
     }
 }

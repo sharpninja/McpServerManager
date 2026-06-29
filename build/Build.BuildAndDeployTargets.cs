@@ -290,13 +290,22 @@ partial class Build
             },
             RepoRootPath);
 
+        var entryPoint = $"{assemblyName}.dll";
+        var runner = "dotnet";
+        if (targetFramework.Contains("-windows", StringComparison.OrdinalIgnoreCase)
+            && File.Exists(Path.Combine(publishDirectory, $"{assemblyName}.exe")))
+        {
+            entryPoint = $"{assemblyName}.exe";
+            runner = "executable";
+        }
+
         File.WriteAllText(
             dotnetToolSettingsPath,
             $"""
              <?xml version="1.0" encoding="utf-8"?>
-             <DotNetCliTool Version="1">
+             <DotNetCliTool Version="2">
                <Commands>
-                 <Command Name="{toolCommandName}" EntryPoint="{assemblyName}.dll" Runner="dotnet" />
+                 <Command Name="{toolCommandName}" EntryPoint="{entryPoint}" Runner="{runner}" />
                </Commands>
              </DotNetCliTool>
              """,

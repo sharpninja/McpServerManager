@@ -5,10 +5,50 @@
              xmlns:components="clr-namespace:McpServerManager.Web.Hybrid.Components"
              x:Class="McpServerManager.Web.Hybrid.MainPage">
 
-    <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html">
-        <BlazorWebView.RootComponents>
-            <RootComponent Selector="#app" ComponentType="{x:Type components:HybridRoot}" />
-        </BlazorWebView.RootComponents>
-    </BlazorWebView>
+    <Grid BackgroundColor="#f6f8fa">
+        <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html">
+            <BlazorWebView.RootComponents>
+                <RootComponent Selector="#app" ComponentType="{x:Type components:HybridRoot}" />
+            </BlazorWebView.RootComponents>
+        </BlazorWebView>
+
+        <Grid x:Name="nativeSplash"
+              ZIndex="1"
+              BackgroundColor="#f6f8fa"
+              InputTransparent="False">
+            <VerticalStackLayout HorizontalOptions="Center"
+                                 VerticalOptions="Center"
+                                 Spacing="18"
+                                 WidthRequest="360">
+                <Border WidthRequest="72"
+                        HeightRequest="72"
+                        BackgroundColor="#24292f"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 16"
+                        HorizontalOptions="Center">
+                    <Label Text="M"
+                           TextColor="#ffffff"
+                           FontSize="34"
+                           FontAttributes="Bold"
+                           HorizontalTextAlignment="Center"
+                           VerticalTextAlignment="Center" />
+                </Border>
+                <Label Text="McpServer"
+                       TextColor="#24292f"
+                       FontSize="28"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center" />
+                <ActivityIndicator IsRunning="True"
+                                   Color="#0969da"
+                                   WidthRequest="32"
+                                   HeightRequest="32"
+                                   HorizontalOptions="Center" />
+                <Label Text="Starting desktop host..."
+                       TextColor="#57606a"
+                       FontSize="16"
+                       HorizontalTextAlignment="Center" />
+            </VerticalStackLayout>
+        </Grid>
+    </Grid>
 
 </ContentPage>
