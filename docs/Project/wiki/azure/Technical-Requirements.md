@@ -272,3 +272,8 @@ Scope: layer-1+
 - [x] DeployWebUiCore references the hybrid project path. (evidence: build/Build.BuildAndDeployTargets.cs:759-761; dotnet build build/Build.csproj --no-restore; build.ps1 UpdateWebUiTool --what-if --skip-version-bump; git diff --check.)
 - [x] Generic UpdateDotnetTool defaults remain Director-oriented unless overridden. (evidence: build/Build.BuildAndDeployTargets.cs:759-761; dotnet build build/Build.csproj --no-restore; build.ps1 UpdateWebUiTool --what-if --skip-version-bump; git diff --check.)
 
+## TR-WEB-NAV-001
+
+**Shared app shell navigation and workspace reload state** — Implement the persistent back button, Ctrl+W workspace picker, workspace change invalidation, and TODO done filter using shared Blazor shell/view-model behavior so Web and Hybrid hosts remain aligned.
+Scope: layer-1+
+

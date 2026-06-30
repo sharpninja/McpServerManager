@@ -56,6 +56,29 @@ body {
     z-index: 100;
 }
 
+.app-header-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+}
+
+.app-workspace-control {
+    position: relative;
+}
+
+.app-workspace-picker-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 200;
+    width: min(420px, calc(100vw - 32px));
+    color: var(--fgColor-default, #1f2328);
+    background: var(--bgColor-default, #ffffff);
+}
+
 /* ── Main content ── */
 .app-content {
     flex: 1;
@@ -225,6 +248,22 @@ table.dashboard-sessions-table td:nth-child(2) {
     letter-spacing: 0.5px;
     background-color: var(--bgColor-neutral-muted, #f6f8fa);
     border-bottom: 1px solid var(--borderColor-muted, #d8dee4);
+}
+
+.detail-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.sidebar-show-done-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    white-space: nowrap;
+    color: var(--fgColor-default, #1f2328);
 }
 
 .detail-sidebar .sidebar-item {

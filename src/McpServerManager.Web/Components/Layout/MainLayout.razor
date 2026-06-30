@@ -1,11 +1,15 @@
 @inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
 @inject McpServerManager.UI.Core.Services.IUiDispatcherService UiDispatcher
+@inject IJSRuntime JsRuntime
 @inject WorkspaceAutoSelector WorkspaceAutoSelector
 @inject BackendConnectionMonitor ConnectionMonitor
 @inject WebVoiceConversationViewModel AgentChatViewModel
+@inject WorkspaceContextViewModel WorkspaceContext
 @implements IDisposable
 
-<div class="d-flex flex-column" style="height: 100vh; min-height: 0">
+<div class="d-flex flex-column" style="height: 100vh; min-height: 0" data-app-shell tabindex="-1" @onkeydown="HandleShellKeyDown">
     <header class="Header app-header-sticky">
         <div class="Header-item">
             <a href="/" class="Header-link f4 d-flex flex-items-center">
@@ -14,9 +18,38 @@
             </a>
         </div>
         <div class="Header-item">
+            <button type="button"
+                    class="btn btn-sm app-header-icon-button"
+                    id="app-back-button"
+                    aria-label="Back"
+                    title="Back"
+                    @onclick="GoBackAsync">
+                <OcticonIcon Name="arrow-left" />
+            </button>
+        </div>
+        <div class="Header-item">
             <nav class="header-nav" aria-label="Main navigation">
                 <NavMenu />
             </nav>
+        </div>
+        <div class="Header-item app-workspace-control">
+            <button type="button"
+                    class="btn btn-sm"
+                    id="workspace-picker-toggle"
+                    aria-expanded="@_isWorkspacePickerOpen"
+                    aria-controls="workspace-picker-panel"
+                    title="Workspace (Ctrl+W)"
+                    @onclick="ToggleWorkspacePicker">
+                <OcticonIcon Name="repo" Class="mr-1" />
+                Workspace
+                <span class="text-small color-fg-muted ml-1">Ctrl+W</span>
+            </button>
+            @if (_isWorkspacePickerOpen)
+            {
+                <div class="Box p-3 app-workspace-picker-panel" id="workspace-picker-panel">
+                    <WorkspacePicker Label="Workspace" IncludeDefaultOption="false" SelectedWorkspaceChanged="OnWorkspaceSelectedAsync" />
+                </div>
+            }
         </div>
         <div class="Header-item Header-item--full"></div>
         <div class="Header-item">
@@ -63,7 +96,7 @@
     }
 
     <div class="app-shell flex-1 @(_isAgentChatOpen && _isAgentChatInline ? "app-shell--with-inline-chat" : null)">
-        <main class="app-content flex-1">
+        <main class="app-content flex-1" data-workspace-version="@_workspaceRenderKey" @key="_workspaceRenderKey">
             @Body
         </main>
 
@@ -80,14 +113,28 @@
     private string? _lastError;
     private bool _isAgentChatOpen;
     private bool _isAgentChatInline;
+    private bool _isWorkspacePickerOpen;
+    private long _workspaceRenderKey;
+    private DotNetObjectReference<MainLayout>? _dotNetReference;
 
     protected override async Task OnInitializedAsync()
     {
         ConnectionMonitor.PropertyChanged += OnConnectionChanged;
+        WorkspaceContext.PropertyChanged += OnWorkspaceContextChanged;
         ConnectionMonitor.Start();
         await WorkspaceAutoSelector.EnsureWorkspaceSelectedAsync().ConfigureAwait(true);
+        _workspaceRenderKey = WorkspaceContext.ChangeVersion;
         _isConnected = ConnectionMonitor.IsConnected;
         _lastError = ConnectionMonitor.LastError;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetReference = DotNetObjectReference.Create(this);
+            await JsRuntime.InvokeVoidAsync("mcpServerAppShell.registerWorkspaceShortcut", _dotNetReference).ConfigureAwait(true);
+        }
     }
 
     private void OnConnectionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -97,6 +144,15 @@
         {
             _isConnected = ConnectionMonitor.IsConnected;
             _lastError = ConnectionMonitor.LastError;
+            _ = RefreshUiAsync();
+        }
+    }
+
+    private void OnWorkspaceContextChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(WorkspaceContextViewModel.ChangeVersion))
+        {
+            _workspaceRenderKey = WorkspaceContext.ChangeVersion;
             _ = RefreshUiAsync();
         }
     }
@@ -111,6 +167,43 @@
     private void ToggleAgentChat()
     {
         _isAgentChatOpen = !_isAgentChatOpen;
+    }
+
+    private void ToggleWorkspacePicker()
+    {
+        _isWorkspacePickerOpen = !_isWorkspacePickerOpen;
+    }
+
+    private Task OnWorkspaceSelectedAsync(string? _)
+    {
+        _isWorkspacePickerOpen = false;
+        return RefreshUiAsync();
+    }
+
+    private async Task GoBackAsync()
+    {
+        await JsRuntime.InvokeVoidAsync("mcpServerAppShell.goBack").ConfigureAwait(true);
+    }
+
+    private Task HandleShellKeyDown(KeyboardEventArgs args)
+    {
+        if (args.CtrlKey
+            && !args.ShiftKey
+            && !args.AltKey
+            && string.Equals(args.Key, "w", StringComparison.OrdinalIgnoreCase))
+        {
+            _isWorkspacePickerOpen = true;
+            return RefreshUiAsync();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public Task OpenWorkspacePickerFromShortcut()
+    {
+        _isWorkspacePickerOpen = true;
+        return RefreshUiAsync();
     }
 
     private Task CloseAgentChatAsync()
@@ -128,5 +221,8 @@
     public void Dispose()
     {
         ConnectionMonitor.PropertyChanged -= OnConnectionChanged;
+        WorkspaceContext.PropertyChanged -= OnWorkspaceContextChanged;
+        _ = JsRuntime.InvokeVoidAsync("mcpServerAppShell.unregisterWorkspaceShortcut");
+        _dotNetReference?.Dispose();
     }
 }

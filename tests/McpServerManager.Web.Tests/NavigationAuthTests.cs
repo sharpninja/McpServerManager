@@ -1,5 +1,6 @@
 using Bunit;
 using Bunit.TestDoubles;
+using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.ViewModels;
 using McpServerManager.Web.Components.Layout;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -97,6 +99,39 @@ public sealed class NavigationAuthTests
     }
 
     [Fact]
+    public void MainLayout_BackButton_InvokesBrowserHistoryBack()
+    {
+        using var ctx = CreateContext(CreatePrincipal("mcp-user", "admin"));
+
+        var cut = RenderMainLayout(ctx);
+        cut.Find("#app-back-button").Click();
+
+        Assert.Contains(ctx.JSInterop.Invocations, invocation => invocation.Identifier == "mcpServerAppShell.goBack");
+    }
+
+    [Fact]
+    public void MainLayout_CtrlW_OpensWorkspacePicker_AndSelectionInvalidatesWorkspaceState()
+    {
+        using var ctx = CreateContext(
+            CreatePrincipal("mcp-user", "admin"),
+            services => services.AddSingleton<IWorkspaceApiClient>(new LayoutWorkspaceApiClientStub(
+                new WorkspaceSummary(@"E:\repo", "Repo", true, true),
+                new WorkspaceSummary(@"E:\next", "Next", true, true))));
+        var workspaceContext = ctx.Services.GetRequiredService<WorkspaceContextViewModel>();
+
+        var cut = RenderMainLayout(ctx);
+        var initialVersion = cut.Find("main.app-content").GetAttribute("data-workspace-version");
+
+        cut.Find("[data-app-shell]").KeyDown(new KeyboardEventArgs { Key = "w", CtrlKey = true });
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("#workspace-picker-panel select")));
+        cut.Find("#workspace-picker-panel select").Change(@"E:\next");
+
+        cut.WaitForAssertion(() => Assert.Equal(@"E:\next", workspaceContext.ActiveWorkspacePath));
+        cut.WaitForAssertion(() => Assert.NotEqual(initialVersion, cut.Find("main.app-content").GetAttribute("data-workspace-version")));
+    }
+
+    [Fact]
     public void NavMenu_WithAuthenticatedUserWithoutRequiredRole_NavigatesToPublicFeaturesAndHidesRoleGatedFeatures()
     {
         using var ctx = CreateContext(CreatePrincipal("viewer-user", "viewer"));
@@ -109,7 +144,7 @@ public sealed class NavigationAuthTests
         AssertLinkMissing(cut, "/auth/config");
     }
 
-    private static BunitContext CreateContext(ClaimsPrincipal user)
+    private static BunitContext CreateContext(ClaimsPrincipal user, Action<IServiceCollection>? configureServices = null)
     {
         var ctx = new BunitContext();
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -128,6 +163,7 @@ public sealed class NavigationAuthTests
         ctx.Services.AddWebServices();
         ctx.Services.AddSingleton<IHealthApiClient>(new HealthApiClientStub());
         ctx.Services.AddSingleton<IWorkspaceApiClient>(new WorkspaceApiClientStub());
+        configureServices?.Invoke(ctx.Services);
         ctx.Services.AddAuthorization();
         ctx.Services.RemoveAll<IAuthorizationService>();
         ctx.Services.AddSingleton<IAuthorizationService, TestAuthorizationService>();
@@ -244,5 +280,24 @@ public sealed class NavigationAuthTests
 
         public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object? resource, string policyName)
             => Task.FromResult(AuthorizationResult.Success());
+    }
+
+    private sealed class LayoutWorkspaceApiClientStub(params WorkspaceSummary[] workspaces) : IWorkspaceApiClient
+    {
+        public Task<ListWorkspacesResult> ListWorkspacesAsync(CancellationToken ct = default)
+            => Task.FromResult(new ListWorkspacesResult(workspaces, workspaces.Length));
+
+        public Task<WorkspaceDetail?> GetWorkspaceAsync(string workspacePath, CancellationToken ct = default) => Task.FromResult<WorkspaceDetail?>(null);
+        public Task<bool> UpdateWorkspacePolicyAsync(UpdateWorkspacePolicyCommand command, CancellationToken ct = default) => Task.FromResult(false);
+        public Task<WorkspaceMutationOutcome> CreateWorkspaceAsync(CreateWorkspaceCommand command, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceMutationOutcome> UpdateWorkspaceAsync(UpdateWorkspaceCommand command, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceMutationOutcome> DeleteWorkspaceAsync(DeleteWorkspaceCommand command, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceProcessState> GetWorkspaceStatusAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceProcessState> StartWorkspaceAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceProcessState> StopWorkspaceAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceHealthState> CheckWorkspaceHealthAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceGlobalPromptState> GetWorkspaceGlobalPromptAsync(CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceGlobalPromptState> UpdateWorkspaceGlobalPromptAsync(UpdateWorkspaceGlobalPromptCommand command, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<WorkspaceInitInfo> InitWorkspaceAsync(string workspacePath, CancellationToken ct = default) => throw new NotImplementedException();
     }
 }

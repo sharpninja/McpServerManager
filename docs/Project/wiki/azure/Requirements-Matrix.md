@@ -43,6 +43,7 @@ Traceability policy: see `Requirements-Traceability-Policy.md`.
 | FR-TRIAGE-002 | Tracked | Functional-Requirements.md |
 | FR-WEB-001 | Tracked | Functional-Requirements.md |
 | FR-WEB-HYBRID-TOOL-001 | Tracked | Functional-Requirements.md |
+| FR-WEB-NAV-001 | Tracked | Functional-Requirements.md |
 | TR1. | Tracked | Technical-Requirements.md |
 | TR10. | Tracked | Technical-Requirements.md |
 | TR11. | Tracked | Technical-Requirements.md |
@@ -95,8 +96,10 @@ Traceability policy: see `Requirements-Traceability-Policy.md`.
 | TR-TRIAGE-CLIENT-001 | Tracked | Technical-Requirements.md |
 | TR-WEB-HYBRID-001 | Tracked | Technical-Requirements.md |
 | TR-WEB-HYBRID-TOOL-001 | Tracked | Technical-Requirements.md |
+| TR-WEB-NAV-001 | Tracked | Technical-Requirements.md |
 | TEST-AUTH-CACHE-001 | Tracked | Testing-Requirements.md |
 | TEST-TRIAGE-001 | Tracked | Testing-Requirements.md |
 | TEST-TRIAGE-002 | Tracked | Testing-Requirements.md |
 | TEST-WEB-001 | Tracked | Testing-Requirements.md |
 | TEST-WEB-HYBRID-TOOL-001 | Tracked | Testing-Requirements.md |
+| TEST-WEB-NAV-001 | Tracked | Testing-Requirements.md |

@@ -47,3 +47,10 @@ Validate that the Nuke build compiles and the web tool target uses the hybrid pr
 
 **Acceptance Criteria:**
 - [x] Targeted build/test validation passes for the changed Nuke build project or static verification confirms the project path and command. (evidence: build/Build.BuildAndDeployTargets.cs:759-761; dotnet build build/Build.csproj --no-restore; build.ps1 UpdateWebUiTool --what-if --skip-version-bump; git diff --check.)
+
+
+## TEST-WEB-NAV
+
+### TEST-WEB-NAV-001
+
+Cover persistent back navigation, Ctrl+W workspace picker behavior, workspace-change reload/invalidation, and TODO sidebar Show Done default/filter behavior with bUnit and focused view-model tests.

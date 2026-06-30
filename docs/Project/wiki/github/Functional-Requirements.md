@@ -209,3 +209,8 @@ Scope: layer-1+
 - [x] The web UI global tool package is produced from McpServerManager.Web.Hybrid rather than McpServerManager.Web. (evidence: build/Build.BuildAndDeployTargets.cs:759-761; dotnet build build/Build.csproj --no-restore; build.ps1 UpdateWebUiTool --what-if --skip-version-bump; git diff --check.)
 - [x] The installed command remains mcp-web. (evidence: build/Build.BuildAndDeployTargets.cs:759-761; dotnet build build/Build.csproj --no-restore; build.ps1 UpdateWebUiTool --what-if --skip-version-bump; git diff --check.)
 
+## FR-WEB-NAV-001 Persistent web navigation and workspace controls
+
+MCP Web and the Hybrid host must provide a persistent back button, a Ctrl+W workspace picker matching Director behavior, workspace-change reload semantics for cached page state, and a TODO sidebar that defaults to open TODOs with Show Done off.
+Scope: layer-1+
+

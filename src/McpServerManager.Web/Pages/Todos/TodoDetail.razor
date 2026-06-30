@@ -5,12 +5,19 @@
 @inject IAuthorizationPolicyService AuthPolicy
 @inject WebCommandTarget CommandTarget
 @inject WorkspaceContextViewModel WorkspaceContext
+@inject NavigationManager Navigation
 
 <PageTitle>Todo Detail</PageTitle>
 
 <div class="detail-layout">
     <aside class="detail-sidebar">
-        <div class="sidebar-header">Todos</div>
+        <div class="sidebar-header detail-sidebar-header">
+            <span>Todos</span>
+            <label class="sidebar-show-done-toggle">
+                <input type="checkbox" name="done" value="true" checked="@ShowDone" @onchange="OnShowDoneChanged" />
+                <span>Show done</span>
+            </label>
+        </div>
         @foreach (var group in GroupByPriority(ListViewModel.Items))
         {
             <div class="sidebar-group-header color-fg-muted f6 text-uppercase px-3 pt-2 pb-1">@group.Key</div>
@@ -172,6 +179,7 @@
     private const string PromptSectionKey = "prompt";
 
     private bool CanEdit => AuthPolicy.CanExecuteAction(McpServerManager.UI.Core.Authorization.McpActionKeys.TodoUpdate);
+    private bool ShowDone => Done == true;
 
     private static readonly string[] PriorityOrder = ["critical", "high", "medium", "low"];
 
@@ -195,7 +203,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        var loadKey = $"{TodoId}|{WorkspacePath}|{Done}|{Section}|{Priority}";
+        var loadKey = $"{TodoId}|{WorkspacePath}|{ShowDone}|{Section}|{Priority}";
         if (string.Equals(_loadedKey, loadKey, StringComparison.Ordinal))
             return;
 
@@ -205,7 +213,7 @@
         {
             ListViewModel.Section = Section;
             ListViewModel.Priority = Priority;
-            ListViewModel.Done = Done ?? false;
+            ListViewModel.Done = ShowDone;
             ApplyWorkspaceFromQuery();
             await ListViewModel.LoadAsync().ConfigureAwait(true);
             ViewModel.TodoId = TodoId;
@@ -298,14 +306,25 @@
             : $"/todos/{Uri.EscapeDataString(id)}?{qs}";
     }
 
-    private string BuildFilterQueryString()
+    private string BuildFilterQueryString(bool? doneOverride = null)
     {
         var parts = new List<string>();
         if (!string.IsNullOrWhiteSpace(WorkspacePath)) parts.Add($"workspacePath={Uri.EscapeDataString(WorkspacePath)}");
         if (!string.IsNullOrWhiteSpace(Section)) parts.Add($"section={Uri.EscapeDataString(Section)}");
         if (!string.IsNullOrWhiteSpace(Priority)) parts.Add($"priority={Uri.EscapeDataString(Priority)}");
-        if (Done.HasValue) parts.Add($"done={Done.Value.ToString().ToLowerInvariant()}");
+        parts.Add($"done={(doneOverride ?? ShowDone).ToString().ToLowerInvariant()}");
         return string.Join("&", parts);
+    }
+
+    private void OnShowDoneChanged(ChangeEventArgs args)
+    {
+        var showDone = args.Value is bool value
+            ? value
+            : string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        var qs = BuildFilterQueryString(showDone);
+        Navigation.NavigateTo(string.IsNullOrEmpty(qs)
+            ? $"/todos/{Uri.EscapeDataString(TodoId)}"
+            : $"/todos/{Uri.EscapeDataString(TodoId)}?{qs}");
     }
 
     private void ApplyWorkspaceFromQuery()

@@ -1,4 +1,5 @@
 using Bunit;
+using AngleSharp.Html.Dom;
 using McpServer.Cqrs;
 using McpServerManager.UI.Core;
 using McpServerManager.UI.Core.Messages;
@@ -62,6 +63,34 @@ public sealed class WebUiPhase4Phase6Tests
 
         cut.WaitForAssertion(() => Assert.Contains("Loading todos...", cut.Markup, StringComparison.Ordinal));
         gate.SetResult(new ListTodosResult([], 0));
+    }
+
+    [Fact]
+    public void TodoListPage_DefaultsToOpenTodos_AndPreservesOpenFilterInLinks()
+    {
+        ListTodosQuery? capturedQuery = null;
+        var api = new TodoApiClientStub
+        {
+            OnListTodosAsync = (query, _) =>
+            {
+                capturedQuery = query;
+                return Task.FromResult(new ListTodosResult(
+                    [new TodoListItem("TODO-001", "Open task", "Architecture", "high", false, "2h")],
+                    1));
+            }
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoList>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(capturedQuery);
+            Assert.False(capturedQuery!.Done);
+            var showDone = Assert.IsAssignableFrom<IHtmlInputElement>(cut.Find("input[name='done'][type='checkbox']"));
+            Assert.False(showDone.IsChecked);
+            Assert.Contains("/todos/TODO-001?done=false", cut.Markup, StringComparison.Ordinal);
+        });
     }
 
     [Fact]

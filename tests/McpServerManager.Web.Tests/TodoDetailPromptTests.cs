@@ -1,9 +1,11 @@
 using Bunit;
+using AngleSharp.Html.Dom;
 using McpServer.Cqrs;
 using McpServerManager.UI.Core;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.ViewModels;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -70,6 +72,41 @@ public sealed class TodoDetailPromptTests
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
         Assert.Contains("> Done", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TodoDetailPage_SidebarDefaultsToOpenTodos_AndShowDoneToggleNavigates()
+    {
+        ListTodosQuery? capturedQuery = null;
+        var api = new TodoApiClientStub
+        {
+            OnGetTodoAsync = (_, _) => Task.FromResult<TodoDetail?>(SampleTodo),
+            OnListTodosAsync = (query, _) =>
+            {
+                capturedQuery = query;
+                return Task.FromResult(new ListTodosResult(
+                    [new TodoListItem("TODO-001", "Sample Task", "Architecture", "high", false, "2h")],
+                    1));
+            }
+        };
+
+        using var ctx = CreateTestContext(services => services.AddSingleton<ITodoApiClient>(api));
+        var nav = ctx.Services.GetRequiredService<NavigationManager>();
+        var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(capturedQuery);
+            Assert.False(capturedQuery!.Done);
+            var showDone = Assert.IsAssignableFrom<IHtmlInputElement>(cut.Find("aside.detail-sidebar input[name='done']"));
+            Assert.False(showDone.IsChecked);
+            Assert.Contains("/todos/TODO-001?done=false", cut.Markup, StringComparison.Ordinal);
+        });
+
+        cut.Find("aside.detail-sidebar input[name='done']").Change(true);
+
+        cut.WaitForAssertion(() =>
+            Assert.EndsWith("/todos/TODO-001?done=true", nav.Uri, StringComparison.Ordinal));
     }
 
     [Fact]

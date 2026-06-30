@@ -23,13 +23,9 @@
             <span class="text-small color-fg-muted">Priority</span>
             <input class="form-control" name="priority" value="@Priority" />
         </label>
-        <label class="d-flex flex-column">
-            <span class="text-small color-fg-muted">Done</span>
-            <select class="form-select" name="done">
-                <option value="">All</option>
-                <option value="true" selected="@(Done == true)">Done</option>
-                <option value="false" selected="@(Done != true)">Open</option>
-            </select>
+        <label class="d-flex flex-items-center gap-2 mt-4">
+            <input class="form-checkbox" type="checkbox" name="done" value="true" checked="@ShowDone" />
+            <span class="text-small color-fg-muted">Show done</span>
         </label>
         <div class="d-flex flex-items-end">
             <button class="btn btn-primary" type="submit">Apply</button>
@@ -92,9 +88,11 @@ else
 
     private string? _lastQueryKey;
 
+    private bool ShowDone => Done == true;
+
     protected override async Task OnParametersSetAsync()
     {
-        var queryKey = $"{Section}|{Priority}|{Done}|{WorkspacePath}";
+        var queryKey = $"{Section}|{Priority}|{ShowDone}|{WorkspacePath}";
         if (string.Equals(queryKey, _lastQueryKey, StringComparison.Ordinal))
             return;
 
@@ -103,7 +101,7 @@ else
         {
             ViewModel.Section = Section;
             ViewModel.Priority = Priority;
-            ViewModel.Done = Done ?? false;
+            ViewModel.Done = ShowDone;
             ApplyWorkspaceFromQuery();
             await ViewModel.LoadAsync().ConfigureAwait(true);
         });
@@ -131,7 +129,7 @@ else
         if (!string.IsNullOrWhiteSpace(WorkspacePath)) parts.Add($"workspacePath={Uri.EscapeDataString(WorkspacePath)}");
         if (!string.IsNullOrWhiteSpace(Section)) parts.Add($"section={Uri.EscapeDataString(Section)}");
         if (!string.IsNullOrWhiteSpace(Priority)) parts.Add($"priority={Uri.EscapeDataString(Priority)}");
-        if (Done.HasValue) parts.Add($"done={Done.Value.ToString().ToLowerInvariant()}");
+        parts.Add($"done={ShowDone.ToString().ToLowerInvariant()}");
         return string.Join("&", parts);
     }
 

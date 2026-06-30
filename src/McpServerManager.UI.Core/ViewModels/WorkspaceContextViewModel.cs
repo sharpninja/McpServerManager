@@ -12,4 +12,16 @@ public sealed partial class WorkspaceContextViewModel : ObservableObject
     /// <summary>The active workspace path selected in the Director UI.</summary>
     [ObservableProperty]
     private string? _activeWorkspacePath;
+
+    /// <summary>Incremented whenever the active workspace changes so UI shells can invalidate workspace-scoped page state.</summary>
+    [ObservableProperty]
+    private long _changeVersion;
+
+    partial void OnActiveWorkspacePathChanged(string? oldValue, string? newValue)
+    {
+        if (!StringComparer.OrdinalIgnoreCase.Equals(oldValue, newValue))
+        {
+            ChangeVersion++;
+        }
+    }
 }
