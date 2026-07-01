@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using System.Text.Json;
+using McpServerManager.UI.Core.Auth;
 using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +20,8 @@ public sealed class LoginModel : PageModel
 
     private readonly IDeviceAuthorizationLoginService _deviceLoginService;
     private readonly IMemoryCache _memoryCache;
+    private readonly IWorkspaceAuthTokenCache _tokenCache;
+    private readonly WorkspaceContextViewModel _workspaceContext;
     private readonly IConfiguration _configuration;
     private readonly ILogger<LoginModel> _logger;
 
@@ -27,11 +31,15 @@ public sealed class LoginModel : PageModel
     public LoginModel(
         IDeviceAuthorizationLoginService deviceLoginService,
         IMemoryCache memoryCache,
+        IWorkspaceAuthTokenCache tokenCache,
+        WorkspaceContextViewModel workspaceContext,
         IConfiguration configuration,
         ILogger<LoginModel> logger)
     {
         _deviceLoginService = deviceLoginService;
         _memoryCache = memoryCache;
+        _tokenCache = tokenCache;
+        _workspaceContext = workspaceContext;
         _configuration = configuration;
         _logger = logger;
     }
@@ -61,6 +69,10 @@ public sealed class LoginModel : PageModel
 
         try
         {
+            var cachedResult = await TrySignInFromWorkspaceTokenAsync(redirectUri).ConfigureAwait(true);
+            if (cachedResult is not null)
+                return cachedResult;
+
             var loginStart = await _deviceLoginService
                 .StartAsync(mcpBaseUrl, HttpContext.RequestAborted)
                 .ConfigureAwait(true);
@@ -111,23 +123,20 @@ public sealed class LoginModel : PageModel
                 .ConfigureAwait(true);
             _memoryCache.Remove(BuildCacheKey(sessionId));
 
-            var principal = BuildPrincipal(result.AccessToken);
-            var properties = new AuthenticationProperties
-            {
-                IsPersistent = true,
-                RedirectUri = redirectUri,
-                ExpiresUtc = ResolveCookieExpiration(result.AccessToken, result.ExpiresInSeconds)
-            };
-            properties.StoreTokens(
-            [
-                new AuthenticationToken { Name = "access_token", Value = result.AccessToken },
-                new AuthenticationToken { Name = "token_type", Value = result.TokenType ?? "Bearer" }
-            ]);
+            var token = WorkspaceAuthToken.FromAccessToken(
+                result.AccessToken,
+                result.ExpiresInSeconds,
+                authority: loginStart.AuthConfig.Authority,
+                tokenEndpoint: loginStart.AuthConfig.TokenEndpoint,
+                clientId: loginStart.AuthConfig.ClientId,
+                tokenType: result.TokenType);
+            _tokenCache.Save(ResolveWorkspacePath(), token);
 
-            await HttpContext.SignInAsync(
-                    CookieAuthenticationDefaults.AuthenticationScheme,
-                    principal,
-                    properties)
+            await SignInWithTokenAsync(
+                    result.AccessToken,
+                    result.TokenType,
+                    redirectUri,
+                    ResolveCookieExpiration(result.AccessToken, result.ExpiresInSeconds))
                 .ConfigureAwait(true);
             return LocalRedirect(redirectUri);
         }
@@ -148,6 +157,54 @@ public sealed class LoginModel : PageModel
 
     private string GetMcpServerBaseUrl()
         => _configuration["McpServer:BaseUrl"] ?? "http://localhost:7147";
+
+    private async Task<IActionResult?> TrySignInFromWorkspaceTokenAsync(string redirectUri)
+    {
+        var token = _tokenCache.TryReadValid(ResolveWorkspacePath());
+        if (token is null)
+            return null;
+
+        await SignInWithTokenAsync(
+                token.AccessToken,
+                token.TokenType,
+                redirectUri,
+                token.ExpiresAtUtc)
+            .ConfigureAwait(true);
+        return LocalRedirect(redirectUri);
+    }
+
+    private async Task SignInWithTokenAsync(
+        string accessToken,
+        string? tokenType,
+        string redirectUri,
+        DateTimeOffset expiresUtc)
+    {
+        var principal = BuildPrincipal(accessToken);
+        var properties = new AuthenticationProperties
+        {
+            IsPersistent = true,
+            RedirectUri = redirectUri,
+            ExpiresUtc = expiresUtc
+        };
+        properties.StoreTokens(
+        [
+            new AuthenticationToken { Name = "access_token", Value = accessToken },
+            new AuthenticationToken { Name = "token_type", Value = string.IsNullOrWhiteSpace(tokenType) ? "Bearer" : tokenType }
+        ]);
+
+        await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                properties)
+            .ConfigureAwait(true);
+    }
+
+    private string? ResolveWorkspacePath()
+        => Normalize(_workspaceContext.ActiveWorkspacePath)
+           ?? Normalize(_configuration["McpServer:WorkspacePath"]);
+
+    private static string? Normalize(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private string SanitizeReturnUrl(string? returnUrl)
         => !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)

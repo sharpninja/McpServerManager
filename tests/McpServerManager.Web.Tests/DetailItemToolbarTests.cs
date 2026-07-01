@@ -37,8 +37,8 @@ public sealed class DetailItemToolbarTests
         cut.WaitForAssertion(() =>
         {
             var toolbar = cut.Find("nav.detail-item-toolbar");
-            Assert.Equal("/todos/TODO-001", toolbar.QuerySelector("a[rel='prev']")?.GetAttribute("href"));
-            Assert.Equal("/todos/TODO-003", toolbar.QuerySelector("a[rel='next']")?.GetAttribute("href"));
+            Assert.Equal("/todos/TODO-001?done=false", toolbar.QuerySelector("a[rel='prev']")?.GetAttribute("href"));
+            Assert.Equal("/todos/TODO-003?done=false", toolbar.QuerySelector("a[rel='next']")?.GetAttribute("href"));
             Assert.Contains("Item 2 of 3", toolbar.TextContent, StringComparison.Ordinal);
             var expanders = cut.FindAll("button.detail-card-expander");
             Assert.Single(expanders);

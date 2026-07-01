@@ -5,6 +5,8 @@
 @inject WorkspaceAutoSelector WorkspaceAutoSelector
 @inject ILogger<HybridRoot> Logger
 
+<PageTitle>@AppTitle.Build("McpServer Web", typeof(HybridRoot).Assembly)</PageTitle>
+
 @if (_workspaceReady)
 {
     <Routes AdditionalAssemblies="AdditionalAssemblies" />

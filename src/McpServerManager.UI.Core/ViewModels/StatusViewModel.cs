@@ -38,7 +38,7 @@ public sealed partial class StatusViewModel : ObservableObject
 
     /// <summary>
     /// Human-readable activity description while Copilot is running
-    /// (e.g., "Copilot is thinking…", "No heartbeat for 30s — Copilot may have stalled").
+    /// (e.g., "Agent is thinking…", "No heartbeat for 30s — Agent may have stalled").
     /// </summary>
     [ObservableProperty]
     private string? _copilotActivityText;

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Security.Claims;
 using System.Text.Json;
 using McpServerManager.UI.Core.Auth;
@@ -6,7 +7,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 
 namespace McpServerManager.Web.Hybrid.Services;
 
-internal sealed class HybridAuthenticationStateProvider : AuthenticationStateProvider
+internal sealed class HybridAuthenticationStateProvider : AuthenticationStateProvider, IDisposable
 {
     private static readonly AuthenticationState AnonymousState = new(new ClaimsPrincipal(new ClaimsIdentity()));
     private readonly IWorkspaceAuthTokenCache _tokenCache;
@@ -18,6 +19,7 @@ internal sealed class HybridAuthenticationStateProvider : AuthenticationStatePro
     {
         _tokenCache = tokenCache;
         _workspaceContext = workspaceContext;
+        _workspaceContext.PropertyChanged += OnWorkspaceContextPropertyChanged;
     }
 
     public override Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -25,6 +27,15 @@ internal sealed class HybridAuthenticationStateProvider : AuthenticationStatePro
 
     public void NotifyTokenChanged()
         => NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+
+    public void Dispose()
+        => _workspaceContext.PropertyChanged -= OnWorkspaceContextPropertyChanged;
+
+    private void OnWorkspaceContextPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(WorkspaceContextViewModel.ActiveWorkspacePath))
+            NotifyTokenChanged();
+    }
 
     private AuthenticationState CreateAuthenticationState()
     {

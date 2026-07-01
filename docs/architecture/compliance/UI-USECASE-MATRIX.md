@@ -114,7 +114,7 @@ This matrix shows current-state UI presence and identifies omissions where the c
 - `List TODOs` (`GET /mcpserver/todo`)
   - `Phone`: Dedicated list screen with tap-to-detail navigation and explicit refresh button.
   - `Tablet`: Split-pane grouped list with filter controls and context-menu actions.
-  - `Desktop`: Same split-pane model as tablet, plus extra Copilot context-menu actions and desktop chat affordances.
+  - `Desktop`: Same split-pane model as tablet, plus extra Agent context-menu actions and desktop chat affordances.
   - `TUI`: Table-first workflow with section filter, show/hide completed toggle, and sortable columns.
 
 - `Get TODO detail` (`GET /mcpserver/todo/{id}`)

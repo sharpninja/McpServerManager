@@ -12,10 +12,11 @@ using Xunit;
 namespace McpServerManager.UI.Core.Tests.ViewModels;
 
 /// <summary>
-/// Dispatch verification tests for ChatWindowViewModel using pure mocked Dispatcher (no AddCqrs/AddUiCore).
-/// Written first per Byrd. These must fail until VM dispatches instead of calling _chatService directly.
+/// Pure mock-only dispatch verification tests for ChatWindowViewModel.
+/// Uses ViewModelDispatchTestHelper (no AddCqrs, no AddUiCore).
+/// Asserts exact message dispatched + resulting observable state.
 /// </summary>
-public sealed class ChatWindowViewModelTests
+public sealed class ChatWindowViewModelDispatchTests
 {
     [Fact]
     public async Task LoadPromptsAsync_DispatchesLoadChatPromptsQuery_AndPopulatesTemplates()
@@ -27,7 +28,7 @@ public sealed class ChatWindowViewModelTests
 
         await vm.LoadPromptsAsync();
 
-        await dispatcher.Received(1).QueryAsync(Arg.Any<LoadChatPromptsQuery>(), Arg.Any<CancellationToken>());
+        await dispatcher.Received(1).QueryAsync(Arg.Is<LoadChatPromptsQuery>(q => q != null), Arg.Any<CancellationToken>());
         Assert.Single(vm.PromptTemplates);
         Assert.Equal("t1", vm.PromptTemplates[0].Name);
     }
@@ -51,10 +52,11 @@ public sealed class ChatWindowViewModelTests
     public async Task PopulatePrompt_DispatchesPopulateChatPromptQuery_AndSetsCurrentInput()
     {
         var (dispatcher, vm) = ViewModelDispatchTestHelper.CreateChatWindow();
-
         ViewModelDispatchTestHelper.SetupQueryResult<PopulateChatPromptQuery, string>(dispatcher, "populated prompt");
 
-        var prompt = new PromptTemplate { Name = "p1", Template = "template" };
+        // PopulatePrompt is protected; call via reflection for test or expose for verification.
+        // For this test we invoke the logic path.
+        var prompt = new PromptTemplate { Name = "p1" };
         var method = vm.GetType().GetMethod("PopulatePrompt", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
         var task = (Task?)method.Invoke(vm, new object?[] { prompt });
         if (task != null) await task;

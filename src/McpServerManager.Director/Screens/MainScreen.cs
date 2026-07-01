@@ -165,7 +165,7 @@ internal sealed class MainScreen : Window
         _loggerFactory = loggerFactory;
         _browserLauncher = browserLauncher;
 
-        Title = "McpServer Director";
+        Title = AppTitle.Build("McpServer Director", typeof(MainScreen).Assembly);
         Width = Dim.Fill();
         Height = Dim.Fill();
 

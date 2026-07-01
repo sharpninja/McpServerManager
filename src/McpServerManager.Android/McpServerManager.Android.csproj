@@ -17,7 +17,7 @@
     <AndroidSigningKeyAlias Condition="'$(AndroidSigningKeyAlias)' != ''">$(AndroidSigningKeyAlias)</AndroidSigningKeyAlias>
     <AndroidSigningStorePass Condition="'$(AndroidSigningStorePass)' != ''">$(AndroidSigningStorePass)</AndroidSigningStorePass>
     <AndroidSigningKeyPass Condition="'$(AndroidSigningKeyPass)' != ''">$(AndroidSigningKeyPass)</AndroidSigningKeyPass>
-    <Title>MCP Server Manager</Title>
+    <Title>MCP Server Manager v$(Version)</Title>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">

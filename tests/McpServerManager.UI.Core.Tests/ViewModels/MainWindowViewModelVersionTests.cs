@@ -1,3 +1,4 @@
+using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.ViewModels;
 using Xunit;
 
@@ -23,5 +24,15 @@ public sealed class MainWindowViewModelVersionTests
         Assert.Equal("unknown", MainWindowViewModel.NormalizeAppVersion(null));
         Assert.Equal("unknown", MainWindowViewModel.NormalizeAppVersion(string.Empty));
         Assert.Equal("unknown", MainWindowViewModel.NormalizeAppVersion("   "));
+    }
+
+    [Fact]
+    public void AppTitle_BuildsTitleWithSemVerSuffix()
+    {
+        var title = AppTitle.Build("MCP Server Manager", typeof(MainWindowViewModelVersionTests).Assembly);
+
+        Assert.StartsWith("MCP Server Manager v", title, StringComparison.Ordinal);
+        Assert.DoesNotContain("+", title, StringComparison.Ordinal);
+        Assert.DoesNotContain(".Sha", title, StringComparison.OrdinalIgnoreCase);
     }
 }

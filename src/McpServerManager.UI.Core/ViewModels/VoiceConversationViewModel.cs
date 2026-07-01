@@ -572,7 +572,7 @@ public partial class VoiceConversationViewModel : ViewModelBase
         try
         {
             var result = await _dispatcher.SendAsync(new InterruptVoiceCommand(SessionId), default).ConfigureAwait(true);
-            StatusText = (result.IsSuccess && result.Value != null && result.Value.Interrupted) ? "ESC sent to Copilot." : "No active interactive session.";
+            StatusText = (result.IsSuccess && result.Value != null && result.Value.Interrupted) ? "ESC sent to Agent." : "No active interactive session.";
             GlobalStatusChanged?.Invoke(StatusText);
         }
         catch (Exception ex)

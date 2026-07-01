@@ -52,6 +52,7 @@ internal sealed class WebMcpContext : IMcpHostContext
             if (args.PropertyName == nameof(WorkspaceContextViewModel.ActiveWorkspacePath))
                 TrySetActiveWorkspace(_workspaceContext.ActiveWorkspacePath, updateViewModel: false);
         };
+        RefreshBearerTokens();
     }
 
     public Uri BaseUrl { get; }
@@ -83,6 +84,7 @@ internal sealed class WebMcpContext : IMcpHostContext
             _workspaceContext.ActiveWorkspacePath = normalizedWorkspacePath;
         }
 
+        RefreshBearerTokens();
         return true;
     }
 

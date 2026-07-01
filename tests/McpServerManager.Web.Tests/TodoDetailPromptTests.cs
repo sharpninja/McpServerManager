@@ -15,7 +15,7 @@ using Xunit;
 namespace McpServerManager.Web.Tests;
 
 /// <summary>
-/// Bunit tests covering the Copilot Status / Plan / Implementation prompt buttons and inline output panel
+/// Bunit tests covering the Agent Status / Plan / Implementation prompt buttons and inline output panel
 /// added to the TodoDetail page, as well as the fix that keeps the detail visible after a prompt error.
 /// </summary>
 public sealed class TodoDetailPromptTests
@@ -57,9 +57,9 @@ public sealed class TodoDetailPromptTests
         var cut = ctx.Render<McpServerManager.Web.Pages.Todos.TodoDetail>(p => p.Add(x => x.TodoId, "TODO-001"));
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
-        Assert.Contains("Copilot Status", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Copilot Plan", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Copilot Implementation", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Agent Status", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Agent Plan", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Agent Implementation", cut.Markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public sealed class TodoDetailPromptTests
 
         // Should show blank-slate, not the buttons
         cut.WaitForAssertion(() => Assert.Contains("No todo selected", cut.Markup, StringComparison.Ordinal));
-        Assert.DoesNotContain("Copilot Status", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Agent Status", cut.Markup, StringComparison.Ordinal);
     }
 
     // ---------------------------------------------------------------------------
@@ -181,8 +181,8 @@ public sealed class TodoDetailPromptTests
         // Wait for detail to load
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
 
-        // Click the "Copilot Status" button
-        var statusButton = cut.FindAll("button").First(b => b.TextContent.Contains("Copilot Status", StringComparison.Ordinal));
+        // Click the "Agent Status" button
+        var statusButton = cut.FindAll("button").First(b => b.TextContent.Contains("Agent Status", StringComparison.Ordinal));
         statusButton.Click();
 
         // Prompt output panel should appear with content
@@ -215,7 +215,7 @@ public sealed class TodoDetailPromptTests
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
 
-        var planButton = cut.FindAll("button").First(b => b.TextContent.Contains("Copilot Plan", StringComparison.Ordinal));
+        var planButton = cut.FindAll("button").First(b => b.TextContent.Contains("Agent Plan", StringComparison.Ordinal));
         planButton.Click();
 
         cut.WaitForAssertion(() => Assert.Contains("prompt-output-panel", cut.Markup, StringComparison.Ordinal));
@@ -243,7 +243,7 @@ public sealed class TodoDetailPromptTests
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
 
-        var implButton = cut.FindAll("button").First(b => b.TextContent.Contains("Copilot Implementation", StringComparison.Ordinal));
+        var implButton = cut.FindAll("button").First(b => b.TextContent.Contains("Agent Implementation", StringComparison.Ordinal));
         implButton.Click();
 
         cut.WaitForAssertion(() => Assert.Contains("prompt-output-panel", cut.Markup, StringComparison.Ordinal));
@@ -270,7 +270,7 @@ public sealed class TodoDetailPromptTests
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
 
-        var statusButton = cut.FindAll("button").First(b => b.TextContent.Contains("Copilot Status", StringComparison.Ordinal));
+        var statusButton = cut.FindAll("button").First(b => b.TextContent.Contains("Agent Status", StringComparison.Ordinal));
         statusButton.Click();
 
         // The inline prompt-error flash should appear
@@ -300,7 +300,7 @@ public sealed class TodoDetailPromptTests
 
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
 
-        var statusButton = cut.FindAll("button").First(b => b.TextContent.Contains("Copilot Status", StringComparison.Ordinal));
+        var statusButton = cut.FindAll("button").First(b => b.TextContent.Contains("Agent Status", StringComparison.Ordinal));
         statusButton.Click();
 
         cut.WaitForAssertion(() => Assert.Contains("Prompt generation failed", cut.Markup, StringComparison.Ordinal));
@@ -330,7 +330,7 @@ public sealed class TodoDetailPromptTests
         cut.WaitForAssertion(() => Assert.Contains("TODO-001", cut.Markup, StringComparison.Ordinal));
 
         // Generate prompt
-        cut.FindAll("button").First(b => b.TextContent.Contains("Copilot Status", StringComparison.Ordinal)).Click();
+        cut.FindAll("button").First(b => b.TextContent.Contains("Agent Status", StringComparison.Ordinal)).Click();
         cut.WaitForAssertion(() => Assert.Contains("prompt-output-panel", cut.Markup, StringComparison.Ordinal));
 
         // Click clear

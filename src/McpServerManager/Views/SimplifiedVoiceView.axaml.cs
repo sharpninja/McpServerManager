@@ -603,7 +603,7 @@ public partial class SimplifiedVoiceView : UserControl
             return;
         }
 
-        SetStatus("Seeding Copilot with workspace instructions...");
+        SetStatus("Seeding Agent with workspace instructions...");
 
         var seedPrompt = "Read the file .github/copilot-instructions.md and follow those instructions for the remainder of this session.";
 
@@ -665,10 +665,10 @@ public partial class SimplifiedVoiceView : UserControl
             Success = true
         });
 
-        if (!await TrySpeakAsync("Copilot ready", vm.Language, ct).ConfigureAwait(true))
+        if (!await TrySpeakAsync("Agent ready", vm.Language, ct).ConfigureAwait(true))
             return;
 
-        SetStatus("Copilot ready. Listening...");
+        SetStatus("Agent ready. Listening...");
     }
 
     // ── Listen loop with command detection ─────────────────────────────

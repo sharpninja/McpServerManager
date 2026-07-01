@@ -207,7 +207,7 @@ namespace McpServerManager.Core.Models.Json
                 Status = log.Status,
                 TurnCount = log.Requests?.Count ?? 0,
 
-                Title = log.Workspace?.Project ?? log.Workspace?.Repository ?? "Copilot Session",
+                Title = log.Workspace?.Project ?? log.Workspace?.Repository ?? "Agent Session",
                 Model = log.Model, // Copilot has session-level model
                 Workspace = log.Workspace,
                 CopilotStatistics = log.Statistics,

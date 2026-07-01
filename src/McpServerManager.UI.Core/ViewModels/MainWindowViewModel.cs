@@ -10,7 +10,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media;
@@ -749,31 +748,10 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     }
 
     private static string ResolveAppVersion()
-    {
-        var assembly = typeof(MainWindowViewModel).Assembly;
-        var informationalVersion = assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-            ?.InformationalVersion;
-
-        var version = string.IsNullOrWhiteSpace(informationalVersion)
-            ? assembly.GetName().Version?.ToString()
-            : informationalVersion;
-
-        return NormalizeAppVersion(version);
-    }
+        => AppTitle.ResolveVersion(typeof(MainWindowViewModel).Assembly);
 
     internal static string NormalizeAppVersion(string? version)
-    {
-        if (string.IsNullOrWhiteSpace(version))
-            return "unknown";
-
-        var plusIndex = version.IndexOf('+', StringComparison.Ordinal);
-        if (plusIndex > 0)
-            version = version[..plusIndex];
-
-        var markerIndex = version.IndexOf(".Sha", StringComparison.OrdinalIgnoreCase);
-        return markerIndex > 0 ? version[..markerIndex] : version;
-    }
+        => AppTitle.NormalizeVersion(version);
 
     /// <summary>Called by MainWindow when it has opened. Builds the file tree off the UI thread and applies on UI; starts the watcher.</summary>
     public void InitializeAfterWindowShown()
@@ -3063,7 +3041,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
                 {
                     if (obj.ContainsKey("sessionId") && obj.ContainsKey("statistics"))
                     {
-                        schemaType = "Copilot Session Log";
+                        schemaType = "Agent Session Log";
                         var model = JsonSerializer.Deserialize<CopilotSessionLog>(jsonContent, CopilotJsonOptions);
                         if (model != null)
                         {

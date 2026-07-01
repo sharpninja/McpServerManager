@@ -604,7 +604,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         var status = StatusViewModel.Instance;
         IsCopilotRunning = true;
         status.IsCopilotRunning = true;
-        status.CopilotActivityText = "Connecting to Copilot...";
+        status.CopilotActivityText = "Connecting to Agent...";
         status.CopilotHeartbeatState = "connecting";
         StatusText = $"{Capitalize(action)} prompt: {item.Id}...";
 
@@ -635,13 +635,13 @@ public partial class TodoListHostViewModel : ViewModelBase
                     && vm.StreamingPromptText is { } text)
                 {
                     copilotTab.Content = text;
-                    status.CopilotActivityText = "Copilot is responding";
+                    status.CopilotActivityText = "Agent is responding";
                     status.CopilotHeartbeatState = "receiving";
                 }
                 else if (e.PropertyName == nameof(UiCoreTodoDetailViewModel.LastHeartbeatUtc)
                          && vm.LastHeartbeatUtc is not null)
                 {
-                    status.CopilotActivityText = "Copilot is thinking\u2026";
+                    status.CopilotActivityText = "Agent is thinking\u2026";
                     status.CopilotHeartbeatState = "active";
                 }
             };
@@ -658,7 +658,7 @@ public partial class TodoListHostViewModel : ViewModelBase
                 var elapsed = DateTimeOffset.UtcNow - last.Value;
                 if (elapsed.TotalSeconds > 30)
                 {
-                    status.CopilotActivityText = $"No heartbeat for {(int)elapsed.TotalSeconds}s \u2014 Copilot may have stalled";
+                    status.CopilotActivityText = $"No heartbeat for {(int)elapsed.TotalSeconds}s \u2014 Agent may have stalled";
                     status.CopilotHeartbeatState = "stalled";
                 }
                 else if (elapsed.TotalSeconds > 15)

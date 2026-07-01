@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using McpServerManager.UI.Core.Auth;
+using McpServerManager.UI.Core.ViewModels;
 using McpServerManager.Web.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -86,5 +88,44 @@ public sealed class BearerTokenAccessorTests
         var token = await accessor.GetAccessTokenAsync();
 
         Assert.Null(token);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_NullHttpContext_UsesWorkspaceCachedToken()
+    {
+        var workspaceContext = new WorkspaceContextViewModel { ActiveWorkspacePath = @"E:\repo" };
+        var tokenCache = Substitute.For<IWorkspaceAuthTokenCache>();
+        tokenCache
+            .TryReadValid(@"E:\repo")
+            .Returns(new WorkspaceAuthToken
+            {
+                AccessToken = "cached-access-token",
+                ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1)
+            });
+        var accessor = new BearerTokenAccessor(BuildAccessor(null), tokenCache, workspaceContext);
+
+        var token = await accessor.GetAccessTokenAsync();
+
+        Assert.Equal("cached-access-token", token);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_AuthenticatedUserWithNoSavedToken_FallsBackToWorkspaceCachedToken()
+    {
+        var context = BuildAuthenticatedContext(accessToken: null);
+        var workspaceContext = new WorkspaceContextViewModel { ActiveWorkspacePath = @"E:\repo" };
+        var tokenCache = Substitute.For<IWorkspaceAuthTokenCache>();
+        tokenCache
+            .TryReadValid(@"E:\repo")
+            .Returns(new WorkspaceAuthToken
+            {
+                AccessToken = "cached-access-token",
+                ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1)
+            });
+        var accessor = new BearerTokenAccessor(BuildAccessor(context), tokenCache, workspaceContext);
+
+        var token = await accessor.GetAccessTokenAsync();
+
+        Assert.Equal("cached-access-token", token);
     }
 }

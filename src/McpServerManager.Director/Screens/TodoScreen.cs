@@ -739,7 +739,7 @@ internal sealed class TodoScreen : View
         var promptLabel = GetPromptDisplayName(promptType);
         var dialog = new Dialog
         {
-            Title = $"Copilot {promptLabel}: {todoId}",
+            Title = $"Agent {promptLabel}: {todoId}",
             Width = Math.Min(120, Math.Max(80, Application.Top?.Frame.Width - 4 ?? 96)),
             Height = Math.Min(30, Math.Max(12, Application.Top?.Frame.Height - 4 ?? 24)),
         };
@@ -1202,7 +1202,7 @@ internal sealed class TodoScreen : View
         if (!string.IsNullOrWhiteSpace(analysis.CopilotResponse))
         {
             lines.Add("");
-            lines.Add("Copilot Response:");
+            lines.Add("Agent Response:");
             lines.Add(analysis.CopilotResponse);
         }
 

@@ -111,7 +111,7 @@
                     <PathIcon Data="M18,18H6V6H18V18Z" Width="24" Height="24"/>
                 </Button>
                 <Button Command="{Binding SendEscapeCommand}"
-                        Padding="16,6" ToolTip.Tip="Send ESC to Copilot">
+                        Padding="16,6" ToolTip.Tip="Send ESC to Agent">
                     <TextBlock Text="ESC" FontSize="14" FontWeight="SemiBold"/>
                 </Button>
                 <Button x:Name="CopyTranscriptButton"

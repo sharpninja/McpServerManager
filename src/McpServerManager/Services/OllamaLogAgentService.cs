@@ -20,7 +20,7 @@ public sealed class OllamaLogAgentService : ILogAgentService
     private static readonly Regex AnsiEscapePattern = new(@"\x1B\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
     private const string DefaultModel = "llama3:latest";
     private const string DefaultBaseUrl = "http://localhost:11434";
-    private static readonly string SystemPrompt = "You are an assistant for a log viewer app. The user sees request logs (Cursor, Copilot, or unified JSON). You receive a summary of the current view (filtered list and optionally the selected request). Help them query, filter, and understand the logs. Be concise and practical.";
+    private static readonly string SystemPrompt = "You are an assistant for a log viewer app. The user sees request logs (Cursor, Agent, or unified JSON). You receive a summary of the current view (filtered list and optionally the selected request). Help them query, filter, and understand the logs. Be concise and practical.";
 
     private readonly HttpClient _httpClient;
     private readonly string _model;

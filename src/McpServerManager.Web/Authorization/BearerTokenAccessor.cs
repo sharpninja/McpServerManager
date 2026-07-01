@@ -36,7 +36,11 @@ internal sealed class BearerTokenAccessor
     {
         var httpContext = _accessor.HttpContext;
         if (httpContext is not null && httpContext.User.Identity?.IsAuthenticated == true)
-            return await httpContext.GetTokenAsync("access_token").ConfigureAwait(true);
+        {
+            var accessToken = await httpContext.GetTokenAsync("access_token").ConfigureAwait(true);
+            if (!string.IsNullOrWhiteSpace(accessToken))
+                return accessToken;
+        }
 
         return _workspaceTokenCache
             ?.TryReadValid(_workspaceContext?.ActiveWorkspacePath)

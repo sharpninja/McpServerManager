@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using McpServerManager.UI.Core.Auth;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.Web.Tests.TestInfrastructure;
 using Xunit;
@@ -79,7 +80,11 @@ public sealed partial class LoginPageTests
                 TokenType = "Bearer"
             }
         };
-        using var factory = WebTestFactory.Create(deviceLoginService: loginService);
+        var tokenCache = new WorkspaceTokenCacheStub();
+        using var factory = WebTestFactory.Create(
+            deviceLoginService: loginService,
+            workspaceTokenCache: tokenCache,
+            workspacePath: @"E:\repo");
         var client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
@@ -95,6 +100,44 @@ public sealed partial class LoginPageTests
         Assert.True(response.Headers.TryGetValues("Set-Cookie", out var cookies));
         Assert.Contains(cookies, static cookie => cookie.Contains("McpServerManager.Web.Auth", StringComparison.Ordinal));
         Assert.NotNull(loginService.CompletedLoginStart);
+        Assert.Equal(@"E:\repo", tokenCache.SavedWorkspacePath);
+        Assert.Equal(loginService.CompleteResult.AccessToken, tokenCache.SavedToken?.AccessToken);
+        Assert.Equal("http://localhost:7147", tokenCache.SavedToken?.Authority);
+        Assert.Equal("http://localhost:7147/connect/token", tokenCache.SavedToken?.TokenEndpoint);
+        Assert.Equal("mcp-director", tokenCache.SavedToken?.ClientId);
+    }
+
+    [Fact]
+    public async Task GetLogin_WithCachedWorkspaceToken_SignsInAndRedirectsWithoutStartingDeviceFlow()
+    {
+        var cachedToken = new WorkspaceAuthToken
+        {
+            AccessToken = CreateJwt("cached-user", "admin"),
+            ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1),
+            Authority = "http://localhost:7147",
+            TokenEndpoint = "http://localhost:7147/connect/token",
+            ClientId = "mcp-director",
+            TokenType = "Bearer"
+        };
+        var tokenCache = new WorkspaceTokenCacheStub { ReadToken = cachedToken };
+        var loginService = new DeviceLoginServiceStub();
+        using var factory = WebTestFactory.Create(
+            deviceLoginService: loginService,
+            workspaceTokenCache: tokenCache,
+            workspacePath: @"E:\repo");
+        var client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var response = await client.GetAsync("/login?returnUrl=%2Ftodos");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/todos", response.Headers.Location?.ToString());
+        Assert.True(response.Headers.TryGetValues("Set-Cookie", out var cookies));
+        Assert.Contains(cookies, static cookie => cookie.Contains("McpServerManager.Web.Auth", StringComparison.Ordinal));
+        Assert.Null(loginService.StartedBaseUrl);
+        Assert.Equal(@"E:\repo", tokenCache.LastReadWorkspacePath);
     }
 
     private static string ExtractCompleteUrl(string body)
@@ -181,5 +224,36 @@ public sealed partial class LoginPageTests
             CompletedLoginStart = loginStart;
             return Task.FromResult(CompleteResult);
         }
+    }
+
+    private sealed class WorkspaceTokenCacheStub : IWorkspaceAuthTokenCache
+    {
+        public WorkspaceAuthToken? ReadToken { get; init; }
+
+        public string? LastReadWorkspacePath { get; private set; }
+
+        public string? SavedWorkspacePath { get; private set; }
+
+        public WorkspaceAuthToken? SavedToken { get; private set; }
+
+        public string? ClearedWorkspacePath { get; private set; }
+
+        public WorkspaceAuthToken? TryReadValid(string? workspacePath)
+        {
+            LastReadWorkspacePath = workspacePath;
+            return ReadToken;
+        }
+
+        public void Save(string? workspacePath, WorkspaceAuthToken token)
+        {
+            SavedWorkspacePath = workspacePath;
+            SavedToken = token;
+        }
+
+        public void Clear(string? workspacePath)
+            => ClearedWorkspacePath = workspacePath;
+
+        public string? TryGetCachePath(string? workspacePath)
+            => null;
     }
 }

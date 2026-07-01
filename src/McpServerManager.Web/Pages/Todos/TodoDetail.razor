@@ -92,16 +92,16 @@
                             </button>
                         }
                         <button class="btn btn-sm" @onclick="GenerateStatusPromptAsync" disabled="@ViewModel.IsBusy"
-                                aria-label="Generate Copilot Status prompt">
-                            <OcticonIcon Name="pulse" Size="16" /> Copilot Status
+                                aria-label="Generate Agent Status prompt">
+                            <OcticonIcon Name="pulse" Size="16" /> Agent Status
                         </button>
                         <button class="btn btn-sm" @onclick="GeneratePlanPromptAsync" disabled="@ViewModel.IsBusy"
-                                aria-label="Generate Copilot Plan prompt">
-                            <OcticonIcon Name="checklist" Size="16" /> Copilot Plan
+                                aria-label="Generate Agent Plan prompt">
+                            <OcticonIcon Name="checklist" Size="16" /> Agent Plan
                         </button>
                         <button class="btn btn-sm" @onclick="GenerateImplementAsync" disabled="@ViewModel.IsBusy"
-                                aria-label="Generate Copilot Implementation prompt">
-                            <OcticonIcon Name="code" Size="16" /> Copilot Implementation
+                                aria-label="Generate Agent Implementation prompt">
+                            <OcticonIcon Name="code" Size="16" /> Agent Implementation
                         </button>
                     </div>
                 </div>
@@ -127,7 +127,7 @@
                                 aria-expanded="@IsSectionExpanded(PromptSectionKey).ToString().ToLowerInvariant()"
                                 @onclick='() => ToggleSection(PromptSectionKey)'>
                             <span class="h4 mb-0">
-                                Copilot Prompt — @output.PromptType
+                                Agent Prompt — @output.PromptType
                                 <span class="color-fg-muted f6 ml-2">(@output.TodoId)</span>
                             </span>
                             <span class="detail-card-expander__icon" aria-hidden="true">@GetSectionIcon(PromptSectionKey)</span>

@@ -11,11 +11,10 @@ public partial class ConnectionViewModel : McpServerManager.UI.Core.ViewModels.C
     private readonly CqrsDispatcher _dispatcher;
 
     public ConnectionViewModel(
-        IConnectionAuthService connectionAuthService,
         CqrsDispatcher dispatcher,
         ILogger<McpServerManager.UI.Core.ViewModels.ConnectionViewModel>? logger = null,
         IUiDispatcherService? uiDispatcher = null)
-        : base(connectionAuthService, logger, uiDispatcher ?? new AvaloniaUiDispatcherService())
+        : base(dispatcher, logger, uiDispatcher ?? new AvaloniaUiDispatcherService())
     {
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
     }

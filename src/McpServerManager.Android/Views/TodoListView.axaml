@@ -165,13 +165,13 @@
                         <MenuItem Header="Analyze Requirements"
                                   Command="{Binding DataContext.AnalyzeRequirementsCommand, ElementName=TodoRoot}"/>
                         <Separator/>
-                        <MenuItem Header="Copilot Status"
+                        <MenuItem Header="Agent Status"
                                   Command="{Binding DataContext.CopilotStatusCommand, ElementName=TodoRoot}"
                                   CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                        <MenuItem Header="Copilot Plan"
+                        <MenuItem Header="Agent Plan"
                                   Command="{Binding DataContext.CopilotPlanCommand, ElementName=TodoRoot}"
                                   CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                        <MenuItem Header="Copilot Implement"
+                        <MenuItem Header="Agent Implement"
                                   Command="{Binding DataContext.CopilotImplementCommand, ElementName=TodoRoot}"
                                   CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                         <Separator/>
@@ -248,7 +248,7 @@
               <controls:AndroidPlainTextEditor x:Name="Editor" Grid.Row="1" FontSize="14"/>
             </Grid>
 
-            <!-- Copilot tab content: text viewer only -->
+            <!-- Agent tab content: text viewer only -->
             <ScrollViewer x:Name="MarkdownViewer" IsVisible="False">
               <SelectableTextBlock x:Name="MarkdownText"
                                    TextWrapping="Wrap"

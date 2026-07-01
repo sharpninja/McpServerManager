@@ -281,7 +281,7 @@ internal sealed class SessionLogScreen : View
         if (detail.CopilotStatistics is { } copilot)
         {
             lines.Add("");
-            lines.Add("Copilot Statistics:");
+            lines.Add("Agent Statistics:");
             lines.Add($"  AvgSuccessScore: {copilot.AverageSuccessScore?.ToString() ?? "—"}");
             lines.Add($"  TotalNetTokens: {copilot.TotalNetTokens?.ToString() ?? "—"}");
             lines.Add($"  TotalNetPremiumRequests: {copilot.TotalNetPremiumRequests?.ToString() ?? "—"}");

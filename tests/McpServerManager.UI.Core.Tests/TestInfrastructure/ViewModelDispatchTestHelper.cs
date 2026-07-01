@@ -2,12 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using McpServer.Cqrs;
-using McpServerManager.UI.Core.Handlers;
-using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.ViewModels;
 using McpServerManager.UI.Core.Models;
 using McpServerManager.UI.Core.Services;
-using McpServerManager.UI.Core.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -15,55 +12,82 @@ using NSubstitute;
 namespace McpServerManager.UI.Core.Tests.TestInfrastructure;
 
 /// <summary>
-/// Harness for ViewModel CQRS dispatch verification using the real sealed dispatcher.
-/// Tests assert the dispatched handler's service dependency and resulting observable state.
+/// Mock-only harness for ViewModel CQRS dispatch verification (Byrd compliant, per strategist).
+/// Constructs VMs using Substitute.For<Dispatcher>() directly.
+/// Bans AddCqrs / AddUiCore / ServiceProvider.GetRequiredService<Dispatcher>() in dispatch-verification tests.
 /// </summary>
 public static class ViewModelDispatchTestHelper
 {
     /// <summary>
-    /// Create a ChatWindowViewModel under test with a real dispatcher and substituted chat service.
-    /// The caller can configure the chat service before invoking VM actions.
+    /// Creates a ChatWindowViewModel under test with mocked dispatcher.
+    /// Caller configures dispatcher.QueryAsync/SendAsync .Returns(...) before calling VM actions.
     /// </summary>
-    public static (Dispatcher dispatcher, ChatWindowViewModel vm, IChatWindowService chatService) CreateChatWindow(
+    public static (IDispatcher dispatcher, ChatWindowViewModel vm) CreateChatWindow(
         Func<string>? getContext = null,
         string? initialModel = null,
-        Action<string?>? onModelChanged = null)
+        Action<string?>? onModelChanged = null,
+        IUiDispatcherService? uiDispatcher = null)
     {
-        var chatService = Substitute.For<IChatWindowService>();
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton(chatService);
-        services.AddSingleton<IQueryHandler<LoadChatPromptsQuery, IReadOnlyList<PromptTemplate>>, LoadChatPromptsQueryHandler>();
-        services.AddSingleton<IQueryHandler<LoadChatModelsQuery, ChatLoadModelsResult>, LoadChatModelsQueryHandler>();
-        services.AddSingleton<IQueryHandler<PopulateChatPromptQuery, string>, PopulateChatPromptQueryHandler>();
-        services.AddSingleton<IQueryHandler<SubmitChatPromptQuery, Messages.ChatPreparedPromptResult>, SubmitChatPromptQueryHandler>();
-        services.AddSingleton<ICommandHandler<SendChatMessageCommand, ChatSendMessageResult>, SendChatMessageCommandHandler>();
-        services.AddSingleton<ICommandHandler<OpenChatAgentConfigCommand, ChatFileOpenResult>, OpenChatAgentConfigCommandHandler>();
-        services.AddSingleton<ICommandHandler<OpenChatPromptTemplatesCommand, ChatFileOpenResult>, OpenChatPromptTemplatesCommandHandler>();
-        services.AddSingleton(sp => new Dispatcher(sp, NullLogger<Dispatcher>.Instance));
-
-        var provider = services.BuildServiceProvider();
-        var dispatcher = provider.GetRequiredService<Dispatcher>();
-        var uiDisp = new ImmediateUiDispatcherService();
+        var dispatcher = Substitute.For<IDispatcher>();
+        var ui = uiDispatcher ?? new ImmediateUiDispatcherService();
         var vm = new ChatWindowViewModel(
             dispatcher,
             getContext ?? (() => string.Empty),
             initialModel,
             onModelChanged,
-            uiDisp);
-        return (dispatcher, vm, chatService);
+            ui);
+        return (dispatcher, vm);
     }
 
     /// <summary>
-    /// Generic helper for VMs that take a real dispatcher.
-    /// For composite or special VMs, callers can wire services manually.
+    /// Creates ConnectionViewModel with mocked dispatcher.
     /// </summary>
-    public static (Dispatcher dispatcher, T vm) CreateWithDispatcher<T>(Func<Dispatcher, T> factory) where T : class
+    public static (IDispatcher dispatcher, ConnectionViewModel vm) CreateConnection(
+        IUiDispatcherService? uiDispatcher = null,
+        ILogger<ConnectionViewModel>? logger = null)
     {
-        var services = new ServiceCollection();
-        var provider = services.BuildServiceProvider();
-        var dispatcher = new Dispatcher(provider, NullLogger<Dispatcher>.Instance);
-        var vm = factory(dispatcher);
+        var dispatcher = Substitute.For<IDispatcher>();
+        var ui = uiDispatcher ?? new ImmediateUiDispatcherService();
+        var log = logger ?? NullLogger<ConnectionViewModel>.Instance;
+        var vm = new ConnectionViewModel(
+            dispatcher,
+            log,
+            ui);
         return (dispatcher, vm);
+    }
+
+    /// <summary>
+    /// Helper to setup a canned query result.
+    /// </summary>
+    public static void SetupQueryResult<TMessage, TResult>(IDispatcher dispatcher, TResult value)
+        where TMessage : IQuery<TResult>
+    {
+        dispatcher.QueryAsync(Arg.Any<TMessage>(), Arg.Any<CancellationToken>())
+            .Returns(Result<TResult>.Success(value));
+    }
+
+    /// <summary>
+    /// Helper to setup a canned send result.
+    /// </summary>
+    public static void SetupSendResult<TMessage, TResult>(IDispatcher dispatcher, TResult value)
+        where TMessage : ICommand<TResult>
+    {
+        dispatcher.SendAsync(Arg.Any<TMessage>(), Arg.Any<CancellationToken>())
+            .Returns(Result<TResult>.Success(value));
+    }
+
+    /// <summary>
+    /// Verifies exact message was sent (for dispatch tests).
+    /// </summary>
+    public static async Task ReceivedQuery<TMessage, TResult>(IDispatcher dispatcher, int count = 1)
+        where TMessage : IQuery<TResult>
+    {
+        await dispatcher.Received(count).QueryAsync(Arg.Any<TMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    public static async Task ReceivedSend<TMessage, TResult>(IDispatcher dispatcher, int count = 1)
+        where TMessage : ICommand<TResult>
+    {
+        await dispatcher.Received(count).SendAsync(Arg.Any<TMessage>(), Arg.Any<CancellationToken>());
     }
 }

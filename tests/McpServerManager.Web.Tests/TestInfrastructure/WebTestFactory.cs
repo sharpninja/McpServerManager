@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using McpServerManager.UI.Core.Auth;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Services;
 
@@ -42,8 +43,10 @@ internal static class WebTestFactory
     /// </param>
     public static McpWebTestFactory Create(
         ClaimsPrincipal? authenticatedUser = null,
-        IDeviceAuthorizationLoginService? deviceLoginService = null)
-        => new(authenticatedUser, deviceLoginService);
+        IDeviceAuthorizationLoginService? deviceLoginService = null,
+        IWorkspaceAuthTokenCache? workspaceTokenCache = null,
+        string? workspacePath = null)
+        => new(authenticatedUser, deviceLoginService, workspaceTokenCache, workspacePath);
 
     /// <summary>Builds an authenticated <see cref="ClaimsPrincipal"/> with the given roles.</summary>
     public static ClaimsPrincipal BuildUser(string name = "test-user", params string[] roles)
@@ -64,13 +67,19 @@ internal sealed class McpWebTestFactory : WebApplicationFactory<Program>
 {
     private readonly ClaimsPrincipal? _authenticatedUser;
     private readonly IDeviceAuthorizationLoginService? _deviceLoginService;
+    private readonly IWorkspaceAuthTokenCache? _workspaceTokenCache;
+    private readonly string? _workspacePath;
 
     public McpWebTestFactory(
         ClaimsPrincipal? authenticatedUser = null,
-        IDeviceAuthorizationLoginService? deviceLoginService = null)
+        IDeviceAuthorizationLoginService? deviceLoginService = null,
+        IWorkspaceAuthTokenCache? workspaceTokenCache = null,
+        string? workspacePath = null)
     {
         _authenticatedUser = authenticatedUser;
         _deviceLoginService = deviceLoginService;
+        _workspaceTokenCache = workspaceTokenCache;
+        _workspacePath = workspacePath;
     }
 
     /// <inheritdoc />
@@ -105,6 +114,7 @@ internal sealed class McpWebTestFactory : WebApplicationFactory<Program>
                 ["Authentication:Schemes:OpenIdConnect:Authority"] = "https://test-oidc.invalid",
                 ["Authentication:Schemes:OpenIdConnect:ClientId"] = "test-web-client",
                 ["Authentication:Schemes:OpenIdConnect:DiscoverAuthorityFromMcpAuthConfig"] = "false",
+                ["McpServer:WorkspacePath"] = _workspacePath,
             });
         });
 
@@ -118,6 +128,12 @@ internal sealed class McpWebTestFactory : WebApplicationFactory<Program>
             {
                 services.RemoveAll<IDeviceAuthorizationLoginService>();
                 services.AddSingleton(_deviceLoginService);
+            }
+
+            if (_workspaceTokenCache is not null)
+            {
+                services.RemoveAll<IWorkspaceAuthTokenCache>();
+                services.AddSingleton(_workspaceTokenCache);
             }
 
             // Stub out OIDC discovery so no real HTTP calls are made to the provider.

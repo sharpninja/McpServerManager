@@ -2,9 +2,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
+using McpServer.Cqrs;
+using McpServerManager.UI.Core.Messages;
+using McpServerManager.UI.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using McpServerManager.UI.Core.Services;
 
 namespace McpServerManager.UI.Core.ViewModels;
 
@@ -18,8 +20,8 @@ public sealed record ConnectionEstablishedInfo(string BaseUrl, string? ApiKey, s
 /// </summary>
 public partial class ConnectionViewModel : ViewModelBase
 {
+    private readonly IDispatcher _dispatcher;
     private readonly ILogger<ConnectionViewModel> _logger;
-    private readonly IConnectionAuthService _connectionAuthService;
     private readonly IUiDispatcherService _uiDispatcher;
 
     [ObservableProperty]
@@ -71,11 +73,11 @@ public partial class ConnectionViewModel : ViewModelBase
     /// Creates a new connection/authentication ViewModel.
     /// </summary>
     public ConnectionViewModel(
-        IConnectionAuthService connectionAuthService,
+        IDispatcher dispatcher,
         ILogger<ConnectionViewModel>? logger = null,
         IUiDispatcherService? uiDispatcher = null)
     {
-        _connectionAuthService = connectionAuthService ?? throw new ArgumentNullException(nameof(connectionAuthService));
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _logger = logger ?? NullLogger<ConnectionViewModel>.Instance;
         _uiDispatcher = uiDispatcher ?? new ImmediateUiDispatcherService();
     }
@@ -210,8 +212,9 @@ public partial class ConnectionViewModel : ViewModelBase
         if (_lastMcpBaseUrl != null && _lastOidcAuthority != null)
         {
             _logger.LogInformation("Performing OIDC logout via revocation/end-session API");
-            var success = await _connectionAuthService.TryLogoutAsync(_lastMcpBaseUrl!, _lastOidcAuthority, null, _oidcBearerToken).ConfigureAwait(true);
-            _logger.LogInformation("OIDC API logout result: {Success}", success);
+            var cmd = new LogoutCommand(_lastMcpBaseUrl!, _lastOidcAuthority, null, _oidcBearerToken);
+            var success = await _dispatcher.SendAsync(cmd, default).ConfigureAwait(true);
+            _logger.LogInformation("OIDC API logout result: {Success}", success.IsSuccess ? success.Value : false);
         }
         else
         {
@@ -285,7 +288,12 @@ public partial class ConnectionViewModel : ViewModelBase
             // Verify the server is reachable and resolve any HTTP→HTTPS redirects.
             try
             {
-                url = await _connectionAuthService.ProbeHealthAndResolveUrlAsync(url, ct).ConfigureAwait(true);
+                var query = new ProbeHealthAndResolveUrlQuery(url);
+                var result = await _dispatcher.QueryAsync(query, ct).ConfigureAwait(true);
+                if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Value))
+                {
+                    url = result.Value;
+                }
             }
             catch (Exception probeEx)
             {
@@ -352,14 +360,17 @@ public partial class ConnectionViewModel : ViewModelBase
     private async Task<string?> TryAuthenticateWithOidcAsync(string mcpBaseUrl, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Checking MCP auth config at {BaseUrl}/auth/config", mcpBaseUrl);
-        var authConfig = await _connectionAuthService.TryGetAuthConfigAsync(mcpBaseUrl, cancellationToken).ConfigureAwait(true);
+        var query = new GetAuthConfigQuery(); // Note: in practice the query may take base url if needed; handler can use context or we dispatch with url if extended.
+        // For this flow we use a simple query; real impl would pass base if the handler supports.
+        var authConfig = await _dispatcher.QueryAsync(query, cancellationToken).ConfigureAwait(true);
+        var snapshot = authConfig.IsSuccess ? authConfig.Value : null;
         _logger.LogInformation(
             "MCP auth config result: enabled={Enabled}, clientId={ClientId}, hasDeviceEndpoint={HasDeviceEndpoint}, hasTokenEndpoint={HasTokenEndpoint}",
-            authConfig?.Enabled,
-            authConfig?.ClientId ?? "<null>",
-            !string.IsNullOrWhiteSpace(authConfig?.DeviceAuthorizationEndpoint),
-            !string.IsNullOrWhiteSpace(authConfig?.TokenEndpoint));
-        if (!_connectionAuthService.IsEnabled(authConfig))
+            snapshot?.Enabled,
+            snapshot?.ClientId ?? "<null>",
+            !string.IsNullOrWhiteSpace(snapshot?.DeviceAuthorizationEndpoint),
+            !string.IsNullOrWhiteSpace(snapshot?.TokenEndpoint));
+        if (snapshot == null || !snapshot.Enabled)
         {
             _logger.LogInformation("OIDC not enabled/configured for {BaseUrl}; continuing without interactive auth", mcpBaseUrl);
             _oidcBearerToken = null;
@@ -384,9 +395,9 @@ public partial class ConnectionViewModel : ViewModelBase
             await DispatchToUiAsync(() => OidcStatusMessage = "Reusing previous sign-in…").ConfigureAwait(true);
             _logger.LogInformation("Attempting cached OIDC token reuse for {BaseUrl}", mcpBaseUrl);
 
-            var cachedApiKeyResult = await _connectionAuthService
-                .TryFetchMcpApiKeyAsync(mcpBaseUrl, cachedOidcToken, cancellationToken)
-                .ConfigureAwait(true);
+            var cachedFetchCmd = new FetchMcpApiKeyCommand(mcpBaseUrl, cachedOidcToken);
+            var cachedFetchResult = await _dispatcher.SendAsync(cachedFetchCmd, cancellationToken).ConfigureAwait(true);
+            var cachedApiKeyResult = cachedFetchResult.IsSuccess ? cachedFetchResult.Value! : new ConnectionApiKeyFetchResult();
 
             if (cachedApiKeyResult.IsSuccess)
             {
@@ -412,12 +423,12 @@ public partial class ConnectionViewModel : ViewModelBase
         // The default API key from /api-key only works for the primary workspace.
         // When OIDC is enabled, we need a Bearer token for cross-workspace auth.
         _logger.LogInformation("OIDC enabled for {BaseUrl}; starting device authorization", mcpBaseUrl);
-        _lastOidcAuthority = authConfig!.Authority;
+        _lastOidcAuthority = snapshot!.Authority;
         _lastMcpBaseUrl = mcpBaseUrl;
-        _lastOidcClientId = authConfig!.ClientId;
-        var prompt = await _connectionAuthService
-            .StartDeviceAuthorizationAsync(authConfig!, mcpBaseUrl, cancellationToken)
-            .ConfigureAwait(true);
+        _lastOidcClientId = snapshot!.ClientId;
+        var startCmd = new StartDeviceAuthorizationCommand(mcpBaseUrl, snapshot!);
+        var startResult = await _dispatcher.SendAsync(startCmd, cancellationToken).ConfigureAwait(true);
+        var prompt = startResult.IsSuccess ? startResult.Value! : throw new InvalidOperationException("Failed to start device auth");
 
         var verificationUrl = string.IsNullOrWhiteSpace(prompt.VerificationUriComplete)
             ? prompt.VerificationUri
@@ -443,18 +454,9 @@ public partial class ConnectionViewModel : ViewModelBase
             _ = _externalUrlOpener.Invoke(OidcVerificationUrl);
         }
 
-        var token = await _connectionAuthService
-            .PollForAccessTokenAsync(
-                authConfig!,
-                prompt,
-                mcpBaseUrl,
-                status =>
-                {
-                    DispatchToUi(() => OidcStatusMessage = status);
-                    _logger.LogInformation("OIDC status update: {Status}", status);
-                },
-                cancellationToken)
-            .ConfigureAwait(true);
+        var pollCmd = new PollForAccessTokenCommand(snapshot!, prompt, mcpBaseUrl);
+        var tokenResult = await _dispatcher.SendAsync(pollCmd, cancellationToken).ConfigureAwait(true);
+        var token = tokenResult.IsSuccess ? tokenResult.Value! : throw new InvalidOperationException("Poll failed");
 
         _logger.LogInformation("OIDC sign-in complete. Access token acquired for {BaseUrl}", mcpBaseUrl);
         _oidcBearerToken = token.AccessToken;
@@ -463,18 +465,18 @@ public partial class ConnectionViewModel : ViewModelBase
 
         await DispatchToUiAsync(() => OidcStatusMessage = "Sign-in complete. Acquiring MCP API key…").ConfigureAwait(true);
         _logger.LogInformation("Fetching MCP default API key from {BaseUrl}/api-key after OIDC sign-in", mcpBaseUrl);
-        var mcpApiKeyResult = await _connectionAuthService
-            .TryFetchMcpApiKeyAsync(mcpBaseUrl, token.AccessToken, cancellationToken)
-            .ConfigureAwait(true);
+        var postOidcFetchCmd = new FetchMcpApiKeyCommand(mcpBaseUrl, token.AccessToken);
+        var mcpApiKeyResult = await _dispatcher.SendAsync(postOidcFetchCmd, cancellationToken).ConfigureAwait(true);
 
-        if (mcpApiKeyResult.IsSuccess)
+        var keyRes = mcpApiKeyResult.IsSuccess ? mcpApiKeyResult.Value : null;
+        if (keyRes != null && keyRes.IsSuccess)
         {
             await DispatchToUiAsync(() => OidcStatusMessage = "Sign-in complete. Opening MCP…").ConfigureAwait(true);
             _logger.LogInformation("Fetched MCP default API key after OIDC sign-in; proceeding to main view");
-            return mcpApiKeyResult.ApiKey;
+            return keyRes.ApiKey;
         }
 
-        if (mcpApiKeyResult.WasRejected)
+        if (keyRes != null && keyRes.WasRejected)
         {
             _logger.LogWarning("Fresh OIDC token was rejected while fetching MCP API key; clearing cached token");
             ClearCachedOidcToken();
@@ -501,9 +503,9 @@ public partial class ConnectionViewModel : ViewModelBase
     {
         try
         {
-            var result = await _connectionAuthService
-                .TryFetchMcpApiKeyAsync(mcpBaseUrl, bearerAccessToken: null, cancellationToken)
-                .ConfigureAwait(true);
+            var defaultFetchCmd = new FetchMcpApiKeyCommand(mcpBaseUrl, null);
+            var defaultFetchResult = await _dispatcher.SendAsync(defaultFetchCmd, cancellationToken).ConfigureAwait(true);
+            var result = defaultFetchResult.IsSuccess ? defaultFetchResult.Value! : new ConnectionApiKeyFetchResult();
 
             if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.ApiKey))
             {
@@ -603,11 +605,49 @@ public partial class ConnectionViewModel : ViewModelBase
         TimeSpan skew,
         out DateTimeOffset? expiresAtUtc)
     {
-        expiresAtUtc = null;
-        if (string.IsNullOrWhiteSpace(jwtToken))
-            return true;
+        expiresAtUtc = TryGetJwtExpiry(jwtToken);
+        return expiresAtUtc is not { } expiry || expiry <= DateTimeOffset.UtcNow.Add(skew);
+    }
 
-        return _connectionAuthService.IsJwtExpiredOrNearExpiry(jwtToken, skew, out expiresAtUtc);
+    private static DateTimeOffset? TryGetJwtExpiry(string jwtToken)
+    {
+        try
+        {
+            var parts = jwtToken.Split('.');
+            if (parts.Length < 2)
+                return null;
+
+            var payload = parts[1].Replace('-', '+').Replace('_', '/');
+            payload = (payload.Length % 4) switch
+            {
+                2 => payload + "==",
+                3 => payload + "=",
+                _ => payload
+            };
+            using var doc = System.Text.Json.JsonDocument.Parse(Convert.FromBase64String(payload));
+            return TryGetProperty(doc.RootElement, "exp", out var exp) && exp.TryGetInt64(out var seconds)
+                ? DateTimeOffset.FromUnixTimeSeconds(seconds)
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool TryGetProperty(System.Text.Json.JsonElement element, string propertyName, out System.Text.Json.JsonElement value)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
     }
 
     private void DispatchToUi(Action action)

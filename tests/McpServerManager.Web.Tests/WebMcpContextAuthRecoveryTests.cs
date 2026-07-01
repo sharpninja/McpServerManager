@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using McpServer.Client;
+using McpServerManager.UI.Core.Auth;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
 using McpServerManager.Web.Adapters;
@@ -164,6 +165,38 @@ public sealed class WebMcpContextAuthRecoveryTests
             if (Directory.Exists(workspacePath))
                 Directory.Delete(workspacePath, recursive: true);
         }
+    }
+
+    [Fact]
+    public async Task TodoAdapter_UsesWorkspaceCachedBearerToken_WhenHttpContextUnavailable()
+    {
+        var config = BuildConfig(apiKey: null, workspacePath: null);
+        var workspaceContext = new WorkspaceContextViewModel { ActiveWorkspacePath = @"E:\repo" };
+        var tokenCache = Substitute.For<IWorkspaceAuthTokenCache>();
+        tokenCache
+            .TryReadValid(@"E:\repo")
+            .Returns(new WorkspaceAuthToken
+            {
+                AccessToken = "cached-access-token",
+                ExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1)
+            });
+        var bearerTokenAccessor = new BearerTokenAccessor(BuildAccessor(context: null), tokenCache, workspaceContext);
+        using var handler = new CachedBearerTodoHandler();
+        var webContext = new WebMcpContext(
+            config,
+            workspaceContext,
+            bearerTokenAccessor,
+            clientFactory: options => CreateClient(handler, options));
+
+        var adapter = new TodoApiClientAdapter(webContext);
+
+        var result = await adapter.ListTodosAsync(new ListTodosQuery { Done = false });
+
+        Assert.Equal(1, result.TotalCount);
+        Assert.Single(result.Items);
+        Assert.Equal("TODO-004", result.Items[0].Id);
+        Assert.Equal(["Bearer cached-access-token"], handler.AuthorizationHeaders);
+        Assert.Equal([null], handler.TodoApiKeys);
     }
 
     private static IConfiguration BuildConfig(string? apiKey, string? workspacePath = "E:/ws/default")
@@ -367,6 +400,49 @@ public sealed class WebMcpContextAuthRecoveryTests
                             {
                               "id": "TODO-003",
                               "title": "Recovered after cached bearer",
+                              "section": "Runtime",
+                              "priority": "high",
+                              "done": false,
+                              "estimate": "15m"
+                            }
+                          ],
+                          "totalCount": 1
+                        }
+                        """));
+                }
+
+                return Task.FromResult(JsonResponse(HttpStatusCode.Unauthorized, "{\"message\":\"Invalid credential.\"}"));
+            }
+
+            return Task.FromResult(JsonResponse(HttpStatusCode.NotFound, "{\"message\":\"Not found.\"}"));
+        }
+    }
+
+    private sealed class CachedBearerTodoHandler : HttpMessageHandler
+    {
+        public List<string?> AuthorizationHeaders { get; } = [];
+
+        public List<string?> TodoApiKeys { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            if (path.Equals("/mcpserver/todo", StringComparison.OrdinalIgnoreCase))
+            {
+                AuthorizationHeaders.Add(request.Headers.Authorization?.ToString());
+                request.Headers.TryGetValues("X-Api-Key", out var keyValues);
+                TodoApiKeys.Add(keyValues?.SingleOrDefault());
+
+                if (string.Equals(request.Headers.Authorization?.ToString(), "Bearer cached-access-token", StringComparison.Ordinal))
+                {
+                    return Task.FromResult(JsonResponse(
+                        HttpStatusCode.OK,
+                        """
+                        {
+                          "items": [
+                            {
+                              "id": "TODO-004",
+                              "title": "Cached bearer",
                               "section": "Runtime",
                               "priority": "high",
                               "done": false,
