@@ -81,7 +81,8 @@
       },
       "owner": {
         "type": "string",
-        "description": "The project owner (user or organization login). The name is not case sensitive."
+        "description": "The project owner (user or organization login). The name is not case sensitive.",
+        "x-mcp-header": "owner"
       },
       "owner_type": {
         "type": "string",

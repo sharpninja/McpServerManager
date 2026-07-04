@@ -30,7 +30,8 @@
       },
       "owner": {
         "type": "string",
-        "description": "Repository owner"
+        "description": "Repository owner",
+        "x-mcp-header": "owner"
       },
       "perPage": {
         "type": "number",
@@ -40,7 +41,8 @@
       },
       "repo": {
         "type": "string",
-        "description": "Repository name. If not provided, discussions will be queried at the organisation level."
+        "description": "Repository name. If not provided, discussions will be queried at the organisation level.",
+        "x-mcp-header": "repo"
       }
     },
     "required": [

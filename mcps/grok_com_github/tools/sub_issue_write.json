@@ -22,7 +22,8 @@
       },
       "owner": {
         "type": "string",
-        "description": "Repository owner"
+        "description": "Repository owner",
+        "x-mcp-header": "owner"
       },
       "replace_parent": {
         "type": "boolean",
@@ -30,7 +31,8 @@
       },
       "repo": {
         "type": "string",
-        "description": "Repository name"
+        "description": "Repository name",
+        "x-mcp-header": "repo"
       },
       "sub_issue_id": {
         "type": "number",

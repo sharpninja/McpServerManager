@@ -14,7 +14,8 @@
       },
       "owner": {
         "type": "string",
-        "description": "Repository owner"
+        "description": "Repository owner",
+        "x-mcp-header": "owner"
       },
       "path": {
         "type": "string",
@@ -26,7 +27,8 @@
       },
       "repo": {
         "type": "string",
-        "description": "Repository name"
+        "description": "Repository name",
+        "x-mcp-header": "repo"
       },
       "side": {
         "type": "string",

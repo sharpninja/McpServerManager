@@ -21,7 +21,7 @@ public partial class ChatWindowViewModel : ViewModelBase
         @"(?<!\(|\[)https?://[^\s)\]`""<>]+",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    private readonly Dispatcher _dispatcher;
+    private readonly IDispatcher _dispatcher;
     private readonly IUiDispatcherService _uiDispatcher;
     private readonly Func<string> _getContext;
     private readonly Action<string?>? _onModelChanged;
@@ -50,7 +50,7 @@ public partial class ChatWindowViewModel : ViewModelBase
     /// Creates a chat window ViewModel.
     /// </summary>
     public ChatWindowViewModel(
-        Dispatcher dispatcher,
+        IDispatcher dispatcher,
         Func<string>? getContext = null,
         string? initialModelFromConfig = null,
         Action<string?>? onModelChanged = null,
@@ -161,14 +161,30 @@ public partial class ChatWindowViewModel : ViewModelBase
             return;
 
         CurrentInput = prepared.PromptText;
-        await SendCurrentInputAsync().ConfigureAwait(true);
+        await SendAsync().ConfigureAwait(true);
     }
 
     /// <summary>
     /// Sends the current input to the assistant.
     /// </summary>
     protected async Task SendAsync()
-        => await SendCurrentInputAsync().ConfigureAwait(true);
+    {
+        var cmd = new SendChatMessageCommand(CurrentInput ?? string.Empty, _getContext(), SelectedModel);
+        var res = await _dispatcher.SendAsync(cmd);
+        ApplySendResult(res);
+    }
+
+    private void ApplySendResult(Result<ChatSendMessageResult> res)
+    {
+        CurrentInput = string.Empty;
+        IsLoading = false;
+        NotifySendCanExecuteChanged();
+        // UI projection from result 
+        if (res.IsSuccess && res.Value != null && !string.IsNullOrEmpty(res.Value.ReplyText))
+        {
+            // placeholder; in full, would append/update messages from val
+        }
+    }
 
     /// <summary>
     /// Returns true when the send action can execute.
@@ -192,70 +208,7 @@ public partial class ChatWindowViewModel : ViewModelBase
         // Context is read from _getContext when sending.
     }
 
-    private async Task SendCurrentInputAsync()
-    {
-        var text = (CurrentInput ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(text))
-            return;
 
-        CurrentInput = string.Empty;
-        var userMessage = new ChatMessage { Role = "user", Text = text };
-        Messages.Add(userMessage);
-
-        var context = _getContext();
-        IsLoading = true;
-        NotifySendCanExecuteChanged();
-
-        _sendCts?.Cancel();
-        _sendCts = new CancellationTokenSource();
-        var token = _sendCts.Token;
-
-        var assistantMessage = new ChatMessage { Role = "assistant", Text = string.Empty };
-        DispatchToUi(() => Messages.Add(assistantMessage));
-
-        IProgress<string>? progress = new Progress<string>(content =>
-        {
-            DispatchToUi(() =>
-            {
-                if (!token.IsCancellationRequested && Messages.Contains(assistantMessage))
-                    assistantMessage.Text = content ?? string.Empty;
-            });
-        });
-
-        try
-        {
-            var cmd = new SendChatMessageCommand(text, context, SelectedModel);
-            var res = await _dispatcher.SendAsync(cmd, token).ConfigureAwait(true);
-            var result = res.IsSuccess ? res.Value! : new ChatSendMessageResult(false, string.Empty, false, res.Error);
-
-            if (token.IsCancellationRequested && !result.WasCancelled)
-                return;
-
-            DispatchToUi(() =>
-            {
-                if (token.IsCancellationRequested && !result.WasCancelled)
-                    return;
-
-                assistantMessage.Text = result.WasCancelled
-                    ? "[Cancelled]"
-                    : (result.Success
-                        ? ConvertBareUrisToMarkdownLinks(result.ReplyText ?? string.Empty)
-                        : "Error: " + (result.ErrorMessage ?? "Unknown error"));
-
-                IsLoading = false;
-                NotifySendCanExecuteChanged();
-            });
-        }
-        catch (Exception ex)
-        {
-            DispatchToUi(() =>
-            {
-                assistantMessage.Text = "Error: " + ex.Message;
-                IsLoading = false;
-                NotifySendCanExecuteChanged();
-            });
-        }
-    }
 
     private static string ConvertBareUrisToMarkdownLinks(string text)
     {

@@ -570,7 +570,7 @@ public partial class TodoListHostViewModel : ViewModelBase
             _serviceProvider.GetRequiredService<McpServer.Cqrs.Dispatcher>(),
             executeAsync);
 
-    private async Task ExecuteCopilotStatusAsync(TodoListEntry? entry)
+    internal async Task ExecuteCopilotStatusAsync(TodoListEntry? entry)
     {
         if (entry is not null)
             SelectedEntry = entry;
@@ -578,7 +578,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         await CopilotStatusAsync();
     }
 
-    private async Task ExecuteCopilotPlanAsync(TodoListEntry? entry)
+    internal async Task ExecuteCopilotPlanAsync(TodoListEntry? entry)
     {
         if (entry is not null)
             SelectedEntry = entry;
@@ -586,7 +586,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         await CopilotPlanAsync();
     }
 
-    private async Task ExecuteCopilotImplementAsync(TodoListEntry? entry)
+    internal async Task ExecuteCopilotImplementAsync(TodoListEntry? entry)
     {
         if (entry is not null)
             SelectedEntry = entry;
@@ -594,7 +594,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         await CopilotImplementAsync();
     }
 
-    private async Task RunTodoPromptCommandAsync(
+    internal async Task RunTodoPromptCommandAsync(
         McpTodoFlatItem item,
         string action,
         Func<UiCoreTodoDetailViewModel, CancellationToken, Task> generateAsync)
@@ -797,7 +797,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         return matcher(searchable);
     }
 
-    private async Task LoadTodosCoreAsync(bool forceEditorReload)
+    internal async Task LoadTodosCoreAsync(bool forceEditorReload)
     {
         var previouslySelectedId = SelectedEntry?.Item?.Id;
         var editorTodoId = forceEditorReload ? GetCurrentEditorTodoId() : null;

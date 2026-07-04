@@ -117,6 +117,23 @@ public sealed class HandlerApiDispatchTests
             return substitute;
         }
 
+        if (dependencyType == typeof(IConnectionAuthService))
+        {
+            var sub = Substitute.For<IConnectionAuthService>();
+            sub.TryLogoutAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult(true));
+            sub.TryFetchMcpApiKeyAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult(new ConnectionApiKeyFetchResult { ApiKey = "testkey" }));
+            sub.StartDeviceAuthorizationAsync(Arg.Any<ConnectionAuthConfig>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult(new ConnectionDeviceAuthorizationPrompt { DeviceCode = "dc", UserCode = "uc", VerificationUri = "https://ver", ExpiresInSeconds = 300, PollIntervalSeconds = 5 }));
+            sub.PollForAccessTokenAsync(Arg.Any<ConnectionAuthConfig>(), Arg.Any<ConnectionDeviceAuthorizationPrompt>(), Arg.Any<string>(), Arg.Any<Action<string>>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult(new ConnectionDeviceTokenResult { AccessToken = "at" }));
+            sub.ProbeHealthAndResolveUrlAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult("https://resolved"));
+            dependencySubstitutes.Add(sub);
+            return sub;
+        }
+
         throw new InvalidOperationException($"Unhandled dependency '{dependencyType.FullName}'.");
     }
 

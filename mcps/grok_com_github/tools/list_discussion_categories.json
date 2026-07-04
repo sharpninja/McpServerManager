@@ -6,11 +6,13 @@
     "properties": {
       "owner": {
         "type": "string",
-        "description": "Repository owner"
+        "description": "Repository owner",
+        "x-mcp-header": "owner"
       },
       "repo": {
         "type": "string",
-        "description": "Repository name. If not provided, discussion categories will be queried at the organisation level."
+        "description": "Repository name. If not provided, discussion categories will be queried at the organisation level.",
+        "x-mcp-header": "repo"
       }
     },
     "required": [

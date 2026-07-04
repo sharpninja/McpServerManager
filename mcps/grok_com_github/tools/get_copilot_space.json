@@ -10,7 +10,8 @@
       },
       "owner": {
         "type": "string",
-        "description": "The owner of the space"
+        "description": "The owner of the space",
+        "x-mcp-header": "owner"
       }
     },
     "required": [

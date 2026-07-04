@@ -30,11 +30,13 @@
       },
       "owner": {
         "type": "string",
-        "description": "Repository owner (required for 'add' and 'reply' methods)"
+        "description": "Repository owner (required for 'add' and 'reply' methods)",
+        "x-mcp-header": "owner"
       },
       "repo": {
         "type": "string",
-        "description": "Repository name (required for 'add' and 'reply' methods)"
+        "description": "Repository name (required for 'add' and 'reply' methods)",
+        "x-mcp-header": "repo"
       }
     },
     "required": [

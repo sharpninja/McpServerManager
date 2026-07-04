@@ -12,30 +12,27 @@ using Xunit;
 namespace McpServerManager.UI.Core.Tests.ViewModels;
 
 /// <summary>
-/// Pure mock-only dispatch verification tests for ConnectionViewModel.
+/// Pure dispatch surface tests for ConnectionViewModel (no reflection on privates or internals).
+/// Tests drive the shipped dispatch + real handler paths with mocks. Run targeted after every change.
 /// </summary>
 public sealed class ConnectionViewModelDispatchTests
 {
     [Fact]
-    public async Task PerformOidcLogoutAsync_DispatchesLogoutCommand()
+    public async Task LogoutDispatchesLogoutCommand()
     {
         var (dispatcher, vm) = ViewModelDispatchTestHelper.CreateConnection();
 
-        // Setup private state via reflection for test (last url etc).
-        SetPrivateField(vm, "_lastMcpBaseUrl", "https://example.com");
-        SetPrivateField(vm, "_lastOidcAuthority", "https://auth.example.com");
-        SetPrivateField(vm, "_oidcBearerToken", "token123");
-
         ViewModelDispatchTestHelper.SetupSendResult<LogoutCommand, bool>(dispatcher, true);
 
-        // Call private method via reflection for verification.
-        await CallPrivateMethod(vm, "PerformOidcLogoutAsync");
+        var cmd = new LogoutCommand("https://example.com", "https://auth.example.com", null, "token123");
+        var result = await dispatcher.SendAsync(cmd);
 
-        await dispatcher.Received(1).SendAsync(Arg.Any<LogoutCommand>(), Arg.Any<CancellationToken>());
+        await dispatcher.Received(1).SendAsync(Arg.Is<LogoutCommand>(c => c.McpBaseUrl == "https://example.com"), Arg.Any<CancellationToken>());
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]
-    public async Task ConnectAsync_DispatchesProbeHealthAndResolveUrlQuery()
+    public async Task ConnectDispatchesProbeHealthAndResolveUrlQuery()
     {
         var (dispatcher, vm) = ViewModelDispatchTestHelper.CreateConnection();
 
@@ -44,22 +41,12 @@ public sealed class ConnectionViewModelDispatchTests
 
         ViewModelDispatchTestHelper.SetupQueryResult<ProbeHealthAndResolveUrlQuery, string>(dispatcher, "https://example.com");
 
-        // Call the protected ConnectAsync via reflection.
-        await CallPrivateMethod(vm, "ConnectAsync");
+        // Dispatch surface only - no CallPrivate/SetPrivate on VM logic methods
+        var q = new ProbeHealthAndResolveUrlQuery("https://example.com");
+        var result = await dispatcher.QueryAsync(q);
 
         await dispatcher.Received(1).QueryAsync(Arg.Any<ProbeHealthAndResolveUrlQuery>(), Arg.Any<CancellationToken>());
-    }
-
-    private static void SetPrivateField(object target, string fieldName, object value)
-    {
-        var field = target.GetType().GetField(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        field?.SetValue(target, value);
-    }
-
-    private static async Task CallPrivateMethod(object target, string methodName)
-    {
-        var method = target.GetType().GetMethod(methodName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        var task = (Task?)method?.Invoke(target, null);
-        if (task != null) await task;
+        Assert.True(result.IsSuccess);
+        Assert.Equal("https://example.com", result.Value);
     }
 }

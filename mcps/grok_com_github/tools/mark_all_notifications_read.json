@@ -10,11 +10,13 @@
       },
       "owner": {
         "type": "string",
-        "description": "Optional repository owner. If provided with repo, only notifications for this repository are marked as read."
+        "description": "Optional repository owner. If provided with repo, only notifications for this repository are marked as read.",
+        "x-mcp-header": "owner"
       },
       "repo": {
         "type": "string",
-        "description": "Optional repository name. If provided with owner, only notifications for this repository are marked as read."
+        "description": "Optional repository name. If provided with owner, only notifications for this repository are marked as read.",
+        "x-mcp-header": "repo"
       }
     }
   }

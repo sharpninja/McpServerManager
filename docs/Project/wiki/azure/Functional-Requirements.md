@@ -49,6 +49,31 @@ Scope: layer-1+
 - [ ] When the cached token is expired, the app deletes it and falls back to the normal login flow.
 - [ ] After identity-server login succeeds in a workspace, the token is saved in workspace-scoped shared auth storage for reuse by other apps.
 
+## FR-E1-001 FR-E1-001
+
+Placeholder requirement backfilled for TODO link FR-E1-001.
+Scope: layer-1+
+
+## FR-E1-002 FR-E1-002
+
+Placeholder requirement backfilled for TODO link FR-E1-002.
+Scope: layer-1+
+
+## FR-E1-003 FR-E1-003
+
+Placeholder requirement backfilled for TODO link FR-E1-003.
+Scope: layer-1+
+
+## FR-E1-004 FR-E1-004
+
+Placeholder requirement backfilled for TODO link FR-E1-004.
+Scope: layer-1+
+
+## FR-E1-005 FR-E1-005
+
+Placeholder requirement backfilled for TODO link FR-E1-005.
+Scope: layer-1+
+
 ## FR-GEN-001 Generate Document Test
 
 FR for document generation test

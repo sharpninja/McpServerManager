@@ -11,7 +11,8 @@
       },
       "owner": {
         "type": "string",
-        "description": "Repository owner"
+        "description": "Repository owner",
+        "x-mcp-header": "owner"
       },
       "page": {
         "type": "number",
@@ -26,7 +27,8 @@
       },
       "repo": {
         "type": "string",
-        "description": "Repository name"
+        "description": "Repository name",
+        "x-mcp-header": "repo"
       },
       "threshold": {
         "type": "number",

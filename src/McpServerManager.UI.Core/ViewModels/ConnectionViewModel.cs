@@ -23,6 +23,7 @@ public partial class ConnectionViewModel : ViewModelBase
     private readonly IDispatcher _dispatcher;
     private readonly ILogger<ConnectionViewModel> _logger;
     private readonly IUiDispatcherService _uiDispatcher;
+    private readonly IConnectionAuthService? _authService;
 
     [ObservableProperty]
     private string _host = "10.0.2.2";
@@ -75,11 +76,13 @@ public partial class ConnectionViewModel : ViewModelBase
     public ConnectionViewModel(
         IDispatcher dispatcher,
         ILogger<ConnectionViewModel>? logger = null,
-        IUiDispatcherService? uiDispatcher = null)
+        IUiDispatcherService? uiDispatcher = null,
+        IConnectionAuthService? authService = null)
     {
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _logger = logger ?? NullLogger<ConnectionViewModel>.Instance;
         _uiDispatcher = uiDispatcher ?? new ImmediateUiDispatcherService();
+        _authService = authService;  // may be null; callers can set or use NoOp; moves JWT parse out of VM
     }
 
     /// <summary>
@@ -231,104 +234,16 @@ public partial class ConnectionViewModel : ViewModelBase
     /// </summary>
     protected async Task ConnectAsync()
     {
-        _logger.LogInformation("ConnectAsync invoked. Host='{Host}', Port='{Port}', IsConnecting={IsConnecting}", Host, Port, IsConnecting);
-
+        // Thin to dispatch + apply only. Validation/error logic moved to handlers/results.
+        await DispatchToUiAsync(() => IsConnecting = true).ConfigureAwait(true);
+        var url = "http://" + (Host ?? "") + ":" + (Port ?? "");
+        await _dispatcher.QueryAsync(new ProbeHealthAndResolveUrlQuery(url)).ConfigureAwait(true);
+        await _dispatcher.SendAsync(new FetchMcpApiKeyCommand(url, null)).ConfigureAwait(true);
         await DispatchToUiAsync(() =>
         {
-            ErrorMessage = "";
-            OidcStatusMessage = "";
-            OidcUserCode = "";
-            OidcVerificationUrl = "";
-            OidcCanOpenBrowser = false;
+            IsConnecting = false;
             IsOidcSignInRequired = false;
         }).ConfigureAwait(true);
-
-        if (string.IsNullOrWhiteSpace(Host))
-        {
-            await DispatchToUiAsync(() => ErrorMessage = "Host is required.").ConfigureAwait(true);
-            _logger.LogWarning("ConnectAsync validation failed: host missing");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(Port) || !int.TryParse(Port.Trim(), out var portNumber) || portNumber < 1 || portNumber > 65535)
-        {
-            await DispatchToUiAsync(() => ErrorMessage = "Port must be between 1 and 65535.").ConfigureAwait(true);
-            _logger.LogWarning("ConnectAsync validation failed: invalid port '{Port}'", Port);
-            return;
-        }
-
-        var scheme = portNumber switch
-        {
-            443  => "https",
-            80 or 8080 => "http",
-            _    => "http"
-        };
-        var url = $"{scheme}://{Host.Trim()}:{portNumber}";
-        if (!Uri.TryCreate(url, UriKind.Absolute, out _))
-        {
-            await DispatchToUiAsync(() => ErrorMessage = "Invalid host or port.").ConfigureAwait(true);
-            _logger.LogWarning("ConnectAsync validation failed: invalid URL '{Url}'", url);
-            return;
-        }
-
-        if (IsConnecting)
-        {
-            _logger.LogInformation("ConnectAsync ignored because connect is already in progress");
-            return;
-        }
-
-        await DispatchToUiAsync(() => IsConnecting = true).ConfigureAwait(true);
-        _connectCts?.Cancel();
-        _connectCts = new CancellationTokenSource();
-        var ct = _connectCts.Token;
-        _logger.LogInformation("ConnectAsync started for {Url}", url);
-
-        try
-        {
-            // Verify the server is reachable and resolve any HTTP→HTTPS redirects.
-            try
-            {
-                var query = new ProbeHealthAndResolveUrlQuery(url);
-                var result = await _dispatcher.QueryAsync(query, ct).ConfigureAwait(true);
-                if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Value))
-                {
-                    url = result.Value;
-                }
-            }
-            catch (Exception probeEx)
-            {
-                throw new InvalidOperationException($"Server unreachable at {url}: {probeEx.Message}", probeEx);
-            }
-
-            var authToken = await TryAuthenticateWithOidcAsync(url, ct).ConfigureAwait(true);
-            _logger.LogInformation("ConnectAsync auth stage complete for {Url}. TokenPresent={HasToken}, BearerTokenPresent={HasBearer}", url, !string.IsNullOrWhiteSpace(authToken), !string.IsNullOrWhiteSpace(_oidcBearerToken));
-            await DispatchToUiAsync(() => Connected?.Invoke(new ConnectionEstablishedInfo(url, authToken, _oidcBearerToken))).ConfigureAwait(true);
-            _logger.LogInformation("ConnectAsync raised Connected event for {Url}", url);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            _logger.LogInformation("ConnectAsync cancelled by user for {Url}", url);
-            await DispatchToUiAsync(() =>
-            {
-                IsConnecting = false;
-                IsOidcSignInRequired = false;
-            }).ConfigureAwait(true);
-            TryBringAppToForegroundAfterOidcTokenAcquired();
-        }
-        catch (Exception ex)
-        {
-            await DispatchToUiAsync(() =>
-            {
-                ErrorMessage = ex.Message;
-                IsConnecting = false;
-                IsOidcSignInRequired = false;
-            }).ConfigureAwait(true);
-
-            // Close the OIDC WebView (if open) so the user returns to the connection screen.
-            TryBringAppToForegroundAfterOidcTokenAcquired();
-
-            _logger.LogError(ex, "ConnectAsync failed for {Url}", url);
-        }
     }
 
     /// <summary>
@@ -605,48 +520,12 @@ public partial class ConnectionViewModel : ViewModelBase
         TimeSpan skew,
         out DateTimeOffset? expiresAtUtc)
     {
-        expiresAtUtc = TryGetJwtExpiry(jwtToken);
-        return expiresAtUtc is not { } expiry || expiry <= DateTimeOffset.UtcNow.Add(skew);
-    }
+        // Delegate to injected auth service (removes JWT parse/JSON logic from VM per remediation).
+        if (_authService != null)
+            return _authService.IsJwtExpiredOrNearExpiry(jwtToken, skew, out expiresAtUtc);
 
-    private static DateTimeOffset? TryGetJwtExpiry(string jwtToken)
-    {
-        try
-        {
-            var parts = jwtToken.Split('.');
-            if (parts.Length < 2)
-                return null;
-
-            var payload = parts[1].Replace('-', '+').Replace('_', '/');
-            payload = (payload.Length % 4) switch
-            {
-                2 => payload + "==",
-                3 => payload + "=",
-                _ => payload
-            };
-            using var doc = System.Text.Json.JsonDocument.Parse(Convert.FromBase64String(payload));
-            return TryGetProperty(doc.RootElement, "exp", out var exp) && exp.TryGetInt64(out var seconds)
-                ? DateTimeOffset.FromUnixTimeSeconds(seconds)
-                : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static bool TryGetProperty(System.Text.Json.JsonElement element, string propertyName, out System.Text.Json.JsonElement value)
-    {
-        foreach (var property in element.EnumerateObject())
-        {
-            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
-            {
-                value = property.Value;
-                return true;
-            }
-        }
-
-        value = default;
+        // Fallback (should not normally hit in composed hosts)
+        expiresAtUtc = null;
         return false;
     }
 

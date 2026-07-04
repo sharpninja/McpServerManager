@@ -10,7 +10,8 @@
       },
       "owner": {
         "type": "string",
-        "description": "The owner of the repository."
+        "description": "The owner of the repository.",
+        "x-mcp-header": "owner"
       },
       "perPage": {
         "type": "number",
@@ -20,7 +21,8 @@
       },
       "repo": {
         "type": "string",
-        "description": "The name of the repository."
+        "description": "The name of the repository.",
+        "x-mcp-header": "repo"
       },
       "severity": {
         "type": "string",

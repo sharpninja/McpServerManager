@@ -31,8 +31,8 @@ public partial class ChatWindowViewModel : McpServerManager.UI.Core.ViewModels.C
         OpenPromptTemplatesCommand = new CqrsRelayCommand<CoreChatFileOpenResult>(_dispatcher, () => new ChatOpenPromptTemplatesCommand());
     }
 
-    /// <summary>Parameterless constructor for design-time only.</summary>
-    public ChatWindowViewModel() : this(ChatWindowViewModelFactory.CreateFallbackDispatcher(new OllamaLogAgentService()), () => string.Empty, null, null)
+    /// <summary>Parameterless constructor for design-time only. Real service creation moved out (no construction in VM ctor).</summary>
+    public ChatWindowViewModel() : this(ChatWindowViewModelFactory.CreateFallbackDispatcher(null), () => string.Empty, null, null)
     {
     }
 

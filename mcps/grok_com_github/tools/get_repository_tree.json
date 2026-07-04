@@ -6,7 +6,8 @@
     "properties": {
       "owner": {
         "type": "string",
-        "description": "Repository owner (username or organization)"
+        "description": "Repository owner (username or organization)",
+        "x-mcp-header": "owner"
       },
       "path_filter": {
         "type": "string",
@@ -19,7 +20,8 @@
       },
       "repo": {
         "type": "string",
-        "description": "Repository name"
+        "description": "Repository name",
+        "x-mcp-header": "repo"
       },
       "tree_sha": {
         "type": "string",

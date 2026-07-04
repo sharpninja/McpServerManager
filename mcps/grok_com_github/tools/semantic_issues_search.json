@@ -14,7 +14,8 @@
       },
       "owner": {
         "type": "string",
-        "description": "Repository owner. Required if `repo` is specified."
+        "description": "Repository owner. Required if `repo` is specified.",
+        "x-mcp-header": "owner"
       },
       "page": {
         "type": "number",
@@ -27,7 +28,8 @@
       },
       "repo": {
         "type": "string",
-        "description": "Repository name. Required if `owner` is specified."
+        "description": "Repository name. Required if `owner` is specified.",
+        "x-mcp-header": "repo"
       },
       "sort": {
         "type": "string",

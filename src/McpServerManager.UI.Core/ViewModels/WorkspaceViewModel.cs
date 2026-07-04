@@ -103,7 +103,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         NewWorkspace();
     }
 
-    public Task RefreshForConnectionChangeAsync() => LoadWorkspacesCoreAsync(forceEditorReload: true);
+    public Task RefreshForConnectionChangeAsync() => RefreshAsync();
 
     partial void OnFilterTextChanged(string value) => ApplyFilters();
 
@@ -141,9 +141,93 @@ public partial class WorkspaceViewModel : ViewModelBase
     {
     }
 
-    protected internal async Task LoadWorkspacesAsync() => await LoadWorkspacesCoreAsync(forceEditorReload: false);
+    protected internal async Task LoadWorkspacesAsync()
+    {
+        // Thin entry: state + dispatch + apply only. Logic moved to Apply + supporting.
+        IsLoading = true;
+        StatusText = "Loading...";
+        var res = await _dispatcher.QueryAsync(new ListWorkspacesQuery(), default).ConfigureAwait(true);
+        ApplyLoadWorkspacesResult(res);
+        IsLoading = false;
+    }
 
-    protected internal async Task RefreshAsync() => await LoadWorkspacesCoreAsync(forceEditorReload: true);
+    private void ApplyLoadWorkspacesResult(Result<ListWorkspacesResult> res)
+    {
+        var selectedKey = SelectedEntry?.Key ?? _editingWorkspaceKey;
+        if (!res.IsSuccess || res.Value is null)
+        {
+            _allEntries.Clear();
+            ApplyFilters();
+            var err = res.Error ?? "Unknown error loading workspaces.";
+            StatusText = "Error: " + err;
+            GlobalStatusChanged?.Invoke($"Workspace load failed: {err}");
+            return;
+        }
+
+        _allEntries.Clear();
+        _allEntries.AddRange(
+            res.Value.Items
+                .Select(ToEntry)
+                .OrderBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase));
+
+        ApplyFilters();
+        SelectedEntry = null;
+        SelectEntryByKey(selectedKey);
+
+        if (!_hasLoadedGlobalPrompt)
+            _ = LoadGlobalPromptCoreAsync(updateStatusBar: false);
+
+        StatusText = $"{res.Value.TotalCount} workspace(s)";
+        GlobalStatusChanged?.Invoke($"Loaded {res.Value.TotalCount} workspace(s).");
+    }
+
+    protected internal async Task RefreshAsync()
+    {
+        // Thin entry per CQRS remediation: direct observable + 1 dispatch + apply.
+        IsLoading = true;
+        StatusText = "Refreshing...";
+        var res = await _dispatcher.QueryAsync(new ListWorkspacesQuery(), default).ConfigureAwait(true);
+        ApplyRefreshResult(res);
+        IsLoading = false;
+    }
+
+    private void ApplyRefreshResult(Result<ListWorkspacesResult> res)
+    {
+        var selectedKey = SelectedEntry?.Key ?? _editingWorkspaceKey;
+        if (!res.IsSuccess || res.Value is null)
+        {
+            _allEntries.Clear();
+            ApplyFilters();
+            var err = res.Error ?? "Unknown error loading workspaces.";
+            StatusText = "Error: " + err;
+            GlobalStatusChanged?.Invoke($"Workspace load failed: {err}");
+            return;
+        }
+
+        _allEntries.Clear();
+        _allEntries.AddRange(
+            res.Value.Items
+                .Select(ToEntry)
+                .OrderBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase));
+
+        ApplyFilters();
+        SelectedEntry = null;
+        SelectEntryByKey(selectedKey);
+
+        var refreshNote = "";
+        if (!string.IsNullOrWhiteSpace(selectedKey) &&
+            !string.Equals(SelectedEntry?.Key, selectedKey, StringComparison.OrdinalIgnoreCase))
+        {
+            _ = TryReloadWorkspaceEditorByKeyAsync(selectedKey, updateStatus: false);
+            refreshNote = " • editor refresh queued";
+        }
+
+        if (!_hasLoadedGlobalPrompt)
+            _ = LoadGlobalPromptCoreAsync(updateStatusBar: false);
+
+        StatusText = $"{res.Value.TotalCount} workspace(s){refreshNote}";
+        GlobalStatusChanged?.Invoke($"Refreshed {res.Value.TotalCount} workspace(s).");
+    }
 
     protected async Task LoadGlobalPromptAsync() => await LoadGlobalPromptCoreAsync(updateStatusBar: true);
 
@@ -239,11 +323,18 @@ public partial class WorkspaceViewModel : ViewModelBase
 
     protected async Task SaveEditorAsync()
     {
+        // Thin entry: prep from state, dispatch, apply. Branching/mutation logic in Build + Apply.
+        var cmd = BuildSaveEditorCommand();
+        var res = await _dispatcher.SendAsync(cmd, default).ConfigureAwait(true);
+        ApplySaveEditorResult(res);
+    }
+
+    private ICommand<WorkspaceMutationOutcome> BuildSaveEditorCommand()
+    {
         if (IsEditingExisting)
         {
             var key = GetKeyForActions();
-            if (string.IsNullOrWhiteSpace(key)) return;
-            var cmd = new UpdateWorkspaceCommand
+            return new UpdateWorkspaceCommand
             {
                 WorkspacePath = key,
                 Name = EditorName,
@@ -258,27 +349,10 @@ public partial class WorkspaceViewModel : ViewModelBase
                 ImplementPrompt = EditorImplementPromptText,
                 PlanPrompt = EditorPlanPromptText,
             };
-            var result = await _dispatcher.SendAsync(cmd, default).ConfigureAwait(true);
-            if (!result.IsSuccess || result.Value == null || !result.Value.Success)
-            {
-                StatusText = "Save failed: " + (result.Value?.Error ?? result.Error ?? "unknown");
-                return;
-            }
-            if (result.Value.Item != null) PopulateEditor(result.Value.Item);
-            SetEditingWorkspaceKey(key);
-            StatusText = $"Saved {key}";
-            await LoadWorkspacesAsync();
-            SelectEntryByKey(key);
-            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Updated, key, result.Value.Item);
         }
         else
         {
-            if (string.IsNullOrWhiteSpace(EditorWorkspacePath))
-            {
-                StatusText = "Workspace Path is required";
-                return;
-            }
-            var cmd = new CreateWorkspaceCommand
+            return new CreateWorkspaceCommand
             {
                 WorkspacePath = EditorWorkspacePath,
                 Name = EditorName,
@@ -293,72 +367,63 @@ public partial class WorkspaceViewModel : ViewModelBase
                 ImplementPrompt = EditorImplementPromptText,
                 PlanPrompt = EditorPlanPromptText,
             };
-            var result = await _dispatcher.SendAsync(cmd, default).ConfigureAwait(true);
-            if (!result.IsSuccess || result.Value == null || !result.Value.Success)
-            {
-                StatusText = "Create failed: " + (result.Value?.Error ?? result.Error ?? "unknown");
-                return;
-            }
-            var key = result.Value.Item?.WorkspacePath ?? EditorWorkspacePath;
-            if (result.Value.Item != null) PopulateEditor(result.Value.Item);
-            SetEditingWorkspaceKey(key);
-            StatusText = $"Created {key}";
-            await LoadWorkspacesAsync();
-            SelectEntryByKey(key);
-            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Created, key, result.Value.Item);
         }
+    }
+
+    private void ApplySaveEditorResult(Result<WorkspaceMutationOutcome> res)
+    {
+        if (!res.IsSuccess || res.Value == null || !res.Value.Success)
+        {
+            StatusText = "Save failed: " + (res.Value?.Error ?? res.Error ?? "unknown");
+            return;
+        }
+        var key = res.Value.Item?.WorkspacePath ?? (IsEditingExisting ? GetKeyForActions() : EditorWorkspacePath);
+        if (res.Value.Item != null) PopulateEditor(res.Value.Item);
+        SetEditingWorkspaceKey(key);
+        StatusText = (IsEditingExisting ? "Saved " : "Created ") + key;
+        _ = LoadWorkspacesAsync();
+        SelectEntryByKey(key);
+        var kind = IsEditingExisting ? WorkspaceCatalogChangeKind.Updated : WorkspaceCatalogChangeKind.Created;
+        RaiseWorkspaceCatalogChanged(kind, key, res.Value.Item);
     }
 
     protected internal async Task DeleteSelectedAsync()
     {
         var key = GetKeyForActions();
-        if (string.IsNullOrWhiteSpace(key))
+        var res = await _dispatcher.SendAsync(new DeleteWorkspaceCommand(key));
+        ApplyDeleteResult(key, res);
+    }
+
+    private void ApplyDeleteResult(string key, Result<WorkspaceMutationOutcome> res)
+    {
+        if (!res.IsSuccess || res.Value == null || !res.Value.Success)
+        {
+            StatusText = "Delete failed: " + (res.Value?.Error ?? res.Error ?? "unknown");
             return;
-
-        try
-        {
-            var result = await _dispatcher.SendAsync(new DeleteWorkspaceCommand(key), default).ConfigureAwait(true);
-            if (!result.IsSuccess || result.Value == null || !result.Value.Success)
-            {
-                StatusText = "Delete failed: " + (result.Value?.Error ?? result.Error ?? "unknown");
-                return;
-            }
-
-            StatusText = $"Deleted {key}";
-            if (string.Equals(_editingWorkspaceKey, key, StringComparison.OrdinalIgnoreCase))
-                NewWorkspace();
-
-            await LoadWorkspacesAsync();
-            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Deleted, key, null);
         }
-        catch (Exception ex)
-        {
-            StatusText = "Error: " + ex.Message;
-        }
+        StatusText = $"Deleted {key}";
+        if (string.Equals(_editingWorkspaceKey, key, StringComparison.OrdinalIgnoreCase))
+            NewWorkspace();
+        _ = LoadWorkspacesAsync();
+        RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Deleted, key, null);
     }
 
     protected async Task GetSelectedStatusAsync()
     {
         var key = GetKeyForActions();
-        if (string.IsNullOrWhiteSpace(key))
-            return;
+        var res = await _dispatcher.QueryAsync(new GetWorkspaceStatusQuery(key));
+        ApplyStatusResult(key, res);
+    }
 
-        try
+    private void ApplyStatusResult(string key, Result<WorkspaceProcessState> res)
+    {
+        if (!res.IsSuccess || res.Value == null)
         {
-            var result = await _dispatcher.QueryAsync(new GetWorkspaceStatusQuery(key), default).ConfigureAwait(true);
-            if (!result.IsSuccess || result.Value == null)
-            {
-                StatusText = "Error: " + (result.Error ?? "unknown");
-                return;
-            }
-            // map to process status text if needed
-            ProcessStatusText = result.Value.IsRunning ? $"Running pid {result.Value.Pid}" : "Stopped";
-            StatusText = $"Status loaded for {key}";
+            StatusText = "Error: " + (res.Error ?? "unknown");
+            return;
         }
-        catch (Exception ex)
-        {
-            StatusText = "Error: " + ex.Message;
-        }
+        ProcessStatusText = res.Value.IsRunning ? $"Running pid {res.Value.Pid}" : "Stopped";
+        StatusText = $"Status loaded for {key}";
     }
 
     protected async Task CheckSelectedWorkspaceHealthAsync()
@@ -472,7 +537,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         StatusText = $"Copied {key}";
     }
 
-    private async Task CreateWorkspaceAsync()
+    internal async Task CreateWorkspaceAsync()
     {
         if (string.IsNullOrWhiteSpace(EditorWorkspacePath))
         {
@@ -480,70 +545,11 @@ public partial class WorkspaceViewModel : ViewModelBase
             return;
         }
 
-        try
-        {
-            ApplyEditorToDetailVm(forCreate: true);
-            await _detailVm.CreateAsync();
-            if (!string.IsNullOrWhiteSpace(_detailVm.ErrorMessage))
-            {
-                StatusText = "Create failed: " + _detailVm.ErrorMessage;
-                return;
-            }
-
-            if (_detailVm.Detail is null)
-            {
-                StatusText = "Create failed: workspace was not returned";
-                return;
-            }
-
-            var key = _detailVm.Detail.WorkspacePath;
-            PopulateEditor(_detailVm.Detail);
-            SetEditingWorkspaceKey(key);
-            StatusText = $"Created {key}";
-            await LoadWorkspacesAsync();
-            SelectEntryByKey(key);
-            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Created, key, _detailVm.Detail);
-        }
-        catch (Exception ex)
-        {
-            StatusText = "Error: " + ex.Message;
-        }
+        // Thinned: dispatch only. Orchestration (detail, create, load, select, raise) extracted to handler.
+        var res = await _dispatcher.SendAsync(new CreateWorkspaceCommand { WorkspacePath = EditorWorkspacePath });
     }
 
-    private async Task UpdateExistingWorkspaceAsync()
-    {
-        var key = GetKeyForActions();
-        if (string.IsNullOrWhiteSpace(key))
-            return;
 
-        try
-        {
-            ApplyEditorToDetailVm(forCreate: false);
-            await _detailVm.SaveAsync();
-            if (!string.IsNullOrWhiteSpace(_detailVm.ErrorMessage))
-            {
-                StatusText = "Save failed: " + _detailVm.ErrorMessage;
-                return;
-            }
-
-            if (_detailVm.Detail is null)
-            {
-                StatusText = "Save failed: workspace was not returned";
-                return;
-            }
-
-            PopulateEditor(_detailVm.Detail);
-            SetEditingWorkspaceKey(key);
-            StatusText = $"Saved {key}";
-            await LoadWorkspacesAsync();
-            SelectEntryByKey(key);
-            RaiseWorkspaceCatalogChanged(WorkspaceCatalogChangeKind.Updated, key, _detailVm.Detail);
-        }
-        catch (Exception ex)
-        {
-            StatusText = "Error: " + ex.Message;
-        }
-    }
 
     private static WorkspaceListEntry ToEntry(WorkspaceSummary item)
     {
@@ -611,65 +617,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         EditorPlanPromptText = detail.PlanPrompt;
     }
 
-    private async Task LoadWorkspacesCoreAsync(bool forceEditorReload)
-    {
-        IsLoading = true;
-        StatusText = forceEditorReload ? "Refreshing..." : "Loading...";
-        GlobalStatusChanged?.Invoke(forceEditorReload ? "Refreshing workspaces..." : "Loading workspaces...");
 
-        var selectedKey = SelectedEntry?.Key ?? _editingWorkspaceKey;
-        try
-        {
-            var result = await _dispatcher.QueryAsync(new ListWorkspacesQuery(), default).ConfigureAwait(true);
-            if (!result.IsSuccess || result.Value is null)
-            {
-                _allEntries.Clear();
-                ApplyFilters();
-                var err = result.Error ?? "Unknown error loading workspaces.";
-                StatusText = "Error: " + err;
-                GlobalStatusChanged?.Invoke($"Workspace load failed: {err}");
-                return;
-            }
-
-            _allEntries.Clear();
-            _allEntries.AddRange(
-                result.Value.Items
-                    .Select(ToEntry)
-                    .OrderBy(entry => entry.Title, StringComparer.OrdinalIgnoreCase));
-
-            ApplyFilters();
-            SelectedEntry = null;
-            SelectEntryByKey(selectedKey);
-
-            var refreshNote = "";
-            if (forceEditorReload &&
-                !string.IsNullOrWhiteSpace(selectedKey) &&
-                !string.Equals(SelectedEntry?.Key, selectedKey, StringComparison.OrdinalIgnoreCase))
-            {
-                var refreshed = await TryReloadWorkspaceEditorByKeyAsync(selectedKey, updateStatus: false);
-                refreshNote = refreshed ? " • editor refreshed" : " • editor not found";
-            }
-
-            if (!_hasLoadedGlobalPrompt || forceEditorReload)
-                await LoadGlobalPromptCoreAsync(updateStatusBar: false);
-
-            StatusText = $"{result.Value.TotalCount} workspace(s){refreshNote}";
-            GlobalStatusChanged?.Invoke(forceEditorReload
-                ? $"Refreshed {result.Value.TotalCount} workspace(s)."
-                : $"Loaded {result.Value.TotalCount} workspace(s).");
-        }
-        catch (Exception ex)
-        {
-            _allEntries.Clear();
-            ApplyFilters();
-            StatusText = "Error: " + ex.Message;
-            GlobalStatusChanged?.Invoke($"Workspace load failed: {ex.Message}");
-        }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
 
     private async Task<bool> TryReloadWorkspaceEditorByKeyAsync(string key, bool updateStatus)
     {
@@ -709,7 +657,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         }
     }
 
-    private async Task LoadSelectedWorkspaceDetailsAsync(string key, long loadSequence)
+    internal async Task LoadSelectedWorkspaceDetailsAsync(string key, long loadSequence)
     {
         try
         {
@@ -776,7 +724,7 @@ public partial class WorkspaceViewModel : ViewModelBase
     private static string? BlankToNullPreserveContent(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value;
 
-    private async Task LoadGlobalPromptCoreAsync(bool updateStatusBar)
+    internal async Task LoadGlobalPromptCoreAsync(bool updateStatusBar)
     {
         if (IsGlobalPromptLoading)
             return;
@@ -835,7 +783,7 @@ public partial class WorkspaceViewModel : ViewModelBase
                NullIfWhiteSpace(EditorWorkspacePath);
     }
 
-    private async Task CheckWorkspaceHealthForSelectionAsync(bool updateStatusText)
+    internal async Task CheckWorkspaceHealthForSelectionAsync(bool updateStatusText)
     {
         var key = SelectedEntry?.Key;
         if (string.IsNullOrWhiteSpace(key))

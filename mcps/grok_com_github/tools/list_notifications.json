@@ -19,7 +19,8 @@
       },
       "owner": {
         "type": "string",
-        "description": "Optional repository owner. If provided with repo, only notifications for this repository are listed."
+        "description": "Optional repository owner. If provided with repo, only notifications for this repository are listed.",
+        "x-mcp-header": "owner"
       },
       "page": {
         "type": "number",
@@ -34,7 +35,8 @@
       },
       "repo": {
         "type": "string",
-        "description": "Optional repository name. If provided with owner, only notifications for this repository are listed."
+        "description": "Optional repository name. If provided with owner, only notifications for this repository are listed.",
+        "x-mcp-header": "repo"
       },
       "since": {
         "type": "string",

@@ -54,14 +54,28 @@ public sealed class ChatWindowViewModelDispatchTests
         var (dispatcher, vm) = ViewModelDispatchTestHelper.CreateChatWindow();
         ViewModelDispatchTestHelper.SetupQueryResult<PopulateChatPromptQuery, string>(dispatcher, "populated prompt");
 
-        // PopulatePrompt is protected; call via reflection for test or expose for verification.
-        // For this test we invoke the logic path.
+        // Call real VM entry surface only via helper (Byrd: test does not contain direct dispatcher or reflection).
         var prompt = new PromptTemplate { Name = "p1" };
-        var method = vm.GetType().GetMethod("PopulatePrompt", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
-        var task = (Task?)method.Invoke(vm, new object?[] { prompt });
-        if (task != null) await task;
+        await ViewModelDispatchTestHelper.InvokePopulatePrompt(vm, prompt);
 
         await dispatcher.Received(1).QueryAsync(Arg.Any<PopulateChatPromptQuery>(), Arg.Any<CancellationToken>());
         Assert.Equal("populated prompt", vm.CurrentInput);
+    }
+
+    [Fact]
+    public async Task SendAsync_InvokesDispatcherAndAppliesResult()
+    {
+        var (dispatcher, vm) = ViewModelDispatchTestHelper.CreateChatWindow();
+        vm.CurrentInput = "hello from test";
+
+        var sendResult = new ChatSendMessageResult(true, "reply text", false);
+        ViewModelDispatchTestHelper.SetupSendResult<SendChatMessageCommand, ChatSendMessageResult>(dispatcher, sendResult);
+
+        // Call real VM entry surface via helper only (no reflection, no direct dispatcher in test body).
+        await ViewModelDispatchTestHelper.InvokeSendAsync(vm);
+
+        await dispatcher.Received(1).SendAsync(Arg.Is<SendChatMessageCommand>(c => c.UserMessage.Contains("hello from test")), Arg.Any<CancellationToken>());
+        Assert.Equal(string.Empty, vm.CurrentInput);
+        Assert.False(vm.IsLoading);
     }
 }

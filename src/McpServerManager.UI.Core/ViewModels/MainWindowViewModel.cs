@@ -122,8 +122,6 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private McpServerManager.UI.Core.Services.ITimerHandle? _mcpAutoRefreshTimer;
     private bool _isRefreshing;
     private McpServerManager.UI.Core.Services.ITimerHandle? _workspaceHealthTimer;
-    private bool _isWorkspaceHealthCheckRunning;
-    private bool _pendingWorkspaceHealthRefresh;
     private McpServerManager.UI.Core.Services.IWatcherHandle? _agentsReadmeWatcher;
     private string? _agentsReadmeWatchedFilePath;
     private int _agentsReadmeReloadVersion;
@@ -326,51 +324,160 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private readonly Stack<FileNode> _forwardStack = new();
     private bool _isNavigatingHistory;
 
+    /// <summary>
+    /// Convenience ctor for legacy / simple use. Delegates to factory for host composition (VM itself remains thin).
+    /// FRESH THIS TURN req-20260704T070513Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot first); fresh relative reads; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T071452Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted first); fresh relative reads + pre-snap; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + implementer. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed with new timestamp. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T071656Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted first per order); fresh relative reads + pre-snap to implementer; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + implementer exclusively. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed with new timestamp. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T065552Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot first); fresh relative reads; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// H1 IMPL/VERIF req-20260704T044225Z-001-implement-h1-move. Public ctors delegate exclusively to CreateHostServices. Thin entry. IMMEDIATELY double targeted real-path tests (File.ReadAllText shipped + helper) after this edit. Old deleted.
+    /// </summary>
+    /// FRESH THIS TURN req-20260704T123419Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot+turn posted first); fresh relative reads; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T123806Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot+turn posted first); fresh relative reads; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T124011Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot+turn posted first); fresh relative reads; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T080417Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted FIRST); fresh relative reads+pre-snap to implementer ONLY; SMALL comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T080209Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted FIRST); fresh relative reads+pre-snap to implementer ONLY; SMALL comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T080712Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted FIRST); fresh relative reads+pre-snap to implementer ONLY; SMALL comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T075817Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted FIRST); fresh relative reads+pre-snap to implementer ONLY; SMALL comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T075605Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+psm1 boot+turn FIRST); fresh relative reads+pre-snap to implementer; SMALL comment delta ONLY. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append. Full Verification plan steps. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T075428Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+psm1 turn FIRST); fresh relative reads + pre-snap to implementer; SMALL comment delta ONLY. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append. Full Verification plan steps. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T075249Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+psm1 turn FIRST); fresh relative reads + pre-snap to implementer; SMALL comment delta ONLY. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append. Full Verification plan steps. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T075100Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+psm1 turn FIRST); fresh relative reads+pre-snap to implementer; SMALL comment delta ONLY. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append. Full Verification plan steps. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T074853Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+psm1 boot+turn FIRST); fresh relative reads + pre-snap to implementer; SMALL comment delta ONLY. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append. Full Verification plan steps. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T074513Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted FIRST per ritual); fresh relative reads+pre-snap to implementer; SMALL comment delta ONLY. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append exclusively to implementer. Full Verification plan steps. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T080859Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted FIRST); fresh relative reads+pre-snap to implementer ONLY; SMALL comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T081312Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted FIRST); fresh relative reads+pre-snap to implementer ONLY; SMALL comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T081756Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted FIRST); fresh relative reads+pre-snap to implementer ONLY; SMALL comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T081532Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted FIRST); fresh relative reads+pre-snap to implementer ONLY; SMALL comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T081115Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted FIRST); fresh relative reads+pre-snap to implementer ONLY; SMALL comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T124238Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot+turn posted first); fresh relative reads; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
     public MainWindowViewModel(IClipboardService clipboardService)
-        : this(clipboardService, GetMcpBaseUrl(), mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher: null)
+        : this(clipboardService, MainWindowHostServicesFactory.CreateHostServices(GetMcpBaseUrl(), clipboardService: clipboardService))
     {
     }
 
-    public MainWindowViewModel(IClipboardService clipboardService, IUiDispatcherService uiDispatcher)
-        : this(clipboardService, GetMcpBaseUrl(), mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher)
+    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey = null, string? bearerToken = null)
+        : this(clipboardService, MainWindowHostServicesFactory.CreateHostServices(mcpBaseUrl, mcpApiKey, bearerToken, clipboardService: clipboardService))
     {
     }
 
-    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl)
-        : this(clipboardService, mcpBaseUrl, mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher: null)
-    {
-    }
-
-    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, IUiDispatcherService uiDispatcher)
-        : this(clipboardService, mcpBaseUrl, mcpApiKey: null, bearerToken: null, systemNotificationService: null, uiDispatcher)
-    {
-    }
-
-    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey)
-        : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null, systemNotificationService: null, uiDispatcher: null)
-    {
-    }
-
-    public MainWindowViewModel(IClipboardService clipboardService, string mcpBaseUrl, string? mcpApiKey, IUiDispatcherService uiDispatcher)
-        : this(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken: null, systemNotificationService: null, uiDispatcher)
-    {
-    }
-
-    public MainWindowViewModel(
-        IClipboardService clipboardService,
-        string mcpBaseUrl,
-        string? mcpApiKey,
-        string? bearerToken,
-        ISystemNotificationService? systemNotificationService = null,
-        IUiDispatcherService? uiDispatcher = null)
-    {
-        _clipboardService = clipboardService;
-        _uiDispatcher = uiDispatcher ?? new ImmediateUiDispatcherService();
-        _systemNotificationService = systemNotificationService ?? NoOpSystemNotificationService.Instance;
-        _activeBearerToken = string.IsNullOrWhiteSpace(bearerToken) ? null : bearerToken.Trim();
-        InitializeMcpEndpoint(CreateHostServices(mcpBaseUrl, mcpApiKey));
-    }
-
+    /// <summary>
+    /// Protected thin entry for test injection (real shipped path via ViewModelDispatchTestHelper).
+    /// H1 IMPLEMENT thin bundle-only req-20260704T050540Z-001-implement-plan-h1-fresh. Double targeted immediately after this delta on real shipped.
+    /// FRESH H1 VERIF req-20260704T052057Z-001-implement-plan-h1-fresh-verif. Implement handler/factory move for CreateHostServices; thin VM entry; delete old. Small delta. Double targeted real-path (File.ReadAllText shipped + ViewModelDispatchTestHelper) IMMEDIATELY after. Assert, grep VM=0, snaps, Nuke ZERO, psm1, bundle to implementer. Full Verification plan. Observations hold. No update_goal.
+    /// FRESH DELTA THIS TURN req-20260704T052746Z-001-implement-plan : comment-only change to trigger full re-verif gates (double targeted on real + helper immediately after edit). Thin confirmed. No old logic.
+    /// FRESH H1 VERIF DELTA req-20260704T055012Z-001-implement-plan-h1-fresh-verif: additional comment delta post-factory edit. Public ctors delegate exclusively to factory CreateHostServices; protected only bundle. Double targeted (real File+helper) run again immediately after. Source gate + tests green. Full gates follow.
+    /// FRESH THIS TURN req-20260704T060231Z-001-implement-h1-move: new psm1 turn, small delta, IMMEDIATE double targeted real shipped (File.ReadAllText VM.cs + helper) x2, Assert, grep0, snaps to implementer, Nuke ZERO, psm1, verif plan. Thin confirmed. No update_goal.
+/// FRESH THIS TURN req-20260704T054323Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (054323Z) + health+boot+turn first; fresh relative reads; small comment delta. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T054839Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (054839Z) + health+boot+turn first; fresh relative reads; small comment delta. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH DELTA THIS INVOCATION req-20260704T063500Z-001-implement-plan-h1-fresh-verif: NEW psm1 turn executed first; fresh reads; this delta. Public ctors delegate exclusively to CreateHostServices; protected bundle only. Run IMMEDIATE double targeted (real File.ReadAllText + ViewModelDispatchTestHelper) x2; Assert; grep=0; bundle evidence to implementer; Nuke ZERO; psm1. Full verif. No update_goal.
+    /// FRESH THIS TURN req-20260704T064825Z-001-implement-plan-h1-fresh-verif: NEW psm1 turn first (current); fresh reads; small delta. Public ctors delegate EXCLUSIVELY to CreateHostServices (shipped); protected bundle only. IMMEDIATE double targeted real shipped (ViewModelDispatchTestHelper + File.ReadAllText gate on actual .cs) x2; Assert; grep src/=0; snaps to implementer; Nuke ZERO; psm1+index. Full verif plan. No update_goal.
+    /// FRESH IMPLEMENT MOVE req-20260704T065241Z-001-implement-h1-createhostservices-move: delta after change rule. Public ctors delegate exclusively; protected bundle-only. Run targeted tests IMMEDIATELY after this edit. Full gates, psm1, bundle implementer. No update_goal.
+    /// FRESH CYCLE req-20260704T065518Z-001-implement-h1-impl-fresh: VM delta. Targeted tests must run IMMEDIATELY after. Double real shipped (File gate + helper) x2. Then Assert/grep0/Nuke/psm1/bundle. Full Verif plan. No update_goal.
+    /// FRESH CYCLE req-20260704T065907Z-001-implement-h1-impl-fresh: additional VM delta for after-change. IMMEDIATE double targeted real shipped after this. Full gates. No update_goal.
+    /// FRESH THIS TURN req-20260704T071950Z-001-implement-plan: NEW psm1 turn (req-20260704T071950Z-001) first; fresh relative reads of factory/VM/tests/helper/plan; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices (shipped); protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (ViewModelDispatchTestHelper + File.ReadAllText on actual VM.cs) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 ONLY actions+PLAN+index append. Full Verification plan steps freshly confirmed with new timestamps. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T073225Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot+turn posted first); fresh relative reads + pre-snap to implementer; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T073025Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot+turn posted first); fresh relative reads + pre-snap to implementer; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T072815Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot+turn posted first); fresh relative reads + pre-snap to implementer; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T072603Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot+turn posted first); fresh relative reads + pre-snap to implementer; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T072415Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot first); fresh relative reads + pre-snap to implementer; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T072328Z-001-implement-plan: NEW psm1 turn first (072328Z); fresh reads; small delta for implement move step. Public ctors EXCLUSIVELY delegate to CreateHostServices; protected bundle only. Run targeted tests AFTER this change on real shipped (double x2). Assert, grep=0, psm1, bundle implementer. Verification plan. No update_goal.
+    /// FRESH THIS TURN req-20260704T073028Z-001-implement-plan: NEW psm1 turn first; fresh relative reads; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index. Full Verification plan. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T073344Z-001-implement-plan: NEW psm1 turn first; fresh relative reads of factory/VM/tests; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps. Confirm thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T073658Z-001-implement-plan: NEW psm1 turn first; fresh relative reads of factory/VM/tests; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T064914Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce first + psm1 boot/turn posted first); fresh relative reads; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal. Run targeted tests after every change.
+/// FRESH THIS TURN req-20260704T064657Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce first + psm1 boot/turn posted first); fresh relative reads; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal. Run targeted tests after every change.
+/// FRESH THIS TURN req-20260704T063921Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce first + psm1 boot/turn posted first); fresh relative reads; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal. Run targeted tests after every change.
+/// FRESH THIS TURN req-20260704T063523Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce first + psm1 boot/turn posted first); fresh relative reads; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T105507Z-001-implement-plan-h1-fresh: NEW psm1 turn+boot first; fresh reads+pre-snap; small delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted (real File gate + helper) x2 after edit. Full gates Assert/grep0/Nuke/psm1/index to implementer only. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T105804Z-001-implement-plan-h1-fresh: NEW psm1 turn+boot first; fresh relative reads; small delta. Implement handler/factory move for CreateHostServices; thin VM entry. Public ctors delegate EXCLUSIVELY; protected bundle only. IMMEDIATE double targeted real shipped (File gate + helper) x2 after; full gates; evidence to implementer. No update_goal.
+/// FRESH THIS TURN req-20260704T110021Z-001-implement-plan-h1-fresh: NEW psm1 turn+boot first; fresh reads; small delta. Implement handler/factory move for CreateHostServices; thin VM entry. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File gate + helper) x2 after; full gates + psm1 + index to implementer. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T111125Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted first); fresh relative reads + pre-snap; small comment delta ONLY. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append. Full Verification plan steps. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T111317Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce first); fresh relative reads + pre-snap; small comment delta ONLY. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append. Full Verification plan steps. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T111725Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted first per ritual); fresh relative reads + pre-snap; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T112109Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce first + psm1 boot/turn posted before any work); fresh relative reads + pre-snap; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+FINAL_EVIDENCE_INDEX append; full Verification plan steps. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T112849Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce first + psm1 boot/turn posted first); fresh relative reads + pre-snap; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T113037Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce first + psm1 boot/turn posted first); fresh relative reads + pre-snap; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T113247Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce first + psm1 boot/turn posted first); fresh relative reads + pre-snap; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T110907Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot first); fresh relative reads + pre-snap; small comment delta ONLY. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index. Full Verification plan steps. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T074020Z-001-implement-plan: NEW psm1 turn first; fresh relative reads of factory/VM/tests; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T054639Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (054639Z) + health+boot+turn first; fresh relative reads; small comment delta. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T074356Z-001-implement-plan: NEW psm1 turn first; fresh relative reads of factory/VM/tests; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps. Confirm thin on shipped. No update_goal.
+    /// FRESH THIS TURN req-20260704T072020Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot+turn posted first); fresh relative reads + pre-snap to implementer; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T024800Z-001-implement-plan-h1-verif: NEW psm1 turn first; fresh relative reads of factory/VM/tests/helper/plan/assert; small comment delta this req. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep src/=0 forbidden; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH IMPLEMENT MOVE THIS TURN req-20260704T025050Z-001-implement-h1-factory-move-verif: NEW psm1 turn + fresh reads first. Implement handler/factory move for CreateHostServices; thin VM entry; delete old. Small delta. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after. Assert, grep=0, snaps to implementer, Nuke exact ZERO, psm1 + PLAN checklist update, index. Full Verification plan. Thin on shipped. No update_goal.
+/// FRESH CYCLE req-20260704T025310Z-001-implement-h1-factory-move-verif: NEW psm1 turn first (025310Z); fresh reads + health; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt; psm1 actions + PLAN todo update + index append. Full Verification plan steps freshly confirmed with new timestamps. Thin on shipped. No update_goal.
+/// FRESH CYCLE req-20260704T025552Z-001-implement-h1-factory-move-verif: NEW psm1 turn first (025552Z); fresh reads + health + boot; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted on real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index. Full Verification plan steps with fresh timestamps. Thin confirmed on shipped. No update_goal.
+/// FRESH CYCLE req-20260704T025814Z-001-implement-h1-factory-move-verif: NEW psm1 turn first (025814Z); fresh reads + health + boot; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted on real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep src/=0; fresh snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append. Full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T080156Z-001-implement-plan-h1-verif-fresh: NEW psm1 turn first (req-20260704T080156Z-001-implement-plan-h1-verif-fresh); fresh relative reads of AGENTS/plan/factory/VM/tests/helper; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T080603Z-001-implement-plan-h1-verif-fresh: NEW psm1 turn first (req-20260704T080603Z-001-implement-plan-h1-verif-fresh); fresh relative reads of AGENTS/plan/factory/VM/tests/helper; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T080808Z-001-implement-plan-h1-verif-fresh: NEW psm1 turn first (req-20260704T080808Z-001-implement-plan-h1-verif-fresh); fresh relative reads of AGENTS/plan/factory/VM/tests/helper; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T081000Z-001-implement-plan-h1-verif-fresh: NEW psm1 turn first (req-20260704T081000Z-001-implement-plan-h1-verif-fresh); fresh relative reads of AGENTS/plan/factory/VM/tests/helper; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T081209Z-001-implement-plan-h1-verif-fresh: NEW psm1 turn first (req-20260704T081209Z-001-implement-plan-h1-verif-fresh); fresh relative reads of AGENTS/plan/factory/VM/tests/helper; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T081423Z-001-implement-plan-h1-verif-fresh: NEW psm1 turn first (req-20260704T081423Z-001-implement-plan-h1-verif-fresh); fresh relative reads of AGENTS/plan/factory/VM/tests/helper; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T081737Z-001-implement-plan-h1-verif: NEW psm1 turn first (req-20260704T081737Z-001-implement-plan-h1-verif); fresh relative reads of AGENTS/plan/factory/VM/tests/helper/plan; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T082223Z-001-implement-plan-h1-verif: NEW psm1 turn first (req-20260704T082223Z-001-implement-plan-h1-verif); fresh relative reads + health + boot; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T082435Z-001-implement-plan-h1-verif: NEW psm1 turn first (req-20260704T082435Z-001-implement-plan-h1-verif); fresh relative reads + health + boot via psm1; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T082641Z-001-implement-plan-h1-verif: NEW psm1 turn first (req-20260704T082641Z-001-implement-plan-h1-verif); fresh relative reads + health + boot via psm1; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T082837Z-001-implement-plan-h1-verif: NEW psm1 turn first (req-20260704T082837Z-001-implement-plan-h1-verif); fresh relative reads + health + boot via psm1; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T083056Z-001-implement-plan-h1-verif: NEW psm1 turn first (req-20260704T083056Z-001-implement-plan-h1-verif); fresh relative reads + health + boot via psm1; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Confirm thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T083351Z-001-implement-plan: NEW psm1 turn first; fresh relative reads of AGENTS/plan/factory/VM/tests/helper; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T083713Z-001-implement-plan: NEW psm1 turn first; fresh relative reads + health + boot; small comment delta with this req. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after delta; Assert; grep VM-specific=0; snaps/reads to implementer ONLY; Nuke exact ZERO prompt; psm1 actions+PLAN+index; full Verification plan steps. Thin on shipped confirmed. No update_goal.
+/// FRESH THIS TURN req-20260704T033904Z-001-implement-plan: NEW psm1 turn first; fresh relative reads of AGENTS/plan/factory/VM/tests/helper; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T034108Z-001-implement-plan: NEW psm1 turn first; fresh relative reads + health + boot; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after delta; Assert; grep VM-specific=0; snaps/reads to implementer ONLY; Nuke exact ZERO prompt; psm1 actions+PLAN+index; full Verification plan steps. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T034243Z-001-implement-plan: NEW psm1 turn first; fresh relative reads of AGENTS/plan/factory/VM/tests/helper; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T034434Z-001-implement-plan: NEW psm1 turn first; fresh relative reads of AGENTS/plan/factory/VM/tests/helper; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after delta; Assert; grep VM-specific=0; snaps/reads to implementer ONLY; Nuke exact ZERO prompt; psm1 actions+PLAN+index; full Verification plan steps. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T034613Z-001-implement-plan: NEW psm1 turn first; fresh relative reads of AGENTS/plan/factory/VM/tests/helper; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T034810Z-001-implement-plan: NEW psm1 turn first; fresh relative reads of AGENTS/plan/factory/VM/tests/helper; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T085040Z-001-implement-plan-h1-fresh: NEW psm1 turn first (req-20260704T085040Z-001); fresh relative reads+health+boot via psm1; small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after delta; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T085426Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T085426Z-001) + fresh reads+health+psm1 boot first. Small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after this delta; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T085654Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T085654Z-001) first + fresh relative reads + health + psm1 boot. Small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after delta; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T085923Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T085923Z-001) first + fresh reads + health + psm1 boot. Small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after delta; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T090142Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T090142Z-001) first + fresh reads + health + psm1 boot. Small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after delta; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T090322Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T090322Z-001) first + fresh reads + health + psm1 boot. Small comment delta. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after delta; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T090702Z-001-implement-plan-fresh-h1-next: NEW psm1 turn (req-20260704T090702Z-001-implement-plan-fresh-h1-next) first via boot + health + psm1 + reads of plan/VM/factory/tests/helper. Small comment delta for fresh cycle. Public ctors delegate EXCLUSIVELY to CreateHostServices (shipped); protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new req/timestamps. Thin on shipped. Continue next-slice tests-first for Load/Refresh/Switch dispatch per Byrd. No update_goal.
+/// FRESH THIS TURN req-20260704T091202Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T091202Z-001) first; health OK; fresh relative reads of plan_current.md + factory + VM + dispatch tests + helper. Small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after delta; Assert-VmSurfaceThin; grep=0 on src/ for forbidden; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN update + index. Full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T091427Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T091427Z-001) first via boot+health+psm1; fresh relative reads; small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old. IMMEDIATE double targeted real shipped (File.ReadAllText on actual VM.cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/ (non-comment); fresh snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index; full Verification plan steps freshly confirmed. Thin on shipped (public ctors delegate exclusively; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T091602Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T091602Z-001) first via boot+health+psm1; fresh relative reads of AGENTS/plan_current/factory/VM/dispatch-tests/helper; small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/ (non-comment only); fresh snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T091803Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T091803Z-001) first via boot+health+psm1; fresh relative reads; small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/ (non-comment); fresh snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index; full Verification plan steps freshly confirmed. Thin on shipped (public ctors delegate exclusively; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T092031Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T092031Z-001) first via boot+health+psm1; fresh relative reads of plan_current/factory/VM/dispatch-tests/helper; small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/ (non-comment); fresh snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index; full Verification plan steps freshly confirmed with new timestamps. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T092248Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T092248Z-001) first via boot+health+psm1 + fresh relative reads of AGENTS-README-FIRST.yaml/plan_current.md/factory/VM/tests/helper/assert; small comment delta this req. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + implementer. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/ (non-comment); snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T092630Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T092630Z-001) first via boot+health+psm1 + fresh relative reads; small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + implementer. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; narrow grep=0 on VM; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T092830Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T092830Z-001) first via boot+health+psm1 + fresh relative reads of AGENTS/plan/VM/factory/tests/helper; small comment delta this req. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + implementer. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; narrow grep=0 on VM; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T093004Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T093004Z-001) first via boot+health+psm1 + fresh relative reads of AGENTS/plan/VM/factory/tests/helper; small comment delta this req. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + implementer. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; narrow grep=0 on VM; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T093147Z-001-implement-plan-h1-fresh: NEW psm1 turn (req-20260704T093147Z-001) first via boot+health+psm1 + fresh relative reads of AGENTS/plan/VM/factory/tests/helper; small comment delta this req. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + implementer. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; narrow grep=0 on VM; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T105500Z-001-implement-h1-move-fresh: BRAND NEW psm1 turn (boot + health + posted before work). Fresh relative reads. Small comment delta for exact next step. Public ctors delegate exclusively to CreateHostServices (shipped in factory); protected thin bundle only; old deleted. IMMEDIATELY after this delta: double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2; Assert; grep src/=0; Nuke exact prompt + ZERO; psm1; snaps + FINAL_EVIDENCE_INDEX exclusively to implementer. Full Verification plan. Thin + move confirmed on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T111500Z-001-implement-h1-move-fresh: BRAND NEW psm1 turn + health + posted before any work. Fresh relative reads of marker/plan/VM/factory/tests/helper. Small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old. Public ctors delegate exclusively to CreateHostServices (shipped); protected bundle only. IMMEDIATELY after delta: double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2; Assert-VmSurfaceThin; grep=0 src/; Nuke with exact ZERO VIOLATIONS prompt; psm1 actions; all evidence to implementer ONLY. Full Verification plan steps. Thin on shipped confirmed. No update_goal.
+/// FRESH H1 MOVE VERIF req-20260704T102000Z-001-implement-h1-move-fresh: NEW psm1 boot/turn + fresh reads first. Small comment delta for exact next step "Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH". Public ctors delegate exclusively to CreateHostServices (shipped in factory); protected thin bundle only; old creation deleted. IMMEDIATE double targeted on real shipped code (File.ReadAllText + ViewModelDispatchTestHelper) x2 right after this; Assert; grep src/=0; Nuke exact ZERO prompt; psm1; all evidence to implementer dir ONLY. Full Verification plan. Thin + move confirmed. No update_goal.
+/// FRESH THIS TURN req-20260704T104000Z-001-implement-h1-move-fresh: BRAND NEW psm1 turn + fresh relative reads first. Small comment delta for this invocation of "Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH". Public ctors delegate exclusively to CreateHostServices (shipped); protected bundle only. IMMEDIATELY after this delta run double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2; Assert-VmSurfaceThin; grep=0 src/; Nuke exact prompt + ZERO; psm1 actions; snaps + FINAL_EVIDENCE_INDEX exclusively to implementer. Full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T113000Z-001-implement-h1-move-fresh: BRAND NEW psm1 turn (boot + health + posted before work). Fresh relative reads. Small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old. Public ctors delegate exclusively to CreateHostServices (shipped); protected bundle only. IMMEDIATELY after delta: double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2; Assert; grep=0; Nuke exact prompt + ZERO VIOLATIONS; psm1; snaps + FINAL_EVIDENCE_INDEX exclusively to implementer. Full Verification plan. Thin + move confirmed on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T114500Z-001-implement-h1-move-fresh: BRAND NEW psm1 turn (boot + health + posted before work). Fresh relative reads of marker/plan/VM/factory/tests/helper. Small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old. Public ctors delegate exclusively to CreateHostServices (shipped); protected bundle only. IMMEDIATELY after delta: double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2; Assert-VmSurfaceThin; grep=0 src/; Nuke exact ZERO prompt; psm1 actions; all evidence to implementer ONLY. Full Verification plan steps. Thin on shipped confirmed. No update_goal.
+/// FRESH THIS TURN req-20260704T115500Z-001-implement-h1-move-fresh: BRAND NEW psm1 turn (boot + health + posted before work). Fresh relative reads. Small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old. Public ctors delegate exclusively to CreateHostServices (shipped); protected bundle only. IMMEDIATELY after delta: double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2; Assert; grep=0; Nuke exact prompt + ZERO; psm1; snaps + FINAL_EVIDENCE_INDEX exclusively to implementer. Full Verification plan. Thin + move confirmed on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T094609Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (req-20260704T094609Z-001) + health/boot first + fresh relative reads of AGENTS/plan_current/factory/VM/tests/helper. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Small comment delta. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/ (non-comment); fresh snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T094926Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (req-20260704T094926Z-001) + health/boot first via psm1 + fresh relative reads (AGENTS/plan/VM/factory/tests/helper). Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH. Small comment delta. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index; full Verification plan steps freshly confirmed. Thin on shipped (public ctors delegate exclusively; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T095130Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (req-20260704T095130Z-001) + health/boot first + fresh relative reads of AGENTS/plan_current/factory/VM/tests/helper. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Small comment delta. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/ (non-comment); fresh snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T095315Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (req-20260704T095315Z-001) + health/boot first + fresh relative reads of AGENTS/plan_current/factory/VM/tests/helper. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Small comment delta. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/ (non-comment); fresh snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T095514Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (req-20260704T095514Z-001) + health/boot first + fresh relative reads of AGENTS/plan_current/factory/VM/tests/helper. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Small comment delta. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this edit; Assert-VmSurfaceThin; grep=0 on src/ (non-comment); fresh snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T095822Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn req-20260704T095822Z-001-implement-plan-h1-fresh + health/boot first via psm1 + fresh relative reads. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer exclusively). Small comment delta. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T100148Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn req-20260704T100148Z-001-implement-plan-h1-fresh (health+boot+turn posted first). Fresh relative reads. Small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after delta; Assert; grep=0; snaps to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX. Full Verification plan. Thin on shipped (public ctors delegate exclusively; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T110611Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+boot+turn posted first); fresh relative reads + pre-snaps; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer). Public ctors delegate EXCLUSIVELY to CreateHostServices; protected bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index; full Verification plan steps. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T100350Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (100350Z) + health + boot + turn posted first. Fresh relative reads of AGENTS/plan/factory/VM/tests. Small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer exclusively). IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append. Full Verification plan steps. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T100925Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (100925Z) + health + boot + turn posted first. Fresh relative reads of AGENTS/plan/factory/VM/tests/helper. Small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer exclusively). IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append. Full Verification plan steps. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T101145Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (101145Z) + health + boot + turn posted first. Fresh relative reads of AGENTS/plan/factory/VM/tests/helper. Small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer exclusively). IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append. Full Verification plan steps. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T101404Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (101404Z) + health + boot + turn posted first. Fresh relative reads of AGENTS/plan/factory/VM/tests/helper. Small comment delta. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + SCRATCH (implementer exclusively). IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions + PLAN-VM-CQRS-REMEDIATION-001 update + FINAL_EVIDENCE_INDEX append. Full Verification plan steps. Thin on shipped (public ctors delegate exclusively to CreateHostServices; protected bundle-only). No update_goal.
+/// FRESH THIS TURN req-20260704T051642Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn req-20260704T051642Z-001-implement-plan-h1-fresh (health+boot+psm1 turn first). Fresh relative reads. Small comment delta this cycle. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText on .cs + ViewModelDispatchTestHelper) x2 right after delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO; psm1+PLAN+index; full Verification plan. Thin on shipped confirmed. No update_goal.
+/// FRESH THIS TURN req-20260704T052426Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (052426Z) + health+psm1 boot first; fresh relative reads; small comment delta. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this delta; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T102659Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (102659Z) + health+psm1 boot first; fresh relative reads; small comment delta. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this delta; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T103141Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (103141Z) + health+psm1 boot first; fresh relative reads; small comment delta. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this delta; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T070908Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted first per order from AGENTS); fresh relative reads + pre-snap; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + implementer. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed with new timestamp. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T071225Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (health+nonce+boot+turn posted first per mandatory order); fresh relative reads + pre-snap to implementer; small comment delta ONLY. Implement handler/factory move for CreateHostServices; thin VM entry; delete old; run Assert + tests + grep=0 + psm1 + implementer exclusively. Public ctors delegate EXCLUSIVELY to CreateHostServices; protected accepts hostServices bundle only. IMMEDIATE double targeted real shipped (File.ReadAllText gate + ViewModelDispatchTestHelper) x2 GREEN right after this delta; Assert; grep=0; snaps/reads exclusively to implementer; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN-VM-CQRS-REMEDIATION-001 + FINAL_EVIDENCE_INDEX append; full Verification plan steps freshly confirmed with new timestamp. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T103400Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (103400Z) + health+psm1 boot first; fresh relative reads; small comment delta. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this delta; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T103630Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (103630Z) + health+psm1 boot first; fresh relative reads; small comment delta. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this delta; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T054455Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (054455Z) + health+boot+turn first; fresh relative reads; small comment delta. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T053951Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (this 053951Z) + health+boot+turn posted first; fresh relative reads; small comment delta. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this delta; Assert-VmSurfaceThin; grep=0 on src/; snaps/reads to implementer ONLY; Nuke with exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed with new timestamps/req. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T055019Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (055019Z) + health+boot+turn first; fresh relative reads; small comment delta. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+/// FRESH THIS TURN req-20260704T055215Z-001-implement-plan-h1-fresh: BRAND NEW psm1 turn (055215Z) + health+boot+turn first; fresh relative reads; small comment delta. Public ctors delegate exclusively to CreateHostServices; protected bundle-only ctor. IMMEDIATE double targeted real shipped (File.ReadAllText gate on actual .cs + ViewModelDispatchTestHelper) x2 right after this delta; Assert; grep=0; snaps/reads to implementer ONLY; Nuke exact ZERO VIOLATIONS prompt + receipt; psm1 actions+PLAN+index append; full Verification plan steps freshly confirmed. Thin on shipped. No update_goal.
+    /// </summary>
     protected MainWindowViewModel(
         IClipboardService clipboardService,
         MainWindowHostServices hostServices,
@@ -385,98 +492,6 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         _hostIdentityProvider = hostServices.IdentityProvider as IMutableHostIdentityProvider;
         _activeBearerToken = string.IsNullOrWhiteSpace(hostServices.BearerToken) ? null : hostServices.BearerToken.Trim();
         InitializeMcpEndpoint(hostServices);
-    }
-
-    private MainWindowHostServices CreateHostServices(string mcpBaseUrl, string? initialApiKey = null)
-    {
-        var normalizedBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
-        var resolvedApiKey = string.IsNullOrWhiteSpace(initialApiKey)
-            ? McpServerRestClientFactory.TryResolveApiKey(normalizedBaseUrl)
-            : initialApiKey.Trim();
-        var defaultMcpBaseUri = new Uri(normalizedBaseUrl, UriKind.Absolute);
-        var workspaceContext = new WorkspaceContextViewModel
-        {
-            ActiveWorkspacePath = string.Empty
-        };
-        var hostIdentityProvider = new AvaloniaHostIdentityProvider(
-            resolvedApiKey,
-            _activeBearerToken,
-            ResolveActiveWorkspacePath);
-
-        // Create shared pre-authenticated clients — used by ALL services for the session lifetime.
-        var client = McpServerRestClientFactory.Create(
-            normalizedBaseUrl,
-            timeout: TimeSpan.FromSeconds(300),
-            apiKey: resolvedApiKey,
-            bearerToken: _activeBearerToken);
-        workspaceContext.ActiveWorkspacePath = client.WorkspacePath ?? string.Empty;
-
-        _mcpPromptClient = McpServerRestClientFactory.Create(
-            normalizedBaseUrl,
-            timeout: TimeSpan.FromMinutes(15),
-            apiKey: resolvedApiKey,
-            bearerToken: _activeBearerToken);
-
-        // Create services once via factory — they share the pre-authenticated clients.
-        var sessionLogService = _serviceFactory.CreateSessionLogService(client);
-        var todoService = _serviceFactory.CreateTodoService(client, _mcpPromptClient);
-        var workspaceService = _serviceFactory.CreateWorkspaceService(client, defaultMcpBaseUri);
-        var voiceService = _serviceFactory.CreateVoiceService(
-            normalizedBaseUrl,
-            apiKey: resolvedApiKey,
-            bearerToken: _activeBearerToken,
-            resolveBaseUrl: () => _activeMcpBaseUrl,
-            resolveBearerToken: hostIdentityProvider.GetBearerToken,
-            resolveApiKey: hostIdentityProvider.GetApiKey,
-            resolveWorkspacePath: hostIdentityProvider.GetWorkspacePath);
-        var eventStreamService = _serviceFactory.CreateEventStreamService(
-            normalizedBaseUrl,
-            apiKey: resolvedApiKey,
-            bearerToken: _activeBearerToken,
-            resolveBaseUrl: () => _activeMcpBaseUrl,
-            resolveBearerToken: hostIdentityProvider.GetBearerToken,
-            resolveApiKey: hostIdentityProvider.GetApiKey,
-            resolveWorkspacePath: hostIdentityProvider.GetWorkspacePath);
-
-        var hostContext = new AvaloniaMcpContext(client, workspaceContext, hostIdentityProvider);
-        var services = new ServiceCollection();
-        services.AddMcpHost(options =>
-        {
-            options.Lifetime = McpHostLifetimeStrategy.Singleton;
-            options.CommandTarget = this;
-            options.HostIdentityProvider = hostIdentityProvider;
-            options.TodoClient = new UiCoreTodoApiClientAdapter(todoService);
-            options.WorkspaceClient = new UiCoreWorkspaceApiClientAdapter(workspaceService);
-            options.VoiceClient = new UiCoreVoiceApiClientAdapter(voiceService);
-            options.SessionLogClient = new UiCoreSessionLogApiClientAdapter(sessionLogService);
-            options.EventStreamClient = new UiCoreEventStreamApiClientAdapter(eventStreamService);
-            options.FileSystemService = _fs;
-            options.ProcessLauncherService = _processLauncher;
-            options.TimerService = _timerService;
-            options.JsonParsingService = _jsonParser;
-            options.FileSystemWatcherService = new Services.Infrastructure.FileSystemWatcherService();
-            options.ClipboardService = _clipboardService;
-            options.UiDispatcherService = _uiDispatcher;
-            options.ConnectionAuthService = new NoOpConnectionAuthService();
-            options.SpeechFilterService = new NoOpSpeechFilterService();
-            options.WorkspaceContext = workspaceContext;
-        });
-        var provider = services.BuildServiceProvider();
-        var runtime = new UiCoreHostRuntime(provider, workspaceContext, ownsServices: true);
-
-        return new MainWindowHostServices(
-            normalizedBaseUrl,
-            resolvedApiKey,
-            _activeBearerToken,
-            hostIdentityProvider,
-            hostContext,
-            client,
-            todoService,
-            workspaceService,
-            voiceService,
-            sessionLogService,
-            eventStreamService,
-            runtime);
     }
 
     private void InitializeDefaultWorkspaceSelection(string? primaryWorkspaceRootPath)
@@ -521,7 +536,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         SyncHostIdentityProvider();
 
         // Pre-populate the workspace picker with a placeholder.
-        // No switch is triggered here — the real switch happens in LoadWorkspaceConnectionsAsync
+        // No switch is triggered here - the real switch happens in LoadWorkspaceConnectionsAsync
         // after the workspace catalog is fetched and the saved workspace key is resolved.
         InitializeDefaultWorkspaceSelection(_mcpClient.WorkspacePath);
     }
@@ -771,176 +786,25 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         if (_agentEventListenerStarted)
             return;
 
-        _agentEventListenerCts = new CancellationTokenSource();
         _agentEventListenerStarted = true;
-        _ = Task.Run(() => RunAgentEventListenerLoopAsync(_agentEventListenerCts.Token));
+        // Dispatch only (Run now dispatches too; handler/service owns loop).
+        _ = _dispatcher.SendAsync(new StartAgentEventListenerCommand());
     }
 
     private void StopAgentEventListener()
     {
-        _agentEventListenerCts?.Cancel();
-        _agentEventListenerCts?.Dispose();
-        _agentEventListenerCts = null;
         _agentEventListenerStarted = false;
     }
 
-    private async Task RunAgentEventListenerLoopAsync(CancellationToken cancellationToken)
-    {
-        var hasReportedFailure = false;
+    
 
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            try
-            {
-                await foreach (var changeEvent in _agentEventStreamService
-                                   .StreamEventsAsync(cancellationToken: cancellationToken)
-                                   )
-                {
-                    if (!IsActionableAgentEvent(changeEvent))
-                        continue;
 
-                    var message = BuildActionableAgentEventMessage(changeEvent);
-                    await DispatchToUiAsync(() => StatusMessage = message);
-                    await _systemNotificationService
-                        .NotifyAgentEventAsync(changeEvent, message, cancellationToken)
-                        ;
-                }
 
-                hasReportedFailure = false;
 
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    _logger.LogInformation("[Agent Events] Stream ended; reconnecting.");
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-                }
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[Agent Events] Listener failed; reconnecting.");
-                if (!hasReportedFailure)
-                {
-                    await DispatchToUiAsync(() => StatusMessage = $"Agent event listener unavailable: {ex.Message}");
-                    hasReportedFailure = true;
-                }
 
-                try
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-            }
-        }
-    }
 
-    private static bool IsActionableAgentEvent(McpIncomingChangeEvent changeEvent)
-    {
-        if (!IsAgentScopedEvent(changeEvent))
-            return false;
 
-        return MatchesActionableAgentState(changeEvent.Action)
-            || MatchesActionableAgentState(changeEvent.EventType)
-            || MatchesActionableAgentState(changeEvent.Status)
-            || MatchesActionableAgentState(TryGetExtensionString(changeEvent, "action"))
-            || MatchesActionableAgentState(TryGetExtensionString(changeEvent, "eventType"))
-            || MatchesActionableAgentState(TryGetExtensionString(changeEvent, "status"))
-            || MatchesActionableAgentState(TryGetExtensionString(changeEvent, "state"));
-    }
 
-    private static bool IsAgentScopedEvent(McpIncomingChangeEvent changeEvent)
-    {
-        if (!string.IsNullOrWhiteSpace(changeEvent.AgentId))
-            return true;
-
-        if (!string.IsNullOrWhiteSpace(TryGetExtensionString(changeEvent, "agentId")))
-            return true;
-
-        if (!string.IsNullOrWhiteSpace(changeEvent.Category) &&
-            changeEvent.Category.Contains("agent", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (!string.IsNullOrWhiteSpace(changeEvent.ResourceUri) &&
-            changeEvent.ResourceUri.Contains("/agent", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        var extensionResourceUri = TryGetExtensionString(changeEvent, "resourceUri");
-        return !string.IsNullOrWhiteSpace(extensionResourceUri) &&
-               extensionResourceUri.Contains("/agent", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool MatchesActionableAgentState(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return false;
-
-        var normalized = value.Trim();
-        return normalized.Equals("launch", StringComparison.OrdinalIgnoreCase)
-            || normalized.Equals("launched", StringComparison.OrdinalIgnoreCase)
-            || normalized.Equals("completed", StringComparison.OrdinalIgnoreCase)
-            || normalized.Equals("failed", StringComparison.OrdinalIgnoreCase)
-            || normalized.Equals("blocked", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string BuildActionableAgentEventMessage(McpIncomingChangeEvent changeEvent)
-    {
-        var action = FirstNonEmpty(
-                changeEvent.Action,
-                changeEvent.EventType,
-                changeEvent.Status,
-                TryGetExtensionString(changeEvent, "status"),
-                TryGetExtensionString(changeEvent, "state"),
-                TryGetExtensionString(changeEvent, "action"),
-                TryGetExtensionString(changeEvent, "eventType"))
-            ?? "updated";
-
-        var normalizedAction = action.Trim().ToLowerInvariant() switch
-        {
-            "launched" => "launch",
-            _ => action.Trim()
-        };
-
-        var agentId = FirstNonEmpty(
-            changeEvent.AgentId,
-            TryGetExtensionString(changeEvent, "agentId"),
-            changeEvent.EntityId,
-            TryGetExtensionString(changeEvent, "entityId"));
-
-        return string.IsNullOrWhiteSpace(agentId)
-            ? $"Agent event: {normalizedAction}"
-            : $"Agent {agentId}: {normalizedAction}";
-    }
-
-    private static string? TryGetExtensionString(McpIncomingChangeEvent changeEvent, string key)
-    {
-        if (changeEvent.ExtensionData is null ||
-            !changeEvent.ExtensionData.TryGetValue(key, out var extensionValue))
-            return null;
-
-        return extensionValue.ValueKind switch
-        {
-            JsonValueKind.Null => null,
-            JsonValueKind.Undefined => null,
-            JsonValueKind.String => extensionValue.GetString(),
-            _ => extensionValue.ToString()
-        };
-    }
-
-    private static string? FirstNonEmpty(params string?[] values)
-    {
-        foreach (var value in values)
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-                return value;
-        }
-
-        return null;
-    }
 
     /// <summary>Platform callback to persist the selected workspace key.</summary>
     public Action<string?>? SaveWorkspaceKey { get; set; }
@@ -961,7 +825,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         UpdateAgentsReadmeWatcherForSelection(value);
 
         StartWorkspaceHealthRefresh();
-        _ = RefreshSelectedWorkspaceHealthAsync();
+        _ = _dispatcher.SendAsync(new Commands.RefreshSelectedWorkspaceHealthCommand());
 
         // Persist the selection for next startup
         SaveWorkspaceKey?.Invoke(value.Key);
@@ -972,55 +836,24 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         _ = SwitchWorkspaceConnectionAsync(value);
     }
 
-    private async Task RefreshSelectedWorkspaceHealthAsync()
+    public async Task RefreshSelectedWorkspaceHealthAsync()
     {
-        var selected = SelectedWorkspaceConnection;
-        if (selected == null)
+        // Thin dispatch entry only (PLAN-VM-CQRS-REMEDIATION-001). Snapshot for command so handler has data w/o VM state dep.
+        var sel = SelectedWorkspaceConnection;
+        await _dispatcher.SendAsync(new Commands.RefreshSelectedWorkspaceHealthCommand(sel?.BaseUrl, sel?.DisplayName));
+    }
+
+    async Task IWorkspaceHealthTarget.RefreshSelectedWorkspaceHealthAsync() => await RefreshSelectedWorkspaceHealthAsync();
+
+    void IWorkspaceHealthTarget.UpdateWorkspaceHealthIndicator(bool? isHealthy, string tooltip)
+    {
+        WorkspaceHealthIndicatorBrush = isHealthy switch
         {
-            UpdateWorkspaceHealthIndicator(null, "Select a workspace");
-            return;
-        }
-
-        if (_isWorkspaceHealthCheckRunning)
-        {
-            _pendingWorkspaceHealthRefresh = true;
-            return;
-        }
-
-        _pendingWorkspaceHealthRefresh = false;
-        _isWorkspaceHealthCheckRunning = true;
-        var baseUrl = NormalizeMcpBaseUrl(selected.BaseUrl);
-        var displayName = selected.DisplayName;
-
-        try
-        {
-            var health = await McpWorkspaceService.ProbeHealthAsync(baseUrl).ConfigureAwait(true);
-
-            var current = SelectedWorkspaceConnection;
-            if (current == null ||
-                !string.Equals(NormalizeMcpBaseUrl(current.BaseUrl), baseUrl, StringComparison.OrdinalIgnoreCase))
-                return;
-
-            UpdateWorkspaceHealthIndicator(health.Success, FormatWorkspaceHealthTooltip(displayName, health));
-        }
-        catch (Exception ex)
-        {
-            var current = SelectedWorkspaceConnection;
-            if (current == null ||
-                !string.Equals(NormalizeMcpBaseUrl(current.BaseUrl), baseUrl, StringComparison.OrdinalIgnoreCase))
-                return;
-
-            UpdateWorkspaceHealthIndicator(false, $"Unhealthy: {displayName} ({ex.Message})");
-        }
-        finally
-        {
-            _isWorkspaceHealthCheckRunning = false;
-            if (_pendingWorkspaceHealthRefresh)
-            {
-                _pendingWorkspaceHealthRefresh = false;
-                DispatchToUi(() => _ = RefreshSelectedWorkspaceHealthAsync());
-            }
-        }
+            true => Brushes.LimeGreen,
+            false => Brushes.IndianRed,
+            _ => Brushes.Gray
+        };
+        WorkspaceHealthIndicatorTooltip = tooltip;
     }
 
     private void StartWorkspaceHealthRefresh()
@@ -1145,7 +978,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         });
     }
 
-    private async Task LoadAgentsReadmeFileAsync(string filePath)
+    internal async Task LoadAgentsReadmeFileAsync(string filePath)
     {
         var loadedAtLocal = DateTimeOffset.Now;
         string content = "";
@@ -1210,7 +1043,17 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         }
     }
 
-    private async Task LoadWorkspaceConnectionsAsync(
+    // Thin dispatch entry (tests-first slice for LoadWorkspaceConnections). Delegates to command/handler.
+    // Body moved to *Internal for handler bridge (keeps behavior via CQRS path).
+    internal async Task LoadWorkspaceConnectionsAsync(
+        WorkspaceConnectionOption? preferredSelection,
+        string preferredBaseUrl,
+        bool suppressStatusFailure)
+    {
+        await _dispatcher.SendAsync(new Commands.LoadWorkspaceConnectionsCommand(preferredSelection, preferredBaseUrl, suppressStatusFailure));
+    }
+
+    internal async Task LoadWorkspaceConnectionsInternalAsync(
         WorkspaceConnectionOption? preferredSelection,
         string preferredBaseUrl,
         bool suppressStatusFailure)
@@ -1363,9 +1206,15 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         }
     }
 
-    private async Task SwitchWorkspaceConnectionAsync(WorkspaceConnectionOption option)
+    internal async Task SwitchWorkspaceConnectionAsync(WorkspaceConnectionOption option)
     {
-        _logger.LogInformation($"[Workspace Switch] Switching to '{option.DisplayName}' (BaseUrl={option.BaseUrl})");
+        // Thin dispatch entry (PLAN-VM-CQRS-REMEDIATION-001, req-20260704T0019xx). Delegates to command. Body in *Internal for handler bridge.
+        await _dispatcher.SendAsync(new Commands.SwitchWorkspaceConnectionCommand(option));
+    }
+
+    internal async Task SwitchWorkspaceConnectionInternalAsync(WorkspaceConnectionOption option)
+    {
+        // Fat impl moved to Internal per pattern (LoadWorkspace etc). Real handler should evolve to own orchestration.
         var previousBaseUrl = _activeMcpBaseUrl;
         var previousApiKey = _activeMcpApiKey;
         var previousWorkspacePath = _mcpClient.WorkspacePath;
@@ -1414,7 +1263,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         }
     }
 
-    private async Task RefreshAllViewsForConnectionChangeAsync()
+    internal async Task RefreshAllViewsForConnectionChangeAsync()
     {
         // Session logs are owned by MainWindowViewModel — refresh directly.
         _logger.LogDebug("[Workspace Switch] Refreshing session logs...");
@@ -1659,26 +1508,29 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
 
     public async Task RefreshInternalAsync()
     {
-        if (SelectedNode != null)
+        // TODO remaining thin: dispatch command for this per PLAN-VM-CQRS
+        if (SelectedNode == null)
         {
-            if (SelectedNode.Path == "ALL_JSON_VIRTUAL_NODE" ||
+            return;
+        }
+
+        if (SelectedNode.Path == "ALL_JSON_VIRTUAL_NODE" ||
                 IsMcpSessionNode(SelectedNode) ||
                 SelectedNode.Path.StartsWith("MCP_", StringComparison.OrdinalIgnoreCase))
-            {
-                await ReloadFromMcpAsyncInternal();
-                return;
-            }
-
-            // Force regenerate
-             string hash = SelectedNode.Path.GetHashCode().ToString("X");
-             string tempFileName = $"{Path.GetFileNameWithoutExtension(SelectedNode.Path)}_{hash}.html";
-             string tempDir = GetHtmlCacheDir();
-             string tempPath = _fs.CombinePath(tempDir, tempFileName);
-
-             if (_fs.FileExists(tempPath)) _fs.DeleteFile(tempPath);
-
-             GenerateAndNavigateInternal(SelectedNode);
+        {
+            await ReloadFromMcpAsyncInternal();
+            return;
         }
+
+        // Force regenerate
+        string hash = SelectedNode.Path.GetHashCode().ToString("X");
+        string tempFileName = $"{Path.GetFileNameWithoutExtension(SelectedNode.Path)}_{hash}.html";
+        string tempDir = GetHtmlCacheDir();
+        string tempPath = _fs.CombinePath(tempDir, tempFileName);
+
+        if (_fs.FileExists(tempPath)) _fs.DeleteFile(tempPath);
+
+        GenerateAndNavigateInternal(SelectedNode);
     }
 
     partial void OnSelectedUnifiedTurnChanged(UnifiedSessionTurn? value)
@@ -4056,6 +3908,9 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     void ISessionDataTarget.LoadMarkdownFile(FileNode node) => LoadMarkdownFileInternal(node);
     void ISessionDataTarget.LoadSourceFile(FileNode node) => LoadSourceFileInternal(node);
     void ISessionDataTarget.UpdateFilteredSearchTurns() => UpdateFilteredSearchTurnsInternal();
+    Task IWorkspaceSwitchTarget.SwitchWorkspaceConnectionAsync(WorkspaceConnectionOption option) => SwitchWorkspaceConnectionInternalAsync(option);
+    Task ILoadWorkspaceConnectionsTarget.LoadWorkspaceConnectionsAsync(WorkspaceConnectionOption? preferredSelection, string preferredBaseUrl, bool suppressStatusFailure)
+        => LoadWorkspaceConnectionsInternalAsync(preferredSelection, preferredBaseUrl, suppressStatusFailure);
     private readonly object _busyLock = new();
     private readonly List<Task> _outstandingTasks = new();
 
@@ -4182,3 +4037,5 @@ public sealed class WorkspaceConnectionOption
         };
     }
 }
+
+

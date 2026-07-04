@@ -1,5 +1,10 @@
+using System;
 using System.Threading.Tasks;
 using McpServer.Cqrs;
+using McpServerManager.UI.Core.Models;
+using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
+using Microsoft.Extensions.Logging;
 
 namespace McpServerManager.UI.Core.Commands;
 
@@ -272,4 +277,83 @@ public sealed class SearchRowDoubleTappedHandler(IRequestDetailsTarget target) :
         return Task.FromResult(Result<bool>.Success(true));
     }
 }
+
+// --- Workspace Switch (C4 MainWindow thin per PLAN-VM-CQRS-REMEDIATION-001) ---
+
+public sealed record SwitchWorkspaceConnectionCommand(WorkspaceConnectionOption Option) : ICommand<bool>;
+
+public sealed class SwitchWorkspaceConnectionHandler(IWorkspaceSwitchTarget target) : ICommandHandler<SwitchWorkspaceConnectionCommand, bool>
+{
+    public async Task<Result<bool>> HandleAsync(SwitchWorkspaceConnectionCommand command, CallContext context)
+    {
+        await target.SwitchWorkspaceConnectionAsync(command.Option);
+        return Result<bool>.Success(true);
+    }
+}
+
+// --- Load Workspace Connections (C4 MainWindow thin per PLAN-VM-CQRS-REMEDIATION-001 / PLAN-C4-MAINWINDOW-001) ---
+// Command contract defined first (tests-first per Byrd). Handler and VM dispatch follow.
+public sealed record LoadWorkspaceConnectionsCommand(
+    WorkspaceConnectionOption? PreferredSelection,
+    string PreferredBaseUrl,
+    bool SuppressStatusFailure) : ICommand<bool>;
+
+public sealed class LoadWorkspaceConnectionsHandler(ILoadWorkspaceConnectionsTarget target) : ICommandHandler<LoadWorkspaceConnectionsCommand, bool>
+{
+    public async Task<Result<bool>> HandleAsync(LoadWorkspaceConnectionsCommand command, CallContext context)
+    {
+        await target.LoadWorkspaceConnectionsAsync(command.PreferredSelection, command.PreferredBaseUrl, command.SuppressStatusFailure);
+        return Result<bool>.Success(true);
+    }
+}
+
+// --- Workspace Health (remaining MainWindow thin slice per PLAN-VM-CQRS-REMEDIATION-001) ---
+// Tests-first: command defined, handler bridges to target (VM implements thin dispatch).
+public sealed record RefreshSelectedWorkspaceHealthCommand(
+    string? SelectedBaseUrl = null,
+    string? DisplayName = null) : ICommand<bool>;
+
+public sealed class RefreshSelectedWorkspaceHealthHandler(
+    IWorkspaceHealthTarget target,
+    IUiDispatcherService uiDispatcher) : ICommandHandler<RefreshSelectedWorkspaceHealthCommand, bool>
+{
+    public async Task<Result<bool>> HandleAsync(RefreshSelectedWorkspaceHealthCommand command, CallContext context)
+    {
+        // Real handler logic (moved from MainWindowViewModel Core per PLAN-VM-CQRS-REMEDIATION-001).
+        // VM entry remains thin dispatch+Apply. 
+        var baseUrl = command.SelectedBaseUrl;
+        var displayName = command.DisplayName ?? "workspace";
+
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            target.UpdateWorkspaceHealthIndicator(null, "Select a workspace");
+            return Result<bool>.Success(true);
+        }
+
+        // Simple normalize (dupe of VM private to keep handler independent for now)
+        baseUrl = baseUrl.Trim().TrimEnd('/');
+
+        try
+        {
+            // Use static as defined on the service (no instance state required for probe).
+            var health = await McpWorkspaceService.ProbeHealthAsync(baseUrl).ConfigureAwait(true);
+            target.UpdateWorkspaceHealthIndicator(health.Success, FormatTooltip(displayName, health));
+        }
+        catch (Exception ex)
+        {
+            target.UpdateWorkspaceHealthIndicator(false, $"Unhealthy: {displayName} ({ex.Message})");
+        }
+
+        return Result<bool>.Success(true);
+    }
+
+    private static string FormatTooltip(string displayName, McpWorkspaceHealthResult health)
+    {
+        var status = health.StatusCode > 0 ? $"HTTP {health.StatusCode}" : "HTTP n/a";
+        var endpoint = string.IsNullOrWhiteSpace(health.Url) ? "" : $" @ {health.Url}";
+        var error = string.IsNullOrWhiteSpace(health.Error) ? "" : $" ({health.Error})";
+        return $"{(health.Success ? "Healthy" : "Unhealthy")}: {displayName} - {status}{endpoint}{error}";
+    }
+}
+
 

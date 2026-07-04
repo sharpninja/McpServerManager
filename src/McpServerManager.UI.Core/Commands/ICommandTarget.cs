@@ -14,7 +14,10 @@ public interface ICommandTarget
       IClipboardTarget,
       IConfigTarget,
       IUiDispatchTarget,
-      ITodoCopilotTarget
+      ITodoCopilotTarget,
+      IWorkspaceSwitchTarget,
+      ILoadWorkspaceConnectionsTarget,
+      IWorkspaceHealthTarget
 {
 }
 

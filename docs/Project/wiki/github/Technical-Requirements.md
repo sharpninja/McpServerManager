@@ -63,6 +63,21 @@ Scope: layer-1+
 - [ ] The shared auth layer exposes read, write, and delete behavior for workspace-scoped identity tokens.
 - [ ] JWT exp is checked locally before a cached token is reused.
 
+## TR-E1-001
+
+**TR-E1-001** — Placeholder requirement backfilled for TODO link TR-E1-001.
+Scope: layer-1+
+
+## TR-E1-002
+
+**TR-E1-002** — Placeholder requirement backfilled for TODO link TR-E1-002.
+Scope: layer-1+
+
+## TR-E1-003
+
+**TR-E1-003** — Placeholder requirement backfilled for TODO link TR-E1-003.
+Scope: layer-1+
+
 ## TR-GEN-YAML-001
 
 **YAML Generation Test** — TR for YAML document generation test
