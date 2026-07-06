@@ -12,7 +12,7 @@ namespace McpServerManager.Android.Views;
 
 public partial class ConnectionDialogView : UserControl
 {
-    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ConnectionDialogView");
+    protected static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ConnectionDialogView");
     private ConnectionViewModel? _viewModel;
     private bool _loggedConnectReadyBounds;
     private bool _loggedOidcPanelReadyBounds;
@@ -26,18 +26,18 @@ public partial class ConnectionDialogView : UserControl
         LayoutUpdated += OnLayoutUpdated;
     }
 
-    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    protected void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _logger.LogInformation("UI_READY ConnectionDialogView attached. RootBounds={Bounds}", FormatBounds(Bounds));
     }
 
-    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    protected void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         if (_viewModel is not null)
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
     }
 
-    private void OnDataContextChanged(object? sender, EventArgs e)
+    protected void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (_viewModel is not null)
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -61,7 +61,7 @@ public partial class ConnectionDialogView : UserControl
         }
     }
 
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    protected void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (_viewModel is null || string.IsNullOrWhiteSpace(e.PropertyName))
             return;
@@ -92,13 +92,13 @@ public partial class ConnectionDialogView : UserControl
         }
     }
 
-    private void OnLayoutUpdated(object? sender, EventArgs e)
+    protected void OnLayoutUpdated(object? sender, EventArgs e)
     {
         TryLogConnectReadyBounds();
         TryLogOidcReadyBounds();
     }
 
-    private void TryLogConnectReadyBounds()
+    protected void TryLogConnectReadyBounds()
     {
         if (_loggedConnectReadyBounds)
             return;
@@ -119,7 +119,7 @@ public partial class ConnectionDialogView : UserControl
         LogControlBounds("ConnectButton", connectButton);
     }
 
-    private void TryLogOidcReadyBounds()
+    protected void TryLogOidcReadyBounds()
     {
         if (_loggedOidcPanelReadyBounds)
             return;
@@ -140,7 +140,7 @@ public partial class ConnectionDialogView : UserControl
             LogControlBounds("OpenSignInPageButton", openSignInButton);
     }
 
-    private void LogControlBounds(string name, Control control)
+    protected void LogControlBounds(string name, Control control)
     {
         var topLevel = TopLevel.GetTopLevel(this);
         var topLevelBounds = topLevel?.Bounds;
@@ -153,9 +153,9 @@ public partial class ConnectionDialogView : UserControl
             topLevelBounds is null ? "<null>" : FormatBounds(topLevelBounds.Value));
     }
 
-    private static bool HasRenderableBounds(Control control)
+    protected static bool HasRenderableBounds(Control control)
         => control.Bounds.Width > 0 && control.Bounds.Height > 0;
 
-    private static string FormatBounds(Rect rect)
+    protected static string FormatBounds(Rect rect)
         => $"[{rect.X:0.##},{rect.Y:0.##},{rect.Width:0.##},{rect.Height:0.##}]";
 }

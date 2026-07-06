@@ -237,13 +237,18 @@ public partial class ConnectionViewModel : ViewModelBase
         // Thin to dispatch + apply only. Validation/error logic moved to handlers/results.
         await DispatchToUiAsync(() => IsConnecting = true).ConfigureAwait(true);
         var url = "http://" + (Host ?? "") + ":" + (Port ?? "");
-        await _dispatcher.QueryAsync(new ProbeHealthAndResolveUrlQuery(url)).ConfigureAwait(true);
-        await _dispatcher.SendAsync(new FetchMcpApiKeyCommand(url, null)).ConfigureAwait(true);
+        var resolvedUrlResult = await _dispatcher.QueryAsync(new ProbeHealthAndResolveUrlQuery(url)).ConfigureAwait(true);
+        var resolvedUrl = resolvedUrlResult.IsSuccess && !string.IsNullOrWhiteSpace(resolvedUrlResult.Value)
+            ? resolvedUrlResult.Value!
+            : url;
+        var apiKeyResult = await _dispatcher.SendAsync(new FetchMcpApiKeyCommand(resolvedUrl, null)).ConfigureAwait(true);
+        var apiKey = apiKeyResult.IsSuccess ? apiKeyResult.Value?.ApiKey : null;
         await DispatchToUiAsync(() =>
         {
             IsConnecting = false;
             IsOidcSignInRequired = false;
         }).ConfigureAwait(true);
+        Connected?.Invoke(new ConnectionEstablishedInfo(resolvedUrl, apiKey, _oidcBearerToken));
     }
 
     /// <summary>

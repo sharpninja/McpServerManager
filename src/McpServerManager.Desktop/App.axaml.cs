@@ -22,7 +22,7 @@ namespace McpServerManager.Desktop;
 
 public partial class App : Application
 {
-    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("App");
+    protected static readonly ILogger _logger = AppLogService.Instance.CreateLogger("App");
     private ServiceProvider? _connectionServices;
     private DesktopMainWindowSession? _mainWindowSession;
 
@@ -171,7 +171,7 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private void DisposeDesktopServices()
+    protected void DisposeDesktopServices()
     {
         _mainWindowSession?.Dispose();
         _mainWindowSession = null;
@@ -179,7 +179,7 @@ public partial class App : Application
         _connectionServices = null;
     }
 
-    private static void WireGlobalExceptionHandlers()
+    protected static void WireGlobalExceptionHandlers()
     {
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
         {
@@ -196,7 +196,7 @@ public partial class App : Application
         };
     }
 
-    private static void WriteConnectionFailureLog(Exception ex)
+    protected static void WriteConnectionFailureLog(Exception ex)
     {
         try
         {

@@ -13,7 +13,7 @@ public partial class LogView : UserControl
         DataContextChanged += OnDataContextChanged;
     }
 
-    private void OnDataContextChanged(object? sender, System.EventArgs e)
+    protected void OnDataContextChanged(object? sender, System.EventArgs e)
     {
         if (DataContext is LogViewModel vm)
         {
@@ -27,7 +27,7 @@ public partial class LogView : UserControl
         }
     }
 
-    private void OnContextMenuOpening(object? sender, System.EventArgs e)
+    protected void OnContextMenuOpening(object? sender, System.EventArgs e)
     {
         if (DataContext is LogViewModel vm)
         {
@@ -36,7 +36,7 @@ public partial class LogView : UserControl
         }
     }
 
-    private void OnContextMenuClosing(object? sender, System.EventArgs e)
+    protected void OnContextMenuClosing(object? sender, System.EventArgs e)
     {
         if (DataContext is LogViewModel vm && !_wasPausedBeforeContextMenu)
         {
@@ -44,7 +44,7 @@ public partial class LogView : UserControl
         }
     }
 
-    private void OnNewEntryAdded()
+    protected void OnNewEntryAdded()
     {
         if (DataContext is LogViewModel vm && vm.LogEntries.Count > 0)
         {

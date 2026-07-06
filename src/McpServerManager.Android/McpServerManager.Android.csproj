@@ -7,6 +7,9 @@
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidZipAlignment>16</AndroidZipAlignment>
+    <!-- Vosk 0.3.38 ships libvosk.so without 16 KB page-size alignment; keep this exemption local to Android voice packaging. -->
+    <NoWarn>$(NoWarn);XA0141</NoWarn>
     <PublishTrimmed>false</PublishTrimmed>
     <RunAOTCompilation>false</RunAOTCompilation>
     <SupportedOSPlatformVersion>35.0</SupportedOSPlatformVersion>
@@ -53,6 +56,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\McpServerManager.Core\McpServerManager.Core.csproj" />
+    <ProjectReference Include="..\..\lib\Markdown.Avalonia\Markdown.Avalonia.Tight\Markdown.Avalonia.Tight.csproj" />
   </ItemGroup>
 
   <ItemGroup>

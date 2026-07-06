@@ -3,7 +3,7 @@ using McpServer.Cqrs;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Models;
 using McpServerManager.Core.Services;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace McpServerManager.Core.Tests.Commands;
@@ -17,16 +17,16 @@ public sealed class ChatHandlerTests
     [Fact]
     public async Task ChatOpenAgentConfigHandler_HandleAsync_CallsOpenAgentConfigInEditor()
     {
-        var svc = new Mock<IChatConfigFilesService>();
+        var svc = Substitute.For<IChatConfigFilesService>();
         var expected = new ChatFileOpenResult(true, "/path/config.json");
-        svc.Setup(s => s.OpenAgentConfigInEditor()).Returns(expected);
+        svc.OpenAgentConfigInEditor().Returns(expected);
 
-        var handler = new ChatOpenAgentConfigHandler(svc.Object);
+        var handler = new ChatOpenAgentConfigHandler(svc);
         var result = await handler.HandleAsync(new ChatOpenAgentConfigCommand(), _ctx);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(expected);
-        svc.Verify(s => s.OpenAgentConfigInEditor(), Times.Once);
+        svc.Received(1).OpenAgentConfigInEditor();
     }
 
     // --- ChatOpenPromptTemplates ---
@@ -34,16 +34,16 @@ public sealed class ChatHandlerTests
     [Fact]
     public async Task ChatOpenPromptTemplatesHandler_HandleAsync_CallsOpenPromptTemplatesInEditor()
     {
-        var svc = new Mock<IChatConfigFilesService>();
+        var svc = Substitute.For<IChatConfigFilesService>();
         var expected = new ChatFileOpenResult(true, "/path/prompts.yaml");
-        svc.Setup(s => s.OpenPromptTemplatesInEditor()).Returns(expected);
+        svc.OpenPromptTemplatesInEditor().Returns(expected);
 
-        var handler = new ChatOpenPromptTemplatesHandler(svc.Object);
+        var handler = new ChatOpenPromptTemplatesHandler(svc);
         var result = await handler.HandleAsync(new ChatOpenPromptTemplatesCommand(), _ctx);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(expected);
-        svc.Verify(s => s.OpenPromptTemplatesInEditor(), Times.Once);
+        svc.Received(1).OpenPromptTemplatesInEditor();
     }
 
     // --- ChatLoadPrompts ---
@@ -51,14 +51,14 @@ public sealed class ChatHandlerTests
     [Fact]
     public async Task ChatLoadPromptsHandler_HandleAsync_ReturnsPromptTemplates()
     {
-        var svc = new Mock<IChatPromptTemplateService>();
+        var svc = Substitute.For<IChatPromptTemplateService>();
         var templates = new List<PromptTemplate>
         {
             new() { Name = "Summarize", Template = "Summarize this" }
         };
-        svc.Setup(s => s.GetPromptTemplates()).Returns(templates);
+        svc.GetPromptTemplates().Returns(templates);
 
-        var handler = new ChatLoadPromptsHandler(svc.Object);
+        var handler = new ChatLoadPromptsHandler(svc);
         var result = await handler.HandleAsync(new ChatLoadPromptsCommand(), _ctx);
 
         result.IsSuccess.Should().BeTrue();
@@ -130,12 +130,12 @@ public sealed class ChatHandlerTests
     [Fact]
     public async Task ChatLoadModelsHandler_HandleAsync_ReturnsModels()
     {
-        var svc = new Mock<IChatModelDiscoveryService>();
+        var svc = Substitute.For<IChatModelDiscoveryService>();
         var models = new List<string> { "llama3", "mistral" };
-        svc.Setup(s => s.GetAvailableModelsAsync(It.IsAny<CancellationToken>()))
-           .ReturnsAsync(models);
+        svc.GetAvailableModelsAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<string>>(models));
 
-        var handler = new ChatLoadModelsHandler(svc.Object);
+        var handler = new ChatLoadModelsHandler(svc);
         var result = await handler.HandleAsync(new ChatLoadModelsQuery("llama3"), _ctx);
 
         result.IsSuccess.Should().BeTrue();
@@ -147,12 +147,12 @@ public sealed class ChatHandlerTests
     [Fact]
     public async Task ChatLoadModelsHandler_HandleAsync_PreferredNotInList_SelectsFirst()
     {
-        var svc = new Mock<IChatModelDiscoveryService>();
+        var svc = Substitute.For<IChatModelDiscoveryService>();
         var models = new List<string> { "llama3", "mistral" };
-        svc.Setup(s => s.GetAvailableModelsAsync(It.IsAny<CancellationToken>()))
-           .ReturnsAsync(models);
+        svc.GetAvailableModelsAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<string>>(models));
 
-        var handler = new ChatLoadModelsHandler(svc.Object);
+        var handler = new ChatLoadModelsHandler(svc);
         var result = await handler.HandleAsync(new ChatLoadModelsQuery("gpt-4"), _ctx);
 
         result.IsSuccess.Should().BeTrue();
@@ -162,11 +162,11 @@ public sealed class ChatHandlerTests
     [Fact]
     public async Task ChatLoadModelsHandler_HandleAsync_ServiceThrows_ReturnsNotReachable()
     {
-        var svc = new Mock<IChatModelDiscoveryService>();
-        svc.Setup(s => s.GetAvailableModelsAsync(It.IsAny<CancellationToken>()))
-           .ThrowsAsync(new HttpRequestException("connection refused"));
+        var svc = Substitute.For<IChatModelDiscoveryService>();
+        svc.GetAvailableModelsAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<IReadOnlyList<string>>(new HttpRequestException("connection refused")));
 
-        var handler = new ChatLoadModelsHandler(svc.Object);
+        var handler = new ChatLoadModelsHandler(svc);
         var result = await handler.HandleAsync(new ChatLoadModelsQuery(null), _ctx);
 
         result.IsSuccess.Should().BeTrue();
@@ -179,12 +179,12 @@ public sealed class ChatHandlerTests
     [Fact]
     public async Task ChatSendMessageHandler_HandleAsync_ReturnsReply()
     {
-        var svc = new Mock<IChatSendOrchestrationService>();
-        svc.Setup(s => s.SendMessageAsync(It.IsAny<ChatSendRequest>(), It.IsAny<IProgress<string>?>(), It.IsAny<CancellationToken>()))
-           .ReturnsAsync("Hello back!");
+        var svc = Substitute.For<IChatSendOrchestrationService>();
+        svc.SendMessageAsync(Arg.Any<ChatSendRequest>(), Arg.Any<IProgress<string>?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult("Hello back!"));
 
         var request = new ChatSendRequest("Hi", "context", "llama3");
-        var handler = new ChatSendMessageHandler(svc.Object);
+        var handler = new ChatSendMessageHandler(svc);
         var result = await handler.HandleAsync(new ChatSendMessageCommand(request), _ctx);
 
         result.IsSuccess.Should().BeTrue();
@@ -196,12 +196,12 @@ public sealed class ChatHandlerTests
     [Fact]
     public async Task ChatSendMessageHandler_HandleAsync_Cancelled_ReturnsCancelledResult()
     {
-        var svc = new Mock<IChatSendOrchestrationService>();
-        svc.Setup(s => s.SendMessageAsync(It.IsAny<ChatSendRequest>(), It.IsAny<IProgress<string>?>(), It.IsAny<CancellationToken>()))
-           .ThrowsAsync(new OperationCanceledException());
+        var svc = Substitute.For<IChatSendOrchestrationService>();
+        svc.SendMessageAsync(Arg.Any<ChatSendRequest>(), Arg.Any<IProgress<string>?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<string>(new OperationCanceledException()));
 
         var request = new ChatSendRequest("Hi", "context", "llama3");
-        var handler = new ChatSendMessageHandler(svc.Object);
+        var handler = new ChatSendMessageHandler(svc);
         var result = await handler.HandleAsync(new ChatSendMessageCommand(request), _ctx);
 
         result.IsSuccess.Should().BeTrue();
@@ -212,15 +212,14 @@ public sealed class ChatHandlerTests
     [Fact]
     public async Task ChatSendMessageHandler_HandleAsync_Error_ReturnsFailure()
     {
-        var svc = new Mock<IChatSendOrchestrationService>();
-        svc.Setup(s => s.SendMessageAsync(It.IsAny<ChatSendRequest>(), It.IsAny<IProgress<string>?>(), It.IsAny<CancellationToken>()))
-           .ThrowsAsync(new InvalidOperationException("backend error"));
+        var svc = Substitute.For<IChatSendOrchestrationService>();
+        svc.SendMessageAsync(Arg.Any<ChatSendRequest>(), Arg.Any<IProgress<string>?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<string>(new InvalidOperationException("backend error")));
 
         var request = new ChatSendRequest("Hi", "context", "llama3");
-        var handler = new ChatSendMessageHandler(svc.Object);
+        var handler = new ChatSendMessageHandler(svc);
         var result = await handler.HandleAsync(new ChatSendMessageCommand(request), _ctx);
 
         result.IsSuccess.Should().BeFalse();
     }
 }
-

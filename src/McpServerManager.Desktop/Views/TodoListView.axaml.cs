@@ -19,8 +19,8 @@ public partial class TodoListView : UserControl
     private bool? _wasPortrait;
     private bool _isUpdatingLayout;
     private bool _suppressOpenSelectedTodoOnce;
-    private LayoutSettings _layoutSettings = new();
-    private readonly List<ListBox> _groupListBoxes = new();
+    protected LayoutSettings _layoutSettings = new();
+    protected readonly List<ListBox> _groupListBoxes = new();
     private TodoListViewModel? _currentViewModel;
 
     public TodoListView()
@@ -61,7 +61,7 @@ public partial class TodoListView : UserControl
         }
     }
 
-    private void OnDataContextChanged(object? sender, EventArgs e)
+    protected void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (ReferenceEquals(_currentViewModel, DataContext))
             return;
@@ -81,7 +81,7 @@ public partial class TodoListView : UserControl
         }
     }
 
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    protected void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is not TodoListViewModel vm) return;
         if (e.PropertyName == nameof(TodoListViewModel.EditorText))
@@ -112,7 +112,7 @@ public partial class TodoListView : UserControl
         editor.TextArea.Caret.BringCaretToView();
     }
 
-    private void SyncTabContent(TodoListViewModel vm)
+    protected void SyncTabContent(TodoListViewModel vm)
     {
         if (!UiDispatcherHost.CheckAccess())
         {
@@ -144,7 +144,7 @@ public partial class TodoListView : UserControl
         }
     }
 
-    private void OnTabContentChanged(object? sender, PropertyChangedEventArgs e)
+    protected void OnTabContentChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(EditorTab.Content) && sender is EditorTab tab && tab.IsMarkdown)
         {
@@ -156,7 +156,7 @@ public partial class TodoListView : UserControl
     }
 
     /// <summary>Called from XAML when a per-group ListBox selection changes. Ensures single selection across all groups and auto-opens the todo.</summary>
-    private void OnGroupListBoxSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    protected void OnGroupListBoxSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is not ListBox activeListBox) return;
         if (activeListBox.SelectedItem is not UiCoreTodoListEntry entry) return;
@@ -166,7 +166,7 @@ public partial class TodoListView : UserControl
         ApplyGroupSelection(activeListBox, entry, openSelectedTodo);
     }
 
-    private void OnGroupListBoxPointerPressed(object? sender, PointerPressedEventArgs e)
+    protected void OnGroupListBoxPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not ListBox activeListBox) return;
         if (!e.GetCurrentPoint(activeListBox).Properties.IsRightButtonPressed) return;
@@ -185,7 +185,7 @@ public partial class TodoListView : UserControl
         ApplyGroupSelection(activeListBox, entry, openSelectedTodo: false);
     }
 
-    private void ApplyGroupSelection(ListBox activeListBox, UiCoreTodoListEntry entry, bool openSelectedTodo)
+    protected void ApplyGroupSelection(ListBox activeListBox, UiCoreTodoListEntry entry, bool openSelectedTodo)
     {
         // Deselect all other group ListBoxes
         foreach (var lb in _groupListBoxes)
@@ -203,22 +203,22 @@ public partial class TodoListView : UserControl
     }
 
     /// <summary>Track ListBox instances as they are created by the ItemsControl template.</summary>
-    private void OnGroupListBoxLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    protected void OnGroupListBoxLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (sender is ListBox lb && !_groupListBoxes.Contains(lb))
             _groupListBoxes.Add(lb);
     }
 
     /// <summary>Remove tracked ListBox instances when unloaded (group removed by filter).</summary>
-    private void OnGroupListBoxUnloaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    protected void OnGroupListBoxUnloaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (sender is ListBox lb)
             _groupListBoxes.Remove(lb);
     }
 
-    private void OnEditorCut(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.Cut();
+    protected void OnEditorCut(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.Cut();
 
-    private async void OnEditorCopy(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    protected async void OnEditorCopy(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         var selectedText = Editor.SelectedText;
         if (string.IsNullOrEmpty(selectedText))
@@ -242,9 +242,9 @@ public partial class TodoListView : UserControl
         }
     }
 
-    private void OnEditorPaste(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.Paste();
+    protected void OnEditorPaste(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => Editor.Paste();
 
-    private void UpdateLayoutForOrientation(bool isPortrait)
+    protected void UpdateLayoutForOrientation(bool isPortrait)
     {
         ContentGrid.ColumnDefinitions.Clear();
         ContentGrid.RowDefinitions.Clear();
@@ -283,7 +283,7 @@ public partial class TodoListView : UserControl
         }
     }
 
-    private void SaveCurrentSplitterToSettings(bool wasPortrait)
+    protected void SaveCurrentSplitterToSettings(bool wasPortrait)
     {
         if (ContentGrid == null) return;
         if (wasPortrait)

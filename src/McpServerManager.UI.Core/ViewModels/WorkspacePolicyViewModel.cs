@@ -138,7 +138,7 @@ public partial class WorkspacePolicyViewModel : ObservableObject
         }
     }
 
-    private UpdateWorkspacePolicyCommand BuildCommand() => new()
+    internal UpdateWorkspacePolicyCommand BuildCommand() => new()
     {
         WorkspacePath = WorkspacePath,
         BannedLicenses = [.. BannedLicenses],
@@ -147,7 +147,7 @@ public partial class WorkspacePolicyViewModel : ObservableObject
         BannedIndividuals = [.. BannedIndividuals],
     };
 
-    private static void ReplaceCollection(ObservableCollection<string> target, IReadOnlyList<string> values)
+    internal static void ReplaceCollection(ObservableCollection<string> target, IReadOnlyList<string> values)
     {
         target.Clear();
         foreach (var value in values)

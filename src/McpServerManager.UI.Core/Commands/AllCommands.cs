@@ -314,8 +314,7 @@ public sealed record RefreshSelectedWorkspaceHealthCommand(
     string? DisplayName = null) : ICommand<bool>;
 
 public sealed class RefreshSelectedWorkspaceHealthHandler(
-    IWorkspaceHealthTarget target,
-    IUiDispatcherService uiDispatcher) : ICommandHandler<RefreshSelectedWorkspaceHealthCommand, bool>
+    IWorkspaceHealthTarget target) : ICommandHandler<RefreshSelectedWorkspaceHealthCommand, bool>
 {
     public async Task<Result<bool>> HandleAsync(RefreshSelectedWorkspaceHealthCommand command, CallContext context)
     {
@@ -355,5 +354,4 @@ public sealed class RefreshSelectedWorkspaceHealthHandler(
         return $"{(health.Success ? "Healthy" : "Unhealthy")}: {displayName} - {status}{endpoint}{error}";
     }
 }
-
 

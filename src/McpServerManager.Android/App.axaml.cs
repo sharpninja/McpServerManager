@@ -17,7 +17,7 @@ namespace McpServerManager.Android;
 
 public partial class App : Application
 {
-    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("App");
+    protected static readonly ILogger _logger = AppLogService.Instance.CreateLogger("App");
     private ServiceProvider? _connectionServices;
     private AndroidMainWindowSession? _mainWindowSession;
 

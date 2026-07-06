@@ -1,1 +1,7 @@
-<Project />
+<Project>
+  <PropertyGroup>
+    <RepositoryDirectoryBuildProps>$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)..'))</RepositoryDirectoryBuildProps>
+  </PropertyGroup>
+  <Import Project="$(RepositoryDirectoryBuildProps)"
+          Condition="'$(RepositoryDirectoryBuildProps)' != '' and Exists('$(RepositoryDirectoryBuildProps)')" />
+</Project>

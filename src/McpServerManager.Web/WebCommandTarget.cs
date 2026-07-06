@@ -10,6 +10,7 @@ using McpServerManager.UI.Core.Commands;
 using McpServerManager.UI.Core.Models;
 using McpServerManager.UI.Core.Models.Json;
 using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
 
 namespace McpServerManager.Web;
@@ -148,6 +149,28 @@ internal sealed class WebCommandTarget : ICommandTarget
     public Task CopilotPlanAsync() => UnsupportedAsync(nameof(CopilotPlanAsync));
 
     public Task CopilotImplementAsync() => UnsupportedAsync(nameof(CopilotImplementAsync));
+
+    public Task SwitchWorkspaceConnectionAsync(WorkspaceConnectionOption option)
+        => UnsupportedAsync(nameof(SwitchWorkspaceConnectionAsync));
+
+    public Task LoadWorkspaceConnectionsAsync(
+        WorkspaceConnectionOption? preferredSelection,
+        string preferredBaseUrl,
+        bool suppressStatusFailure)
+        => UnsupportedAsync(nameof(LoadWorkspaceConnectionsAsync));
+
+    public Task RefreshSelectedWorkspaceHealthAsync()
+        => UnsupportedAsync(nameof(RefreshSelectedWorkspaceHealthAsync));
+
+    public void UpdateWorkspaceHealthIndicator(bool? isHealthy, string tooltip)
+    {
+        StatusMessage = tooltip;
+    }
+
+    public void SetAgentEventStatus(string message)
+    {
+        StatusMessage = message;
+    }
 
     private Task DispatchUnsupportedAsync(string operationName)
         => DispatchAsync(Create(() => throw CreateUnsupportedException(operationName)), parameter: null, CancellationToken.None);

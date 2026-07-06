@@ -15,7 +15,7 @@ public partial class PhoneSettingsView : UserControl
         InitializeComponent();
     }
 
-    private async void OnImportClick(object? sender, RoutedEventArgs e)
+    protected async void OnImportClick(object? sender, RoutedEventArgs e)
     {
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.StorageProvider is not { } storage) return;

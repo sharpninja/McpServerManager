@@ -34,12 +34,12 @@ public partial class AdaptiveMainView : UserControl
         base.OnDetachedFromVisualTree(e);
     }
 
-    private void OnDisplayChanged()
+    protected void OnDisplayChanged()
     {
         UiDispatcherHost.Post(EvaluateLayout);
     }
 
-    private void EvaluateLayout()
+    protected void EvaluateLayout()
     {
         double widthDp = DeviceFormFactor.GetCurrentWidthDp();
         if (widthDp <= 0) return;

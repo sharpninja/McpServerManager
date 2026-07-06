@@ -12,7 +12,7 @@ namespace McpServerManager;
 
 public partial class App : Application
 {
-    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("App");
+    protected static readonly ILogger _logger = AppLogService.Instance.CreateLogger("App");
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);

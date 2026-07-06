@@ -304,7 +304,7 @@ public sealed partial class WorkspaceDetailViewModel : AreaDetailViewModelBase<W
         }
     }
 
-    private void ApplyDetailToEditor(WorkspaceDetail detail)
+    internal void ApplyDetailToEditor(WorkspaceDetail detail)
     {
         WorkspacePath = detail.WorkspacePath;
         EditorWorkspacePath = detail.WorkspacePath;
@@ -321,7 +321,7 @@ public sealed partial class WorkspaceDetailViewModel : AreaDetailViewModelBase<W
         EditorPlanPromptText = detail.PlanPrompt;
     }
 
-    private CreateWorkspaceCommand BuildCreateCommand()
+    internal CreateWorkspaceCommand BuildCreateCommand()
         => new()
         {
             WorkspacePath = EditorWorkspacePath.Trim(),
@@ -338,7 +338,7 @@ public sealed partial class WorkspaceDetailViewModel : AreaDetailViewModelBase<W
             PlanPrompt = NormalizePromptOverride(EditorPlanPromptText),
         };
 
-    private UpdateWorkspaceCommand BuildUpdateCommand()
+    internal UpdateWorkspaceCommand BuildUpdateCommand()
         => new()
         {
             WorkspacePath = WorkspacePath,

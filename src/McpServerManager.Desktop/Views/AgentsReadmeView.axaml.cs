@@ -17,7 +17,7 @@ public partial class AgentsReadmeView : UserControl
         ConfigureEditor(AgentsReadmeEditor);
     }
 
-    private void OnDataContextChanged(object? sender, EventArgs e)
+    protected void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (!ReferenceEquals(_currentViewModel, DataContext))
         {
@@ -33,7 +33,7 @@ public partial class AgentsReadmeView : UserControl
         SetEditorTextIfDifferent(AgentsReadmeEditor, _currentViewModel?.AgentsReadmeContent);
     }
 
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    protected void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is not MainWindowViewModel vm)
             return;
@@ -42,14 +42,14 @@ public partial class AgentsReadmeView : UserControl
             SetEditorTextIfDifferent(AgentsReadmeEditor, vm.AgentsReadmeContent);
     }
 
-    private static void ConfigureEditor(TextEditor editor)
+    protected static void ConfigureEditor(TextEditor editor)
     {
         editor.IsReadOnly = true;
         editor.WordWrap = false;
         editor.Text = "";
     }
 
-    private static void SetEditorTextIfDifferent(TextEditor editor, string? text)
+    protected static void SetEditorTextIfDifferent(TextEditor editor, string? text)
     {
         var next = text ?? "";
         if (!string.Equals(editor.Text ?? "", next, StringComparison.Ordinal))

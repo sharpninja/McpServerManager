@@ -70,6 +70,15 @@ internal static class AndroidAppServiceFactory
         services.AddSingleton<McpServerManager.UI.Core.Services.IClipboardService>(sp => sp.GetRequiredService<McpServerManager.Core.Services.IClipboardService>());
         services.AddSingleton<McpServerManager.Core.Services.ISystemNotificationService, AndroidSystemNotificationService>();
         services.AddSingleton<McpServerManager.UI.Core.Services.ISystemNotificationService>(sp => sp.GetRequiredService<McpServerManager.Core.Services.ISystemNotificationService>());
+
+        // Register platform Android voice services for injection (addresses high violation in VoiceConversationView code-behind)
+        services.AddSingleton<IAndroidSpeechRecognitionService, AndroidSpeechRecognitionService>();
+        services.AddSingleton<IAndroidTextToSpeechService, AndroidTextToSpeechService>();
+        services.AddSingleton<IAndroidAudioFocusService, AndroidAudioFocusService>();
+        services.AddSingleton<IAndroidWakeWordService, AndroidWakeWordService>();
+        services.AddTransient<IAndroidVoiceConversationController, AndroidVoiceConversationController>();
+        services.AddTransient<IAndroidSimplifiedVoiceController, AndroidSimplifiedVoiceController>();
+
         RegisterUiCoreCommandTargets(services);
         RegisterCoreCommandTargets(services);
 
@@ -96,6 +105,11 @@ internal static class AndroidAppServiceFactory
 
             var viewModel = ActivatorUtilities.CreateInstance<CoreMainWindowViewModel>(provider, hostServices);
             commandTargetAccessor.Attach(viewModel);
+
+            // Configure Android voice view controllers from host composition.
+            McpServerManager.Android.Views.VoiceConversationView.ControllerFactory = () => provider.GetRequiredService<IAndroidVoiceConversationController>();
+            McpServerManager.Android.Views.SimplifiedVoiceView.PlatformControllerFactory = () => provider.GetRequiredService<IAndroidSimplifiedVoiceController>();
+
             return new AndroidMainWindowSession(provider, viewModel);
         }
         catch
@@ -124,6 +138,7 @@ internal static class AndroidAppServiceFactory
         services.TryAddSingleton<McpServerManager.UI.Core.Commands.IConfigTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
         services.TryAddSingleton<McpServerManager.UI.Core.Commands.IUiDispatchTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
         services.TryAddSingleton<McpServerManager.UI.Core.Commands.ITodoCopilotTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IAgentEventStatusTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
     }
 
     private static void RegisterCoreCommandTargets(IServiceCollection services)

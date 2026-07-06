@@ -226,6 +226,23 @@ public sealed class MainWindowViewModelDispatchTests
     }
 
     [Fact]
+    public void SelectedWorkspaceChange_UsesThinHealthRefreshEntry_WithSelectedSnapshot()
+    {
+        var candidates = new[]
+        {
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "src", "McpServerManager.UI.Core", "ViewModels", "MainWindowViewModel.cs")),
+            Path.GetFullPath("src/McpServerManager.UI.Core/ViewModels/MainWindowViewModel.cs"),
+            "F:/GitHub/McpServerManager/src/McpServerManager.UI.Core/ViewModels/MainWindowViewModel.cs"
+        };
+        var vmPath = candidates.FirstOrDefault(File.Exists);
+        Assert.True(vmPath != null && File.Exists(vmPath), $"VM src required for C4 health refresh gate. Tried: {string.Join("; ", candidates)}");
+        var src = File.ReadAllText(vmPath);
+
+        Assert.Contains("_ = RefreshSelectedWorkspaceHealthAsync();", src);
+        Assert.DoesNotContain("new Commands.RefreshSelectedWorkspaceHealthCommand());", src);
+    }
+
+    [Fact]
     public void InitializeAfterWindowShown_DispatchesInitializeCommand_ThinEntry_TestsFirst()
     {
         // Tests-first per Byrd for next C4 slice (PLAN-C4-MAINWINDOW-001).

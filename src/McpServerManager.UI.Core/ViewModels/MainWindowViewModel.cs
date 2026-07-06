@@ -55,15 +55,12 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
 
     private readonly IClipboardService _clipboardService;
     private readonly IUiDispatcherService _uiDispatcher;
-    private readonly ISystemNotificationService _systemNotificationService;
     private string _defaultMcpBaseUrl = "";
     private string? _defaultMcpApiKey;
     private string? _activeMcpApiKey;
     private Uri _defaultMcpBaseUri = new("http://localhost");
     private string _activeMcpBaseUrl = "";
     private string? _activeBearerToken;
-    private McpAgentEventStreamService _agentEventStreamService = null!;
-    private CancellationTokenSource? _agentEventListenerCts;
     private bool _agentEventListenerStarted;
 
     // Shared pre-authenticated clients — created once at connection time.
@@ -84,7 +81,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private readonly McpServerManager.UI.Core.Services.IProcessLauncherService _processLauncher = new Services.Infrastructure.ProcessLauncherService();
     private readonly McpServerManager.UI.Core.Services.ITimerService _timerService = new Services.Infrastructure.TimerService();
     private readonly McpServerManager.UI.Core.Services.IJsonParsingService _jsonParser = new Services.Infrastructure.JsonParsingService();
-    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
+    protected static readonly ILogger _logger = AppLogService.Instance.CreateLogger("ViewModel");
 
     protected IClipboardService ClipboardService => _clipboardService;
     protected UiCoreHostRuntime UiCoreRuntime => _uiCoreRuntime;
@@ -488,10 +485,10 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
 
         _clipboardService = clipboardService;
         _uiDispatcher = uiDispatcher ?? new ImmediateUiDispatcherService();
-        _systemNotificationService = systemNotificationService ?? NoOpSystemNotificationService.Instance;
         _hostIdentityProvider = hostServices.IdentityProvider as IMutableHostIdentityProvider;
         _activeBearerToken = string.IsNullOrWhiteSpace(hostServices.BearerToken) ? null : hostServices.BearerToken.Trim();
         InitializeMcpEndpoint(hostServices);
+        hostServices.Runtime.Services.GetService<DeferredMainWindowCommandTargetAccessor>()?.Attach(this);
     }
 
     private void InitializeDefaultWorkspaceSelection(string? primaryWorkspaceRootPath)
@@ -530,7 +527,6 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         _mcpWorkspaceService = hostServices.WorkspaceService;
         _mcpVoiceService = hostServices.VoiceService;
         _activeMcpBaseUrl = _defaultMcpBaseUrl;
-        _agentEventStreamService = hostServices.EventStreamService;
         _uiCoreRuntime = hostServices.Runtime;
         _dispatcher = _uiCoreRuntime.GetRequiredService<McpServer.Cqrs.Dispatcher>();
         SyncHostIdentityProvider();
@@ -580,7 +576,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
             && SelectedWorkspaceConnection != null
             && !string.IsNullOrWhiteSpace(ResolveActiveWorkspacePath());
 
-    private void ApplyActiveMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? workspaceRootPath = null)
+    protected void ApplyActiveMcpBaseUrl(string mcpBaseUrl, string? mcpApiKey = null, string? workspaceRootPath = null)
     {
         _activeMcpBaseUrl = NormalizeMcpBaseUrl(mcpBaseUrl);
         _activeMcpApiKey = string.IsNullOrWhiteSpace(mcpApiKey) ? null : mcpApiKey.Trim();
@@ -776,25 +772,22 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         StartAgentEventListener();
     }
 
-    private void StartAgentEventListener(bool restart = false)
+    protected void StartAgentEventListener(bool restart = false)
     {
-        if (restart)
-        {
-            StopAgentEventListener();
-        }
-
-        if (_agentEventListenerStarted)
+        if (_agentEventListenerStarted && !restart)
             return;
 
         _agentEventListenerStarted = true;
-        // Dispatch only (Run now dispatches too; handler/service owns loop).
-        _ = _dispatcher.SendAsync(new StartAgentEventListenerCommand());
+        _ = _dispatcher.SendAsync(new StartAgentEventListenerCommand(restart));
     }
 
-    private void StopAgentEventListener()
+    protected void StopAgentEventListener()
     {
         _agentEventListenerStarted = false;
+        _ = _dispatcher.SendAsync(new StopAgentEventListenerCommand());
     }
+
+    public void SetAgentEventStatus(string message) => StatusMessage = message;
 
     
 
@@ -818,14 +811,14 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         {
             UpdateAgentsReadmeWatcherForSelection(null);
             StopWorkspaceHealthRefresh();
-            UpdateWorkspaceHealthIndicator(null, "Select a workspace");
+            ((IWorkspaceHealthTarget)this).UpdateWorkspaceHealthIndicator(null, "Select a workspace");
             return;
         }
 
         UpdateAgentsReadmeWatcherForSelection(value);
 
         StartWorkspaceHealthRefresh();
-        _ = _dispatcher.SendAsync(new Commands.RefreshSelectedWorkspaceHealthCommand());
+        _ = RefreshSelectedWorkspaceHealthAsync();
 
         // Persist the selection for next startup
         SaveWorkspaceKey?.Invoke(value.Key);
@@ -856,7 +849,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         WorkspaceHealthIndicatorTooltip = tooltip;
     }
 
-    private void StartWorkspaceHealthRefresh()
+    protected void StartWorkspaceHealthRefresh()
     {
         StopWorkspaceHealthRefresh();
         var interval = TimeSpan.FromMinutes(1);
@@ -867,24 +860,13 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         });
     }
 
-    private void StopWorkspaceHealthRefresh()
+    protected void StopWorkspaceHealthRefresh()
     {
         _workspaceHealthTimer?.Dispose();
         _workspaceHealthTimer = null;
     }
 
-    private void UpdateWorkspaceHealthIndicator(bool? isHealthy, string tooltip)
-    {
-        WorkspaceHealthIndicatorBrush = isHealthy switch
-        {
-            true => Brushes.LimeGreen,
-            false => Brushes.IndianRed,
-            _ => Brushes.Gray
-        };
-        WorkspaceHealthIndicatorTooltip = tooltip;
-    }
-
-    private void UpdateAgentsReadmeWatcherForSelection(WorkspaceConnectionOption? selection)
+    protected void UpdateAgentsReadmeWatcherForSelection(WorkspaceConnectionOption? selection)
     {
         var workspaceRootPath = selection?.WorkspaceRootPath;
         if (string.IsNullOrWhiteSpace(workspaceRootPath))
@@ -909,7 +891,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         QueueAgentsReadmeReload(filePath);
     }
 
-    private void ReplaceAgentsReadmeWatcher(string? filePath)
+    protected void ReplaceAgentsReadmeWatcher(string? filePath)
     {
         if (string.Equals(_agentsReadmeWatchedFilePath, filePath, StringComparison.OrdinalIgnoreCase))
             return;
@@ -961,7 +943,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     private void QueueAgentsReadmeReload(string filePath)
     {
         var version = Interlocked.Increment(ref _agentsReadmeReloadVersion);
-        _ = Task.Run(async () =>
+        QueueBackground(async () =>
         {
             try
             {
@@ -974,6 +956,36 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "AGENTS file reload scheduling failed");
+            }
+        });
+    }
+
+    internal void QueueBackground(Action work)
+    {
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            try
+            {
+                work();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Background operation failed");
+            }
+        });
+    }
+
+    internal void QueueBackground(Func<Task> work)
+    {
+        ThreadPool.QueueUserWorkItem(async _ =>
+        {
+            try
+            {
+                await work().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Background operation failed");
             }
         });
     }
@@ -1125,7 +1137,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         return options;
     }
 
-    private void ApplyWorkspaceConnectionOptions(
+    protected void ApplyWorkspaceConnectionOptions(
         IEnumerable<WorkspaceConnectionOption> options,
         WorkspaceConnectionOption? preferredSelection,
         string preferredBaseUrl)
@@ -2153,7 +2165,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     }
 
     /// <summary>Starts an auto-refresh timer for MCP nodes (60s). Stops any existing timer first.</summary>
-    private void StartMcpAutoRefresh()
+    protected void StartMcpAutoRefresh()
     {
         StopMcpAutoRefresh();
         var interval = TimeSpan.FromMinutes(1);
@@ -2168,7 +2180,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         });
     }
 
-    private void StopMcpAutoRefresh()
+    protected void StopMcpAutoRefresh()
     {
         _mcpAutoRefreshTimer?.Dispose();
         _mcpAutoRefreshTimer = null;
@@ -2503,7 +2515,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
          _markdownPreviewCts = new CancellationTokenSource();
          var token = _markdownPreviewCts.Token;
 
-         _ = Task.Run(async () =>
+         QueueBackground(async () =>
          {
              string markdownText;
              try
@@ -2552,7 +2564,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
          _markdownPreviewCts = new CancellationTokenSource();
          var token = _markdownPreviewCts.Token;
 
-         _ = Task.Run(async () =>
+         QueueBackground(async () =>
          {
              string content;
              try
@@ -2610,7 +2622,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     }
 
     /// <summary>Opens an HTML file in the system default browser.</summary>
-    private void OpenHtmlInDefaultBrowser(string htmlFilePath)
+    protected void OpenHtmlInDefaultBrowser(string htmlFilePath)
     {
         if (!_fs.FileExists(htmlFilePath)) return;
         try
@@ -2651,7 +2663,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         OpenFileInDefaultEditor(PromptTemplatesIo.GetFilePath(), "prompts");
     }
 
-    private void OpenFileInDefaultEditor(string path, string label)
+    protected void OpenFileInDefaultEditor(string path, string label)
     {
         if (!_fs.FileExists(path))
         {
@@ -2688,7 +2700,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         string name = Path.GetFileName(path);
         string newName = "Archived-" + name;
         string newPath = _fs.CombinePath(dir, newName);
-        Task.Run(() =>
+        QueueBackground(() =>
         {
             try
             {
@@ -2736,7 +2748,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         if (IsArchivedName(name)) return;
         string newName = "archive-" + name;
         string newPath = _fs.CombinePath(dir, newName);
-        Task.Run(() =>
+        QueueBackground(() =>
         {
             try
             {
@@ -2878,7 +2890,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     {
         DispatchToUi(() => StatusMessage = "Loading JSON...");
 
-        Task.Run(() =>
+        QueueBackground(() =>
         {
             try
             {
@@ -2962,7 +2974,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         });
     }
 
-    private void ApplyLoadedJsonToUi(string path, JsonNode? jsonNode, string schemaType, JsonLogSummary summary, UnifiedSessionLog? unifiedLog)
+    protected void ApplyLoadedJsonToUi(string path, JsonNode? jsonNode, string schemaType, JsonLogSummary summary, UnifiedSessionLog? unifiedLog)
     {
         JsonTree.Clear();
         SearchableTurns.Clear();
@@ -3320,7 +3332,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         UpdateDistinctFilterValues();
     }
 
-    private void UpdateDistinctFilterValues()
+    protected void UpdateDistinctFilterValues()
     {
         var entries = SearchableTurns ?? new ObservableCollection<SearchableTurn>();
         var requestIds = new List<string> { "" };
@@ -3473,7 +3485,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     }
 
     /// <summary>DTO for building the file tree on a background thread (no ObservableCollection).</summary>
-    private sealed class TreeDto
+    protected sealed class TreeDto
     {
         public string Path { get; set; } = "";
         public bool IsDirectory { get; set; }
@@ -3514,7 +3526,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     }
 
     /// <summary>Recursively adds code files and subdirs to the node, skipping session log folder(s).</summary>
-    private void LoadSourceChildrenDto(TreeDto node, string sessionsPathToIgnore)
+    protected void LoadSourceChildrenDto(TreeDto node, string sessionsPathToIgnore)
     {
         foreach (var dir in _fs.EnumerateDirectories(node.Path, "*", false))
         {
@@ -3554,7 +3566,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         return documentsDto;
     }
 
-    private void LoadDocumentsChildrenDto(TreeDto node, string sessionsPathToIgnore)
+    protected void LoadDocumentsChildrenDto(TreeDto node, string sessionsPathToIgnore)
     {
         foreach (var dir in _fs.EnumerateDirectories(node.Path, "*", false))
         {
@@ -3607,7 +3619,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         }
     }
 
-    private void LoadChildrenDto(TreeDto node)
+    protected void LoadChildrenDto(TreeDto node)
     {
         try
         {
@@ -3633,7 +3645,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     }
 
     /// <summary>Converts DTO tree to FileNode tree on the UI thread (ObservableCollection safe).</summary>
-    private static FileNode ApplyTreeDtoToNodes(TreeDto dto)
+    protected static FileNode ApplyTreeDtoToNodes(TreeDto dto)
     {
         var node = new FileNode(dto.Path, dto.IsDirectory);
         foreach (var childDto in dto.Children)
@@ -3696,7 +3708,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         return documentsNode;
     }
 
-    private void LoadDocumentsChildren(FileNode node, string sessionsPathToIgnore)
+    protected void LoadDocumentsChildren(FileNode node, string sessionsPathToIgnore)
     {
         foreach (var dir in _fs.EnumerateDirectories(node.Path, "*", false))
         {
@@ -3734,7 +3746,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         return sourceNode;
     }
 
-    private void LoadSourceChildren(FileNode node, string sessionsPathToIgnore)
+    protected void LoadSourceChildren(FileNode node, string sessionsPathToIgnore)
     {
         foreach (var dir in _fs.EnumerateDirectories(node.Path, "*", false))
         {
@@ -3755,7 +3767,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         }
     }
 
-    private void LoadChildren(FileNode node)
+    protected void LoadChildren(FileNode node)
     {
         try
         {
@@ -3798,7 +3810,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
         string? resolvedPath = null;
         try { resolvedPath = GetResolvedTargetPath(); } catch (Exception ex) { _logger.LogDebug(ex, "[Path] GetResolvedTargetPath failed"); }
         if (resolvedPath == null) return;
-        Task.Run(() =>
+        QueueBackground(() =>
         {
             try
             {

@@ -18,7 +18,7 @@ public partial class PhoneMainView : UserControl
         InitializeComponent();
     }
 
-    private async void MainTabControl_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    protected async void MainTabControl_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is not TabControl tc || DataContext is not MainWindowViewModel vm)
             return;
@@ -37,7 +37,7 @@ public partial class PhoneMainView : UserControl
         }
     }
 
-    private void StatusMessageText_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    protected void StatusMessageText_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm || string.IsNullOrWhiteSpace(vm.StatusMessage))
             return;
@@ -46,7 +46,7 @@ public partial class PhoneMainView : UserControl
         e.Handled = true;
     }
 
-    private async void StatusMessageText_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    protected async void StatusMessageText_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm || string.IsNullOrWhiteSpace(vm.StatusMessage))
         {
@@ -70,12 +70,12 @@ public partial class PhoneMainView : UserControl
         e.Handled = true;
     }
 
-    private void StatusMessageText_OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    protected void StatusMessageText_OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
         _statusPointerPressedAt = null;
     }
 
-    private async Task CopyStatusToClipboardAsync(string statusText)
+    protected async Task CopyStatusToClipboardAsync(string statusText)
     {
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.Clipboard is null)
@@ -84,25 +84,25 @@ public partial class PhoneMainView : UserControl
         await topLevel.Clipboard.SetTextAsync(statusText);
     }
 
-    private void ShowStatusDialog(string statusText)
+    protected void ShowStatusDialog(string statusText)
     {
         StatusDialogText.Text = statusText;
         StatusDialogOverlay.IsVisible = true;
     }
 
-    private void CloseStatusDialog_OnClick(object? sender, RoutedEventArgs e)
+    protected void CloseStatusDialog_OnClick(object? sender, RoutedEventArgs e)
     {
         StatusDialogOverlay.IsVisible = false;
         e.Handled = true;
     }
 
-    private void StatusDialogOverlay_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    protected void StatusDialogOverlay_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         StatusDialogOverlay.IsVisible = false;
         e.Handled = true;
     }
 
-    private void StatusDialogContent_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    protected void StatusDialogContent_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         e.Handled = true;
     }

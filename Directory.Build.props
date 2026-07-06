@@ -2,6 +2,9 @@
   <PropertyGroup>
     <!-- Avoid compiling generated sources from ad-hoc build output folders. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;artifacts\**</DefaultItemExcludes>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
+    <MSBuildWarningsAsErrors>$(MSBuildWarningsAsErrors);MSB*</MSBuildWarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net461'">

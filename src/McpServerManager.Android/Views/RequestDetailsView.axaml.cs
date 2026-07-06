@@ -28,7 +28,7 @@ public partial class RequestDetailsView : UserControl
             UpdateOriginalJsonVisibility();
     }
 
-    private void UpdateOriginalJsonVisibility()
+    protected void UpdateOriginalJsonVisibility()
     {
         if (OriginalJsonExpander != null)
             OriginalJsonExpander.IsVisible = ShowOriginalJson;

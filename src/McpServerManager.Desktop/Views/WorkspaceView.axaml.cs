@@ -14,7 +14,7 @@ public partial class WorkspaceView : UserControl
     private bool? _wasPortrait;
     private bool _isUpdatingLayout;
     private bool _hasAutoLoaded;
-    private LayoutSettings _layoutSettings = new();
+    protected LayoutSettings _layoutSettings = new();
     private WorkspaceViewModel? _currentViewModel;
 
     public WorkspaceView()
@@ -61,12 +61,12 @@ public partial class WorkspaceView : UserControl
         }
     }
 
-    private async void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    protected async void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         await TryAutoLoadAsync();
     }
 
-    private async void OnDataContextChanged(object? sender, EventArgs e)
+    protected async void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (!ReferenceEquals(_currentViewModel, DataContext))
         {
@@ -81,7 +81,7 @@ public partial class WorkspaceView : UserControl
         await TryAutoLoadAsync();
     }
 
-    private async Task TryAutoLoadAsync()
+    protected async Task TryAutoLoadAsync()
     {
         if (_hasAutoLoaded) return;
         if (DataContext is not WorkspaceViewModel vm) return;
@@ -89,7 +89,7 @@ public partial class WorkspaceView : UserControl
         await vm.LoadWorkspacesCommand.ExecuteAsync(null);
     }
 
-    private void AttachViewModel(WorkspaceViewModel vm)
+    protected void AttachViewModel(WorkspaceViewModel vm)
     {
         vm.GetWorkspacePromptEditorText = () => WorkspacePromptEditor.Text ?? "";
         vm.GetWorkspaceStatusPromptEditorText = () => WorkspaceStatusPromptEditor.Text ?? "";
@@ -104,7 +104,7 @@ public partial class WorkspaceView : UserControl
         SetEditorTextIfDifferent(GlobalPromptEditor, vm.GlobalPromptTemplateText);
     }
 
-    private void DetachViewModel(WorkspaceViewModel vm)
+    protected void DetachViewModel(WorkspaceViewModel vm)
     {
         vm.PropertyChanged -= OnViewModelPropertyChanged;
         vm.GetWorkspacePromptEditorText = null;
@@ -114,7 +114,7 @@ public partial class WorkspaceView : UserControl
         vm.GetGlobalPromptEditorText = null;
     }
 
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    protected void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is not WorkspaceViewModel vm) return;
 
@@ -140,21 +140,21 @@ public partial class WorkspaceView : UserControl
         }
     }
 
-    private static void ConfigurePromptEditor(TextEditor editor)
+    protected static void ConfigurePromptEditor(TextEditor editor)
     {
         editor.FontFamily = new Avalonia.Media.FontFamily("Cascadia Code,Consolas,Menlo,monospace");
         editor.WordWrap = true;
         editor.Text = "";
     }
 
-    private static void SetEditorTextIfDifferent(TextEditor editor, string? text)
+    protected static void SetEditorTextIfDifferent(TextEditor editor, string? text)
     {
         var next = text ?? "";
         if (!string.Equals(editor.Text ?? "", next, StringComparison.Ordinal))
             editor.Text = next;
     }
 
-    private void UpdateLayoutForOrientation(bool isPortrait)
+    protected void UpdateLayoutForOrientation(bool isPortrait)
     {
         ContentGrid.ColumnDefinitions.Clear();
         ContentGrid.RowDefinitions.Clear();
@@ -191,7 +191,7 @@ public partial class WorkspaceView : UserControl
         }
     }
 
-    private void SaveCurrentSplitterToSettings(bool wasPortrait)
+    protected void SaveCurrentSplitterToSettings(bool wasPortrait)
     {
         if (ContentGrid == null) return;
         if (wasPortrait)

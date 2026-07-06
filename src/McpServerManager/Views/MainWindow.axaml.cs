@@ -23,10 +23,10 @@ namespace McpServerManager.Views;
 
 public partial class MainWindow : Window
 {
-    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("MainWindow");
+    protected static readonly ILogger _logger = AppLogService.Instance.CreateLogger("MainWindow");
     private bool? _wasPortrait;
     private bool _isUpdatingLayout;
-    private LayoutSettings _layoutSettings = new();
+    protected LayoutSettings _layoutSettings = new();
     private ChatWindow? _chatWindow;
     /// <summary>Set during main window closing so SaveSettings can persist that the chat was open.</summary>
     private bool? _chatWindowWasOpenOnClosing;
@@ -56,7 +56,7 @@ public partial class MainWindow : Window
         public void OnNext(WindowState value) { _window.SaveWindowStateToSettings(); _window.SaveSettings(); }
     }
 
-    private void ApplyWindowSettings()
+    protected void ApplyWindowSettings()
     {
         try
         {
@@ -91,7 +91,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void OnWindowOpened(object? sender, EventArgs e)
+    protected async void OnWindowOpened(object? sender, EventArgs e)
     {
         // Deferred ViewModel init (file tree + watcher) so window shows first; failures don't block display
         if (DataContext is MainWindowViewModel vm)
@@ -141,7 +141,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Updates MarkdownViewer from ViewModel. If Markdown.Avalonia throws (e.g. StaticBinding), we switch to raw text and stop using the viewer.</summary>
-    private void SubscribeMarkdownViewerToViewModel(MainWindowViewModel vm)
+    protected void SubscribeMarkdownViewerToViewModel(MainWindowViewModel vm)
     {
         if (MarkdownViewer == null) return;
         void UpdateMarkdown()
@@ -165,16 +165,16 @@ public partial class MainWindow : Window
         };
     }
 
-    private static void DispatchToUi(Action action) => UiDispatcherHost.Post(action);
+    protected static void DispatchToUi(Action action) => UiDispatcherHost.Post(action);
 
-    private static Task DispatchToUiAsync(Action action)
+    protected static Task DispatchToUiAsync(Action action)
         => UiDispatcherHost.InvokeAsync(() =>
         {
             action();
             return Task.CompletedTask;
         });
 
-    private void LoadSettings()
+    protected void LoadSettings()
     {
         try
         {
@@ -188,7 +188,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void SaveSettings()
+    protected void SaveSettings()
     {
         try
         {
@@ -216,7 +216,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
+    protected void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
         _chatWindowWasOpenOnClosing = _chatWindow != null;
         _chatWindow?.Close();
@@ -241,7 +241,7 @@ public partial class MainWindow : Window
         SaveSettings();
     }
 
-    private void ApplyJsonViewerSplitterSettings()
+    protected void ApplyJsonViewerSplitterSettings()
     {
         try
         {
@@ -260,7 +260,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void SaveJsonViewerSplitterSettings()
+    protected void SaveJsonViewerSplitterSettings()
     {
         try
         {
@@ -275,7 +275,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnWindowPositionChanged(object? sender, PixelPointEventArgs e)
+    protected void OnWindowPositionChanged(object? sender, PixelPointEventArgs e)
     {
         // Position is saved on size/state change and on close; no need to save on every move
     }
@@ -284,7 +284,7 @@ public partial class MainWindow : Window
     /// Updates _layoutSettings from current window state, size and position. Call before SaveSettings().
     /// Minimized is never stored (we skip saving when minimized).
     /// </summary>
-    private void SaveWindowStateToSettings()
+    protected void SaveWindowStateToSettings()
     {
         if (WindowState == WindowState.Minimized)
             return;
@@ -298,7 +298,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
+    protected void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         // Re-entrancy guard: layout update can trigger another SizeChanged; avoid infinite loop
         if (_isUpdatingLayout) return;
@@ -330,7 +330,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void SaveCurrentLayoutToSettings(bool isPortrait)
+    protected void SaveCurrentLayoutToSettings(bool isPortrait)
     {
         if (MainGrid == null) return;
 
@@ -356,7 +356,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void UpdateLayoutForOrientation(bool isPortrait)
+    protected void UpdateLayoutForOrientation(bool isPortrait)
     {
         // Elements are: MainGrid, TreePanel, Splitter1, HistoryPanel, Splitter2, ViewerPanel
         // Note: Avalonia name generator creates references to x:Name elements
@@ -457,7 +457,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnJsonNodeDoubleTapped(object? sender, TappedEventArgs e)
+    protected void OnJsonNodeDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
 
@@ -483,7 +483,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnSearchRowTapped(object? sender, TappedEventArgs e)
+    protected void OnSearchRowTapped(object? sender, TappedEventArgs e)
     {
         if (sender is not Avalonia.Controls.Control control || control.DataContext is not SearchableTurn entry)
             return;
@@ -491,7 +491,7 @@ public partial class MainWindow : Window
             vm.SelectSearchTurnCommand.Execute(entry);
     }
 
-    private void OnSearchRowDoubleTapped(object? sender, TappedEventArgs e)
+    protected void OnSearchRowDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (sender is not Avalonia.Controls.Control control || control.DataContext is not SearchableTurn entry)
             return;
@@ -499,7 +499,7 @@ public partial class MainWindow : Window
             vm.ShowRequestDetailsCommand.Execute(entry);
     }
 
-    private void OnFileTreeTapped(object? sender, TappedEventArgs e)
+    protected void OnFileTreeTapped(object? sender, TappedEventArgs e)
     {
         if (e.Source is not Control source)
             return;
@@ -524,13 +524,13 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OpenChatWindow(object? sender, RoutedEventArgs e)
+    protected void OpenChatWindow(object? sender, RoutedEventArgs e)
     {
         ShowChatWindowIfRequested();
     }
 
     /// <summary>Opens the chat window if not already open. Call from toolbar button or on startup when ChatWindowWasOpen was true.</summary>
-    private void ShowChatWindowIfRequested()
+    protected void ShowChatWindowIfRequested()
     {
         if (DataContext is not MainWindowViewModel mainVm)
             return;
@@ -557,7 +557,7 @@ public partial class MainWindow : Window
         mainVm.ApplyModelForCurrentSelection();
     }
 
-    private void PersistChatWindowClosed()
+    protected void PersistChatWindowClosed()
     {
         try
         {

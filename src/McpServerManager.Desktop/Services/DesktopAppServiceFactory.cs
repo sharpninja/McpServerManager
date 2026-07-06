@@ -78,6 +78,7 @@ internal static class DesktopAppServiceFactory
         services.AddSingleton<McpServerManager.Core.Services.IClipboardService>(clipboardService);
         services.AddSingleton<McpServerManager.UI.Core.Services.IClipboardService>(sp => sp.GetRequiredService<McpServerManager.Core.Services.IClipboardService>());
         services.AddSingleton<McpServerManager.Core.Services.ISystemNotificationService, DesktopSystemNotificationService>();
+        services.AddSingleton<McpServerManager.UI.Core.Services.ISystemNotificationService>(sp => sp.GetRequiredService<McpServerManager.Core.Services.ISystemNotificationService>());
         RegisterChatServices(services);
         RegisterUiCoreCommandTargets(services);
         RegisterCoreCommandTargets(services);
@@ -133,6 +134,7 @@ internal static class DesktopAppServiceFactory
         services.TryAddSingleton<McpServerManager.UI.Core.Commands.IConfigTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
         services.TryAddSingleton<McpServerManager.UI.Core.Commands.IUiDispatchTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
         services.TryAddSingleton<McpServerManager.UI.Core.Commands.ITodoCopilotTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IAgentEventStatusTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
     }
 
     private static void RegisterCoreCommandTargets(IServiceCollection services)

@@ -20,8 +20,8 @@ public partial class MainWindow : Window
     private const double DefaultVoiceFlyoutWidth = 420;
     private const double DefaultVoiceFlyoutHeight = 300;
 
-    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("MainWindow");
-    private LayoutSettings _layoutSettings = new();
+    protected static readonly ILogger _logger = AppLogService.Instance.CreateLogger("MainWindow");
+    protected LayoutSettings _layoutSettings = new();
     private ChatWindow? _chatWindow;
     private ChatWindowViewModelSession? _chatWindowSession;
     private bool? _chatWindowWasOpenOnClosing;
@@ -54,7 +54,7 @@ public partial class MainWindow : Window
         public void OnNext(WindowState value) { _window.SaveWindowStateToSettings(); _window.SaveSettings(); }
     }
 
-    private void ApplyWindowSettings()
+    protected void ApplyWindowSettings()
     {
         try
         {
@@ -85,7 +85,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void OnWindowOpened(object? sender, EventArgs e)
+    protected async void OnWindowOpened(object? sender, EventArgs e)
     {
         if (DataContext is MainWindowViewModel vm)
         {
@@ -141,7 +141,7 @@ public partial class MainWindow : Window
             DispatchToUi(ShowChatWindowIfRequested);
     }
 
-    private void OnTabSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    protected void OnTabSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender == MainTabControl)
         {
@@ -151,12 +151,12 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnOpenChatWindowRequested(object? sender, EventArgs e)
+    protected void OnOpenChatWindowRequested(object? sender, EventArgs e)
     {
         ShowChatWindowIfRequested();
     }
 
-    private void OnTodoOpenAiChatRequested(object? sender, EventArgs e)
+    protected void OnTodoOpenAiChatRequested(object? sender, EventArgs e)
     {
         ShowChatWindowIfRequested();
         // Inject todo context into the chat's context provider
@@ -167,7 +167,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void LoadSettings()
+    protected void LoadSettings()
     {
         try
         {
@@ -178,7 +178,7 @@ public partial class MainWindow : Window
         catch { }
     }
 
-    private void SaveSettings()
+    protected void SaveSettings()
     {
         try
         {
@@ -212,7 +212,7 @@ public partial class MainWindow : Window
         catch { }
     }
 
-    private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
+    protected void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
         if (DataContext is MainWindowViewModel vm)
         {
@@ -243,7 +243,7 @@ public partial class MainWindow : Window
         SaveSettings();
     }
 
-    private void SaveWindowStateToSettings()
+    protected void SaveWindowStateToSettings()
     {
         if (WindowState == WindowState.Minimized)
             return;
@@ -257,7 +257,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
+    protected void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         if (WindowState == WindowState.Minimized) return;
         var size = ClientSize;
@@ -270,7 +270,7 @@ public partial class MainWindow : Window
         SaveSettings();
     }
 
-    private void OnVoiceFlyoutToggleChanged(object? sender, RoutedEventArgs e)
+    protected void OnVoiceFlyoutToggleChanged(object? sender, RoutedEventArgs e)
     {
         if (_isUpdatingVoiceFlyoutToggleState)
             return;
@@ -279,7 +279,7 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void OnVoicePinToggleChanged(object? sender, RoutedEventArgs e)
+    protected void OnVoicePinToggleChanged(object? sender, RoutedEventArgs e)
     {
         _isVoiceFlyoutPinned = VoicePinToggleButton.IsChecked != false;
         SyncVoiceFlyoutToggleState();
@@ -287,34 +287,34 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void OnVoiceFlyoutCloseClick(object? sender, RoutedEventArgs e)
+    protected void OnVoiceFlyoutCloseClick(object? sender, RoutedEventArgs e)
     {
         SetVoiceFlyoutOpen(false);
         e.Handled = true;
     }
 
-    private void OnVoiceFlyoutSplitterPointerReleased(object? sender, PointerReleasedEventArgs e)
+    protected void OnVoiceFlyoutSplitterPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         CaptureVoiceFlyoutSize();
         SaveSettings();
     }
 
-    private void OnVoiceFlyoutSplitterPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    protected void OnVoiceFlyoutSplitterPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
         CaptureVoiceFlyoutSize();
         SaveSettings();
     }
 
-    private static void DispatchToUi(Action action) => UiDispatcherHost.Post(action);
+    protected static void DispatchToUi(Action action) => UiDispatcherHost.Post(action);
 
-    private static Task DispatchToUiAsync(Action action)
+    protected static Task DispatchToUiAsync(Action action)
         => UiDispatcherHost.InvokeAsync(() =>
         {
             action();
             return Task.CompletedTask;
         });
 
-    private void ShowChatWindowIfRequested()
+    protected void ShowChatWindowIfRequested()
     {
         if (DataContext is not MainWindowViewModel mainVm)
             return;
@@ -348,13 +348,13 @@ public partial class MainWindow : Window
         mainVm.ApplyModelForCurrentSelection();
     }
 
-    private void OnLogoutRequested(object? sender, EventArgs e)
+    protected void OnLogoutRequested(object? sender, EventArgs e)
     {
         _logger.LogInformation("Logout requested; closing application");
         Close();
     }
 
-    private void PersistChatWindowClosed()
+    protected void PersistChatWindowClosed()
     {
         try
         {
@@ -365,7 +365,7 @@ public partial class MainWindow : Window
         catch { }
     }
 
-    private void SetVoiceFlyoutOpen(bool isOpen)
+    protected void SetVoiceFlyoutOpen(bool isOpen)
     {
         if (_isVoiceFlyoutOpen == isOpen)
         {
@@ -380,7 +380,7 @@ public partial class MainWindow : Window
         SaveSettings();
     }
 
-    private void SyncVoiceFlyoutToggleState()
+    protected void SyncVoiceFlyoutToggleState()
     {
         _isUpdatingVoiceFlyoutToggleState = true;
         try
@@ -396,7 +396,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ApplyVoiceFlyoutLayout(Size hostSize)
+    protected void ApplyVoiceFlyoutLayout(Size hostSize)
     {
         if (ShellGrid == null)
             return;
@@ -457,21 +457,21 @@ public partial class MainWindow : Window
         }
     }
 
-    private double CoerceVoiceFlyoutWidth(Size hostSize)
+    protected double CoerceVoiceFlyoutWidth(Size hostSize)
     {
         var savedWidth = _layoutSettings.VoiceFlyoutLandscapeWidth?.ToGridLength().Value ?? DefaultVoiceFlyoutWidth;
         var maxWidth = Math.Max(MinVoiceFlyoutWidth, hostSize.Width - 240);
         return Math.Clamp(savedWidth, MinVoiceFlyoutWidth, maxWidth);
     }
 
-    private double CoerceVoiceFlyoutHeight(Size hostSize)
+    protected double CoerceVoiceFlyoutHeight(Size hostSize)
     {
         var savedHeight = _layoutSettings.VoiceFlyoutPortraitHeight?.ToGridLength().Value ?? DefaultVoiceFlyoutHeight;
         var maxHeight = Math.Max(MinVoiceFlyoutHeight, hostSize.Height - 180);
         return Math.Clamp(savedHeight, MinVoiceFlyoutHeight, maxHeight);
     }
 
-    private void CaptureVoiceFlyoutSize()
+    protected void CaptureVoiceFlyoutSize()
     {
         if (!_isVoiceFlyoutOpen || VoiceFlyoutBorder == null)
             return;

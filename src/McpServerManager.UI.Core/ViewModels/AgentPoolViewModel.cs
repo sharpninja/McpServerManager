@@ -29,7 +29,7 @@ public sealed partial class AgentPoolViewModel : ObservableObject
         workspaceContext.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(WorkspaceContextViewModel.ActiveWorkspacePath))
-                _ = Task.Run(() => LoadAsync());
+                _ = LoadAsync();
         };
     }
 
@@ -440,7 +440,7 @@ public sealed partial class AgentPoolViewModel : ObservableObject
             AgentNameInput = selected.AgentName;
     }
 
-    private async Task ExecuteAgentMutationAsync<TCommand>(
+    internal async Task ExecuteAgentMutationAsync<TCommand>(
         string? agentName,
         Func<string, TCommand> commandFactory,
         Func<string, string> pendingMessage,
@@ -475,7 +475,7 @@ public sealed partial class AgentPoolViewModel : ObservableObject
         StatusMessage = successMessage(agentName);
     }
 
-    private async Task ExecuteQueueMutationAsync<TCommand>(
+    internal async Task ExecuteQueueMutationAsync<TCommand>(
         string? jobId,
         Func<string, TCommand> commandFactory,
         Func<string, string> pendingMessage,
@@ -518,7 +518,7 @@ public sealed partial class AgentPoolViewModel : ObservableObject
         return SelectedRuntimeAgent?.AgentName;
     }
 
-    private static void ReplaceCollection<T>(ObservableCollection<T> target, IReadOnlyList<T> items)
+    internal static void ReplaceCollection<T>(ObservableCollection<T> target, IReadOnlyList<T> items)
     {
         target.Clear();
         foreach (var item in items)

@@ -258,6 +258,14 @@ Scope: layer-1+
 **TR-TEST-001** — Placeholder requirement backfilled for TODO link TR-TEST-001.
 Scope: layer-1+
 
+## TR-TEST-DOUBLE-001
+
+**NSubstitute-only test doubles** — Test projects must use NSubstitute for mocks/substitutes and must not reference or use any other mocking framework.
+Scope: layer-1+
+**Acceptance Criteria:**
+- [x] No source file imports or uses APIs from disallowed mock frameworks.
+- [x] Test project package references include NSubstitute where substitutes are needed and exclude disallowed mock packages.
+
 ## TR-TRIAGE-ACTIONS-001
 
 **Typed triage grouping actions** — The Web triage page must call typed McpServer.Client triage endpoints for moving reports to a new group, moving reports to an existing group, and combining multiple groups.
@@ -270,6 +278,11 @@ Scope: layer-1+
 **Acceptance Criteria:**
 - [ ] Direct SharpNinja.McpServer.Client package references are upgraded to 1.2.0.
 - [ ] UI queries call TriageClient.GetDashboardAsync, QueryGroupsAsync, GetGroupAsync, GetReportAsync, QueryRunsAsync, GetRunAsync, and QueryCreatedTodosAsync.
+
+## TR-VM-CQRS-LAYER-001
+
+**Core command layer dependency boundary** — Core command layer must not depend on UI.Core, app, Android, Desktop, or platform service interfaces while completing CQRS/ViewModel refactor slices.
+Scope: layer-1+
 
 ## TR-WEB-HYBRID-001
 

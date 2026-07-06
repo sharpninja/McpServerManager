@@ -217,6 +217,16 @@ Scope: layer-1+
 MCP Web triage dashboard must let users select multiple triage rows or groups and move/consolidate them into report groups without leaving the triage page.
 Scope: layer-1+
 
+## FR-VM-CQRS-ANDROIDVOICE-001 Android voice host-composed services
+
+Android voice views must obtain speech recognition, text-to-speech, audio focus, and wake word services from host composition instead of constructing platform services directly.
+Scope: layer-1+
+
+## FR-VM-CQRS-EVENTS-001 Agent event listener extraction
+
+Agent event listener behavior must live outside MainWindowViewModel while preserving actionable-event filtering, status updates, reconnect behavior, notifications, and cancellation.
+Scope: layer-1+
+
 ## FR-WEB-001 MCP Web desktop hybrid host
 
 McpServer must provide a Blazor Hybrid desktop host for the existing mcp-web experience so users can run the web UI as a local desktop application without duplicating page behavior.

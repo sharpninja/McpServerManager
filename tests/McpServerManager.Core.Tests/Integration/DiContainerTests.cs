@@ -8,7 +8,7 @@ using McpServerManager.Core;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
+using NSubstitute;
 using Xunit;
 using CoreMcpTodoService = McpServerManager.Core.Services.McpTodoService;
 
@@ -16,7 +16,7 @@ namespace McpServerManager.Core.Tests.Integration;
 
 public sealed class DiContainerTests : IDisposable
 {
-    private readonly Mock<ICommandTarget> _target = new();
+    private readonly ICommandTarget _target = Substitute.For<ICommandTarget, McpServerManager.UI.Core.Commands.ICommandTarget>();
     private readonly ServiceProvider _provider;
 
     public DiContainerTests()
@@ -63,7 +63,7 @@ public sealed class DiContainerTests : IDisposable
     {
         var target = _provider.GetService<ICommandTarget>();
         target.Should().NotBeNull();
-        target.Should().BeSameAs(_target.Object);
+        target.Should().BeSameAs(_target);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class DiContainerTests : IDisposable
     {
         var target = _provider.GetService<McpServerManager.UI.Core.Commands.ITodoCopilotTarget>();
         target.Should().NotBeNull();
-        target.Should().BeSameAs(_target.Object);
+        target.Should().BeSameAs(_target);
     }
 
     [Fact]
@@ -144,23 +144,23 @@ public sealed class DiContainerTests : IDisposable
     public void Dispose() => _provider.Dispose();
 
     private static ServiceProvider CreateProvider(
-        Mock<ICommandTarget> target,
+        ICommandTarget target,
         CoreMcpTodoService todoService,
         McpServerClient client,
         Uri baseUri)
     {
-        var uiTarget = target.As<McpServerManager.UI.Core.Commands.ICommandTarget>();
+        var uiTarget = (McpServerManager.UI.Core.Commands.ICommandTarget)target;
         var services = new ServiceCollection();
         services.AddMcpHost(options =>
         {
             options.Lifetime = McpHostLifetimeStrategy.Singleton;
-            options.CommandTarget = uiTarget.Object;
+            options.CommandTarget = uiTarget;
             options.TodoClient = new UiCoreTodoApiClientAdapter(todoService);
             options.HealthClient = new UiCoreHealthApiClientAdapter(client, baseUri);
             options.AdditionalHandlerAssemblies = [typeof(NavigateBackCommand).Assembly];
         });
 
-        services.AddSingleton<ICommandTarget>(target.Object);
+        services.AddSingleton(target);
         services.AddSingleton<INavigationTarget>(sp => sp.GetRequiredService<ICommandTarget>());
         services.AddSingleton<IRequestDetailsTarget>(sp => sp.GetRequiredService<ICommandTarget>());
         services.AddSingleton<IPreviewTarget>(sp => sp.GetRequiredService<ICommandTarget>());

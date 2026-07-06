@@ -19,7 +19,7 @@ public partial class TabletMainView : UserControl
     private const double DefaultVoiceFlyoutHeight = 300;
 
     private DateTimeOffset? _statusPointerPressedAt;
-    private LayoutSettings _layoutSettings = new();
+    protected LayoutSettings _layoutSettings = new();
     private bool _isVoiceFlyoutOpen;
     private bool _isVoiceFlyoutPinned = true;
     private bool? _voiceFlyoutIsPortrait;
@@ -37,25 +37,25 @@ public partial class TabletMainView : UserControl
         SizeChanged += OnHostSizeChanged;
     }
 
-    private void OnLoaded(object? sender, RoutedEventArgs e)
+    protected void OnLoaded(object? sender, RoutedEventArgs e)
     {
         MainTabControl.SelectedIndex = Math.Clamp(_layoutSettings.SelectedTabIndex, 0, Math.Max(0, MainTabControl.ItemCount - 1));
         ApplyVoiceFlyoutLayout(Bounds.Size);
     }
 
-    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    protected void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         SaveSettings();
     }
 
-    private void OnHostSizeChanged(object? sender, SizeChangedEventArgs e)
+    protected void OnHostSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         CaptureVoiceFlyoutSize();
         ApplyVoiceFlyoutLayout(e.NewSize);
         SaveSettings();
     }
 
-    private void StatusMessageText_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    protected void StatusMessageText_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm || string.IsNullOrWhiteSpace(vm.StatusMessage))
             return;
@@ -64,7 +64,7 @@ public partial class TabletMainView : UserControl
         e.Handled = true;
     }
 
-    private async void StatusMessageText_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    protected async void StatusMessageText_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm || string.IsNullOrWhiteSpace(vm.StatusMessage))
         {
@@ -88,12 +88,12 @@ public partial class TabletMainView : UserControl
         e.Handled = true;
     }
 
-    private void StatusMessageText_OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    protected void StatusMessageText_OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
         _statusPointerPressedAt = null;
     }
 
-    private async Task CopyStatusToClipboardAsync(string statusText)
+    protected async Task CopyStatusToClipboardAsync(string statusText)
     {
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.Clipboard is null)
@@ -102,30 +102,30 @@ public partial class TabletMainView : UserControl
         await topLevel.Clipboard.SetTextAsync(statusText);
     }
 
-    private void ShowStatusDialog(string statusText)
+    protected void ShowStatusDialog(string statusText)
     {
         StatusDialogText.Text = statusText;
         StatusDialogOverlay.IsVisible = true;
     }
 
-    private void CloseStatusDialog_OnClick(object? sender, RoutedEventArgs e)
+    protected void CloseStatusDialog_OnClick(object? sender, RoutedEventArgs e)
     {
         StatusDialogOverlay.IsVisible = false;
         e.Handled = true;
     }
 
-    private void StatusDialogOverlay_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    protected void StatusDialogOverlay_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         StatusDialogOverlay.IsVisible = false;
         e.Handled = true;
     }
 
-    private void StatusDialogContent_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    protected void StatusDialogContent_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         e.Handled = true;
     }
 
-    private void OnMainTabSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    protected void OnMainTabSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         _layoutSettings.SelectedTabIndex = MainTabControl.SelectedIndex;
         if (_isVoiceFlyoutOpen && !_isVoiceFlyoutPinned)
@@ -134,7 +134,7 @@ public partial class TabletMainView : UserControl
             SaveSettings();
     }
 
-    private void OnVoiceFlyoutToggleChanged(object? sender, RoutedEventArgs e)
+    protected void OnVoiceFlyoutToggleChanged(object? sender, RoutedEventArgs e)
     {
         if (_isUpdatingVoiceFlyoutToggleState)
             return;
@@ -143,7 +143,7 @@ public partial class TabletMainView : UserControl
         e.Handled = true;
     }
 
-    private void OnVoicePinToggleChanged(object? sender, RoutedEventArgs e)
+    protected void OnVoicePinToggleChanged(object? sender, RoutedEventArgs e)
     {
         _isVoiceFlyoutPinned = VoicePinToggleButton.IsChecked != false;
         SyncVoiceFlyoutToggleState();
@@ -151,25 +151,25 @@ public partial class TabletMainView : UserControl
         e.Handled = true;
     }
 
-    private void OnVoiceFlyoutCloseClick(object? sender, RoutedEventArgs e)
+    protected void OnVoiceFlyoutCloseClick(object? sender, RoutedEventArgs e)
     {
         SetVoiceFlyoutOpen(false);
         e.Handled = true;
     }
 
-    private void OnVoiceFlyoutSplitterPointerReleased(object? sender, PointerReleasedEventArgs e)
+    protected void OnVoiceFlyoutSplitterPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         CaptureVoiceFlyoutSize();
         SaveSettings();
     }
 
-    private void OnVoiceFlyoutSplitterPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    protected void OnVoiceFlyoutSplitterPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
         CaptureVoiceFlyoutSize();
         SaveSettings();
     }
 
-    private void SetVoiceFlyoutOpen(bool isOpen)
+    protected void SetVoiceFlyoutOpen(bool isOpen)
     {
         if (_isVoiceFlyoutOpen == isOpen)
         {
@@ -184,7 +184,7 @@ public partial class TabletMainView : UserControl
         SaveSettings();
     }
 
-    private void SyncVoiceFlyoutToggleState()
+    protected void SyncVoiceFlyoutToggleState()
     {
         _isUpdatingVoiceFlyoutToggleState = true;
         try
@@ -200,7 +200,7 @@ public partial class TabletMainView : UserControl
         }
     }
 
-    private void ApplyVoiceFlyoutLayout(Size hostSize)
+    protected void ApplyVoiceFlyoutLayout(Size hostSize)
     {
         if (hostSize.Width <= 0 || hostSize.Height <= 0)
             return;
@@ -261,21 +261,21 @@ public partial class TabletMainView : UserControl
         }
     }
 
-    private double CoerceVoiceFlyoutWidth(Size hostSize)
+    protected double CoerceVoiceFlyoutWidth(Size hostSize)
     {
         var savedWidth = _layoutSettings.VoiceFlyoutLandscapeWidth?.ToGridLength().Value ?? DefaultVoiceFlyoutWidth;
         var maxWidth = Math.Max(MinVoiceFlyoutWidth, hostSize.Width - 220);
         return Math.Clamp(savedWidth, MinVoiceFlyoutWidth, maxWidth);
     }
 
-    private double CoerceVoiceFlyoutHeight(Size hostSize)
+    protected double CoerceVoiceFlyoutHeight(Size hostSize)
     {
         var savedHeight = _layoutSettings.VoiceFlyoutPortraitHeight?.ToGridLength().Value ?? DefaultVoiceFlyoutHeight;
         var maxHeight = Math.Max(MinVoiceFlyoutHeight, hostSize.Height - 160);
         return Math.Clamp(savedHeight, MinVoiceFlyoutHeight, maxHeight);
     }
 
-    private void CaptureVoiceFlyoutSize()
+    protected void CaptureVoiceFlyoutSize()
     {
         if (!_isVoiceFlyoutOpen)
             return;
@@ -296,12 +296,12 @@ public partial class TabletMainView : UserControl
         }
     }
 
-    private void LoadSettings()
+    protected void LoadSettings()
     {
         _layoutSettings = LayoutSettingsIo.Load() ?? new LayoutSettings();
     }
 
-    private void SaveSettings()
+    protected void SaveSettings()
     {
         CaptureVoiceFlyoutSize();
         _layoutSettings.VoiceFlyoutIsOpen = _isVoiceFlyoutOpen;

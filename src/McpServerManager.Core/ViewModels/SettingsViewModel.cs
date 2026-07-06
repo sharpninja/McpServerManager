@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
+using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
 using CqrsDispatcher = McpServer.Cqrs.Dispatcher;
 
@@ -47,19 +48,19 @@ public partial class SettingsViewModel : McpServerManager.UI.Core.ViewModels.Set
     private async void SaveSettings()
     {
         SaveFilterWords();
-        var cmd = new SaveSettingsCommand();
+        var cmd = new SaveSettingsCommand(new VoiceChatSettings
+        {
+            Language = VoiceLanguage,
+            AutoContinueEnabled = AutoContinueEnabled,
+            WakePhrase = WakePhrase,
+            WakeSensitivity = WakeSensitivity,
+            AutoListenOnWake = AutoListenOnWake,
+            PicovoiceAccessKey = PicovoiceAccessKey
+        });
         var result = await _dispatcher.SendAsync(cmd);
         if (result.IsSuccess)
         {
-            ApplyVoiceChatSettings(_voiceChatSettingsService.Save(new VoiceChatSettings
-            {
-                Language = VoiceLanguage,
-                AutoContinueEnabled = AutoContinueEnabled,
-                WakePhrase = WakePhrase,
-                WakeSensitivity = WakeSensitivity,
-                AutoListenOnWake = AutoListenOnWake,
-                PicovoiceAccessKey = PicovoiceAccessKey
-            }));
+            ApplyVoiceChatSettings(result.Value ?? _voiceChatSettingsService.Load());
             StatusMessage = "Saved speech filter and voice chat settings.";
         }
     }

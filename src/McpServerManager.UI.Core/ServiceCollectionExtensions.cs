@@ -41,6 +41,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<Services.ISpeechFilterService, Services.NoOpSpeechFilterService>();
         services.TryAddSingleton<Services.IUiDispatcherService, Services.ImmediateUiDispatcherService>();
         services.TryAddSingleton<Services.IConnectionAuthService, Services.NoOpConnectionAuthService>();
+        services.TryAddSingleton<Services.IAgentEventStreamReader, Services.NoOpAgentEventStreamReader>();
+        services.TryAddSingleton<Services.AgentEventListenerCoordinator>();
         services.TryAddScoped<Services.IDeviceAuthorizationLoginService, Services.DeviceAuthorizationLoginService>();
         services.TryAddSingleton<Services.IChatWindowService, Services.NoOpChatWindowService>();
         services.TryAddSingleton<Services.IVoiceConversationService, Services.NoOpVoiceConversationService>();

@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using McpServerManager.UI.Core.Models;
 using McpServerManager.UI.Core.Services;
 using McpServer.Cqrs;
-using McpServerManager.UI.Core.Messages;
 using UiCoreWorkspaceDetailViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceDetailViewModel;
 using UiCoreWorkspaceGlobalPromptViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceGlobalPromptViewModel;
 using UiCoreWorkspaceHealthProbeViewModel = McpServerManager.UI.Core.ViewModels.WorkspaceHealthProbeViewModel;
@@ -151,7 +150,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         IsLoading = false;
     }
 
-    private void ApplyLoadWorkspacesResult(Result<ListWorkspacesResult> res)
+    protected void ApplyLoadWorkspacesResult(Result<ListWorkspacesResult> res)
     {
         var selectedKey = SelectedEntry?.Key ?? _editingWorkspaceKey;
         if (!res.IsSuccess || res.Value is null)
@@ -191,7 +190,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         IsLoading = false;
     }
 
-    private void ApplyRefreshResult(Result<ListWorkspacesResult> res)
+    protected void ApplyRefreshResult(Result<ListWorkspacesResult> res)
     {
         var selectedKey = SelectedEntry?.Key ?? _editingWorkspaceKey;
         if (!res.IsSuccess || res.Value is null)
@@ -324,6 +323,18 @@ public partial class WorkspaceViewModel : ViewModelBase
     protected async Task SaveEditorAsync()
     {
         // Thin entry: prep from state, dispatch, apply. Branching/mutation logic in Build + Apply.
+        if (IsEditingExisting && string.IsNullOrWhiteSpace(GetKeyForActions()))
+        {
+            StatusText = "Workspace Path is required";
+            return;
+        }
+
+        if (!IsEditingExisting && string.IsNullOrWhiteSpace(EditorWorkspacePath))
+        {
+            StatusText = "Workspace Path is required";
+            return;
+        }
+
         var cmd = BuildSaveEditorCommand();
         var res = await _dispatcher.SendAsync(cmd, default).ConfigureAwait(true);
         ApplySaveEditorResult(res);
@@ -334,6 +345,9 @@ public partial class WorkspaceViewModel : ViewModelBase
         if (IsEditingExisting)
         {
             var key = GetKeyForActions();
+            if (string.IsNullOrWhiteSpace(key))
+                throw new InvalidOperationException("Workspace Path is required.");
+
             return new UpdateWorkspaceCommand
             {
                 WorkspacePath = key,
@@ -370,14 +384,21 @@ public partial class WorkspaceViewModel : ViewModelBase
         }
     }
 
-    private void ApplySaveEditorResult(Result<WorkspaceMutationOutcome> res)
+    protected void ApplySaveEditorResult(Result<WorkspaceMutationOutcome> res)
     {
         if (!res.IsSuccess || res.Value == null || !res.Value.Success)
         {
             StatusText = "Save failed: " + (res.Value?.Error ?? res.Error ?? "unknown");
             return;
         }
-        var key = res.Value.Item?.WorkspacePath ?? (IsEditingExisting ? GetKeyForActions() : EditorWorkspacePath);
+        var key = NullIfWhiteSpace(res.Value.Item?.WorkspacePath) ??
+                  NullIfWhiteSpace(IsEditingExisting ? GetKeyForActions() : EditorWorkspacePath);
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            StatusText = "Save failed: Workspace Path is required";
+            return;
+        }
+
         if (res.Value.Item != null) PopulateEditor(res.Value.Item);
         SetEditingWorkspaceKey(key);
         StatusText = (IsEditingExisting ? "Saved " : "Created ") + key;
@@ -390,11 +411,14 @@ public partial class WorkspaceViewModel : ViewModelBase
     protected internal async Task DeleteSelectedAsync()
     {
         var key = GetKeyForActions();
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
         var res = await _dispatcher.SendAsync(new DeleteWorkspaceCommand(key));
         ApplyDeleteResult(key, res);
     }
 
-    private void ApplyDeleteResult(string key, Result<WorkspaceMutationOutcome> res)
+    protected void ApplyDeleteResult(string key, Result<WorkspaceMutationOutcome> res)
     {
         if (!res.IsSuccess || res.Value == null || !res.Value.Success)
         {
@@ -411,11 +435,14 @@ public partial class WorkspaceViewModel : ViewModelBase
     protected async Task GetSelectedStatusAsync()
     {
         var key = GetKeyForActions();
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
         var res = await _dispatcher.QueryAsync(new GetWorkspaceStatusQuery(key));
         ApplyStatusResult(key, res);
     }
 
-    private void ApplyStatusResult(string key, Result<WorkspaceProcessState> res)
+    protected void ApplyStatusResult(string key, Result<WorkspaceProcessState> res)
     {
         if (!res.IsSuccess || res.Value == null)
         {
@@ -586,7 +613,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         };
     }
 
-    private void ApplyFilters()
+    protected void ApplyFilters()
     {
         IEnumerable<WorkspaceListEntry> source = _allEntries;
         var text = (FilterText ?? "").Trim();
@@ -859,7 +886,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         _healthTimer = null;
     }
 
-    private void UpdateHealthIndicator(bool? isHealthy, string tooltip)
+    protected void UpdateHealthIndicator(bool? isHealthy, string? tooltip)
     {
         HealthIndicatorBrush = isHealthy switch
         {
@@ -867,10 +894,10 @@ public partial class WorkspaceViewModel : ViewModelBase
             false => "OrangeRed",
             _ => "Gray"
         };
-        HealthIndicatorTooltip = tooltip;
+        HealthIndicatorTooltip = tooltip ?? string.Empty;
     }
 
-    private void ApplyEditorToDetailVm(bool forCreate)
+    protected void ApplyEditorToDetailVm(bool forCreate)
     {
         if (forCreate)
             _detailVm.BeginNewDraft(EditorWorkspacePath);

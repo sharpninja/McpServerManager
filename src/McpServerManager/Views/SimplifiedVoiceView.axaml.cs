@@ -14,8 +14,6 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 #if ANDROID
-using Android.App;
-using AndroidOS = Android.OS;
 using McpServerManager.Android.Services;
 #endif
 using McpServerManager.Core.Services;
@@ -28,9 +26,9 @@ namespace McpServerManager.Android.Views;
 
 public class ChatMessage : INotifyPropertyChanged
 {
-    private static readonly IBrush s_userBrush = new SolidColorBrush(Color.FromArgb(50, 0, 120, 215));
-    private static readonly IBrush s_assistantBrush = new SolidColorBrush(Color.FromArgb(30, 128, 128, 128));
-    private static readonly IBrush s_systemBrush = new SolidColorBrush(Color.FromArgb(40, 200, 160, 0));
+    protected static readonly IBrush s_userBrush = new SolidColorBrush(Color.FromArgb(50, 0, 120, 215));
+    protected static readonly IBrush s_assistantBrush = new SolidColorBrush(Color.FromArgb(30, 128, 128, 128));
+    protected static readonly IBrush s_systemBrush = new SolidColorBrush(Color.FromArgb(40, 200, 160, 0));
 
     private string _text = "";
     private string _timingText = "";
@@ -95,8 +93,8 @@ public class ChatMessage : INotifyPropertyChanged
     public bool IsAssistant => string.Equals(Role, "assistant", StringComparison.OrdinalIgnoreCase);
     public bool IsNotAssistant => !IsAssistant;
 
-    private bool IsUser => string.Equals(Role, "user", StringComparison.OrdinalIgnoreCase);
-    private bool IsSystem => string.Equals(Role, "system", StringComparison.OrdinalIgnoreCase);
+    protected bool IsUser => string.Equals(Role, "user", StringComparison.OrdinalIgnoreCase);
+    protected bool IsSystem => string.Equals(Role, "system", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Updates timing text. Pass <paramref name="elapsed"/> for live updates during streaming.</summary>
     public void UpdateTiming(TimeSpan? elapsed = null)
@@ -114,7 +112,7 @@ public class ChatMessage : INotifyPropertyChanged
     /// <summary>Sets timing text from captured durations (finalized).</summary>
     public void SetTimingFromDurations() => UpdateTiming();
 
-    private static string FormatDuration(TimeSpan d) => FormatDurationStatic(d);
+    protected static string FormatDuration(TimeSpan d) => FormatDurationStatic(d);
 
     /// <summary>Formats a duration for display. Used by ChatLogService.</summary>
     public static string FormatDurationStatic(TimeSpan d) =>
@@ -125,19 +123,19 @@ public class ChatMessage : INotifyPropertyChanged
 
 public partial class SimplifiedVoiceView : UserControl
 {
-    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("SimplifiedVoiceView");
+    protected static readonly ILogger _logger = AppLogService.Instance.CreateLogger("SimplifiedVoiceView");
     private const int MaxChatMessages = 200;
-    private static readonly TimeSpan StreamUiUpdateInterval = TimeSpan.FromMilliseconds(100);
+    protected static readonly TimeSpan StreamUiUpdateInterval = TimeSpan.FromMilliseconds(100);
     private const int StreamUiUpdateMinChars = 256;
     private readonly VoiceChatSettingsService _voiceChatSettingsService = VoiceChatSettingsService.Instance;
 #if ANDROID
-    private readonly IAndroidSpeechRecognitionService _stt = new AndroidSpeechRecognitionService();
-    private readonly IAndroidTextToSpeechService _tts = new AndroidTextToSpeechService();
-    private readonly IAndroidAudioFocusService _audioFocus = new AndroidAudioFocusService();
+    private IAndroidSimplifiedVoiceController _platformController = null!;
+
+    public static Func<IAndroidSimplifiedVoiceController>? PlatformControllerFactory { get; set; }
 #endif
-    private readonly ObservableCollection<ChatMessage> _messages = new();
-    private readonly CancellationTokenSource _viewLifetimeCts = new();
-    private readonly object _activeOperationsSync = new();
+    protected readonly ObservableCollection<ChatMessage> _messages = new();
+    protected readonly CancellationTokenSource _viewLifetimeCts = new();
+    protected readonly object _activeOperationsSync = new();
     private readonly HashSet<Task> _activeOperations = [];
 
     private ScrollViewer? _chatScroller;
@@ -157,7 +155,6 @@ public partial class SimplifiedVoiceView : UserControl
     private bool _clearRequested;
     private bool _sendRequested;
     private string? _manualText;
-    private bool _foregroundServiceRunning;
     private Timer? _heartbeatTimer;
     private int _heartbeatInFlight;
     private int _scrollPending;
@@ -180,6 +177,10 @@ public partial class SimplifiedVoiceView : UserControl
     public SimplifiedVoiceView()
     {
         InitializeComponent();
+#if ANDROID
+        _platformController = PlatformControllerFactory?.Invoke()
+            ?? throw new InvalidOperationException("PlatformControllerFactory must be configured by Android host before view use");
+#endif
         _chatScroller = this.FindControl<ScrollViewer>("ChatScroller");
         _autoCheck = this.FindControl<ToggleButton>("AutoContinueToggle");
         _inputPreviewBorder = this.FindControl<Border>("InputPreviewBorder");
@@ -208,7 +209,7 @@ public partial class SimplifiedVoiceView : UserControl
     private VoiceConversationViewModel? VM => DataContext as VoiceConversationViewModel;
 
     // ── Auto-continue toggle ───────────────────────────────────────────
-    private async void OnAutoCheckedChanged(object? sender, RoutedEventArgs e)
+    protected async void OnAutoCheckedChanged(object? sender, RoutedEventArgs e)
     {
         if (!_isApplyingAutoContinueSetting)
         {
@@ -253,7 +254,7 @@ public partial class SimplifiedVoiceView : UserControl
         }
     }
 
-    private void OnVoiceChatSettingsChanged(VoiceChatSettings settings)
+    protected void OnVoiceChatSettingsChanged(VoiceChatSettings settings)
     {
         DispatchToUi(() =>
         {
@@ -273,7 +274,7 @@ public partial class SimplifiedVoiceView : UserControl
     }
 
     // ── Start/End Chat toggle ──────────────────────────────────────────
-    private async void OnChatToggleClick(object? sender, RoutedEventArgs e)
+    protected async void OnChatToggleClick(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
         if (_isDisposed)
@@ -316,7 +317,7 @@ public partial class SimplifiedVoiceView : UserControl
         }
     }
 
-    private async Task StartSessionAsync(CancellationToken ct)
+    protected async Task StartSessionAsync(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         var vm = VM;
@@ -403,7 +404,7 @@ public partial class SimplifiedVoiceView : UserControl
     }
 
     // ── Main conversation loop ─────────────────────────────────────────
-    private async Task RunConversationLoopAsync(CancellationToken ct)
+    protected async Task RunConversationLoopAsync(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         var vm = VM;
@@ -591,7 +592,7 @@ public partial class SimplifiedVoiceView : UserControl
     }
 
     // ── Seed session with workspace instructions ──────────────────────
-    private async Task SeedSessionAsync(VoiceConversationViewModel vm, CancellationToken ct)
+    protected async Task SeedSessionAsync(VoiceConversationViewModel vm, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         var workspacePath = vm.WorkspacePath;
@@ -672,7 +673,7 @@ public partial class SimplifiedVoiceView : UserControl
     }
 
     // ── Listen loop with command detection ─────────────────────────────
-    private async Task<ListenResult> ListenForCommandAsync(CancellationToken ct)
+    protected async Task<ListenResult> ListenForCommandAsync(CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         var accumulated = new StringBuilder();
@@ -805,11 +806,11 @@ public partial class SimplifiedVoiceView : UserControl
 
     // ── Voice command detection ────────────────────────────────────────
 
-    private record ListenResult(string? Transcript, bool ShouldEndChat);
+    protected record ListenResult(string? Transcript, bool ShouldEndChat);
 
-    private enum VoiceCommand { Continue, Send, StartOver, ClearChat, EndChat, PauseChat, ResumeChat }
+    protected enum VoiceCommand { Continue, Send, StartOver, ClearChat, EndChat, PauseChat, ResumeChat }
 
-    private static (string cleanText, VoiceCommand command) DetectCommand(string recognizedText)
+    protected static (string cleanText, VoiceCommand command) DetectCommand(string recognizedText)
     {
         var trimmed = recognizedText.Trim();
         if (string.IsNullOrEmpty(trimmed))
@@ -852,7 +853,7 @@ public partial class SimplifiedVoiceView : UserControl
 
     // ── UI helpers ─────────────────────────────────────────────────────
 
-    private void SetMicState(string state)
+    protected void SetMicState(string state)
     {
         DispatchToUi(() =>
         {
@@ -888,12 +889,12 @@ public partial class SimplifiedVoiceView : UserControl
                     notificationText = "Speaking...";
                     break;
             }
-            if (notificationText != null && _foregroundServiceRunning)
+            if (notificationText != null && IsForegroundServiceRunning())
                 UpdateForegroundServiceStatus(notificationText);
         });
     }
 
-    private void SetStatus(string text)
+    protected void SetStatus(string text)
     {
         if (UiDispatcherHost.CheckAccess())
         {
@@ -909,7 +910,7 @@ public partial class SimplifiedVoiceView : UserControl
         });
     }
 
-    private void UpdateInputPreview(string? text)
+    protected void UpdateInputPreview(string? text)
     {
         DispatchToUi(() =>
         {
@@ -920,12 +921,12 @@ public partial class SimplifiedVoiceView : UserControl
         });
     }
 
-    private void OnLayoutUpdated(object? sender, EventArgs e)
+    protected void OnLayoutUpdated(object? sender, EventArgs e)
     {
         UpdatePhoneManualInputOffset();
     }
 
-    private void UpdatePhoneManualInputOffset()
+    protected void UpdatePhoneManualInputOffset()
     {
         if (_manualInputRowsPanel == null || _manualTextEntryBorder == null)
             return;
@@ -949,7 +950,7 @@ public partial class SimplifiedVoiceView : UserControl
 
     // ── Pause/Resume (contextual: listening vs speaking) ──────────────
 
-    private void OnPauseResumeClick(object? sender, RoutedEventArgs e)
+    protected void OnPauseResumeClick(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
         if (!_conversationActive) return;
@@ -968,7 +969,7 @@ public partial class SimplifiedVoiceView : UserControl
         }
     }
 
-    private void OnStopClick(object? sender, RoutedEventArgs e)
+    protected void OnStopClick(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
         if (!_isSpeaking) return;
@@ -980,7 +981,7 @@ public partial class SimplifiedVoiceView : UserControl
         SetStatus("Playback stopped.");
     }
 
-    private void OnClearInputClick(object? sender, RoutedEventArgs e)
+    protected void OnClearInputClick(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
         _clearRequested = true;
@@ -988,13 +989,13 @@ public partial class SimplifiedVoiceView : UserControl
         SetStatus("Cleared. Listening...");
     }
 
-    private void OnSendInputClick(object? sender, RoutedEventArgs e)
+    protected void OnSendInputClick(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
         _sendRequested = true;
     }
 
-    private async void OnCopyTranscriptClick(object? sender, RoutedEventArgs e)
+    protected async void OnCopyTranscriptClick(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
         var vm = VM;
@@ -1011,7 +1012,7 @@ public partial class SimplifiedVoiceView : UserControl
         }
     }
 
-    private async void OnSaveTranscriptJsonlClick(object? sender, RoutedEventArgs e)
+    protected async void OnSaveTranscriptJsonlClick(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
         var vm = VM;
@@ -1031,7 +1032,7 @@ public partial class SimplifiedVoiceView : UserControl
         }
     }
 
-    private async Task SaveTranscriptJsonlAsync(VoiceConversationViewModel vm)
+    protected async Task SaveTranscriptJsonlAsync(VoiceConversationViewModel vm)
     {
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.StorageProvider is not { } storage)
@@ -1069,20 +1070,20 @@ public partial class SimplifiedVoiceView : UserControl
         vm.StatusText = $"Transcript JSONL saved: {file.Name}";
     }
 
-    private void OnTextClearClick(object? sender, RoutedEventArgs e)
+    protected void OnTextClearClick(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
         if (_textInputBox != null)
             _textInputBox.Text = string.Empty;
     }
 
-    private void OnTextSendClick(object? sender, RoutedEventArgs e)
+    protected void OnTextSendClick(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
         SubmitTypedText();
     }
 
-    private void OnTextInputKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    protected void OnTextInputKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
         if (e.Key == Avalonia.Input.Key.Enter && e.KeyModifiers == Avalonia.Input.KeyModifiers.None)
         {
@@ -1091,7 +1092,7 @@ public partial class SimplifiedVoiceView : UserControl
         }
     }
 
-    private void SubmitTypedText()
+    protected void SubmitTypedText()
     {
         var text = _textInputBox?.Text?.Trim();
         if (string.IsNullOrWhiteSpace(text)) return;
@@ -1101,7 +1102,7 @@ public partial class SimplifiedVoiceView : UserControl
             _textInputBox.Text = string.Empty;
     }
 
-    private void OnHeartbeatTick(object? state)
+    protected void OnHeartbeatTick(object? state)
     {
         if (_isDisposed || _viewLifetimeCts.IsCancellationRequested)
             return;
@@ -1112,20 +1113,20 @@ public partial class SimplifiedVoiceView : UserControl
         _ = TrackOperationAsync(RunHeartbeatAsync());
     }
 
-    private void StartHeartbeatTimer()
+    protected void StartHeartbeatTimer()
     {
         StopHeartbeatTimer();
         _heartbeatTimer = new Timer(OnHeartbeatTick, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
     }
 
-    private void StopHeartbeatTimer()
+    protected void StopHeartbeatTimer()
     {
         Interlocked.Exchange(ref _heartbeatInFlight, 0);
         var timer = Interlocked.Exchange(ref _heartbeatTimer, null);
         timer?.Dispose();
     }
 
-    private async Task RunHeartbeatAsync()
+    protected async Task RunHeartbeatAsync()
     {
         string? sessionId = null;
 
@@ -1166,7 +1167,7 @@ public partial class SimplifiedVoiceView : UserControl
         }
     }
 
-    private void UpdateButtons()
+    protected void UpdateButtons()
     {
         DispatchToUi(() =>
         {
@@ -1189,7 +1190,7 @@ public partial class SimplifiedVoiceView : UserControl
 
     // ── Streaming TTS (sentence-by-sentence with pause/stop) ──────────
 
-    private async Task SpeakResponseStreamingAsync(
+    protected async Task SpeakResponseStreamingAsync(
         string displayText, string speakText, string language, CancellationToken ct)
     {
         _isSpeaking = true;
@@ -1247,7 +1248,7 @@ public partial class SimplifiedVoiceView : UserControl
         UpdateButtons();
     }
 
-    private static string[] SplitIntoSentences(string text)
+    protected static string[] SplitIntoSentences(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return [];
@@ -1279,7 +1280,7 @@ public partial class SimplifiedVoiceView : UserControl
         return sentences.Count > 0 ? sentences.ToArray() : [text.Trim()];
     }
 
-    private async Task EndSessionInternalAsync()
+    protected async Task EndSessionInternalAsync()
     {
         StopTts();
         _isPaused = false;
@@ -1303,7 +1304,7 @@ public partial class SimplifiedVoiceView : UserControl
     /// Returns true if the line is a Copilot CLI tool-execution marker that
     /// should be displayed but not spoken (spinners, commands, fold summaries).
     /// </summary>
-    private static bool IsToolProgressLine(string line)
+    protected static bool IsToolProgressLine(string line)
     {
         if (string.IsNullOrEmpty(line)) return false;
         var trimmed = line.TrimStart();
@@ -1334,7 +1335,7 @@ public partial class SimplifiedVoiceView : UserControl
         return false;
     }
 
-    private static void PlayChime()
+    protected static void PlayChime()
     {
 #if ANDROID
         try
@@ -1353,7 +1354,7 @@ public partial class SimplifiedVoiceView : UserControl
 #endif
     }
 
-    private void ScrollToBottom()
+    protected void ScrollToBottom()
     {
         if (Interlocked.Exchange(ref _scrollPending, 1) == 1)
             return;
@@ -1367,9 +1368,9 @@ public partial class SimplifiedVoiceView : UserControl
             }));
     }
 
-    private static void DispatchToUi(Action action) => UiDispatcherHost.Post(action);
+    protected static void DispatchToUi(Action action) => UiDispatcherHost.Post(action);
 
-    private Task TrackOperationAsync(Task operation)
+    protected Task TrackOperationAsync(Task operation)
     {
         lock (_activeOperationsSync)
             _activeOperations.Add(operation);
@@ -1384,7 +1385,7 @@ public partial class SimplifiedVoiceView : UserControl
         return operation;
     }
 
-    private async Task<bool> TrySpeakAsync(string text, string? language, CancellationToken ct)
+    protected async Task<bool> TrySpeakAsync(string text, string? language, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(text) || _ttsStopped || _isDisposed || _viewLifetimeCts.IsCancellationRequested)
             return false;
@@ -1418,7 +1419,7 @@ public partial class SimplifiedVoiceView : UserControl
         }
     }
 
-    private async Task DisposeServicesAfterOperationsAsync()
+    protected async Task DisposeServicesAfterOperationsAsync()
     {
         try
         {
@@ -1450,69 +1451,43 @@ public partial class SimplifiedVoiceView : UserControl
 
     // ── Foreground service helpers ───────────────────────────────────────
 
-    private void StartForegroundService(string statusText)
+    protected void StartForegroundService(string statusText)
     {
 #if ANDROID
-        try
-        {
-            var context = global::Android.App.Application.Context;
-            using var intent = VoiceSessionForegroundService.CreateStartIntent(context, statusText);
-            if (AndroidOS.Build.VERSION.SdkInt >= AndroidOS.BuildVersionCodes.O)
-                context.StartForegroundService(intent);
-            else
-                context.StartService(intent);
-            _foregroundServiceRunning = true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to start voice foreground service");
-        }
+        _platformController.StartForegroundService(statusText);
 #endif
     }
 
-    private void StopForegroundService()
+    protected void StopForegroundService()
     {
 #if ANDROID
-        if (!_foregroundServiceRunning) return;
-        try
-        {
-            var context = global::Android.App.Application.Context;
-            using var intent = VoiceSessionForegroundService.CreateStopIntent(context);
-            context.StartService(intent);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to stop voice foreground service");
-        }
-        finally
-        {
-            _foregroundServiceRunning = false;
-        }
-#else
-        _foregroundServiceRunning = false;
+        _platformController.StopForegroundService();
 #endif
     }
 
-    private void UpdateForegroundServiceStatus(string statusText)
+    protected void UpdateForegroundServiceStatus(string statusText)
     {
     #if ANDROID
-        try
-        {
-            var context = global::Android.App.Application.Context;
-            using var intent = VoiceSessionForegroundService.CreateUpdateIntent(context, statusText);
-            context.StartService(intent);
-        }
-        catch (Exception ex) { _logger.LogDebug(ex, "Failed to update foreground service status"); }
+        _platformController.UpdateForegroundServiceStatus(statusText);
     #endif
     }
 
-    private void AddChatMessage(ChatMessage message)
+    protected bool IsForegroundServiceRunning()
+    {
+    #if ANDROID
+        return _platformController.IsForegroundServiceRunning;
+    #else
+        return false;
+    #endif
+    }
+
+    protected void AddChatMessage(ChatMessage message)
     {
         _messages.Add(message);
         TrimChatHistory();
     }
 
-    private static string ResolveAssistantDisplayText(StringBuilder accumulated, VoiceConversationViewModel vm)
+    protected static string ResolveAssistantDisplayText(StringBuilder accumulated, VoiceConversationViewModel vm)
     {
         var text = accumulated.ToString();
         if (string.IsNullOrWhiteSpace(text))
@@ -1523,13 +1498,13 @@ public partial class SimplifiedVoiceView : UserControl
         return TextTransformations.ConvertBareUrisToMarkdownLinks(text);
     }
 
-    private void TrimChatHistory()
+    protected void TrimChatHistory()
     {
         while (_messages.Count > MaxChatMessages)
             _messages.RemoveAt(0);
     }
 
-    private static bool ShouldFlushStreamingUi(string chunkText, DateTimeOffset lastUiUpdateAt, int pendingUiChars)
+    protected static bool ShouldFlushStreamingUi(string chunkText, DateTimeOffset lastUiUpdateAt, int pendingUiChars)
     {
         if (pendingUiChars >= StreamUiUpdateMinChars)
             return true;
@@ -1540,56 +1515,54 @@ public partial class SimplifiedVoiceView : UserControl
         return chunkText.IndexOf('\n') >= 0;
     }
 
-        private IDisposable AcquireSpeechRecognitionFocus()
+        protected IDisposable AcquireSpeechRecognitionFocus()
         {
     #if ANDROID
-        return _audioFocus.Acquire(AndroidVoiceAudioFocusUsage.SpeechRecognition);
+        return _platformController.AcquireSpeechRecognitionFocus();
     #else
         return NoopDisposable.Instance;
     #endif
         }
 
-        private IDisposable AcquireTextToSpeechFocus()
+        protected IDisposable AcquireTextToSpeechFocus()
         {
     #if ANDROID
-        return _audioFocus.Acquire(AndroidVoiceAudioFocusUsage.TextToSpeechPlayback);
+        return _platformController.AcquireTextToSpeechFocus();
     #else
         return NoopDisposable.Instance;
     #endif
         }
 
-        private async Task<string> RecognizeSpeechOnceAsync(CancellationToken ct)
+        protected async Task<string> RecognizeSpeechOnceAsync(CancellationToken ct)
         {
     #if ANDROID
-        return await _stt.RecognizeOnceAsync(VM?.Language, ct).ConfigureAwait(true);
+        return await _platformController.RecognizeSpeechOnceAsync(VM?.Language, ct).ConfigureAwait(true);
     #else
         await Task.Delay(150, ct).ConfigureAwait(true);
         return string.Empty;
     #endif
         }
 
-        private async Task SpeakTextAsync(string text, string? language, CancellationToken ct)
+        protected async Task SpeakTextAsync(string text, string? language, CancellationToken ct)
         {
     #if ANDROID
-        await _tts.SpeakAsync(text, language, ct).ConfigureAwait(true);
+        await _platformController.SpeakTextAsync(text, language, ct).ConfigureAwait(true);
     #else
         await Task.CompletedTask;
     #endif
         }
 
-        private void StopTts()
+        protected void StopTts()
         {
     #if ANDROID
-        _tts.Stop();
+        _platformController.StopTextToSpeech();
     #endif
         }
 
-        private void DisposePlatformAudioServices()
+        protected void DisposePlatformAudioServices()
         {
     #if ANDROID
-        _tts.Dispose();
-        _stt.Dispose();
-        _audioFocus.Dispose();
+        _platformController.Dispose();
     #endif
         }
 
@@ -1601,7 +1574,7 @@ public partial class SimplifiedVoiceView : UserControl
 
     // ── Cleanup ────────────────────────────────────────────────────────
 
-    private void OnDetached(object? sender, VisualTreeAttachmentEventArgs e)
+    protected void OnDetached(object? sender, VisualTreeAttachmentEventArgs e)
     {
         if (_isDisposed) return;
         _isDisposed = true;

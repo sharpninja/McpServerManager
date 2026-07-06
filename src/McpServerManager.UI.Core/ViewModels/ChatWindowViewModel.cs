@@ -92,7 +92,7 @@ public partial class ChatWindowViewModel : ViewModelBase
     public async Task LoadPromptsAsync(CancellationToken cancellationToken = default)
     {
         var res = await _dispatcher.QueryAsync(new LoadChatPromptsQuery(), cancellationToken).ConfigureAwait(true);
-        var prompts = res.IsSuccess ? res.Value : Array.Empty<PromptTemplate>();
+        var prompts = res.IsSuccess && res.Value is not null ? res.Value : Array.Empty<PromptTemplate>();
         DispatchToUi(() =>
         {
             PromptTemplates.Clear();
@@ -169,9 +169,20 @@ public partial class ChatWindowViewModel : ViewModelBase
     /// </summary>
     protected async Task SendAsync()
     {
+        _sendCts?.Cancel();
+        using var sendCts = new CancellationTokenSource();
+        _sendCts = sendCts;
         var cmd = new SendChatMessageCommand(CurrentInput ?? string.Empty, _getContext(), SelectedModel);
-        var res = await _dispatcher.SendAsync(cmd);
-        ApplySendResult(res);
+        try
+        {
+            var res = await _dispatcher.SendAsync(cmd, sendCts.Token).ConfigureAwait(true);
+            ApplySendResult(res);
+        }
+        finally
+        {
+            if (ReferenceEquals(_sendCts, sendCts))
+                _sendCts = null;
+        }
     }
 
     private void ApplySendResult(Result<ChatSendMessageResult> res)

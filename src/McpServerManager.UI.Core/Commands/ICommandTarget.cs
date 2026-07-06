@@ -17,7 +17,7 @@ public interface ICommandTarget
       ITodoCopilotTarget,
       IWorkspaceSwitchTarget,
       ILoadWorkspaceConnectionsTarget,
-      IWorkspaceHealthTarget
+      IWorkspaceHealthTarget,
+      IAgentEventStatusTarget
 {
 }
-

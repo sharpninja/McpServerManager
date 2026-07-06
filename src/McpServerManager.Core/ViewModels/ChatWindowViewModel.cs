@@ -32,8 +32,19 @@ public partial class ChatWindowViewModel : McpServerManager.UI.Core.ViewModels.C
     }
 
     /// <summary>Parameterless constructor for design-time only. Real service creation moved out (no construction in VM ctor).</summary>
-    public ChatWindowViewModel() : this(ChatWindowViewModelFactory.CreateFallbackDispatcher(null), () => string.Empty, null, null)
+    public ChatWindowViewModel() : this(ChatWindowViewModelFactory.CreateFallbackDispatcher(new DesignTimeLogAgentService()), () => string.Empty, null, null)
     {
+    }
+
+    private sealed class DesignTimeLogAgentService : ILogAgentService
+    {
+        public System.Threading.Tasks.Task<string> SendMessageAsync(
+            string userMessage,
+            string contextSummary,
+            string? model = null,
+            IProgress<string>? contentProgress = null,
+            System.Threading.CancellationToken cancellationToken = default)
+            => System.Threading.Tasks.Task.FromResult(string.Empty);
     }
 
     protected override void NotifySendCanExecuteChanged()

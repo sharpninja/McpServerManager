@@ -11,7 +11,7 @@ namespace McpServerManager.Android.Views;
 
 public partial class PhoneSessionLogView : UserControl
 {
-    private enum PhoneSessionLogScreen
+    protected enum PhoneSessionLogScreen
     {
         List,
         Detail
@@ -37,13 +37,13 @@ public partial class PhoneSessionLogView : UserControl
         base.OnDetachedFromVisualTree(e);
     }
 
-    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    protected void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         AndroidBackNavigationService.BackRequested -= OnAndroidBackRequested;
         AndroidBackNavigationService.BackRequested += OnAndroidBackRequested;
     }
 
-    private void OnDataContextChanged(object? sender, EventArgs e)
+    protected void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (_currentVm != null)
             _currentVm.PropertyChanged -= OnViewModelPropertyChanged;
@@ -55,7 +55,7 @@ public partial class PhoneSessionLogView : UserControl
         RefreshDetailHeader();
     }
 
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    protected void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is not MainWindowViewModel vm)
             return;
@@ -79,14 +79,14 @@ public partial class PhoneSessionLogView : UserControl
         }
     }
 
-    private void ShowScreen(PhoneSessionLogScreen screen)
+    protected void ShowScreen(PhoneSessionLogScreen screen)
     {
         _screen = screen;
         UpdateScreenVisibility();
         RefreshDetailHeader();
     }
 
-    private void UpdateScreenVisibility()
+    protected void UpdateScreenVisibility()
     {
         if (ListScreen == null || DetailScreen == null)
             return;
@@ -95,7 +95,7 @@ public partial class PhoneSessionLogView : UserControl
         DetailScreen.IsVisible = _screen == PhoneSessionLogScreen.Detail;
     }
 
-    private void RefreshDetailHeader()
+    protected void RefreshDetailHeader()
     {
         if (DetailTitleText == null || DetailSubtitleText == null)
             return;
@@ -138,7 +138,7 @@ public partial class PhoneSessionLogView : UserControl
         DetailSubtitleText.Text = "Select a session from the list.";
     }
 
-    private static string JoinNonEmpty(string? part1, string? part2, string? part3, string fallback)
+    protected static string JoinNonEmpty(string? part1, string? part2, string? part3, string fallback)
     {
         var a = string.IsNullOrWhiteSpace(part1) ? null : part1!.Trim();
         var b = string.IsNullOrWhiteSpace(part2) ? null : part2!.Trim();
@@ -154,7 +154,7 @@ public partial class PhoneSessionLogView : UserControl
         return a ?? b ?? c ?? fallback;
     }
 
-    private void OnAllJsonHeaderClick(object? sender, RoutedEventArgs e)
+    protected void OnAllJsonHeaderClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainWindowViewModel vm &&
             vm.Nodes.Count > 0 &&
@@ -166,7 +166,7 @@ public partial class PhoneSessionLogView : UserControl
         ShowScreen(PhoneSessionLogScreen.Detail);
     }
 
-    private void OnSessionLeafClick(object? sender, RoutedEventArgs e)
+    protected void OnSessionLeafClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: FileNode node } || node.IsDirectory)
             return;
@@ -177,7 +177,7 @@ public partial class PhoneSessionLogView : UserControl
         ShowScreen(PhoneSessionLogScreen.Detail);
     }
 
-    private void OnSessionDetailBackClick(object? sender, RoutedEventArgs e)
+    protected void OnSessionDetailBackClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainWindowViewModel vm && vm.IsRequestDetailsVisible)
         {
@@ -190,7 +190,7 @@ public partial class PhoneSessionLogView : UserControl
         ShowScreen(PhoneSessionLogScreen.List);
     }
 
-    private bool OnAndroidBackRequested()
+    protected bool OnAndroidBackRequested()
     {
         if (!IsVisible)
             return false;
@@ -209,4 +209,3 @@ public partial class PhoneSessionLogView : UserControl
         return true;
     }
 }
-

@@ -19,7 +19,7 @@ namespace McpServerManager.Android.Views;
 
 public partial class PhoneTodoView : UserControl
 {
-    private enum PhoneTodoScreen
+    protected enum PhoneTodoScreen
     {
         List,
         DetailFormatted,
@@ -47,19 +47,19 @@ public partial class PhoneTodoView : UserControl
         base.OnDetachedFromVisualTree(e);
     }
 
-    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    protected void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         AndroidBackNavigationService.BackRequested -= OnAndroidBackRequested;
         AndroidBackNavigationService.BackRequested += OnAndroidBackRequested;
     }
 
-    private void OnLoaded(object? sender, RoutedEventArgs e)
+    protected void OnLoaded(object? sender, RoutedEventArgs e)
     {
         // No auto-load here — workspace-change event triggers the initial load
         // after the correct workspace path is set on the shared MCP client.
     }
 
-    private void OnDataContextChanged(object? sender, EventArgs e)
+    protected void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (_currentVm != null)
             _currentVm.PropertyChanged -= OnViewModelPropertyChanged;
@@ -78,7 +78,7 @@ public partial class PhoneTodoView : UserControl
         RefreshFormattedDetailFromViewModel();
     }
 
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    protected void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is not TodoListViewModel vm) return;
 
@@ -101,7 +101,7 @@ public partial class PhoneTodoView : UserControl
         }
     }
 
-    private void SyncTabContent(TodoListViewModel vm)
+    protected void SyncTabContent(TodoListViewModel vm)
     {
         if (!UiDispatcherHost.CheckAccess())
         {
@@ -132,7 +132,7 @@ public partial class PhoneTodoView : UserControl
         }
     }
 
-    private void OnTabContentChanged(object? sender, PropertyChangedEventArgs e)
+    protected void OnTabContentChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(EditorTab.Content) && sender is EditorTab tab && tab.IsMarkdown)
         {
@@ -143,19 +143,19 @@ public partial class PhoneTodoView : UserControl
         }
     }
 
-    private void SyncEditorFromViewModel(TodoListViewModel vm)
+    protected void SyncEditorFromViewModel(TodoListViewModel vm)
     {
         Editor.Text = vm.EditorText;
         Editor.FontSize = Math.Max(vm.EditorFontSize, 16);
     }
 
-    private void ShowScreen(PhoneTodoScreen screen)
+    protected void ShowScreen(PhoneTodoScreen screen)
     {
         _screen = screen;
         UpdateScreenVisibility();
     }
 
-    private void UpdateScreenVisibility()
+    protected void UpdateScreenVisibility()
     {
         if (ListScreen == null || DetailScreen == null || EditScreen == null)
             return;
@@ -165,13 +165,13 @@ public partial class PhoneTodoView : UserControl
         EditScreen.IsVisible = _screen == PhoneTodoScreen.DetailMarkdownEdit;
     }
 
-    private async void OnListRefreshClick(object? sender, RoutedEventArgs e)
+    protected async void OnListRefreshClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TodoListViewModel vm) return;
         await vm.RefreshCommand.ExecuteAsync(null);
     }
 
-    private async void OnTodoRowClick(object? sender, RoutedEventArgs e)
+    protected async void OnTodoRowClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TodoListViewModel vm) return;
         if (sender is not Button button || button.Tag is not UiCoreTodoListEntry entry) return;
@@ -187,18 +187,18 @@ public partial class PhoneTodoView : UserControl
             ShowScreen(PhoneTodoScreen.DetailFormatted);
     }
 
-    private void OnDetailBackClick(object? sender, RoutedEventArgs e)
+    protected void OnDetailBackClick(object? sender, RoutedEventArgs e)
     {
         ShowScreen(PhoneTodoScreen.List);
     }
 
-    private async void OnDetailCopyIdClick(object? sender, RoutedEventArgs e)
+    protected async void OnDetailCopyIdClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TodoListViewModel vm) return;
         await vm.CopySelectedIdCommand.ExecuteAsync(null);
     }
 
-    private async void OnDetailToggleDoneClick(object? sender, RoutedEventArgs e)
+    protected async void OnDetailToggleDoneClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TodoListViewModel vm) return;
         await vm.ToggleDoneCommand.ExecuteAsync(null);
@@ -208,7 +208,7 @@ public partial class PhoneTodoView : UserControl
             ShowScreen(PhoneTodoScreen.List);
     }
 
-    private async void OnDetailRefreshClick(object? sender, RoutedEventArgs e)
+    protected async void OnDetailRefreshClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TodoListViewModel vm) return;
         await vm.RefreshEditorCommand.ExecuteAsync(null);
@@ -218,35 +218,35 @@ public partial class PhoneTodoView : UserControl
             ShowScreen(PhoneTodoScreen.List);
     }
 
-    private void OnDetailEditMarkdownClick(object? sender, RoutedEventArgs e)
+    protected void OnDetailEditMarkdownClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TodoListViewModel vm) return;
         SyncEditorFromViewModel(vm);
         ShowScreen(PhoneTodoScreen.DetailMarkdownEdit);
     }
 
-    private async void OnDetailPlanClick(object? sender, RoutedEventArgs e)
+    protected async void OnDetailPlanClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TodoListViewModel vm) return;
         ShowScreen(PhoneTodoScreen.DetailMarkdownEdit);
         await vm.CopilotPlanCommand.ExecuteAsync(null);
     }
 
-    private async void OnDetailStatusClick(object? sender, RoutedEventArgs e)
+    protected async void OnDetailStatusClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TodoListViewModel vm) return;
         ShowScreen(PhoneTodoScreen.DetailMarkdownEdit);
         await vm.CopilotStatusCommand.ExecuteAsync(null);
     }
 
-    private async void OnDetailImplementClick(object? sender, RoutedEventArgs e)
+    protected async void OnDetailImplementClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TodoListViewModel vm) return;
         ShowScreen(PhoneTodoScreen.DetailMarkdownEdit);
         await vm.CopilotImplementCommand.ExecuteAsync(null);
     }
 
-    private void OnEditBackClick(object? sender, RoutedEventArgs e)
+    protected void OnEditBackClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is TodoListViewModel vm && vm.CurrentTodoDetail != null)
         {
@@ -257,7 +257,7 @@ public partial class PhoneTodoView : UserControl
         ShowScreen(PhoneTodoScreen.List);
     }
 
-    private bool OnAndroidBackRequested()
+    protected bool OnAndroidBackRequested()
     {
         if (!IsVisible)
             return false;
@@ -275,7 +275,7 @@ public partial class PhoneTodoView : UserControl
         }
     }
 
-    private async void OnEditSaveClick(object? sender, RoutedEventArgs e)
+    protected async void OnEditSaveClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TodoListViewModel vm) return;
         await vm.SaveEditorCommand.ExecuteAsync(null);
@@ -285,7 +285,7 @@ public partial class PhoneTodoView : UserControl
             ShowScreen(PhoneTodoScreen.DetailFormatted);
     }
 
-    private async void OnEditRefreshClick(object? sender, RoutedEventArgs e)
+    protected async void OnEditRefreshClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not TodoListViewModel vm) return;
         await vm.RefreshEditorCommand.ExecuteAsync(null);
@@ -295,14 +295,14 @@ public partial class PhoneTodoView : UserControl
             ShowScreen(PhoneTodoScreen.List);
     }
 
-    private static bool LooksLikeSuccessfulSave(string? statusText)
+    protected static bool LooksLikeSuccessfulSave(string? statusText)
     {
         if (string.IsNullOrWhiteSpace(statusText)) return false;
         return statusText.StartsWith("Saved ", StringComparison.OrdinalIgnoreCase)
                || statusText.StartsWith("Created ", StringComparison.OrdinalIgnoreCase);
     }
 
-    private void RefreshFormattedDetailFromViewModel()
+    protected void RefreshFormattedDetailFromViewModel()
     {
         if (DetailTitleText == null || DetailSubtitleText == null ||
             DetailMetaChipsPanel == null || DetailFieldCardsPanel == null ||
@@ -332,7 +332,7 @@ public partial class PhoneTodoView : UserControl
         RenderFormattedDetail(item);
     }
 
-    private static string BuildSubtitle(UiCoreMcpTodoFlatItem item)
+    protected static string BuildSubtitle(UiCoreMcpTodoFlatItem item)
     {
         var parts = new[]
         {
@@ -345,7 +345,7 @@ public partial class PhoneTodoView : UserControl
         return string.Join(" | ", parts);
     }
 
-    private void RenderFormattedDetail(UiCoreMcpTodoFlatItem item)
+    protected void RenderFormattedDetail(UiCoreMcpTodoFlatItem item)
     {
         DetailMetaChipsPanel.Children.Clear();
         DetailFieldCardsPanel.Children.Clear();
@@ -384,7 +384,7 @@ public partial class PhoneTodoView : UserControl
         DetailEmptyText.IsVisible = !hasCards;
     }
 
-    private void AddMetaChip(string text)
+    protected void AddMetaChip(string text)
     {
         DetailMetaChipsPanel.Children.Add(new Border
         {
@@ -403,7 +403,7 @@ public partial class PhoneTodoView : UserControl
         });
     }
 
-    private Control CreateFieldCard(string title, IReadOnlyList<(string Label, string Value)> rows)
+    protected Control CreateFieldCard(string title, IReadOnlyList<(string Label, string Value)> rows)
     {
         var content = new StackPanel { Spacing = 6 };
         foreach (var row in rows)
@@ -435,7 +435,7 @@ public partial class PhoneTodoView : UserControl
         return CreateCard(title, content);
     }
 
-    private void AddStringSectionCard(string title, IReadOnlyCollection<string>? items, bool bullets)
+    protected void AddStringSectionCard(string title, IReadOnlyCollection<string>? items, bool bullets)
     {
         if (items == null || items.Count == 0)
             return;
@@ -476,7 +476,7 @@ public partial class PhoneTodoView : UserControl
         DetailSectionCardsPanel.Children.Add(CreateCard(title, content));
     }
 
-    private void AddTaskSectionCard(string title, IReadOnlyCollection<UiCoreMcpTodoFlatTask>? tasks)
+    protected void AddTaskSectionCard(string title, IReadOnlyCollection<UiCoreMcpTodoFlatTask>? tasks)
     {
         if (tasks == null || tasks.Count == 0)
             return;
@@ -513,7 +513,7 @@ public partial class PhoneTodoView : UserControl
             DetailSectionCardsPanel.Children.Add(CreateCard(title, content));
     }
 
-    private Control CreateCard(string title, Control content)
+    protected Control CreateCard(string title, Control content)
     {
         var root = new StackPanel { Spacing = 6 };
         root.Children.Add(new TextBlock
@@ -536,39 +536,39 @@ public partial class PhoneTodoView : UserControl
         };
     }
 
-    private IBrush GetPrimaryTextBrush()
+    protected IBrush GetPrimaryTextBrush()
         => TryGetBrush("ThemeForegroundBrush")
            ?? TryGetBrush("SystemControlForegroundBaseHighBrush")
            ?? (IsDarkTheme() ? Brushes.White : Brushes.Black);
 
-    private IBrush GetSubtleTextBrush()
+    protected IBrush GetSubtleTextBrush()
         => TryGetBrush("SubtleForeground")
            ?? TryGetBrush("SystemControlForegroundBaseMediumBrush")
            ?? (IsDarkTheme()
                ? new SolidColorBrush(Color.FromArgb(0xDD, 0xE0, 0xE0, 0xE0))
                : new SolidColorBrush(Color.FromArgb(0xDD, 0x40, 0x40, 0x40)));
 
-    private IBrush GetCardBorderBrush()
+    protected IBrush GetCardBorderBrush()
         => TryGetBrush("ItemBorderBrush")
            ?? TryGetBrush("SeparatorBrush")
            ?? (IsDarkTheme()
                ? new SolidColorBrush(Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF))
                : new SolidColorBrush(Color.FromArgb(0x33, 0x00, 0x00, 0x00)));
 
-    private IBrush GetCardBackgroundBrush()
+    protected IBrush GetCardBackgroundBrush()
         => TryGetBrush("ThemeBackgroundBrush")
            ?? TryGetBrush("SystemAltHighColor")
            ?? Brushes.Transparent;
 
-    private IBrush GetChipBackgroundBrush()
+    protected IBrush GetChipBackgroundBrush()
         => TryGetBrush("SystemAltMediumHighColor")
            ?? TryGetBrush("SystemAltHighColor")
            ?? Brushes.Transparent;
 
-    private bool IsDarkTheme()
+    protected bool IsDarkTheme()
         => Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
 
-    private IBrush? TryGetBrush(string resourceKey)
+    protected IBrush? TryGetBrush(string resourceKey)
     {
         if (Resources.TryGetResource(resourceKey, null, out var local) && local is IBrush localBrush)
             return localBrush;

@@ -26,7 +26,7 @@ public partial class ChatWindow : Window
         Loaded += OnLoaded;
     }
 
-    private void InitializeGridRows()
+    protected void InitializeGridRows()
     {
         if (ChatMainGrid == null) return;
         var s = LayoutSettingsIo.Load();
@@ -41,7 +41,7 @@ public partial class ChatWindow : Window
         ChatMainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));      // 4: input
     }
 
-    private void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    protected void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (ChatTemplateSplitter != null)
         {
@@ -61,12 +61,12 @@ public partial class ChatWindow : Window
         }
     }
 
-    private void OnPromptTemplatesCollapsed(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    protected void OnPromptTemplatesCollapsed(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         SetTemplatePickerRowToAuto();
     }
 
-    private void OnPromptTemplatesExpanded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    protected void OnPromptTemplatesExpanded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         ApplyTemplatePickerSplitterSettings(LayoutSettingsIo.Load());
     }
@@ -74,7 +74,7 @@ public partial class ChatWindow : Window
     /// <summary>Minimum height for the template-picker row when collapsed so the expander header isn't clipped by the splitter.</summary>
     private const double TemplatePickerRowMinHeightCollapsed = 40;
 
-    private void SetTemplatePickerRowToAuto()
+    protected void SetTemplatePickerRowToAuto()
     {
         try
         {
@@ -89,11 +89,11 @@ public partial class ChatWindow : Window
         catch { }
     }
 
-    private void OnChatSplitterPointerReleased(object? sender, PointerReleasedEventArgs e) => SaveLayoutSettings();
+    protected void OnChatSplitterPointerReleased(object? sender, PointerReleasedEventArgs e) => SaveLayoutSettings();
 
-    private void OnChatSplitterPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e) => SaveLayoutSettings();
+    protected void OnChatSplitterPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e) => SaveLayoutSettings();
 
-    private void OnOpened(object? sender, EventArgs e)
+    protected void OnOpened(object? sender, EventArgs e)
     {
         ApplyLayoutSettings();
         if (DataContext is ViewModels.ChatWindowViewModel vm)
@@ -104,7 +104,7 @@ public partial class ChatWindow : Window
         }
     }
 
-    private void OnClosing(object? sender, WindowClosingEventArgs e)
+    protected void OnClosing(object? sender, WindowClosingEventArgs e)
     {
         if (DataContext is ViewModels.ChatWindowViewModel vm)
         {
@@ -114,7 +114,7 @@ public partial class ChatWindow : Window
         SaveLayoutSettings();
     }
 
-    private void ApplyLayoutSettings()
+    protected void ApplyLayoutSettings()
     {
         try
         {
@@ -132,7 +132,7 @@ public partial class ChatWindow : Window
         catch { }
     }
 
-    private void ApplyTemplatePickerSplitterSettings(LayoutSettings? s)
+    protected void ApplyTemplatePickerSplitterSettings(LayoutSettings? s)
     {
         try
         {
@@ -146,7 +146,7 @@ public partial class ChatWindow : Window
         catch { }
     }
 
-    private void ApplyTemplatePickerSplitterOnly()
+    protected void ApplyTemplatePickerSplitterOnly()
     {
         try
         {
@@ -157,7 +157,7 @@ public partial class ChatWindow : Window
         catch { }
     }
 
-    private void SaveLayoutSettings()
+    protected void SaveLayoutSettings()
     {
         try
         {
@@ -172,7 +172,7 @@ public partial class ChatWindow : Window
         catch { }
     }
 
-    private void SaveTemplatePickerSplitterSettings(LayoutSettings s)
+    protected void SaveTemplatePickerSplitterSettings(LayoutSettings s)
     {
         try
         {
@@ -187,7 +187,7 @@ public partial class ChatWindow : Window
         catch { }
     }
 
-    private static PromptTemplate? GetPromptFromSource(object? source)
+    protected static PromptTemplate? GetPromptFromSource(object? source)
     {
         if (source is not Control c) return null;
         if (c.DataContext is PromptTemplate p) return p;
@@ -195,21 +195,21 @@ public partial class ChatWindow : Window
         return parent?.DataContext as PromptTemplate;
     }
 
-    private void OnPromptListTapped(object? sender, TappedEventArgs e)
+    protected void OnPromptListTapped(object? sender, TappedEventArgs e)
     {
         var prompt = GetPromptFromSource(e.Source);
         if (prompt != null && DataContext is ViewModels.ChatWindowViewModel vm)
             vm.PopulatePromptCommand.Execute(prompt);
     }
 
-    private async void OnPromptListDoubleTapped(object? sender, TappedEventArgs e)
+    protected async void OnPromptListDoubleTapped(object? sender, TappedEventArgs e)
     {
         var prompt = GetPromptFromSource(e.Source);
         if (prompt != null && DataContext is ViewModels.ChatWindowViewModel vm)
             await vm.SubmitPromptCommand.ExecuteAsync(prompt);
     }
 
-    private void OnMessagesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    protected void OnMessagesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
         {
@@ -222,13 +222,13 @@ public partial class ChatWindow : Window
         }
     }
 
-    private void OnAssistantMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    protected void OnAssistantMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ChatMessage.Text))
             ScrollToEnd();
     }
 
-    private void ScrollToEnd()
+    protected void ScrollToEnd()
     {
         UiDispatcherHost.Post(() =>
         {
@@ -237,7 +237,7 @@ public partial class ChatWindow : Window
         });
     }
 
-    private void OnInputKeyDown(object? sender, KeyEventArgs e)
+    protected void OnInputKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter) return;
         // Send on Enter (without Shift). Shift+Enter could be used for newline if we want later.

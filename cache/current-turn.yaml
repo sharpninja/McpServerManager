@@ -1,6 +1,11 @@
-turnRequestId: req-20260630T201020Z-001-set-the-goal-back-to-this
-queryTitle: Set the goal back to this [Image #1]
-openedAt: 2026-06-30T20:10:52Z
-status: in_progress
-codeEdits: 0
-queryText: "[Image #1] Set the goal back to this"
+turnRequestId: req-20260706T163147Z-prompt-1162
+queryTitle: Wrap up
+openedAt: 2026-07-06T16:31:47Z
+status: completed
+codeEdits: 2
+lastBuildStatus: succeeded
+auditActions: 12
+auditFiles: 2
+auditDialog: 0
+auditDecisions: 1
+queryText: [$wrap-up](C:\\Users\\kingd\\.codex\\skills\\wrap-up\\SKILL.md)

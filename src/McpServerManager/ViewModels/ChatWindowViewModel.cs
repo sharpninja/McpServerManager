@@ -18,8 +18,19 @@ public partial class ChatWindowViewModel : McpServerManager.Core.ViewModels.Chat
     }
 
     public ChatWindowViewModel()
-        : this(new OllamaLogAgentService(), () => string.Empty, null, null)
+        : this(new DesignTimeLogAgentService(), () => string.Empty, null, null)
     {
+    }
+
+    private sealed class DesignTimeLogAgentService : ILogAgentService
+    {
+        public System.Threading.Tasks.Task<string> SendMessageAsync(
+            string userMessage,
+            string contextSummary,
+            string? model = null,
+            IProgress<string>? contentProgress = null,
+            System.Threading.CancellationToken cancellationToken = default)
+            => System.Threading.Tasks.Task.FromResult(string.Empty);
     }
 
     private sealed class CoreLogAgentServiceAdapter : CoreLogAgentService

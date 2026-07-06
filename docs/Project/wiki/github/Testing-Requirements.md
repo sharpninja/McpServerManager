@@ -28,6 +28,14 @@ Cover report multi-select, move to new group, consolidate into selected group, g
 
 
 
+## TEST-VM-CQRS-FINISH
+
+### TEST-VM-CQRS-FINISH-001
+
+Tests must cover command layer boundaries, agent event listener dispatch/service behavior, Android voice factory wiring, direct-construction source gates, and app-level build validation.
+
+
+
 ## TEST-WEB
 
 ### TEST-WEB-001

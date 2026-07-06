@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using McpServer.Cqrs;
+using McpServerManager.Core.Services;
 
 namespace McpServerManager.Core.Commands;
 
@@ -260,6 +261,21 @@ public sealed class SearchRowTappedHandler(IRequestDetailsTarget target) : IComm
     }
 }
 
+// --- Settings ---
+
+public sealed record SaveSettingsCommand(VoiceChatSettings Settings) : ICommand<VoiceChatSettings>;
+
+public sealed class SaveSettingsHandler(VoiceChatSettingsService? voice = null) : ICommandHandler<SaveSettingsCommand, VoiceChatSettings>
+{
+    private readonly VoiceChatSettingsService _voice = voice ?? VoiceChatSettingsService.Instance;
+
+    public Task<Result<VoiceChatSettings>> HandleAsync(SaveSettingsCommand command, CallContext context)
+    {
+        var saved = _voice.Save(command.Settings);
+        return Task.FromResult(Result<VoiceChatSettings>.Success(saved));
+    }
+}
+
 // --- Search Row Double-Tap ---
 
 public sealed record SearchRowDoubleTappedCommand(McpServerManager.UI.Core.Models.Json.SearchableTurn? Entry) : ICommand<bool>;
@@ -272,6 +288,3 @@ public sealed class SearchRowDoubleTappedHandler(IRequestDetailsTarget target) :
         return Task.FromResult(Result<bool>.Success(true));
     }
 }
-
-
-

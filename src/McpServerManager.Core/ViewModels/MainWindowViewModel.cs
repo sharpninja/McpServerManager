@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using McpServer.Cqrs.Mvvm;
+using McpServerManager.UI.Core.Hosting;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
@@ -142,7 +143,11 @@ public partial class MainWindowViewModel : McpServerManager.UI.Core.ViewModels.M
         string? bearerToken,
         CoreSystemNotificationService? systemNotificationService = null,
         McpServerManager.UI.Core.Services.IUiDispatcherService? uiDispatcher = null)
-        : base(clipboardService, mcpBaseUrl, mcpApiKey, bearerToken, systemNotificationService, uiDispatcher ?? new AvaloniaUiDispatcherService())
+        : base(
+            clipboardService,
+            MainWindowHostServicesFactory.CreateHostServices(mcpBaseUrl, mcpApiKey, bearerToken, clipboardService: clipboardService),
+            systemNotificationService,
+            uiDispatcher ?? new AvaloniaUiDispatcherService())
     {
         _dispatcher = CqrsDispatcher;
         CloseRequestDetailsCommand = new CqrsRelayCommand<bool>(_dispatcher, () => new Commands.CloseRequestDetailsCommand());

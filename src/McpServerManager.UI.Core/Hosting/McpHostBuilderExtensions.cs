@@ -131,6 +131,7 @@ public static class McpHostBuilderExtensions
         RegisterForLifetime<UiCoreWorkspaceApiClientAdapter>(services, options.Lifetime, static sp => new UiCoreWorkspaceApiClientAdapter(sp.GetRequiredService<McpWorkspaceService>()));
         RegisterForLifetime<UiCoreVoiceApiClientAdapter>(services, options.Lifetime, static sp => new UiCoreVoiceApiClientAdapter(sp.GetRequiredService<McpVoiceConversationService>()));
         RegisterForLifetime<UiCoreEventStreamApiClientAdapter>(services, options.Lifetime, static sp => new UiCoreEventStreamApiClientAdapter(sp.GetRequiredService<McpAgentEventStreamService>()));
+        RegisterForLifetime<IAgentEventStreamReader>(services, options.Lifetime, static sp => new McpAgentEventStreamReader(sp.GetRequiredService<McpAgentEventStreamService>()));
         RegisterForLifetime<IVoiceConversationService, McpVoiceConversationService>(services, options.Lifetime, static sp => sp.GetRequiredService<McpVoiceConversationService>());
         RegisterForLifetime<ITodoApiClient, UiCoreTodoApiClientAdapter>(services, options.Lifetime, static sp => sp.GetRequiredService<UiCoreTodoApiClientAdapter>());
         RegisterForLifetime<IWorkspaceApiClient, UiCoreWorkspaceApiClientAdapter>(services, options.Lifetime, static sp => sp.GetRequiredService<UiCoreWorkspaceApiClientAdapter>());
@@ -183,6 +184,7 @@ public static class McpHostBuilderExtensions
         RegisterForLifetime<IConfigTarget, ICommandTarget>(services, options.Lifetime, static sp => sp.GetRequiredService<ICommandTarget>());
         RegisterForLifetime<IUiDispatchTarget, ICommandTarget>(services, options.Lifetime, static sp => sp.GetRequiredService<ICommandTarget>());
         RegisterForLifetime<ITodoCopilotTarget, ICommandTarget>(services, options.Lifetime, static sp => sp.GetRequiredService<ICommandTarget>());
+        RegisterForLifetime<IAgentEventStatusTarget, ICommandTarget>(services, options.Lifetime, static sp => sp.GetRequiredService<ICommandTarget>());
     }
 
     private static bool HasExplicitApiClients(McpHostOptions options)

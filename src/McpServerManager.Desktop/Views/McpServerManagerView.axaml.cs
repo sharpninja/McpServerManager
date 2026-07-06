@@ -9,10 +9,10 @@ namespace McpServerManager.Desktop.Views;
 
 public partial class McpServerManagerView : UserControl
 {
-    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("McpServerManagerView");
+    protected static readonly ILogger _logger = AppLogService.Instance.CreateLogger("McpServerManagerView");
     private bool? _wasPortrait;
     private bool _isUpdatingLayout;
-    private LayoutSettings _layoutSettings = new();
+    protected LayoutSettings _layoutSettings = new();
 
     public McpServerManagerView()
     {
@@ -59,7 +59,7 @@ public partial class McpServerManagerView : UserControl
         }
     }
 
-    private void ApplyJsonViewerSplitterSettings()
+    protected void ApplyJsonViewerSplitterSettings()
     {
         try
         {
@@ -84,7 +84,7 @@ public partial class McpServerManagerView : UserControl
         }
     }
 
-    private void SaveJsonViewerSplitterSettings()
+    protected void SaveJsonViewerSplitterSettings()
     {
         try
         {
@@ -99,7 +99,7 @@ public partial class McpServerManagerView : UserControl
         }
     }
 
-    private void SaveCurrentLayoutToSettings(bool isPortrait)
+    protected void SaveCurrentLayoutToSettings(bool isPortrait)
     {
         if (MainGrid == null) return;
         if (isPortrait)
@@ -120,7 +120,7 @@ public partial class McpServerManagerView : UserControl
         }
     }
 
-    private void UpdateLayoutForOrientation(bool isPortrait)
+    protected void UpdateLayoutForOrientation(bool isPortrait)
     {
         if (MainGrid == null) return;
         MainGrid.ColumnDefinitions.Clear();

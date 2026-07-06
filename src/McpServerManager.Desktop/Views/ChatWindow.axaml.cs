@@ -23,7 +23,7 @@ public partial class ChatWindow : Window
         Loaded += OnLoaded;
     }
 
-    private void InitializeGridRows()
+    protected void InitializeGridRows()
     {
         if (ChatMainGrid == null) return;
         var s = LayoutSettingsIo.Load();
@@ -38,7 +38,7 @@ public partial class ChatWindow : Window
         ChatMainGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
     }
 
-    private void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    protected void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (ChatTemplateSplitter != null)
             ChatTemplateSplitter.PointerCaptureLost += (_, _) => SaveLayoutSettings();
@@ -57,7 +57,7 @@ public partial class ChatWindow : Window
         }
     }
 
-    private void SetTemplatePickerRowToAuto()
+    protected void SetTemplatePickerRowToAuto()
     {
         try
         {
@@ -70,7 +70,7 @@ public partial class ChatWindow : Window
         catch { }
     }
 
-    private void OnOpened(object? sender, EventArgs e)
+    protected void OnOpened(object? sender, EventArgs e)
     {
         ApplyLayoutSettings();
         if (DataContext is ChatWindowViewModel vm)
@@ -81,7 +81,7 @@ public partial class ChatWindow : Window
         }
     }
 
-    private void OnClosing(object? sender, WindowClosingEventArgs e)
+    protected void OnClosing(object? sender, WindowClosingEventArgs e)
     {
         if (DataContext is ChatWindowViewModel vm)
         {
@@ -91,7 +91,7 @@ public partial class ChatWindow : Window
         SaveLayoutSettings();
     }
 
-    private void ApplyLayoutSettings()
+    protected void ApplyLayoutSettings()
     {
         try
         {
@@ -109,7 +109,7 @@ public partial class ChatWindow : Window
         catch { }
     }
 
-    private void ApplyTemplatePickerSplitterSettings(LayoutSettings? s)
+    protected void ApplyTemplatePickerSplitterSettings(LayoutSettings? s)
     {
         try
         {
@@ -128,7 +128,7 @@ public partial class ChatWindow : Window
         catch { }
     }
 
-    private void ApplyTemplatePickerSplitterOnly()
+    protected void ApplyTemplatePickerSplitterOnly()
     {
         try
         {
@@ -138,7 +138,7 @@ public partial class ChatWindow : Window
         catch { }
     }
 
-    private void SaveLayoutSettings()
+    protected void SaveLayoutSettings()
     {
         try
         {
@@ -158,7 +158,7 @@ public partial class ChatWindow : Window
         catch { }
     }
 
-    private void OnMessagesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    protected void OnMessagesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
         {
@@ -171,13 +171,13 @@ public partial class ChatWindow : Window
         }
     }
 
-    private void OnAssistantMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    protected void OnAssistantMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(UiChatMessage.Text))
             ScrollToEnd();
     }
 
-    private void ScrollToEnd()
+    protected void ScrollToEnd()
     {
         UiDispatcherHost.Post(() =>
         {

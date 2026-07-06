@@ -11,7 +11,7 @@ public partial class RequestDetailsView : UserControl
         InitializeComponent();
     }
 
-    private void InitializeComponent()
+    protected void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);
     }

@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Reassert the repository policy after imported project props have run. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
+    <MSBuildWarningsAsErrors>$(MSBuildWarningsAsErrors);MSB*</MSBuildWarningsAsErrors>
+  </PropertyGroup>
+</Project>

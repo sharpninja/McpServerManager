@@ -7,7 +7,7 @@ using McpServerManager.Core;
 using McpServerManager.Core.Commands;
 using McpServerManager.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
+using NSubstitute;
 using System.Threading.Tasks;
 using Xunit;
 using CoreMcpTodoService = McpServerManager.Core.Services.McpTodoService;
@@ -16,7 +16,7 @@ namespace McpServerManager.Core.Tests.Integration;
 
 public sealed class CommandRoundTripTests : IDisposable
 {
-    private readonly Mock<ICommandTarget> _target = new();
+    private readonly ICommandTarget _target = Substitute.For<ICommandTarget, McpServerManager.UI.Core.Commands.ICommandTarget>();
     private readonly ServiceProvider _provider;
     private readonly Dispatcher _dispatcher;
 
@@ -40,7 +40,7 @@ public sealed class CommandRoundTripTests : IDisposable
         var result = await _dispatcher.SendAsync(new NavigateBackCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _target.Verify(t => t.NavigateBack(), Times.Once);
+        _target.Received(1).NavigateBack();
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public sealed class CommandRoundTripTests : IDisposable
         var result = await _dispatcher.SendAsync(new NavigateForwardCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _target.Verify(t => t.NavigateForward(), Times.Once);
+        _target.Received(1).NavigateForward();
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public sealed class CommandRoundTripTests : IDisposable
         var result = await _dispatcher.SendAsync(new OpenAgentConfigCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _target.Verify(t => t.OpenAgentConfig(), Times.Once);
+        _target.Received(1).OpenAgentConfig();
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public sealed class CommandRoundTripTests : IDisposable
         var result = await _dispatcher.SendAsync(new OpenPromptTemplatesCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _target.Verify(t => t.OpenPromptTemplates(), Times.Once);
+        _target.Received(1).OpenPromptTemplates();
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public sealed class CommandRoundTripTests : IDisposable
         var result = await _dispatcher.SendAsync(new ArchiveCurrentCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _target.Verify(t => t.Archive(), Times.Once);
+        _target.Received(1).Archive();
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public sealed class CommandRoundTripTests : IDisposable
         var result = await _dispatcher.SendAsync(new ToggleShowRawMarkdownCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _target.Verify(t => t.ToggleShowRawMarkdown(), Times.Once);
+        _target.Received(1).ToggleShowRawMarkdown();
     }
 
     [Fact]
@@ -94,19 +94,19 @@ public sealed class CommandRoundTripTests : IDisposable
         var result = await _dispatcher.SendAsync(new PhoneNavigateSectionCommand("details"), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        _target.Verify(t => t.PhoneNavigateSection("details"), Times.Once);
+        _target.Received(1).PhoneNavigateSection("details");
     }
 
     [Fact]
     public async Task CopilotPlanCommand_DispatchesThroughDispatcher()
     {
-        var uiCoreTarget = _target.As<McpServerManager.UI.Core.Commands.ITodoCopilotTarget>();
-        uiCoreTarget.Setup(t => t.CopilotPlanAsync()).Returns(Task.CompletedTask);
+        var uiCoreTarget = (McpServerManager.UI.Core.Commands.ITodoCopilotTarget)_target;
+        uiCoreTarget.CopilotPlanAsync().Returns(Task.CompletedTask);
 
         var result = await _dispatcher.SendAsync(new McpServerManager.UI.Core.Commands.CopilotPlanCommand(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
-        uiCoreTarget.Verify(t => t.CopilotPlanAsync(), Times.Once);
+        await uiCoreTarget.Received(1).CopilotPlanAsync();
     }
 
     [Fact]
@@ -116,8 +116,8 @@ public sealed class CommandRoundTripTests : IDisposable
         await _dispatcher.SendAsync(new NavigateForwardCommand(), TestContext.Current.CancellationToken);
         await _dispatcher.SendAsync(new NavigateBackCommand(), TestContext.Current.CancellationToken);
 
-        _target.Verify(t => t.NavigateBack(), Times.Exactly(2));
-        _target.Verify(t => t.NavigateForward(), Times.Once);
+        _target.Received(2).NavigateBack();
+        _target.Received(1).NavigateForward();
     }
 
     [Fact]
@@ -147,23 +147,23 @@ public sealed class CommandRoundTripTests : IDisposable
     public void Dispose() => _provider.Dispose();
 
     private static ServiceProvider CreateProvider(
-        Mock<ICommandTarget> target,
+        ICommandTarget target,
         CoreMcpTodoService todoService,
         McpServerClient client,
         Uri baseUri)
     {
-        var uiTarget = target.As<McpServerManager.UI.Core.Commands.ICommandTarget>();
+        var uiTarget = (McpServerManager.UI.Core.Commands.ICommandTarget)target;
         var services = new ServiceCollection();
         services.AddMcpHost(options =>
         {
             options.Lifetime = McpHostLifetimeStrategy.Singleton;
-            options.CommandTarget = uiTarget.Object;
+            options.CommandTarget = uiTarget;
             options.TodoClient = new UiCoreTodoApiClientAdapter(todoService);
             options.HealthClient = new UiCoreHealthApiClientAdapter(client, baseUri);
             options.AdditionalHandlerAssemblies = [typeof(NavigateBackCommand).Assembly];
         });
 
-        services.AddSingleton<ICommandTarget>(target.Object);
+        services.AddSingleton(target);
         services.AddSingleton<INavigationTarget>(sp => sp.GetRequiredService<ICommandTarget>());
         services.AddSingleton<IRequestDetailsTarget>(sp => sp.GetRequiredService<ICommandTarget>());
         services.AddSingleton<IPreviewTarget>(sp => sp.GetRequiredService<ICommandTarget>());

@@ -1,34 +1,33 @@
 using FluentAssertions;
 using McpServer.Cqrs;
 using McpServerManager.Core.Commands;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace McpServerManager.Core.Tests.Commands;
 
 public sealed class PreviewHandlerTests
 {
-    private readonly Mock<ICommandTarget> _target = new();
+    private readonly ICommandTarget _target = Substitute.For<ICommandTarget>();
     private readonly CallContext _ctx = new();
 
     [Fact]
     public async Task OpenPreviewInBrowserHandler_HandleAsync_CallsOpenPreviewInBrowser()
     {
-        var handler = new OpenPreviewInBrowserHandler(_target.Object);
+        var handler = new OpenPreviewInBrowserHandler(_target);
         var result = await handler.HandleAsync(new OpenPreviewInBrowserCommand(), _ctx);
 
         result.IsSuccess.Should().BeTrue();
-        _target.Verify(t => t.OpenPreviewInBrowser(), Times.Once);
+        _target.Received(1).OpenPreviewInBrowser();
     }
 
     [Fact]
     public async Task ToggleShowRawMarkdownHandler_HandleAsync_CallsToggleShowRawMarkdown()
     {
-        var handler = new ToggleShowRawMarkdownHandler(_target.Object);
+        var handler = new ToggleShowRawMarkdownHandler(_target);
         var result = await handler.HandleAsync(new ToggleShowRawMarkdownCommand(), _ctx);
 
         result.IsSuccess.Should().BeTrue();
-        _target.Verify(t => t.ToggleShowRawMarkdown(), Times.Once);
+        _target.Received(1).ToggleShowRawMarkdown();
     }
 }
-

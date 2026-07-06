@@ -100,6 +100,8 @@ Traceability policy: see `Requirements-Traceability-Policy.md`.
 | FR6. | Tracked | Functional-Requirements.md |
 | FR7. | Tracked | Functional-Requirements.md |
 | FR8. | Tracked | Functional-Requirements.md |
+| FR-VM-CQRS-ANDROIDVOICE-001 | Tracked | Functional-Requirements.md |
+| FR-VM-CQRS-EVENTS-001 | Tracked | Functional-Requirements.md |
 | TR1. | Tracked | Technical-Requirements.md |
 | TR10. | Tracked | Technical-Requirements.md |
 | TR11. | Tracked | Technical-Requirements.md |
@@ -111,3 +113,6 @@ Traceability policy: see `Requirements-Traceability-Policy.md`.
 | TR7. | Tracked | Technical-Requirements.md |
 | TR8. | Tracked | Technical-Requirements.md |
 | TR9. | Tracked | Technical-Requirements.md |
+| TR-TEST-DOUBLE-001 | Tracked | Technical-Requirements.md |
+| TR-VM-CQRS-LAYER-001 | Tracked | Technical-Requirements.md |
+| TEST-VM-CQRS-FINISH-001 | Tracked | Testing-Requirements.md |

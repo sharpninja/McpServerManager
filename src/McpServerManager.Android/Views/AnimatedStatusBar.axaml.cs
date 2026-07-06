@@ -11,7 +11,7 @@ namespace McpServerManager.Android.Views;
 
 public partial class AnimatedStatusBar : UserControl
 {
-    private static readonly ILogger _logger = AppLogService.Instance.CreateLogger("AnimatedStatusBar");
+    protected static readonly ILogger _logger = AppLogService.Instance.CreateLogger("AnimatedStatusBar");
     public static readonly StyledProperty<bool> IsBusyProperty =
         AvaloniaProperty.Register<AnimatedStatusBar, bool>(nameof(IsBusy));
 
@@ -57,7 +57,7 @@ public partial class AnimatedStatusBar : UserControl
         }
     }
 
-    private void StartAnimation()
+    protected void StartAnimation()
     {
         _animating = true;
         _hue = 0;
@@ -74,7 +74,7 @@ public partial class AnimatedStatusBar : UserControl
         }, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(40));
     }
 
-    private void StopAnimation()
+    protected void StopAnimation()
     {
         _animating = false;
         _timer?.Dispose();
@@ -109,7 +109,7 @@ public partial class AnimatedStatusBar : UserControl
         base.OnDetachedFromVisualTree(e);
     }
 
-    private static Color HslToColor(double h, double s, double l)
+    protected static Color HslToColor(double h, double s, double l)
     {
         double c = (1 - Math.Abs(2 * l - 1)) * s;
         double x = c * (1 - Math.Abs((h / 60) % 2 - 1));
