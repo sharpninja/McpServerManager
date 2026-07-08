@@ -216,7 +216,7 @@
           <!-- Content area below tabs -->
           <Grid Grid.Row="1">
             <!-- Editor tab content: toolbar + text editor -->
-            <Grid x:Name="EditorContent" RowDefinitions="Auto,*" IsVisible="False">
+            <Grid x:Name="EditorContent" RowDefinitions="Auto,Auto,*" IsVisible="False">
               <Border Grid.Row="0" Classes="phone-toolbar-card" Padding="6" Margin="0,0,0,6">
               <StackPanel Orientation="Horizontal" Spacing="2">
                 <Button Command="{Binding SaveEditorCommand}" Padding="6" ToolTip.Tip="Save to MCP" Width="30">
@@ -248,7 +248,44 @@
                 </Button>
               </StackPanel>
               </Border>
-              <avedit:TextEditor x:Name="Editor" Grid.Row="1"
+              <!-- UI-TODO-001: structured metadata form (YAML front matter). Editor below shows body only. -->
+              <Expander Grid.Row="1" Header="Metadata" IsExpanded="True" Margin="0,0,0,6">
+                <StackPanel Spacing="6" Margin="4">
+                  <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="6" RowSpacing="4">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="ID" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding EditorFmId, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Section" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding EditorFmSection, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Priority" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch"
+                              ItemsSource="{x:Static uicorevm:TodoListHostViewModel.FormPriorityOptions}"
+                              SelectedItem="{Binding EditorFmPriority, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="2" Text="Estimate" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding EditorFmEstimate, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Phase" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding EditorFmPhase, Mode=TwoWay}"/>
+                    <CheckBox Grid.Row="2" Grid.Column="3" Content="Done" IsChecked="{Binding EditorFmDone, Mode=TwoWay}"/>
+                  </Grid>
+                  <TextBlock Text="Depends On" FontWeight="SemiBold"/>
+                  <ItemsControl ItemsSource="{Binding EditorFmDependsOn}" x:CompileBindings="False">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,0,2">
+                          <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                          <Button Content="✕" Padding="4,0"
+                                  Command="{Binding DataContext.RemoveDependsOnCommand, ElementName=TodoRoot}"
+                                  CommandParameter="{Binding}"/>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBox Width="180" Watermark="Add dependency id..." Text="{Binding NewDependsOnEntry, Mode=TwoWay}"/>
+                    <Button Content="Add" Command="{Binding AddDependsOnCommand}"/>
+                  </StackPanel>
+                </StackPanel>
+              </Expander>
+              <avedit:TextEditor x:Name="Editor" Grid.Row="2"
                                  FontFamily="Cascadia Code,Consolas,Menlo,monospace"
                                  FontSize="13"
                                  ShowLineNumbers="True"

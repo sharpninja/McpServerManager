@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using McpServer.Cqrs;
 using McpServer.Cqrs.Mvvm;
 using McpServerManager.UI.Core.Messages;
@@ -71,6 +72,22 @@ public partial class TodoListHostViewModel : ViewModelBase
     [ObservableProperty] private McpTodoFlatItem? _currentTodoDetail;
     [ObservableProperty] private ObservableCollection<EditorTab> _editorTabs = new();
     [ObservableProperty] private EditorTab? _selectedEditorTab;
+
+    // UI-TODO-001 / FR-TODO-METAFORM-001: structured metadata form for the YAML front matter.
+    // The raw editor (EditorText) shows body sections only; these fields own the front matter.
+    [ObservableProperty] private string _editorFmId = "NEW-TODO";
+    [ObservableProperty] private string _editorFmSection = "";
+    [ObservableProperty] private string _editorFmPriority = "";
+    [ObservableProperty] private string _editorFmEstimate = "";
+    [ObservableProperty] private string _editorFmPhase = "";
+    [ObservableProperty] private bool _editorFmDone;
+    [ObservableProperty] private string _newDependsOnEntry = "";
+
+    /// <summary>Editable dependency ids for the metadata form (buildable list).</summary>
+    public ObservableCollection<string> EditorFmDependsOn { get; } = new();
+
+    /// <summary>Priority choices for the metadata form combo box.</summary>
+    public static IReadOnlyList<string> FormPriorityOptions { get; } = ["high", "medium", "low"];
 
     public Func<string>? GetEditorText { get; set; }
 
@@ -386,10 +403,64 @@ public partial class TodoListHostViewModel : ViewModelBase
 
     protected virtual void NewTodo()
     {
-        EditorText = TodoMarkdown.BlankTemplate();
+        var template = TodoMarkdown.BlankTemplate();
+        SyncMetadataForm(template);
+        EditorText = TodoMarkdown.ExtractBody(template);
         EditorTitle = "NEW-TODO";
         ResetEditorTabs("NEW-TODO", EditorText);
         _detailVm.BeginNewDraft();
+    }
+
+    /// <summary>UI-TODO-001: populates the metadata form fields from a full document's front matter.</summary>
+    /// <param name="fullMarkdown">The full TODO markdown (front matter + body).</param>
+    protected void SyncMetadataForm(string fullMarkdown)
+    {
+        var fm = TodoMarkdown.ParseFrontMatter(fullMarkdown);
+        EditorFmId = fm.Id;
+        EditorFmSection = fm.Section;
+        EditorFmPriority = fm.Priority;
+        EditorFmEstimate = fm.Estimate ?? "";
+        EditorFmPhase = fm.Phase ?? "";
+        EditorFmDone = fm.Done;
+        EditorFmDependsOn.Clear();
+        foreach (var d in fm.DependsOn)
+            EditorFmDependsOn.Add(d);
+    }
+
+    /// <summary>UI-TODO-001: recomposes a full document from the metadata form plus the editor body.</summary>
+    /// <param name="body">The body text from the raw editor.</param>
+    /// <returns>The composed full markdown.</returns>
+    public string ComposeEditorDocument(string body)
+        => TodoMarkdown.ComposeDocument(
+            new TodoFrontMatter
+            {
+                Id = EditorFmId,
+                Section = EditorFmSection,
+                Priority = EditorFmPriority,
+                Estimate = string.IsNullOrWhiteSpace(EditorFmEstimate) ? null : EditorFmEstimate.Trim(),
+                Phase = string.IsNullOrWhiteSpace(EditorFmPhase) ? null : EditorFmPhase.Trim(),
+                Done = EditorFmDone,
+                DependsOn = EditorFmDependsOn.ToList(),
+            },
+            body);
+
+    /// <summary>Adds the pending dependency entry to the metadata form list.</summary>
+    [RelayCommand]
+    protected void AddDependsOn()
+    {
+        var value = (NewDependsOnEntry ?? "").Trim();
+        if (value.Length > 0 && !EditorFmDependsOn.Contains(value))
+            EditorFmDependsOn.Add(value);
+        NewDependsOnEntry = "";
+    }
+
+    /// <summary>Removes a dependency id from the metadata form list.</summary>
+    /// <param name="id">The dependency id to remove.</param>
+    [RelayCommand]
+    protected void RemoveDependsOn(string? id)
+    {
+        if (!string.IsNullOrEmpty(id))
+            EditorFmDependsOn.Remove(id);
     }
 
     protected void CancelNewTodo()
@@ -459,8 +530,9 @@ public partial class TodoListHostViewModel : ViewModelBase
 
     protected async Task SaveEditorAsync()
     {
-        var text = GetEditorText?.Invoke() ?? EditorText;
-        if (string.IsNullOrWhiteSpace(text))
+        var body = GetEditorText?.Invoke() ?? EditorText;
+        var text = ComposeEditorDocument(body);
+        if (string.IsNullOrWhiteSpace(body) && EditorFmDependsOn.Count == 0 && string.IsNullOrWhiteSpace(EditorFmId))
             return;
 
         var parsed = TodoMarkdown.FromMarkdown(text);
@@ -907,7 +979,9 @@ public partial class TodoListHostViewModel : ViewModelBase
     private void ApplyDetailToHost(TodoDetail detail)
     {
         CurrentTodoDetail = ToMcpTodoFlatItem(detail);
-        EditorText = TodoMarkdown.ToMarkdown(CurrentTodoDetail);
+        var full = TodoMarkdown.ToMarkdown(CurrentTodoDetail);
+        SyncMetadataForm(full);
+        EditorText = TodoMarkdown.ExtractBody(full);
         EditorTitle = detail.Id;
         ResetEditorTabs(detail.Id, EditorText);
     }
