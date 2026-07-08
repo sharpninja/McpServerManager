@@ -20,7 +20,7 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.0.5" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="Markdig" Version="0.40.0" />
+    <PackageReference Include="Markdig" Version="1.3.2" />
     <PackageReference Include="SharpNinja.McpServer.Client" Version="1.4.0" />
     <PackageReference Include="SharpNinja.McpServer.Cqrs" Version="1.4.0" />
     <PackageReference Include="SharpNinja.McpServer.Cqrs.Mvvm" Version="1.4.0" />

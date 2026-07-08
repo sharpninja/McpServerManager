@@ -33,7 +33,7 @@
     <PackageReference Include="SharpNinja.McpServer.Repl.Core" Version="1.4.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.1" />
     <PackageReference Include="Terminal.Gui" Version="2.0.0" />
-    <PackageReference Include="Markdig.Signed" Version="0.38.0" Aliases="MarkdigSigned" />
+    <PackageReference Include="Markdig.Signed" Version="1.3.2" Aliases="MarkdigSigned" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="SharpNinja.McpServer.Client" Version="1.4.0" />
