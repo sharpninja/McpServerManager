@@ -6,32 +6,33 @@ using FluentAvalonia.UI.Controls;
 namespace McpServerManager.Core.Behaviors;
 
 /// <summary>
-/// Attached behavior that binds a <see cref="NavigationView.ItemInvoked"/> event
+/// Attached behavior that binds a <see cref="FANavigationView.ItemInvoked"/> event
 /// to an <see cref="ICommand"/>, passing the section key (Tag) as the command parameter.
 /// Adapted from remote-agent for use in McpServerManager phone view.
+/// (FluentAvalonia 3.x renamed NavigationView* to FANavigationView*.)
 /// </summary>
 public static class NavigationViewItemInvokedBehavior
 {
     public static readonly AttachedProperty<ICommand?> CommandProperty =
-        AvaloniaProperty.RegisterAttached<NavigationView, ICommand?>(
+        AvaloniaProperty.RegisterAttached<FANavigationView, ICommand?>(
             "Command", typeof(NavigationViewItemInvokedBehavior));
 
     public static readonly AttachedProperty<string> SettingsKeyProperty =
-        AvaloniaProperty.RegisterAttached<NavigationView, string>(
+        AvaloniaProperty.RegisterAttached<FANavigationView, string>(
             "SettingsKey", typeof(NavigationViewItemInvokedBehavior), "Settings");
 
     static NavigationViewItemInvokedBehavior()
     {
-        CommandProperty.Changed.AddClassHandler<NavigationView>(OnCommandChanged);
+        CommandProperty.Changed.AddClassHandler<FANavigationView>(OnCommandChanged);
     }
 
-    public static ICommand? GetCommand(NavigationView nav) => nav.GetValue(CommandProperty);
-    public static void SetCommand(NavigationView nav, ICommand? value) => nav.SetValue(CommandProperty, value);
+    public static ICommand? GetCommand(FANavigationView nav) => nav.GetValue(CommandProperty);
+    public static void SetCommand(FANavigationView nav, ICommand? value) => nav.SetValue(CommandProperty, value);
 
-    public static string GetSettingsKey(NavigationView nav) => nav.GetValue(SettingsKeyProperty);
-    public static void SetSettingsKey(NavigationView nav, string value) => nav.SetValue(SettingsKeyProperty, value);
+    public static string GetSettingsKey(FANavigationView nav) => nav.GetValue(SettingsKeyProperty);
+    public static void SetSettingsKey(FANavigationView nav, string value) => nav.SetValue(SettingsKeyProperty, value);
 
-    private static void OnCommandChanged(NavigationView nav, AvaloniaPropertyChangedEventArgs e)
+    private static void OnCommandChanged(FANavigationView nav, AvaloniaPropertyChangedEventArgs e)
     {
         nav.ItemInvoked -= OnItemInvoked;
 
@@ -39,9 +40,9 @@ public static class NavigationViewItemInvokedBehavior
             nav.ItemInvoked += OnItemInvoked;
     }
 
-    private static void OnItemInvoked(object? sender, NavigationViewItemInvokedEventArgs e)
+    private static void OnItemInvoked(object? sender, FANavigationViewItemInvokedEventArgs e)
     {
-        if (sender is not NavigationView nav)
+        if (sender is not FANavigationView nav)
             return;
 
         var command = GetCommand(nav);
@@ -55,7 +56,7 @@ public static class NavigationViewItemInvokedBehavior
         }
         else
         {
-            sectionKey = e.InvokedItemContainer is NavigationViewItem { Tag: string tag } ? tag : null;
+            sectionKey = e.InvokedItemContainer is FANavigationViewItem { Tag: string tag } ? tag : null;
         }
 
         if (sectionKey is not null && command.CanExecute(sectionKey))
