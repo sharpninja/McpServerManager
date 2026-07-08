@@ -12,16 +12,16 @@ internal static class ConfigCommands
     public static void Register(RootCommand root)
     {
         var config = new Command("config", "Manage Director CLI defaults (outside workspace marker files)");
-        config.AddCommand(BuildShowCommand());
-        config.AddCommand(BuildSetDefaultUrlCommand());
-        config.AddCommand(BuildClearDefaultUrlCommand());
-        root.AddCommand(config);
+        config.Subcommands.Add(BuildShowCommand());
+        config.Subcommands.Add(BuildSetDefaultUrlCommand());
+        config.Subcommands.Add(BuildClearDefaultUrlCommand());
+        root.Subcommands.Add(config);
     }
 
     private static Command BuildShowCommand()
     {
         var cmd = new Command("show", "Show current Director CLI config");
-        cmd.SetHandler(() =>
+        cmd.SetAction(_ =>
         {
             var cfg = DirectorCliConfigStore.Load();
             var table = new Table();
@@ -38,15 +38,19 @@ internal static class ConfigCommands
 
     private static Command BuildSetDefaultUrlCommand()
     {
-        var urlArg = new Argument<string>("url", "Default MCP server base URL (e.g. http://localhost:7147)");
+        var urlArg = new Argument<string>("url")
+        {
+            Description = "Default MCP server base URL (e.g. http://localhost:7147)",
+        };
         var cmd = new Command("set-default-url", "Set default MCP server base URL for use outside a workspace")
         {
             urlArg,
         };
-        cmd.AddAlias("set-url");
+        cmd.Aliases.Add("set-url");
 
-        cmd.SetHandler((string url) =>
+        cmd.SetAction(parseResult =>
         {
+            var url = parseResult.GetValue(urlArg)!;
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
                 || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
@@ -62,7 +66,7 @@ internal static class ConfigCommands
             Success($"Default MCP base URL set to {normalized}");
             Info($"Saved at {DirectorCliConfigStore.GetConfigPath()}");
             Warn("Workspace-scoped commands still require a workspace marker/API key unless bearer-only support is added.");
-        }, urlArg);
+        });
 
         return cmd;
     }
@@ -70,7 +74,7 @@ internal static class ConfigCommands
     private static Command BuildClearDefaultUrlCommand()
     {
         var cmd = new Command("clear-default-url", "Clear the default MCP server base URL");
-        cmd.SetHandler(() =>
+        cmd.SetAction(_ =>
         {
             var cfg = DirectorCliConfigStore.Load();
             cfg.DefaultBaseUrl = null;

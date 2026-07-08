@@ -17,22 +17,24 @@ namespace McpServerManager.Director.Commands;
 /// </summary>
 internal static class InteractiveCommand
 {
-    private static readonly Option<string?> s_workspaceOption = new("--workspace", "Workspace path (defaults to current directory)");
+    private static readonly Option<string?> s_workspaceOption = new("--workspace", "-w")
+    {
+        Description = "Workspace path (defaults to current directory)",
+    };
 
     /// <summary>Registers the interactive command on the root command.</summary>
     public static void Register(RootCommand root)
     {
-        s_workspaceOption.AddAlias("-w");
-
         var cmd = new Command("interactive", "Launch interactive Terminal UI for workspace management")
         {
             s_workspaceOption,
         };
-        cmd.AddAlias("tui");
-        cmd.AddAlias("ui");
+        cmd.Aliases.Add("tui");
+        cmd.Aliases.Add("ui");
 
-        cmd.SetHandler((string? workspace) =>
+        cmd.SetAction(parseResult =>
         {
+            var workspace = parseResult.GetValue(s_workspaceOption);
             using var sp = DirectorHost.CreateProvider(workspace);
             var directorContext = sp.GetRequiredService<DirectorMcpContext>();
 
@@ -152,9 +154,9 @@ internal static class InteractiveCommand
                     // Best-effort terminal cleanup on exit.
                 }
             }
-        }, s_workspaceOption);
+        });
 
-        root.AddCommand(cmd);
+        root.Subcommands.Add(cmd);
     }
 
     /// <summary>Applies a Darcula-inspired dark color scheme to all Terminal.Gui color scheme slots.</summary>

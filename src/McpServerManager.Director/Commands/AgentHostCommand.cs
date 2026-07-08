@@ -20,12 +20,13 @@ namespace McpServerManager.Director.Commands;
 
 internal static class AgentHostCommand
 {
-    private static readonly Option<string?> s_workspaceOption = new("--workspace", "Workspace path (defaults to current directory)");
+    private static readonly Option<string?> s_workspaceOption = new("--workspace", "-w")
+    {
+        Description = "Workspace path (defaults to current directory)",
+    };
 
     public static void Register(RootCommand root)
     {
-        s_workspaceOption.AddAlias("-w");
-
         var promptArgument = new Argument<string[]>("prompt")
         {
             Arity = ArgumentArity.ZeroOrMore,
@@ -38,8 +39,10 @@ internal static class AgentHostCommand
             promptArgument
         };
 
-        command.SetHandler(async (string? workspace, string[] prompt) =>
+        command.SetAction(async parseResult =>
         {
+            var workspace = parseResult.GetValue(s_workspaceOption);
+            var prompt = parseResult.GetValue(promptArgument) ?? [];
             using var cancellationSource = new CancellationTokenSource();
             DirectorAgentConsoleApplication? application = null;
             ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
@@ -89,9 +92,9 @@ internal static class AgentHostCommand
             {
                 Console.CancelKeyPress -= cancelHandler;
             }
-        }, s_workspaceOption, promptArgument);
+        });
 
-        root.AddCommand(command);
+        root.Subcommands.Add(command);
     }
 
     private static void ConfigureHostedAgentServices(
