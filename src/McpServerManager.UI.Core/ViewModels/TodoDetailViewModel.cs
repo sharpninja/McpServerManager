@@ -38,14 +38,14 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         : base(McpArea.Todo)
     {
         _logger = logger;
-        _loadCommand = new CqrsQueryCommand<TodoDetail?>(dispatcher, BuildQuery);
-        _createCommand = new CqrsRelayCommand<TodoMutationOutcome>(dispatcher, BuildCreateCommand);
-        _updateCommand = new CqrsRelayCommand<TodoMutationOutcome>(dispatcher, BuildUpdateCommand);
-        _deleteCommand = new CqrsRelayCommand<TodoMutationOutcome>(dispatcher, BuildDeleteCommand);
-        _analyzeRequirementsCommand = new CqrsRelayCommand<TodoRequirementsAnalysis>(dispatcher, BuildAnalyzeRequirementsCommand);
-        _statusPromptCommand = new CqrsQueryCommand<TodoPromptOutput>(dispatcher, BuildStatusPromptQuery);
-        _implementPromptCommand = new CqrsQueryCommand<TodoPromptOutput>(dispatcher, BuildImplementPromptQuery);
-        _planPromptCommand = new CqrsQueryCommand<TodoPromptOutput>(dispatcher, BuildPlanPromptQuery);
+        _loadCommand = new CqrsQueryCommand<TodoDetail?>(dispatcher, () => new GetTodoQuery(TodoId.Trim()));
+        _createCommand = new CqrsRelayCommand<TodoMutationOutcome>(dispatcher, () => TodoEditorMapper.ToCreateCommand(CaptureSnapshot()));
+        _updateCommand = new CqrsRelayCommand<TodoMutationOutcome>(dispatcher, () => TodoEditorMapper.ToUpdateCommand(CaptureSnapshot()));
+        _deleteCommand = new CqrsRelayCommand<TodoMutationOutcome>(dispatcher, () => TodoEditorMapper.ToDeleteCommand(CaptureSnapshot()));
+        _analyzeRequirementsCommand = new CqrsRelayCommand<TodoRequirementsAnalysis>(dispatcher, () => new AnalyzeTodoRequirementsCommand(TodoEditorMapper.ActiveTodoId(CaptureSnapshot())));
+        _statusPromptCommand = new CqrsQueryCommand<TodoPromptOutput>(dispatcher, () => new GenerateTodoStatusPromptQuery(TodoEditorMapper.ActiveTodoId(CaptureSnapshot())));
+        _implementPromptCommand = new CqrsQueryCommand<TodoPromptOutput>(dispatcher, () => new GenerateTodoImplementPromptQuery(TodoEditorMapper.ActiveTodoId(CaptureSnapshot())));
+        _planPromptCommand = new CqrsQueryCommand<TodoPromptOutput>(dispatcher, () => new GenerateTodoPlanPromptQuery(TodoEditorMapper.ActiveTodoId(CaptureSnapshot())));
         workspaceContext.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(WorkspaceContextViewModel.ActiveWorkspacePath))
@@ -454,7 +454,7 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
             RequirementsAnalysis = result.Value;
             if (result.Value is not null && result.Value.Success)
             {
-                StatusMessage = $"Requirements analysis completed for {GetActiveTodoId()}.";
+                StatusMessage = $"Requirements analysis completed for {TodoEditorMapper.ActiveTodoId(CaptureSnapshot())}.";
                 LastUpdatedAt = DateTimeOffset.UtcNow;
             }
             else
@@ -511,56 +511,27 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         }
     }
 
-    private GetTodoQuery BuildQuery() => new(TodoId.Trim());
-
-    private CreateTodoCommand BuildCreateCommand() => new()
+    private TodoEditorSnapshot CaptureSnapshot() => new()
     {
-        Id = RequireTrimmed(EditorId),
-        Title = RequireTrimmed(EditorTitle),
-        Section = RequireTrimmed(EditorSection),
-        Priority = RequireTrimmed(EditorPriority),
-        Estimate = Normalize(EditorEstimate),
-        Note = Normalize(EditorNote),
-        Remaining = Normalize(EditorRemaining),
-        Phase = Normalize(EditorPhase),
-        Description = ParseLines(EditorDescriptionText),
-        TechnicalDetails = ParseLines(EditorTechnicalDetailsText),
-        ImplementationTasks = ParseTasks(EditorImplementationTasksText),
-        DependsOn = ParseLines(EditorDependsOnText),
-        FunctionalRequirements = ParseLines(EditorFunctionalRequirementsText),
-        TechnicalRequirements = ParseLines(EditorTechnicalRequirementsText),
-    };
-
-    private UpdateTodoCommand BuildUpdateCommand() => new()
-    {
-        TodoId = RequireTrimmed(EditorId),
-        Title = Normalize(EditorTitle),
-        Section = Normalize(EditorSection),
-        Priority = Normalize(EditorPriority),
+        Id = EditorId,
+        Title = EditorTitle,
+        Section = EditorSection,
+        Priority = EditorPriority,
         Done = EditorDone,
-        Estimate = Normalize(EditorEstimate),
-        Note = Normalize(EditorNote),
-        CompletedDate = Normalize(EditorCompletedDate),
-        DoneSummary = Normalize(EditorDoneSummary),
-        Remaining = Normalize(EditorRemaining),
-        Phase = Normalize(EditorPhase),
-        Description = ParseLines(EditorDescriptionText),
-        TechnicalDetails = ParseLines(EditorTechnicalDetailsText),
-        ImplementationTasks = ParseTasks(EditorImplementationTasksText),
-        DependsOn = ParseLines(EditorDependsOnText),
-        FunctionalRequirements = ParseLines(EditorFunctionalRequirementsText),
-        TechnicalRequirements = ParseLines(EditorTechnicalRequirementsText),
+        Estimate = EditorEstimate,
+        Note = EditorNote,
+        CompletedDate = EditorCompletedDate,
+        DoneSummary = EditorDoneSummary,
+        Remaining = EditorRemaining,
+        Phase = EditorPhase,
+        DescriptionText = EditorDescriptionText,
+        TechnicalDetailsText = EditorTechnicalDetailsText,
+        ImplementationTasksText = EditorImplementationTasksText,
+        DependsOnText = EditorDependsOnText,
+        FunctionalRequirementsText = EditorFunctionalRequirementsText,
+        TechnicalRequirementsText = EditorTechnicalRequirementsText,
+        TodoId = TodoId,
     };
-
-    private DeleteTodoCommand BuildDeleteCommand() => new(RequireTrimmed(EditorId));
-
-    private AnalyzeTodoRequirementsCommand BuildAnalyzeRequirementsCommand() => new(GetActiveTodoId());
-
-    private GenerateTodoStatusPromptQuery BuildStatusPromptQuery() => new(GetActiveTodoId());
-
-    private GenerateTodoImplementPromptQuery BuildImplementPromptQuery() => new(GetActiveTodoId());
-
-    private GenerateTodoPlanPromptQuery BuildPlanPromptQuery() => new(GetActiveTodoId());
 
     private void ApplyDetailToEditor(TodoDetail detail)
     {
@@ -576,12 +547,12 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         EditorDoneSummary = detail.DoneSummary;
         EditorRemaining = detail.Remaining;
         EditorPhase = detail.Phase;
-        EditorDescriptionText = FormatLines(detail.Description);
-        EditorTechnicalDetailsText = FormatLines(detail.TechnicalDetails);
-        EditorImplementationTasksText = FormatTasks(detail.ImplementationTasks);
-        EditorDependsOnText = FormatLines(detail.DependsOn);
-        EditorFunctionalRequirementsText = FormatLines(detail.FunctionalRequirements);
-        EditorTechnicalRequirementsText = FormatLines(detail.TechnicalRequirements);
+        EditorDescriptionText = TodoMarkdownSerializer.FormatLines(detail.Description);
+        EditorTechnicalDetailsText = TodoMarkdownSerializer.FormatLines(detail.TechnicalDetails);
+        EditorImplementationTasksText = TodoMarkdownSerializer.FormatTasks(detail.ImplementationTasks);
+        EditorDependsOnText = TodoMarkdownSerializer.FormatLines(detail.DependsOn);
+        EditorFunctionalRequirementsText = TodoMarkdownSerializer.FormatLines(detail.FunctionalRequirements);
+        EditorTechnicalRequirementsText = TodoMarkdownSerializer.FormatLines(detail.TechnicalRequirements);
         EditorMarkdownText = TodoMarkdownSerializer.Serialize(detail);
     }
 
@@ -607,78 +578,6 @@ public sealed partial class TodoDetailViewModel : AreaDetailViewModelBase<TodoDe
         EditorFunctionalRequirementsText = fields.FunctionalRequirementsText;
         EditorTechnicalRequirementsText = fields.TechnicalRequirementsText;
     }
-
-    private string GetActiveTodoId()
-    {
-        var editorId = RequireTrimmed(EditorId);
-        if (!string.IsNullOrEmpty(editorId))
-            return editorId;
-
-        return RequireTrimmed(TodoId);
-    }
-
-    private static IReadOnlyList<string>? ParseLines(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-
-        var lines = text
-            .Replace("\r\n", "\n", StringComparison.Ordinal)
-            .Split('\n')
-            .Select(l => l.Trim())
-            .Where(l => !string.IsNullOrWhiteSpace(l))
-            .ToList();
-
-        return lines.Count == 0 ? null : lines;
-    }
-
-    private static IReadOnlyList<TodoTaskDetail>? ParseTasks(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-
-        var tasks = new List<TodoTaskDetail>();
-        var lines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        foreach (var raw in lines)
-        {
-            var line = raw.Trim();
-            if (string.IsNullOrWhiteSpace(line))
-                continue;
-
-            var done = false;
-            if (line.StartsWith("[x]", StringComparison.OrdinalIgnoreCase))
-            {
-                done = true;
-                line = line.Substring(3).Trim();
-            }
-            else if (line.StartsWith("[ ]", StringComparison.OrdinalIgnoreCase))
-            {
-                line = line.Substring(3).Trim();
-            }
-            else if (line.StartsWith("- ", StringComparison.Ordinal))
-            {
-                line = line.Substring(2).Trim();
-            }
-
-            if (!string.IsNullOrWhiteSpace(line))
-                tasks.Add(new TodoTaskDetail(line, done));
-        }
-
-        return tasks.Count == 0 ? null : tasks;
-    }
-
-    private static string? FormatLines(IReadOnlyList<string> values)
-        => values.Count == 0 ? null : string.Join(Environment.NewLine, values);
-
-    private static string? FormatTasks(IReadOnlyList<TodoTaskDetail> tasks)
-        => tasks.Count == 0
-            ? null
-            : string.Join(Environment.NewLine, tasks.Select(t => $"{(t.Done ? "[x]" : "[ ]")} {t.Task}"));
-
-    private static string RequireTrimmed(string? value)
-        => string.IsNullOrWhiteSpace(value)
-            ? string.Empty
-            : value.Trim();
 
     private static string? Normalize(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

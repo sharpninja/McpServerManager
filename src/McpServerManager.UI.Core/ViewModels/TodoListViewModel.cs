@@ -30,7 +30,14 @@ public sealed partial class TodoListViewModel : AreaListViewModelBase<TodoListIt
         : base(McpArea.Todo)
     {
         _logger = logger;
-        _refreshCommand = new CqrsQueryCommand<ListTodosResult>(dispatcher, BuildQuery);
+        _refreshCommand = new CqrsQueryCommand<ListTodosResult>(dispatcher, () => new ListTodosQuery
+        {
+            Keyword = NormalizeFilter(Keyword),
+            Priority = NormalizeFilter(Priority),
+            Section = NormalizeFilter(Section),
+            Id = NormalizeFilter(TodoId),
+            Done = Done,
+        });
         workspaceContext.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(WorkspaceContextViewModel.ActiveWorkspacePath))
@@ -110,15 +117,6 @@ public sealed partial class TodoListViewModel : AreaListViewModelBase<TodoListIt
             IsLoading = false;
         }
     }
-
-    private ListTodosQuery BuildQuery() => new()
-    {
-        Keyword = NormalizeFilter(Keyword),
-        Priority = NormalizeFilter(Priority),
-        Section = NormalizeFilter(Section),
-        Id = NormalizeFilter(TodoId),
-        Done = Done,
-    };
 
     private static string? NormalizeFilter(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

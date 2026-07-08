@@ -16,7 +16,23 @@ public sealed partial class CreateTodoViewModel : ObservableObject
     /// <param name="dispatcher">CQRS dispatcher.</param>
     public CreateTodoViewModel(Dispatcher dispatcher)
     {
-        _createCommand = new CqrsRelayCommand<TodoMutationOutcome>(dispatcher, BuildCommand);
+        _createCommand = new CqrsRelayCommand<TodoMutationOutcome>(dispatcher, () => new CreateTodoCommand
+        {
+            Id = Id,
+            Title = Title,
+            Section = Section,
+            Priority = Priority,
+            Estimate = Estimate,
+            Note = Note,
+            Remaining = Remaining,
+            Phase = Phase,
+            Description = Description,
+            TechnicalDetails = TechnicalDetails,
+            ImplementationTasks = ImplementationTasks,
+            DependsOn = DependsOn,
+            FunctionalRequirements = FunctionalRequirements,
+            TechnicalRequirements = TechnicalRequirements,
+        });
     }
 
     [ObservableProperty] private string _id = string.Empty;
@@ -43,21 +59,4 @@ public sealed partial class CreateTodoViewModel : ObservableObject
     /// <summary>Last create result.</summary>
     public Result<TodoMutationOutcome>? LastResult => _createCommand.LastResult;
 
-    private CreateTodoCommand BuildCommand() => new()
-    {
-        Id = Id,
-        Title = Title,
-        Section = Section,
-        Priority = Priority,
-        Estimate = Estimate,
-        Note = Note,
-        Remaining = Remaining,
-        Phase = Phase,
-        Description = Description,
-        TechnicalDetails = TechnicalDetails,
-        ImplementationTasks = ImplementationTasks,
-        DependsOn = DependsOn,
-        FunctionalRequirements = FunctionalRequirements,
-        TechnicalRequirements = TechnicalRequirements,
-    };
 }

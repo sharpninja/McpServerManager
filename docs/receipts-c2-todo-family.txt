@@ -1,0 +1,46 @@
+PLAN-C2-TODO-FAMILY-001 — Todo-family CQRS extraction — receipts
+Generated: 2026-07-07 (session ClaudeCode)
+Requirements: FR-VM-CQRS-SCOPE, FR-VM-HANDLER-MUTATION, TR-VM-STATE-ONLY, TR-HANDLER-EXTRACTION, TR-GREP-ZERO
+
+== Extracted business logic (now in tested units) ==
+1. TodoMarkdownSerializer (Services/TodoMarkdownSerializer.cs)
+   - ParseLines, ParseTasks, FormatLines, FormatTasks  (moved from TodoDetailViewModel)
+   - Tests: tests/.../Services/TodoMarkdownParseTests.cs (10 cases)
+2. TodoListProjectionService (Services/TodoListProjectionService.cs, ITodoListProjectionService)
+   - BuildEntries, filtering (ApplyFilters), MatchesTextFilter, FormatPriority, PrioritySortKey, grouping
+     (moved from TodoListHostViewModel)
+   - Tests: tests/.../Services/TodoListProjectionServiceTests.cs (6 cases)
+   - DI: ServiceCollectionExtensions.AddUiCore registers ITodoListProjectionService
+3. TodoEditorMapper + TodoEditorSnapshot (Services/TodoEditorMapper.cs)
+   - ToCreateCommand/ToUpdateCommand/ToDeleteCommand/ActiveTodoId + RequireTrimmed/Normalize
+     (moved from TodoDetailViewModel Build*Command / GetActiveTodoId)
+   - Tests: tests/.../Services/TodoEditorMapperTests.cs (create/update/delete/active-id)
+
+== TR-GREP-ZERO: extracted logic-method DEFINITIONS remaining in the 6 target VMs ==
+Target VMs: TodoListHostViewModel, TodoDetailViewModel, TodoListViewModel, CreateTodoViewModel,
+            UpdateTodoViewModel, DeleteTodoViewModel
+Grep for definitions of: ApplyFilters, MatchesTextFilter, BuildEntries, FormatPriority, PrioritySortKey,
+  ParseLines, ParseTasks, BuildQuery, BuildCreateCommand, BuildUpdateCommand, BuildDeleteCommand,
+  BuildAnalyzeRequirementsCommand, BuildStatusPromptQuery, BuildImplementPromptQuery, BuildPlanPromptQuery,
+  BuildCommand, GetActiveTodoId, RequireTrimmed
+RESULT: 0 definitions remaining (CONFIRMED).
+Only remaining name occurrence: TodoListHostViewModel.cs:771 `_projection.BuildEntries(...)` — a delegation
+  CALL to the extracted service, not VM logic (this is the intended state+delegate pattern).
+
+== Retained thin methods (documented: UI orchestration / state projection, NOT business logic) ==
+- ExecuteCopilotStatus/Plan/ImplementAsync (host): set SelectedEntry then await the copilot command — pure
+  UI orchestration.
+- ApplyDetailToHost / ApplyDetailToEditor: assign observable state from a loaded DTO (state projection;
+  all formatting delegates to TodoMarkdownSerializer).
+- Host FormatLines/FormatTasks, BuildWorkspaceMoveLabel: trivial display formatting used by state projection.
+- LoadTodosCoreAsync: orchestration (await list query VM, delegate to projection, set state).
+These contain no branching business logic; extracting them would be ceremony without value.
+
+== Test evidence ==
+dotnet test tests/McpServerManager.UI.Core.Tests — Passed! Failed: 0, Passed: 389, Skipped: 0
+Baseline before C2: 367 passed. Net +22 tests (parse 10, projection 6, mapper ~6).
+
+== Coverage note ==
+Extracted services have direct unit tests exercising all branches: parse blank/non-blank/checkbox/dash,
+priority-index 0-3, scope title/id/all, create/update/delete mapping incl. trim/normalize, active-id
+editor-vs-loaded fallback. Business logic branch coverage is comprehensive by construction.

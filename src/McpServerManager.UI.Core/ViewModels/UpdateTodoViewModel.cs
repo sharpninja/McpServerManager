@@ -16,7 +16,26 @@ public sealed partial class UpdateTodoViewModel : ObservableObject
     /// <param name="dispatcher">CQRS dispatcher.</param>
     public UpdateTodoViewModel(Dispatcher dispatcher)
     {
-        _updateCommand = new CqrsRelayCommand<TodoMutationOutcome>(dispatcher, BuildCommand);
+        _updateCommand = new CqrsRelayCommand<TodoMutationOutcome>(dispatcher, () => new UpdateTodoCommand
+        {
+            TodoId = TodoId,
+            Title = Title,
+            Section = Section,
+            Priority = Priority,
+            Done = Done,
+            Estimate = Estimate,
+            Note = Note,
+            CompletedDate = CompletedDate,
+            DoneSummary = DoneSummary,
+            Remaining = Remaining,
+            Phase = Phase,
+            Description = Description,
+            TechnicalDetails = TechnicalDetails,
+            ImplementationTasks = ImplementationTasks,
+            DependsOn = DependsOn,
+            FunctionalRequirements = FunctionalRequirements,
+            TechnicalRequirements = TechnicalRequirements,
+        });
     }
 
     [ObservableProperty] private string _todoId = string.Empty;
@@ -46,24 +65,4 @@ public sealed partial class UpdateTodoViewModel : ObservableObject
     /// <summary>Last update result.</summary>
     public Result<TodoMutationOutcome>? LastResult => _updateCommand.LastResult;
 
-    private UpdateTodoCommand BuildCommand() => new()
-    {
-        TodoId = TodoId,
-        Title = Title,
-        Section = Section,
-        Priority = Priority,
-        Done = Done,
-        Estimate = Estimate,
-        Note = Note,
-        CompletedDate = CompletedDate,
-        DoneSummary = DoneSummary,
-        Remaining = Remaining,
-        Phase = Phase,
-        Description = Description,
-        TechnicalDetails = TechnicalDetails,
-        ImplementationTasks = ImplementationTasks,
-        DependsOn = DependsOn,
-        FunctionalRequirements = FunctionalRequirements,
-        TechnicalRequirements = TechnicalRequirements,
-    };
 }

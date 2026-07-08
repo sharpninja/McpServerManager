@@ -231,6 +231,82 @@ public static class TodoMarkdownSerializer
 
     private static string? JoinNonEmpty(List<string> lines)
         => lines.Count == 0 ? null : string.Join(Environment.NewLine, lines);
+
+    /// <summary>
+    /// Splits multi-line editor text into trimmed, non-empty lines.
+    /// TR-HANDLER-EXTRACTION: shared parse logic lifted out of <c>TodoDetailViewModel</c>.
+    /// </summary>
+    /// <param name="text">Raw multi-line text.</param>
+    /// <returns>The parsed lines, or <see langword="null"/> when the input is blank.</returns>
+    public static IReadOnlyList<string>? ParseLines(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var lines = text
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Split('\n')
+            .Select(l => l.Trim())
+            .Where(l => !string.IsNullOrWhiteSpace(l))
+            .ToList();
+
+        return lines.Count == 0 ? null : lines;
+    }
+
+    /// <summary>
+    /// Parses checkbox/dash task lines (<c>[x]</c>, <c>[ ]</c>, or <c>- </c> prefixes) into task items.
+    /// TR-HANDLER-EXTRACTION: shared parse logic lifted out of <c>TodoDetailViewModel</c>.
+    /// </summary>
+    /// <param name="text">Raw multi-line task text.</param>
+    /// <returns>The parsed tasks, or <see langword="null"/> when the input is blank.</returns>
+    public static IReadOnlyList<TodoTaskDetail>? ParseTasks(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var tasks = new List<TodoTaskDetail>();
+        var lines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        foreach (var raw in lines)
+        {
+            var line = raw.Trim();
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            var done = false;
+            if (line.StartsWith("[x]", StringComparison.OrdinalIgnoreCase))
+            {
+                done = true;
+                line = line.Substring(3).Trim();
+            }
+            else if (line.StartsWith("[ ]", StringComparison.OrdinalIgnoreCase))
+            {
+                line = line.Substring(3).Trim();
+            }
+            else if (line.StartsWith("- ", StringComparison.Ordinal))
+            {
+                line = line.Substring(2).Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(line))
+                tasks.Add(new TodoTaskDetail(line, done));
+        }
+
+        return tasks.Count == 0 ? null : tasks;
+    }
+
+    /// <summary>Joins non-empty line values into multi-line editor text, or <see langword="null"/> when empty.</summary>
+    /// <param name="values">Line values.</param>
+    /// <returns>The joined text, or <see langword="null"/> when empty.</returns>
+    public static string? FormatLines(IReadOnlyList<string> values)
+        => values.Count == 0 ? null : string.Join(Environment.NewLine, values);
+
+    /// <summary>Formats task items as checkbox lines, or <see langword="null"/> when empty.</summary>
+    /// <param name="tasks">Task items.</param>
+    /// <returns>The checkbox text, or <see langword="null"/> when empty.</returns>
+    public static string? FormatTasks(IReadOnlyList<TodoTaskDetail> tasks)
+        => tasks.Count == 0
+            ? null
+            : string.Join(Environment.NewLine, tasks.Select(t => $"{(t.Done ? "[x]" : "[ ]")} {t.Task}"));
 }
 
 /// <summary>

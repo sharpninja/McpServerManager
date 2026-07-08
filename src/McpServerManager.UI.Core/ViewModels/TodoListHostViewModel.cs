@@ -38,6 +38,7 @@ public partial class TodoListHostViewModel : ViewModelBase
     private readonly UiCoreWorkspaceContextViewModel _workspaceContext;
     private readonly IServiceProvider _serviceProvider;
     private readonly ITimerService _timerService;
+    private readonly ITodoListProjectionService _projection;
     private List<TodoListEntry> _allEntries = new();
     private CancellationTokenSource? _activeCts;
     private CqrsRelayCommand<bool>? _copilotStatusCommand;
@@ -98,7 +99,8 @@ public partial class TodoListHostViewModel : ViewModelBase
         UiCoreWorkspaceContextViewModel workspaceContext,
         IServiceProvider serviceProvider,
         ITimerService timerService,
-        ILogger<TodoListHostViewModel>? logger = null)
+        ILogger<TodoListHostViewModel>? logger = null,
+        ITodoListProjectionService? projection = null)
     {
         _clipboardService = clipboardService ?? throw new ArgumentNullException(nameof(clipboardService));
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
@@ -109,6 +111,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _timerService = timerService ?? throw new ArgumentNullException(nameof(timerService));
         _logger = logger ?? NullLogger<TodoListHostViewModel>.Instance;
+        _projection = projection ?? new TodoListProjectionService();
     }
 
     public void ApplyWorkspacePath(string? workspacePath)
@@ -122,9 +125,9 @@ public partial class TodoListHostViewModel : ViewModelBase
 
     public Task RefreshForConnectionChangeAsync() => LoadTodosAsync();
 
-    partial void OnSelectedPriorityIndexChanged(int value) => ApplyFilters();
-    partial void OnSelectedScopeIndexChanged(int value) => ApplyFilters();
-    partial void OnFilterTextChanged(string value) => ApplyFilters();
+    partial void OnSelectedPriorityIndexChanged(int value) => RefreshGroups();
+    partial void OnSelectedScopeIndexChanged(int value) => RefreshGroups();
+    partial void OnFilterTextChanged(string value) => RefreshGroups();
     partial void OnIncludeCompletedChanged(bool value) => _ = LoadTodosAsync();
     partial void OnSelectedEntryChanged(TodoListEntry? value)
     {
@@ -733,69 +736,9 @@ public partial class TodoListHostViewModel : ViewModelBase
         return sb.ToString();
     }
 
-    private void ApplyFilters()
-    {
-        IEnumerable<TodoListEntry> source = _allEntries;
-
-        var priorityTag = SelectedPriorityIndex switch
-        {
-            1 => "high",
-            2 => "medium",
-            3 => "low",
-            _ => ""
-        };
-
-        if (!string.IsNullOrEmpty(priorityTag))
-        {
-            source = source.Where(e =>
-                string.Equals(e.Item?.Priority, priorityTag, StringComparison.OrdinalIgnoreCase));
-        }
-
-        var text = (FilterText ?? "").Trim();
-        if (!string.IsNullOrEmpty(text))
-        {
-            var scopeTag = SelectedScopeIndex switch
-            {
-                1 => "id",
-                2 => "all",
-                _ => "title"
-            };
-            var matcher = BooleanSearchParser.Parse(text);
-            source = source.Where(e => MatchesTextFilter(e.Item, matcher, scopeTag));
-        }
-
-        var groups = source
-            .ToList()
-            .GroupBy(e => e.PriorityGroup)
-            .OrderBy(g => PrioritySortKey(g.First().Item?.Priority))
-            .Select(g => new TodoListGroup(
-                g.Key,
-                new ObservableCollection<TodoListEntry>(
-                    g.OrderBy(e => e.Item?.Id, StringComparer.OrdinalIgnoreCase))))
-            .ToList();
-
-        GroupedItems = new ObservableCollection<TodoListGroup>(groups);
-    }
-
-    private static bool MatchesTextFilter(McpTodoFlatItem? item, Func<string, bool> matcher, string scope)
-    {
-        if (item == null)
-            return false;
-
-        var searchable = scope switch
-        {
-            "id" => item.Id ?? "",
-            "title" => item.Title ?? "",
-            _ => string.Join(
-                " ",
-                new[] { item.Id, item.Title, item.Section, item.Priority, item.Note, item.Estimate, item.Remaining }
-                    .Concat(item.Description ?? Enumerable.Empty<string>())
-                    .Concat(item.TechnicalDetails ?? Enumerable.Empty<string>())
-                    .Where(s => !string.IsNullOrEmpty(s)))
-        };
-
-        return matcher(searchable);
-    }
+    private void RefreshGroups()
+        => GroupedItems = new ObservableCollection<TodoListGroup>(
+            _projection.Project(_allEntries, SelectedPriorityIndex, SelectedScopeIndex, FilterText));
 
     internal async Task LoadTodosCoreAsync(bool forceEditorReload)
     {
@@ -818,15 +761,15 @@ public partial class TodoListHostViewModel : ViewModelBase
             if (!string.IsNullOrWhiteSpace(_listVm.ErrorMessage))
             {
                 _allEntries = [];
-                ApplyFilters();
+                RefreshGroups();
                 SelectedEntry = null;
                 StatusText = "Error: " + _listVm.ErrorMessage;
                 GlobalStatusChanged?.Invoke($"Todo load failed: {_listVm.ErrorMessage}");
                 return;
             }
 
-            _allEntries = BuildEntries(_listVm.Items);
-            ApplyFilters();
+            _allEntries = _projection.BuildEntries(_listVm.Items).ToList();
+            RefreshGroups();
             RestoreSelectionById(previouslySelectedId);
 
             var refreshNote = "";
@@ -845,7 +788,7 @@ public partial class TodoListHostViewModel : ViewModelBase
         {
             _logger.LogError(ex, "Failed to load TODO list");
             _allEntries = [];
-            ApplyFilters();
+            RefreshGroups();
             SelectedEntry = null;
             StatusText = "Error: " + ex.Message;
             GlobalStatusChanged?.Invoke($"Todo load failed: {ex.Message}");
@@ -1064,49 +1007,6 @@ public partial class TodoListHostViewModel : ViewModelBase
             TechnicalRequirements = detail.TechnicalRequirements.ToList()
         };
     }
-
-    private static List<TodoListEntry> BuildEntries(IEnumerable<TodoListItem> items)
-    {
-        return items
-            .Select(static item =>
-            {
-                var flat = new McpTodoFlatItem
-                {
-                    Id = item.Id,
-                    Title = item.Title,
-                    Section = item.Section,
-                    Priority = item.Priority,
-                    Done = item.Done,
-                    Estimate = item.Estimate
-                };
-
-                return new TodoListEntry
-                {
-                    PriorityGroup = "Priority: " + FormatPriority(flat.Priority),
-                    DisplayLine = $"{flat.Id} · {flat.Priority} · {flat.Title}",
-                    Item = flat
-                };
-            })
-            .OrderBy(e => PrioritySortKey(e.Item?.Priority))
-            .ThenBy(e => e.Item?.Id, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static string FormatPriority(string? priority)
-    {
-        if (string.IsNullOrWhiteSpace(priority))
-            return "Other";
-
-        return char.ToUpperInvariant(priority[0]) + priority.Substring(1).ToLowerInvariant();
-    }
-
-    private static int PrioritySortKey(string? priority) => (priority?.Trim().ToUpperInvariant()) switch
-    {
-        "HIGH" => 0,
-        "MEDIUM" => 1,
-        "LOW" => 2,
-        _ => 3
-    };
 
     private static string Capitalize(string value)
         => string.IsNullOrEmpty(value) ? value : char.ToUpperInvariant(value[0]) + value[1..];

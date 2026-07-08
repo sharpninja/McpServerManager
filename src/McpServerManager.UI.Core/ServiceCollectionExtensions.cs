@@ -50,6 +50,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<Services.IHealthApiClient, Services.NoOpHealthApiClient>();
         services.TryAddSingleton<Services.ITriageApiClient, Services.NoOpTriageApiClient>();
         services.TryAddSingleton<IWorkspaceAuthTokenCache, FileWorkspaceAuthTokenCache>();
+        services.TryAddSingleton<Services.ITodoListProjectionService, Services.TodoListProjectionService>();
 
         // Register shared workspace context as singleton so all ViewModels observe the same instance
         services.AddSingleton<WorkspaceContextViewModel>();

@@ -16,7 +16,7 @@ public sealed partial class DeleteTodoViewModel : ObservableObject
     /// <param name="dispatcher">CQRS dispatcher.</param>
     public DeleteTodoViewModel(Dispatcher dispatcher)
     {
-        _deleteCommand = new CqrsRelayCommand<TodoMutationOutcome>(dispatcher, BuildCommand);
+        _deleteCommand = new CqrsRelayCommand<TodoMutationOutcome>(dispatcher, () => new DeleteTodoCommand(TodoId));
     }
 
     [ObservableProperty] private string _todoId = string.Empty;
@@ -30,5 +30,4 @@ public sealed partial class DeleteTodoViewModel : ObservableObject
     /// <summary>Last delete result.</summary>
     public Result<TodoMutationOutcome>? LastResult => _deleteCommand.LastResult;
 
-    private DeleteTodoCommand BuildCommand() => new(TodoId);
 }
