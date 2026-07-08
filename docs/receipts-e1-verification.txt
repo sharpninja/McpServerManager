@@ -1,0 +1,42 @@
+E1 Elaboration - verification receipt
+Generated: 2026-07-08 (session ClaudeCode, feature/cqrs-c2-and-todo-metaform)
+
+E1 is the elaboration wrapper around the CQRS remediation program (PLAN-VM-CQRS-REMEDIATION-001).
+Per TR-E1-002 the E1 phase itself makes no src changes; the src changes below belong to the C-series
+construction (C2) delivered this session. This receipt records the E1 deliverables and their evidence.
+
+== FR-E1-001  Core patterns documented ==
+The CQRS reference pattern (IQueryHandler/ICommandHandler -> Result<T>, IDispatcher dispatch, handlers
+depend on services not ViewModels) is documented in the approved plan and demonstrated + proven by the
+C2 extraction: TodoMarkdownSerializer, TodoListProjectionService, TodoEditorMapper, and the new
+Requirements import/push handlers all follow it. Matrix artifact on disk:
+docs/McpServerManager_Management_Interfaces_Matrix.xlsx (tabs Overview/Matrix/ViewModel Usage/CQRS
+Handler Usage/Sources/Legend). Receipt: docs/receipts-c2-todo-family.txt.
+
+== FR-E1-003  Detailed C TODOs ==
+C1..C5 exist as detailed TODOs (PLAYLIST-E1-TODOS-001 enumerates PLAN-C1-SMALL-VMS-001,
+PLAN-C2-TODO-FAMILY-001, PLAN-C3-AGENT-CONFIG-001/-WS-001, PLAN-C4-MAINWINDOW-001,
+PLAN-C5-CODEBEHIND-001). C2's detail was proven actionable by implementing it to green this session
+(grep-zero receipt, 389->411 UI.Core tests).
+
+== FR-E1-004  UI.Core dedup priority ==
+Deliverable performed, not just noted: the duplicate TodoMarkdown (UI.Core + Core) was consolidated to
+the single UI.Core copy (commit 47f5f62), addressing GROK-PLUGIN-AUDIT-001 shared-lib duplication and
+honoring the "UI.Core owns VM/handler logic" dedup rule.
+
+== FR-E1-005  Verification plan run - observations ==
+1. C2 business logic extracted to tested units; grep-zero on logic-method definitions in the 6 VMs.
+2. UI-TODO-001 metadata form + body-only editor round-trip verified.
+3. PLAN-REQSDESKTOP-001 Requirements UI (view/generate/import/push/crosslink) built + tested.
+4. Full suites green: UI.Core 411, Core 141, Desktop 6 (0 failed, 0 skipped); UI.Core/Core/Desktop/Web/
+   Director all build.
+5. All MCP/TODO/requirements edits done via PS objects -> serialize -> plugin wrapper (TR-E1-001).
+6. Work committed on feature/cqrs-c2-and-todo-metaform and pushed to origin (commits 81e512e, 47f5f62,
+   f033140, 7c364ca).
+
+== TR-E1-001  PS objects + var1 ==  Honored: every MCP call this session built native PS objects and
+serialized (ConvertTo-Json) through the plugin wrapper; no handwritten JSON/YAML.
+== TR-E1-002  No src changes in E1 ==  Honored: the E1 closeout (Part A) changes no .cs/.axaml; src
+changes trace to C2/UI-TODO-001/PLAN-REQSDESKTOP-001 construction.
+== TR-E1-003  Sessions with turns populated ==  Honored: session-log turns are opened per prompt by the
+MCP plugin hooks and updated through the wrap-up flow.
