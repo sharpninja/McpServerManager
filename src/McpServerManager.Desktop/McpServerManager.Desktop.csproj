@@ -35,4 +35,8 @@
     <ProjectReference Include="..\..\lib\Markdown.Avalonia\Markdown.Avalonia.Tight\Markdown.Avalonia.Tight.csproj" />
     <ProjectReference Include="..\McpServerManager.Core\McpServerManager.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="McpServerManager.Desktop.Tests" />
+  </ItemGroup>
 </Project>

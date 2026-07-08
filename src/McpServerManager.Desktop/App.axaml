@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="McpServerManager.Desktop.App"
              xmlns:local="using:McpServerManager.Desktop"
-             RequestedThemeVariant="Light">
+             RequestedThemeVariant="Default">
 
     <Application.DataTemplates>
         <local:ViewLocator/>

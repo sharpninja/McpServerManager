@@ -135,6 +135,12 @@ internal static class DesktopAppServiceFactory
         services.TryAddSingleton<McpServerManager.UI.Core.Commands.IUiDispatchTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
         services.TryAddSingleton<McpServerManager.UI.Core.Commands.ITodoCopilotTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
         services.TryAddSingleton<McpServerManager.UI.Core.Commands.IAgentEventStatusTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        // Workspace-related UI.Core command targets (added by the CQRS remediation) must also resolve
+        // from the attached Desktop accessor; otherwise LoadWorkspaceConnections/switch/health commands
+        // fail target resolution and the workspace dropdown never populates.
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IWorkspaceSwitchTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.ILoadWorkspaceConnectionsTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
+        services.TryAddSingleton<McpServerManager.UI.Core.Commands.IWorkspaceHealthTarget>(sp => sp.GetRequiredService<DeferredCommandTargetAccessor>().RequireUiCoreTarget());
     }
 
     private static void RegisterCoreCommandTargets(IServiceCollection services)
