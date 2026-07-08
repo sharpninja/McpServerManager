@@ -212,6 +212,74 @@ public static class TodoMarkdown
         return req;
     }
 
+    /// <summary>
+    /// Returns the body of the document (everything after the YAML front matter), or the whole
+    /// document when there is no front matter. UI-TODO-001: the raw editor shows body only.
+    /// </summary>
+    /// <param name="markdown">The full TODO markdown.</param>
+    /// <returns>The body text with leading blank lines trimmed.</returns>
+    public static string ExtractBody(string markdown)
+    {
+        ArgumentNullException.ThrowIfNull(markdown);
+        var (_, body) = SplitFrontMatter(markdown);
+        return string.Join("\n", body).TrimStart('\r', '\n').TrimEnd();
+    }
+
+    /// <summary>
+    /// Parses the structured front-matter fields for the metadata form (UI-TODO-001).
+    /// </summary>
+    /// <param name="markdown">The full TODO markdown.</param>
+    /// <returns>The parsed front-matter fields.</returns>
+    public static TodoFrontMatter ParseFrontMatter(string markdown)
+    {
+        ArgumentNullException.ThrowIfNull(markdown);
+        var req = FromMarkdown(markdown);
+        return new TodoFrontMatter
+        {
+            Id = ExtractId(markdown) ?? "",
+            Section = req.Section ?? "",
+            Priority = req.Priority ?? "",
+            Estimate = req.Estimate,
+            Phase = req.Phase,
+            Done = req.Done ?? false,
+            DependsOn = req.DependsOn is { Count: > 0 } d ? d.ToList() : new List<string>(),
+        };
+    }
+
+    /// <summary>
+    /// Rebuilds a full document from structured front-matter fields plus a body (UI-TODO-001 save path).
+    /// </summary>
+    /// <param name="fm">The metadata form values.</param>
+    /// <param name="body">The body markdown (from the raw editor).</param>
+    /// <returns>The composed document with a YAML front-matter block.</returns>
+    public static string ComposeDocument(TodoFrontMatter fm, string body)
+    {
+        ArgumentNullException.ThrowIfNull(fm);
+        var lines = new List<string>
+        {
+            "---",
+            $"id: {fm.Id}",
+            $"section: {fm.Section}",
+            $"priority: {fm.Priority}",
+        };
+        if (fm.Done) lines.Add("done: true");
+        lines.Add(string.IsNullOrEmpty(fm.Estimate) ? "estimate: " : $"estimate: {YamlScalar(fm.Estimate!)}");
+        lines.Add(string.IsNullOrEmpty(fm.Phase) ? "phase: " : $"phase: {YamlScalar(fm.Phase!)}");
+        if (fm.DependsOn.Count > 0)
+        {
+            lines.Add("depends-on:");
+            foreach (var d in fm.DependsOn) lines.Add($"  - {d}");
+        }
+        else
+        {
+            lines.Add("depends-on: []");
+        }
+
+        lines.Add("---");
+        var bodyText = (body ?? string.Empty).TrimStart('\r', '\n');
+        return string.Join("\n", lines) + "\n\n" + bodyText;
+    }
+
     /// <summary>Extract the todo ID from YAML front matter.</summary>
     public static string? ExtractId(string markdown)
     {
@@ -275,6 +343,35 @@ public static class TodoMarkdown
             case "technical-requirements": req.TechnicalRequirements = items; break;
         }
     }
+}
+
+/// <summary>
+/// Structured TODO front-matter fields surfaced to the metadata form (UI-TODO-001,
+/// FR-TODO-METAFORM-001). Immutable; composed back into a document via
+/// <see cref="TodoMarkdown.ComposeDocument"/>.
+/// </summary>
+public sealed record TodoFrontMatter
+{
+    /// <summary>TODO id.</summary>
+    public string Id { get; init; } = "NEW-TODO";
+
+    /// <summary>Section label.</summary>
+    public string Section { get; init; } = string.Empty;
+
+    /// <summary>Priority (high/medium/low).</summary>
+    public string Priority { get; init; } = string.Empty;
+
+    /// <summary>Optional estimate.</summary>
+    public string? Estimate { get; init; }
+
+    /// <summary>Optional phase.</summary>
+    public string? Phase { get; init; }
+
+    /// <summary>Done flag.</summary>
+    public bool Done { get; init; }
+
+    /// <summary>Dependency ids.</summary>
+    public IReadOnlyList<string> DependsOn { get; init; } = new List<string>();
 }
 
 #pragma warning restore CS1591

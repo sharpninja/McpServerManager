@@ -1,4 +1,4 @@
-next-version: 0.6.14
+next-version: 0.6.15
 branches:
   main:
     regex: ^main$

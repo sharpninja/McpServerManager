@@ -1,13 +1,13 @@
 using System.Linq;
-using McpServerManager.Core.Services;
+using McpServerManager.UI.Core.Services;
 using Xunit;
 
-namespace McpServerManager.Core.Tests.Services;
+namespace McpServerManager.UI.Core.Tests.Services;
 
 /// <summary>
 /// UI-TODO-001 / FR-TODO-METAFORM-001 + TR-TODO-EDITOR-BODYONLY-001: verifies the front-matter/body
-/// split and recompose helpers that let the metadata form own the YAML front matter while the raw
-/// editor shows body sections only. Fixtures are the blank template and composed documents.
+/// split and recompose helpers on the (consolidated) UI.Core <see cref="TodoMarkdown"/> that let the
+/// metadata form own the YAML front matter while the raw editor shows body sections only.
 /// </summary>
 public sealed class TodoMarkdownFrontMatterTests
 {
@@ -63,7 +63,7 @@ public sealed class TodoMarkdownFrontMatterTests
         Assert.DoesNotContain("id: MCP-API-001", extracted);
     }
 
-    /// <summary>A document with no front matter yields the whole text as body and default fields.</summary>
+    /// <summary>A document with no front matter yields the whole text as body.</summary>
     [Fact]
     public void ExtractBody_NoFrontMatter_ReturnsWhole()
     {
