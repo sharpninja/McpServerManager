@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Import Requirements Wireframe</title>
+  <link rel="stylesheet" href="../shared/wireframe.css" />
+</head>
+<body>
+  <main class="gh-content">
+    <h1 class="page-title">Import Requirements</h1>
+    <p class="subtitle">Import FR/TR/TEST records from a file or zip. Preview parsed counts and resolve validation messages before importing.</p>
+
+    <section class="panel">
+      <h2>Source File</h2>
+      <div class="row">
+        <label style="width:140px">File / Zip</label>
+        <input class="input" type="file" style="width:360px" />
+        <button class="btn">Parse</button>
+      </div>
+      <div class="row">
+        <label style="width:140px">Target Workspace</label>
+        <select class="select" style="width:320px"><option>McpServerManager</option><option>McpServer</option></select>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Preview</h2>
+      <section class="card-grid">
+        <div class="card"><div class="label">FR parsed</div><div class="value">24</div></div>
+        <div class="card"><div class="label">TR parsed</div><div class="value">18</div></div>
+        <div class="card"><div class="label">TEST parsed</div><div class="value">31</div></div>
+        <div class="card"><div class="label">Mappings</div><div class="value">57</div></div>
+      </section>
+    </section>
+
+    <section class="panel">
+      <h2>Validation</h2>
+      <div class="note">Parsed requirements-export.zip: 73 records ready to import, 2 warnings, 1 error.</div>
+      <table class="table">
+        <thead><tr><th>Record</th><th>Level</th><th>Message</th></tr></thead>
+        <tbody>
+          <tr><td>FR-019</td><td><span class="badge badge-danger">error</span></td><td>Missing required title field</td></tr>
+          <tr><td>TR-007</td><td><span class="badge badge-warn">warning</span></td><td>References unknown id TEST-999</td></tr>
+          <tr><td>TEST-044</td><td><span class="badge badge-warn">warning</span></td><td>Duplicate id already exists in workspace</td></tr>
+        </tbody>
+      </table>
+      <div class="row" style="margin-top:8px">
+        <button class="btn btn-primary">Import</button>
+        <button class="btn">Cancel</button>
+        <span class="subtitle" style="margin:0">Import is disabled until all errors are resolved.</span>
+      </div>
+    </section>
+
+    <div class="footer-links">
+      <p><a href="requirements-list.html">Back to requirements list</a> &middot; <a href="requirements-generate.html">Generate documents</a> &middot; <a href="../index.html">Back to index</a></p>
+    </div>
+  </main>
+</body>
+</html>

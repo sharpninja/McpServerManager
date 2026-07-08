@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Requirements Crosslink Navigation Wireframe</title>
+  <link rel="stylesheet" href="../shared/wireframe.css" />
+</head>
+<body>
+  <main class="gh-content">
+    <h1 class="page-title">Crosslink Navigation</h1>
+    <p class="subtitle">Walk referenced requirements as a clickable graph. Clicking a linked id pushes the current requirement onto the nav stack; Back/Forward move through history.</p>
+
+    <section class="panel">
+      <h2>Navigation Stack</h2>
+      <div class="row">
+        <button class="btn btn-outline">&#8592; Back</button>
+        <button class="btn btn-outline">Forward &#8594;</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span class="subtitle" style="margin:0">Breadcrumb:</span>
+        <a href="requirements-crosslink.html">FR-001</a><span class="subtitle" style="margin:0">/</span>
+        <a href="requirements-crosslink.html">TR-014</a><span class="subtitle" style="margin:0">/</span>
+        <span class="badge badge-success">TR-015 (current)</span>
+      </div>
+      <div class="note">Clicking any referenced id below opens it here and pushes TR-015 onto the Back stack. Navigating Back re-enables Forward.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Current: TR-015</h2>
+      <div class="row"><label style="width:140px">Title</label><span>Requirements export pushes wiki to GitHub and Azure</span></div>
+      <div class="row"><label style="width:140px">Status</label><span class="badge badge-muted">pending</span></div>
+      <div class="row"><label style="width:140px">Workspace</label><span>McpServerManager</span></div>
+      <div class="row"><a href="requirements-detail.html">Open full detail / edit</a></div>
+    </section>
+
+    <section class="panel">
+      <h2>Referenced Requirements (graph)</h2>
+      <p class="subtitle" style="margin:0 0 8px">Outbound and inbound links from TR-015. Each row is a clickable node.</p>
+      <table class="table">
+        <thead><tr><th>Direction</th><th>ID</th><th>Relationship</th><th>Title</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-muted">in</span></td><td><a href="requirements-crosslink.html">FR-001</a></td><td>refined from</td><td>Requirements management UI in Desktop app</td><td><a href="requirements-crosslink.html">Push &amp; open</a></td></tr>
+          <tr><td><span class="badge badge-muted">out</span></td><td><a href="requirements-crosslink.html">TEST-104</a></td><td>verified by</td><td>Generate then push updates both remotes</td><td><a href="requirements-crosslink.html">Push &amp; open</a></td></tr>
+          <tr><td><span class="badge badge-muted">out</span></td><td><a href="requirements-crosslink.html">MAP-210</a></td><td>traced by</td><td>TR-015 to TEST-104 traceability mapping</td><td><a href="requirements-crosslink.html">Push &amp; open</a></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="footer-links">
+      <p><a href="requirements-detail.html">Requirement detail</a> &middot; <a href="requirements-list.html">Back to requirements list</a> &middot; <a href="../index.html">Back to index</a></p>
+    </div>
+  </main>
+</body>
+</html>

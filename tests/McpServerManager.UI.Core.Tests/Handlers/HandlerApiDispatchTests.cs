@@ -134,6 +134,15 @@ public sealed class HandlerApiDispatchTests
             return sub;
         }
 
+        if (dependencyType == typeof(IRequirementsWikiPublisher))
+        {
+            var sub = Substitute.For<IRequirementsWikiPublisher>();
+            sub.PublishAsync(Arg.Any<byte[]>(), Arg.Any<string?>(), Arg.Any<McpServerManager.UI.Core.Messages.WikiPushTarget>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult(new McpServerManager.UI.Core.Messages.WikiPushResult(true, null, "https://sample/wiki")));
+            dependencySubstitutes.Add(sub);
+            return sub;
+        }
+
         throw new InvalidOperationException($"Unhandled dependency '{dependencyType.FullName}'.");
     }
 

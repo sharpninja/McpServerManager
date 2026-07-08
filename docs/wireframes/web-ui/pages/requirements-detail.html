@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Requirement Detail Wireframe</title>
+  <link rel="stylesheet" href="../shared/wireframe.css" />
+</head>
+<body>
+  <main class="gh-content">
+    <h1 class="page-title">Requirement Detail</h1>
+    <p class="subtitle">View and edit a single requirement. Referenced requirement ids are crosslinked; Back/Forward walk the navigation stack.</p>
+
+    <section class="panel">
+      <h2>Navigation</h2>
+      <div class="row">
+        <button class="btn btn-outline">&#8592; Back</button>
+        <button class="btn btn-outline">Forward &#8594;</button>
+        <span class="subtitle" style="margin:0">Stack: FR-001 / TR-014 / <strong>TR-015</strong></span>
+        <a href="requirements-crosslink.html" style="margin-left:auto">Open crosslink view</a>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="row"><label style="width:140px">ID</label><input class="input" style="width:220px" value="FR-001" readonly /><span class="badge badge-success">approved</span></div>
+      <div class="row"><label style="width:140px">Title</label><input class="input" style="width:520px" value="Requirements management UI in Desktop app" /></div>
+      <div class="row"><label style="width:140px">Assigned Workspace</label><select class="select" style="width:320px"><option>McpServerManager</option><option>McpServer</option><option>(unassigned)</option></select></div>
+      <div class="row"><label style="width:140px">Status</label><select class="select" style="width:220px"><option>approved</option><option>draft</option><option>implemented</option></select></div>
+      <div class="row"><button class="btn btn-primary">Save</button><button class="btn">Cancel</button><button class="btn btn-outline">Assign to Workspace</button><button class="btn btn-danger">Delete</button></div>
+    </section>
+
+    <section class="panel">
+      <h2>Body / Condition (Monaco)</h2>
+      <div class="editor-shell">
+        <div class="editor-toolbar"><strong>FR-001.md</strong><span class="badge badge-muted">Markdown</span></div>
+        <div class="editor-canvas">As an operator, I can manage FR/TR/TEST/Mapping records
+from the McpServerManager desktop app, so that requirements
+stay traceable to workspaces and exported wiki documents.</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Referenced Requirements (crosslinked)</h2>
+      <p class="subtitle" style="margin:0 0 8px">Click a linked id to open it. Clicking pushes the current requirement onto the navigation stack.</p>
+      <table class="table">
+        <thead><tr><th>ID</th><th>Relationship</th><th>Title</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><a href="requirements-detail.html">TR-014</a></td><td>refined by</td><td>Navigation stack maintains Back/Forward history</td><td><a href="requirements-crosslink.html">Follow</a></td></tr>
+          <tr><td><a href="requirements-detail.html">TR-015</a></td><td>refined by</td><td>Requirements export pushes wiki to GitHub and Azure</td><td><a href="requirements-crosslink.html">Follow</a></td></tr>
+          <tr><td><a href="requirements-detail.html">TEST-102</a></td><td>verified by</td><td>Requirements list renders four tabs</td><td><a href="requirements-crosslink.html">Follow</a></td></tr>
+        </tbody>
+      </table>
+      <div class="row" style="margin-top:8px"><input class="input" style="min-width:220px" placeholder="Add reference by id (e.g. TR-016)" /><button class="btn">Add reference</button></div>
+    </section>
+
+    <div class="footer-links">
+      <p><a href="requirements-list.html">Back to requirements list</a> &middot; <a href="../index.html">Back to index</a></p>
+    </div>
+  </main>
+</body>
+</html>

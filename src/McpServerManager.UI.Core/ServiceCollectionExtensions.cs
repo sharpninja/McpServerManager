@@ -51,6 +51,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<Services.ITriageApiClient, Services.NoOpTriageApiClient>();
         services.TryAddSingleton<IWorkspaceAuthTokenCache, FileWorkspaceAuthTokenCache>();
         services.TryAddSingleton<Services.ITodoListProjectionService, Services.TodoListProjectionService>();
+        services.TryAddSingleton<Services.IRequirementsWikiPublisher, Services.NoOpRequirementsWikiPublisher>();
 
         // Register shared workspace context as singleton so all ViewModels observe the same instance
         services.AddSingleton<WorkspaceContextViewModel>();
@@ -101,6 +102,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<TestDetailViewModel>();
         services.AddTransient<MappingListViewModel>();
         services.AddTransient<RequirementsGenerateViewModel>();
+        services.AddTransient<RequirementsHostViewModel>();
         services.AddTransient<VoiceViewModel>();
         services.AddTransient<TodoListViewModel>();
         services.AddTransient<TodoListHostViewModel>();

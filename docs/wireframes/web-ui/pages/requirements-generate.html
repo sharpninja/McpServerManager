@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Generate Requirements Documents Wireframe</title>
+  <link rel="stylesheet" href="../shared/wireframe.css" />
+</head>
+<body>
+  <main class="gh-content">
+    <h1 class="page-title">Generate Requirements Documents</h1>
+    <p class="subtitle">Select a document, generate the exported wiki, then push to GitHub or Azure. Status area reports progress and results.</p>
+
+    <section class="panel">
+      <h2>Document</h2>
+      <div class="row">
+        <label style="width:140px">Document</label>
+        <select class="select" style="width:360px">
+          <option>Requirements Specification (FR + TR)</option>
+          <option>Test Plan (TEST)</option>
+          <option>Traceability Matrix (Mapping)</option>
+          <option>Full Requirements Wiki (all)</option>
+        </select>
+        <button class="btn btn-primary">Generate</button>
+      </div>
+      <div class="row">
+        <label style="width:140px">Workspace</label>
+        <select class="select" style="width:320px"><option>McpServerManager</option><option>McpServer</option></select>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Export Targets</h2>
+      <div class="row">
+        <button class="btn btn-outline">Push to GitHub</button>
+        <button class="btn btn-outline">Push to Azure</button>
+        <span class="subtitle" style="margin:0">Pushes the last generated wiki export to the selected remote.</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Status</h2>
+      <div class="note">Generated Requirements Specification (FR + TR): 42 requirements written to <strong>docs/wiki/requirements.md</strong>.</div>
+      <table class="table">
+        <thead><tr><th>Step</th><th>Status</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td>Generate export</td><td><span class="badge badge-success">complete</span></td><td>42 records, 6 documents</td></tr>
+          <tr><td>Push to GitHub</td><td><span class="badge badge-success">complete</span></td><td>commit a1b2c3 to wiki</td></tr>
+          <tr><td>Push to Azure</td><td><span class="badge badge-muted">idle</span></td><td>not yet run</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="footer-links">
+      <p><a href="requirements-list.html">Back to requirements list</a> &middot; <a href="requirements-import.html">Import requirements</a> &middot; <a href="../index.html">Back to index</a></p>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Requirements List Wireframe</title>
+  <link rel="stylesheet" href="../shared/wireframe.css" />
+</head>
+<body>
+  <main class="gh-content">
+    <h1 class="page-title">Requirements</h1>
+    <p class="subtitle">Tabbed management of Functional (FR), Technical (TR), Test (TEST), and Mapping records. GitHub issue-list ergonomics: filter first, actions close to context.</p>
+
+    <section class="panel">
+      <h2>Tabs</h2>
+      <div class="row">
+        <button class="btn">FR <span class="badge badge-muted">24</span></button>
+        <button class="btn btn-outline">TR <span class="badge badge-muted">18</span></button>
+        <button class="btn btn-outline">TEST <span class="badge badge-muted">31</span></button>
+        <button class="btn btn-outline">Mapping <span class="badge badge-muted">57</span></button>
+      </div>
+      <div class="note">Only the selected tab's panel is shown at runtime. All four panels are rendered below for wireframe review.</div>
+    </section>
+
+    <section class="panel">
+      <h2>FR - Functional Requirements</h2>
+      <div class="row">
+        <input class="input" style="min-width:220px" placeholder="Search functional requirements" />
+        <select class="select"><option>Status: all</option><option>draft</option><option>approved</option><option>implemented</option></select>
+        <select class="select"><option>Workspace: all</option></select>
+        <button class="btn">Clear</button>
+        <button class="btn btn-primary">New FR</button>
+      </div>
+      <table class="table">
+        <thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Workspace</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><a href="requirements-detail.html">FR-001</a></td>
+            <td>Requirements management UI in Desktop app</td>
+            <td><span class="badge badge-success">approved</span></td>
+            <td>McpServerManager</td>
+            <td><button class="btn">Edit</button> <button class="btn btn-outline">Assign to Workspace</button> <button class="btn btn-danger">Delete</button></td>
+          </tr>
+          <tr>
+            <td><a href="requirements-detail.html">FR-002</a></td>
+            <td>Crosslinked navigation between referenced requirements</td>
+            <td><span class="badge badge-warn">draft</span></td>
+            <td>McpServerManager</td>
+            <td><button class="btn">Edit</button> <button class="btn btn-outline">Assign to Workspace</button> <button class="btn btn-danger">Delete</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>TR - Technical Requirements</h2>
+      <div class="row">
+        <input class="input" style="min-width:220px" placeholder="Search technical requirements" />
+        <select class="select"><option>Status: all</option><option>draft</option><option>approved</option><option>implemented</option></select>
+        <select class="select"><option>Workspace: all</option></select>
+        <button class="btn">Clear</button>
+        <button class="btn btn-primary">New TR</button>
+      </div>
+      <table class="table">
+        <thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Workspace</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><a href="requirements-detail.html">TR-014</a></td>
+            <td>Navigation stack maintains Back/Forward history</td>
+            <td><span class="badge badge-success">approved</span></td>
+            <td>McpServerManager</td>
+            <td><button class="btn">Edit</button> <button class="btn btn-outline">Assign to Workspace</button> <button class="btn btn-danger">Delete</button></td>
+          </tr>
+          <tr>
+            <td><a href="requirements-detail.html">TR-015</a></td>
+            <td>Requirements export pushes wiki to GitHub and Azure</td>
+            <td><span class="badge badge-muted">pending</span></td>
+            <td>McpServerManager</td>
+            <td><button class="btn">Edit</button> <button class="btn btn-outline">Assign to Workspace</button> <button class="btn btn-danger">Delete</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>TEST - Test Requirements</h2>
+      <div class="row">
+        <input class="input" style="min-width:220px" placeholder="Search test requirements" />
+        <select class="select"><option>Status: all</option><option>failing</option><option>passing</option><option>skipped</option></select>
+        <select class="select"><option>Workspace: all</option></select>
+        <button class="btn">Clear</button>
+        <button class="btn btn-primary">New TEST</button>
+      </div>
+      <table class="table">
+        <thead><tr><th>ID</th><th>Condition</th><th>Status</th><th>Workspace</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><a href="requirements-detail.html">TEST-102</a></td>
+            <td>Given FR-001 approved, requirements list renders four tabs</td>
+            <td><span class="badge badge-success">passing</span></td>
+            <td>McpServerManager</td>
+            <td><button class="btn">Edit</button> <button class="btn btn-outline">Assign to Workspace</button> <button class="btn btn-danger">Delete</button></td>
+          </tr>
+          <tr>
+            <td><a href="requirements-detail.html">TEST-103</a></td>
+            <td>Given a linked id is clicked, it pushes onto the nav stack</td>
+            <td><span class="badge badge-danger">failing</span></td>
+            <td>McpServerManager</td>
+            <td><button class="btn">Edit</button> <button class="btn btn-outline">Assign to Workspace</button> <button class="btn btn-danger">Delete</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>Mapping - Traceability</h2>
+      <div class="row">
+        <input class="input" style="min-width:220px" placeholder="Search mappings" />
+        <select class="select"><option>Type: all</option><option>FR to TR</option><option>TR to TEST</option><option>FR to TEST</option></select>
+        <select class="select"><option>Workspace: all</option></select>
+        <button class="btn">Clear</button>
+        <button class="btn btn-primary">New Mapping</button>
+      </div>
+      <table class="table">
+        <thead><tr><th>ID</th><th>Source</th><th>Target</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>MAP-201</td>
+            <td><a href="requirements-detail.html">FR-001</a></td>
+            <td><a href="requirements-detail.html">TR-014</a></td>
+            <td><span class="badge badge-success">linked</span></td>
+            <td><button class="btn">Edit</button> <button class="btn btn-outline">Assign to Workspace</button> <button class="btn btn-danger">Delete</button></td>
+          </tr>
+          <tr>
+            <td>MAP-202</td>
+            <td><a href="requirements-detail.html">TR-014</a></td>
+            <td><a href="requirements-detail.html">TEST-102</a></td>
+            <td><span class="badge badge-warn">unverified</span></td>
+            <td><button class="btn">Edit</button> <button class="btn btn-outline">Assign to Workspace</button> <button class="btn btn-danger">Delete</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="footer-links">
+      <p><a href="requirements-detail.html">Requirement detail</a> &middot; <a href="requirements-generate.html">Generate documents</a> &middot; <a href="requirements-import.html">Import</a> &middot; <a href="requirements-crosslink.html">Crosslink navigation</a></p>
+      <p><a href="../index.html">Back to index</a></p>
+    </div>
+  </main>
+</body>
+</html>

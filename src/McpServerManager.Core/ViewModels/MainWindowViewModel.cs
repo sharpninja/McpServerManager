@@ -47,6 +47,18 @@ public partial class MainWindowViewModel : McpServerManager.UI.Core.ViewModels.M
         return vm;
     }
 
+    /// <summary>ViewModel for the Requirements tab (PLAN-REQSDESKTOP-001). Created lazily on first access.</summary>
+    public McpServerManager.UI.Core.ViewModels.RequirementsHostViewModel RequirementsViewModel
+        => _requirementsViewModel ??= CreateRequirementsViewModel();
+    private McpServerManager.UI.Core.ViewModels.RequirementsHostViewModel? _requirementsViewModel;
+
+    private McpServerManager.UI.Core.ViewModels.RequirementsHostViewModel CreateRequirementsViewModel()
+    {
+        var vm = UiCoreRuntime.GetRequiredService<McpServerManager.UI.Core.ViewModels.RequirementsHostViewModel>();
+        _ = vm.LoadAllCommand.ExecuteAsync(null);
+        return vm;
+    }
+
     /// <summary>ViewModel for the Workspace tab. Created lazily on first access.</summary>
     public WorkspaceViewModel WorkspaceViewModel => _workspaceViewModel ??= CreateWorkspaceViewModel();
     private WorkspaceViewModel? _workspaceViewModel;

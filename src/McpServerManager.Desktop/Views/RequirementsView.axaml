@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:uicorevm="using:McpServerManager.UI.Core.ViewModels"
+             x:Class="McpServerManager.Desktop.Views.RequirementsView"
+             x:Name="RequirementsRoot"
+             x:DataType="uicorevm:RequirementsHostViewModel">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="8">
+    <!-- Toolbar -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+      <TextBlock Text="Requirements" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"/>
+      <Button Content="Refresh" Command="{Binding LoadAllCommand}"/>
+    </StackPanel>
+
+    <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
+      <TabItem Header="Functional">
+        <ListBox ItemsSource="{Binding Functional.Items}" x:CompileBindings="False">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding Id}" FontWeight="SemiBold" Width="140"/>
+                <TextBlock Text="{Binding Title}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Technical">
+        <ListBox ItemsSource="{Binding Technical.Items}" x:CompileBindings="False">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding Id}" FontWeight="SemiBold" Width="140"/>
+                <TextBlock Text="{Binding Title}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Testing">
+        <ListBox ItemsSource="{Binding Testing.Items}" x:CompileBindings="False">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding Id}" FontWeight="SemiBold" Width="140"/>
+                <TextBlock Text="{Binding Condition}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Mapping">
+        <ListBox ItemsSource="{Binding Mapping.Items}" x:CompileBindings="False">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding FrId}"/>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </TabItem>
+      <TabItem Header="Generate &amp; Push">
+        <StackPanel Spacing="8" Margin="4">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Document:" VerticalAlignment="Center"/>
+            <TextBox Width="160" Text="{Binding Generate.DocSelector, Mode=TwoWay}"/>
+            <Button Content="Generate" Command="{Binding GenerateDocumentCommand}"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Push to GitHub" Command="{Binding PushToGitHubCommand}"/>
+            <Button Content="Push to Azure" Command="{Binding PushToAzureCommand}"/>
+          </StackPanel>
+          <TextBlock Text="{Binding Generate.StatusMessage}" TextWrapping="Wrap" Opacity="0.8"/>
+        </StackPanel>
+      </TabItem>
+      <TabItem Header="Crosslink">
+        <StackPanel Spacing="8" Margin="4">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Back" Command="{Binding NavigateBackCommand}" IsEnabled="{Binding CanNavigateBack}"/>
+            <Button Content="Forward" Command="{Binding NavigateForwardCommand}" IsEnabled="{Binding CanNavigateForward}"/>
+            <TextBlock Text="{Binding CurrentRequirementId}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+          </StackPanel>
+          <TextBox PlaceholderText="Requirement id to open..."
+                   x:Name="CrosslinkIdBox" Width="220" HorizontalAlignment="Left"/>
+          <Button Content="Open" Click="OnOpenCrosslink"/>
+          <TextBlock Text="{Binding FunctionalDetail.Detail.Title, FallbackValue=''}" TextWrapping="Wrap"/>
+        </StackPanel>
+      </TabItem>
+    </TabControl>
+
+    <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" Margin="0,8,0,0" Opacity="0.8"/>
+  </Grid>
+</UserControl>

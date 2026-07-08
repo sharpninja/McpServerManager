@@ -280,7 +280,7 @@
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                   <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBox Width="180" Watermark="Add dependency id..." Text="{Binding NewDependsOnEntry, Mode=TwoWay}"/>
+                    <TextBox Width="180" PlaceholderText="Add dependency id..." Text="{Binding NewDependsOnEntry, Mode=TwoWay}"/>
                     <Button Content="Add" Command="{Binding AddDependsOnCommand}"/>
                   </StackPanel>
                 </StackPanel>

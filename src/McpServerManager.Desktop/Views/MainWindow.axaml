@@ -30,6 +30,9 @@
                 <TabItem Header="Workspaces" Classes="shell-tab">
                     <views:WorkspaceView x:Name="WorkspaceTabView" DataContext="{Binding WorkspaceViewModel}"/>
                 </TabItem>
+                <TabItem Header="Requirements" Classes="shell-tab">
+                    <views:RequirementsView x:Name="RequirementsTabView" DataContext="{Binding RequirementsViewModel}"/>
+                </TabItem>
                 <TabItem Header="Logs" Classes="shell-tab">
                     <views:LogView x:Name="LogView" DataContext="{Binding LogViewModel}"/>
                 </TabItem>
