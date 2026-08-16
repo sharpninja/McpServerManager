@@ -42,9 +42,9 @@ public partial class TodoListHostViewModel : ViewModelBase
     private readonly ITodoListProjectionService _projection;
     private List<TodoListEntry> _allEntries = new();
     private CancellationTokenSource? _activeCts;
-    private CqrsRelayCommand<bool>? _copilotStatusCommand;
-    private CqrsRelayCommand<bool>? _copilotPlanCommand;
-    private CqrsRelayCommand<bool>? _copilotImplementCommand;
+    private AsyncRelayCommand<TodoListEntry?>? _copilotStatusCommand;
+    private AsyncRelayCommand<TodoListEntry?>? _copilotPlanCommand;
+    private AsyncRelayCommand<TodoListEntry?>? _copilotImplementCommand;
 
     [ObservableProperty] private ObservableCollection<TodoListGroup> _groupedItems = new();
     [ObservableProperty] private TodoListEntry? _selectedEntry;
@@ -95,13 +95,13 @@ public partial class TodoListHostViewModel : ViewModelBase
 
     public event EventHandler? OpenAiChatRequested;
 
-    public CqrsRelayCommand<bool> CopilotStatusCommand
+    public IAsyncRelayCommand<TodoListEntry?> CopilotStatusCommand
         => _copilotStatusCommand ??= CreateCopilotCommand(ExecuteCopilotStatusAsync);
 
-    public CqrsRelayCommand<bool> CopilotPlanCommand
+    public IAsyncRelayCommand<TodoListEntry?> CopilotPlanCommand
         => _copilotPlanCommand ??= CreateCopilotCommand(ExecuteCopilotPlanAsync);
 
-    public CqrsRelayCommand<bool> CopilotImplementCommand
+    public IAsyncRelayCommand<TodoListEntry?> CopilotImplementCommand
         => _copilotImplementCommand ??= CreateCopilotCommand(ExecuteCopilotImplementAsync);
 
     public static IReadOnlyList<string> PriorityOptions { get; } = ["All", "High", "Medium", "Low"];
@@ -640,10 +640,8 @@ public partial class TodoListHostViewModel : ViewModelBase
             static (vm, ct) => vm.GenerateImplementPromptAsync(ct));
     }
 
-    private CqrsRelayCommand<bool> CreateCopilotCommand(Func<TodoListEntry?, Task> executeAsync)
-        => Commands.CqrsRelayFactory.Create<TodoListEntry>(
-            _serviceProvider.GetRequiredService<McpServer.Cqrs.Dispatcher>(),
-            executeAsync);
+    private static AsyncRelayCommand<TodoListEntry?> CreateCopilotCommand(Func<TodoListEntry?, Task> executeAsync)
+        => new(executeAsync);
 
     internal async Task ExecuteCopilotStatusAsync(TodoListEntry? entry)
     {

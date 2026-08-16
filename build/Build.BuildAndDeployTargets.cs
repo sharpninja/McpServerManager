@@ -266,9 +266,17 @@ partial class Build
             }
         }
 
-        var dotnetToolSettingsPath = Path.Combine(publishDirectory, "DotnetToolSettings.xml");
         var nuspecPath = Path.Combine(outputDirectory, $"{toolId}.nuspec");
         var nupkgPath = Path.Combine(outputDirectory, $"{toolId}.{version.SemVer}.nupkg");
+
+        var supportsDotNetToolPack = propertyGroups
+            .SelectMany(group => group.Elements())
+            .Any(element =>
+                string.Equals(element.Name.LocalName, "PackAsTool", StringComparison.OrdinalIgnoreCase) &&
+                bool.TryParse(element.Value.Trim(), out var enabled) &&
+                enabled);
+        var useNugetPack = CommandExists("nuget");
+        var useDotNetToolPack = !useNugetPack && supportsDotNetToolPack;
 
         if (!ShouldExecuteAction($"Publish and pack {toolId} ({Configuration})"))
         {
@@ -277,79 +285,20 @@ partial class Build
 
         InvokeDotNet(new List<string> { "tool", "uninstall", "--global", toolId }, RepoRootPath, false);
 
-        EnsureDirectoryExists(publishDirectory);
-        InvokeDotNet(
-            new List<string>
-            {
-                "publish",
-                projectPath,
-                "-c",
-                Configuration,
-                "-o",
-                publishDirectory
-            },
-            RepoRootPath);
-
-        var entryPoint = $"{assemblyName}.dll";
-        var runner = "dotnet";
-        if (targetFramework.Contains("-windows", StringComparison.OrdinalIgnoreCase)
-            && File.Exists(Path.Combine(publishDirectory, $"{assemblyName}.exe")))
-        {
-            entryPoint = $"{assemblyName}.exe";
-            runner = "executable";
-        }
-
-        File.WriteAllText(
-            dotnetToolSettingsPath,
-            $"""
-             <?xml version="1.0" encoding="utf-8"?>
-             <DotNetCliTool Version="2">
-               <Commands>
-                 <Command Name="{toolCommandName}" EntryPoint="{entryPoint}" Runner="{runner}" />
-               </Commands>
-             </DotNetCliTool>
-             """,
-            new UTF8Encoding(false));
-
-        File.WriteAllText(
-            nuspecPath,
-            $"""
-             <?xml version="1.0" encoding="utf-8"?>
-             <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
-               <metadata>
-                 <id>{toolId}</id>
-                 <version>{version.SemVer}</version>
-                 <authors>{authors}</authors>
-                 <description>{description}</description>
-                 <packageTypes>
-                   <packageType name="DotnetTool" />
-                 </packageTypes>
-                </metadata>
-                <files>
-                  <file src="{publishDirectory}\**" target="tools/{toolTargetFramework}/any" />
-                </files>
-              </package>
-             """,
-            new UTF8Encoding(false));
-
         if (File.Exists(nupkgPath))
         {
             File.Delete(nupkgPath);
         }
 
-        var supportsDotNetToolPack = propertyGroups
-            .SelectMany(group => group.Elements())
-            .Any(element =>
-                string.Equals(element.Name.LocalName, "PackAsTool", StringComparison.OrdinalIgnoreCase) &&
-                bool.TryParse(element.Value.Trim(), out var enabled) &&
-                enabled);
+        if (useDotNetToolPack)
+        {
+            // PackAsTool projects generate DotnetToolSettings.xml during dotnet pack.
+            // Clear stale publish output (for example from prior nuspec-based runs) to avoid NU5118.
+            if (Directory.Exists(publishDirectory))
+            {
+                ClearDirectory(publishDirectory);
+            }
 
-        if (CommandExists("nuget"))
-        {
-            InvokeProcess("nuget", new List<string> { "pack", nuspecPath, "-OutputDirectory", outputDirectory, "-NoPackageAnalysis" }, RepoRootPath, true);
-        }
-        else if (supportsDotNetToolPack)
-        {
             InvokeDotNet(
                 new List<string>
                 {
@@ -370,7 +319,71 @@ partial class Build
         }
         else
         {
-            throw new InvalidOperationException($"nuget.exe was not found in PATH and {Path.GetFileName(projectPath)} does not declare PackAsTool for dotnet pack fallback.");
+            var dotnetToolSettingsPath = Path.Combine(publishDirectory, "DotnetToolSettings.xml");
+
+            EnsureDirectoryExists(publishDirectory);
+            InvokeDotNet(
+                new List<string>
+                {
+                    "publish",
+                    projectPath,
+                    "-c",
+                    Configuration,
+                    "-o",
+                    publishDirectory
+                },
+                RepoRootPath);
+
+            var entryPoint = $"{assemblyName}.dll";
+            var runner = "dotnet";
+            if (targetFramework.Contains("-windows", StringComparison.OrdinalIgnoreCase)
+                && File.Exists(Path.Combine(publishDirectory, $"{assemblyName}.exe")))
+            {
+                entryPoint = $"{assemblyName}.exe";
+                runner = "executable";
+            }
+
+            File.WriteAllText(
+                dotnetToolSettingsPath,
+                $"""
+                 <?xml version="1.0" encoding="utf-8"?>
+                 <DotNetCliTool Version="2">
+                   <Commands>
+                     <Command Name="{toolCommandName}" EntryPoint="{entryPoint}" Runner="{runner}" />
+                   </Commands>
+                 </DotNetCliTool>
+                 """,
+                new UTF8Encoding(false));
+
+            File.WriteAllText(
+                nuspecPath,
+                $"""
+                 <?xml version="1.0" encoding="utf-8"?>
+                 <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+                   <metadata>
+                     <id>{toolId}</id>
+                     <version>{version.SemVer}</version>
+                     <authors>{authors}</authors>
+                     <description>{description}</description>
+                     <packageTypes>
+                       <packageType name="DotnetTool" />
+                     </packageTypes>
+                    </metadata>
+                    <files>
+                      <file src="{publishDirectory}\**" target="tools/{toolTargetFramework}/any" />
+                    </files>
+                  </package>
+                 """,
+                new UTF8Encoding(false));
+
+            if (useNugetPack)
+            {
+                InvokeProcess("nuget", new List<string> { "pack", nuspecPath, "-OutputDirectory", outputDirectory, "-NoPackageAnalysis" }, RepoRootPath, true);
+            }
+            else
+            {
+                throw new InvalidOperationException($"nuget.exe was not found in PATH and {Path.GetFileName(projectPath)} does not declare PackAsTool for dotnet pack fallback.");
+            }
         }
 
         if (installAfterPack)

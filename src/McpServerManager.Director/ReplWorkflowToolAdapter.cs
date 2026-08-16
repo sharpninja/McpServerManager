@@ -306,7 +306,7 @@ internal sealed class ReplWorkflowToolAdapter
     private async Task<string> RequirementsGenerateDocumentAsync(
         string format, string docType, CancellationToken cancellationToken)
     {
-        var result = await _requirements.GenerateDocumentAsync(format, docType, cancellationToken);
+        var result = await _requirements.GenerateDocumentAsync(format, docType, null, cancellationToken);
         return JsonSerializer.Serialize(new { result.Content, result.Format }, s_jsonOptions);
     }
 
