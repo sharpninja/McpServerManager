@@ -8,6 +8,7 @@
   - [McpServerManager Overview](McpServerManager-Overview)
   - [Director Requirements](Director-Requirements)
   - [Web UI Requirements](Web-UI-Requirements)
+  - [Use Case Designer](Use-Case-Designer)
   - [Android Crash Diagnostics Workflow](Android-Crash-Diagnostics-Workflow)
 - Architecture
   - [DI Convergence Diagram](DI-Convergence-Diagram)

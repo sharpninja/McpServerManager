@@ -10,6 +10,14 @@
     <OcticonIcon Name="tasklist" Size="16" Class="header-nav-icon" />
     <span>Todos</span>
 </NavLink>
+<AuthorizeView>
+    <Authorized>
+        <NavLink class="header-nav-tab" href="/usecases">
+            <OcticonIcon Name="project" Size="16" Class="header-nav-icon" />
+            <span>Use Cases</span>
+        </NavLink>
+    </Authorized>
+</AuthorizeView>
 <AuthorizeView Roles="admin,agent-manager">
     <NavLink class="header-nav-tab" href="/triage">
         <OcticonIcon Name="project" Size="16" Class="header-nav-icon" />

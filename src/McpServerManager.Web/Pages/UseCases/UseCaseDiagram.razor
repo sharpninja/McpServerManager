@@ -1,0 +1,228 @@
+@page "/usecases/{UseCaseId:long}/diagram"
+@attribute [Authorize]
+@using McpServer.Client.Models
+@inject UseCaseDesignerViewModel ViewModel
+@inject NavigationManager Navigation
+
+<PageTitle>Use Case Diagram</PageTitle>
+
+<div class="page-shell usecase-diagram-page">
+    <div class="page-header">
+        <div>
+            <a href="@($"/usecases/{UseCaseId}")" class="Link--primary">&larr; Back to use case</a>
+            <h1>Use Case Diagram</h1>
+            <p class="text-small color-fg-muted">@ViewModel.EditorTitle</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn" @onclick="LoadAsync">Refresh</button>
+            <button class="btn btn-primary" disabled="@(!ViewModel.CanSaveDiagram || ViewModel.IsSaving)" @onclick="SaveAsync">Save Diagram</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+    {
+        <PrimerFlash Variant="danger" Title="Diagram operation failed" Message="@ViewModel.ErrorMessage" />
+    }
+    @if (ViewModel.ValidationMessages.Count > 0)
+    {
+        <PrimerFlash Variant="warning" Title="Diagram validation" Message="@string.Join("; ", ViewModel.ValidationMessages)" />
+    }
+
+    <div class="usecase-designer-shell">
+        <aside class="Box usecase-toolbox">
+            <div class="Box-header"><h2 class="h4 mb-0">Tools</h2></div>
+            <div class="Box-body d-flex flex-column gap-2">
+                <button class="btn" @onclick="AddBoundary">System Boundary</button>
+                <button class="btn" @onclick='() => AddNode("actor")'>Actor</button>
+                <button class="btn" @onclick='() => AddNode("usecase")'>Use Case</button>
+                <select class="form-select" @bind="NewEdgeType">
+                    <option value="association">Association</option>
+                    <option value="include">Include</option>
+                    <option value="extend">Extend</option>
+                    <option value="generalization">Generalization</option>
+                </select>
+                <button class="btn" disabled="@(string.IsNullOrWhiteSpace(SelectedNodeId) || string.IsNullOrWhiteSpace(EdgeTargetNodeId))" @onclick="AddEdge">Connect</button>
+                <button class="btn btn-danger" disabled="@string.IsNullOrWhiteSpace(SelectedItemId)" @onclick="DeleteSelected">Delete</button>
+            </div>
+        </aside>
+
+        <section class="Box usecase-canvas-card">
+            <div class="Box-header d-flex flex-justify-between flex-items-center">
+                <h2 class="h4 mb-0">Designer <span class="Counter">@ViewModel.DiagramGraph.Nodes.Count nodes</span></h2>
+                <span class="text-small color-fg-muted">@(ViewModel.DiagramDirty ? "Unsaved changes" : "Saved")</span>
+            </div>
+            <div class="Box-body p-0">
+                <svg class="usecase-svg-canvas" viewBox="0 0 960 600" role="img" aria-label="Use case diagram designer">
+                    @if (ViewModel.DiagramGraph.SystemBoundary is not null)
+                    {
+                        var boundary = ViewModel.DiagramGraph.SystemBoundary;
+                        <rect class="usecase-boundary @(SelectedItemId == boundary.Id ? "selected" : null)" x="@boundary.X" y="@boundary.Y" width="@boundary.Width" height="@boundary.Height" rx="6" @onclick="() => SelectBoundary(boundary.Id)" />
+                        <svg:text class="usecase-boundary-label" x="@(boundary.X + 14)" y="@(boundary.Y + 28)">@boundary.Label</svg:text>
+                    }
+                    @foreach (var edge in ViewModel.DiagramGraph.Edges)
+                    {
+                        var source = FindNode(edge.Source);
+                        var target = FindNode(edge.Target);
+                        if (source is not null && target is not null)
+                        {
+                            <line class="usecase-edge @(SelectedItemId == edge.Id ? "selected" : null)" x1="@source.X" y1="@source.Y" x2="@target.X" y2="@target.Y" @onclick="() => SelectEdge(edge.Id)" />
+                            <svg:text class="usecase-edge-label" x="@((source.X + target.X) / 2)" y="@((source.Y + target.Y) / 2 - 8)">@EdgeLabel(edge.Type)</svg:text>
+                        }
+                    }
+                    @foreach (var node in ViewModel.DiagramGraph.Nodes)
+                    {
+                        if (node.Type == "actor")
+                        {
+                            <g class="usecase-node @(SelectedItemId == node.Id ? "selected" : null)" @onclick="() => SelectNode(node.Id)">
+                                <circle cx="@node.X" cy="@(node.Y - 22)" r="12" />
+                                <line x1="@node.X" y1="@(node.Y - 10)" x2="@node.X" y2="@(node.Y + 24)" />
+                                <line x1="@(node.X - 22)" y1="@node.Y" x2="@(node.X + 22)" y2="@node.Y" />
+                                <line x1="@node.X" y1="@(node.Y + 24)" x2="@(node.X - 18)" y2="@(node.Y + 50)" />
+                                <line x1="@node.X" y1="@(node.Y + 24)" x2="@(node.X + 18)" y2="@(node.Y + 50)" />
+                                <svg:text x="@node.X" y="@(node.Y + 76)" text-anchor="middle">@node.Label</svg:text>
+                            </g>
+                        }
+                        else
+                        {
+                            <g class="usecase-node @(SelectedItemId == node.Id ? "selected" : null)" @onclick="() => SelectNode(node.Id)">
+                                <ellipse cx="@node.X" cy="@node.Y" rx="82" ry="34" />
+                                <svg:text x="@node.X" y="@(node.Y + 5)" text-anchor="middle">@node.Label</svg:text>
+                            </g>
+                        }
+                    }
+                </svg>
+            </div>
+        </section>
+
+        <aside class="Box usecase-properties">
+            <div class="Box-header"><h2 class="h4 mb-0">Properties</h2></div>
+            <div class="Box-body d-flex flex-column gap-2">
+                <label class="form-group">
+                    <span class="form-label">Selected</span>
+                    <input class="form-control" readonly value="@SelectedItemId" />
+                </label>
+                @if (SelectedNode is not null)
+                {
+                    <label class="form-group"><span class="form-label">Label</span><input class="form-control" @bind="SelectedNodeLabel" /></label>
+                    <label class="form-group"><span class="form-label">X</span><input class="form-control" type="number" @bind="SelectedNodeX" /></label>
+                    <label class="form-group"><span class="form-label">Y</span><input class="form-control" type="number" @bind="SelectedNodeY" /></label>
+                    <label class="form-group"><span class="form-label">Connect to</span><select class="form-select" @bind="EdgeTargetNodeId"><option value="">Select target</option>@foreach (var node in ViewModel.DiagramGraph.Nodes.Where(n => n.Id != SelectedNodeId)){<option value="@node.Id">@node.Label</option>}</select></label>
+                    <button class="btn" @onclick="ApplySelectedNode">Apply</button>
+                }
+                @if (ViewModel.DiagramGraph.SystemBoundary is not null)
+                {
+                    <label class="form-group"><span class="form-label">Boundary label</span><input class="form-control" @bind="BoundaryLabel" /></label>
+                    <button class="btn" @onclick="ApplyBoundary">Apply boundary</button>
+                }
+            </div>
+        </aside>
+    </div>
+
+    <div class="Box mt-3">
+        <div class="Box-header"><h2 class="h4 mb-0">Rendered Mermaid Preview</h2></div>
+        <pre class="Box-body usecase-preview">@ViewModel.DiagramPreview</pre>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public long UseCaseId { get; set; }
+
+    private string? SelectedItemId { get; set; }
+    private string? SelectedNodeId { get; set; }
+    private string? EdgeTargetNodeId { get; set; }
+    private string NewEdgeType { get; set; } = "association";
+    private string? SelectedNodeLabel { get; set; }
+    private double SelectedNodeX { get; set; }
+    private double SelectedNodeY { get; set; }
+    private string? BoundaryLabel { get; set; }
+    private UseCaseDiagramNode? SelectedNode => string.IsNullOrWhiteSpace(SelectedNodeId) ? null : FindNode(SelectedNodeId);
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        await ViewModel.LoadDiagramAsync(UseCaseId).ConfigureAwait(true);
+        BoundaryLabel = ViewModel.DiagramGraph.SystemBoundary?.Label;
+    }
+
+    private Task SaveAsync() => ViewModel.SaveDiagramAsync();
+
+    private void AddBoundary()
+    {
+        ViewModel.EnsureSystemBoundary();
+        BoundaryLabel = ViewModel.DiagramGraph.SystemBoundary?.Label;
+    }
+
+    private void AddNode(string type)
+    {
+        ViewModel.AddDiagramNode(type, type == "actor" ? 120 : 430, type == "actor" ? 210 : 190 + (ViewModel.DiagramGraph.Nodes.Count * 70));
+    }
+
+    private void SelectBoundary(string id)
+    {
+        SelectedItemId = id;
+        SelectedNodeId = null;
+    }
+
+    private void SelectNode(string id)
+    {
+        var node = FindNode(id);
+        if (node is null)
+            return;
+
+        SelectedItemId = id;
+        SelectedNodeId = id;
+        SelectedNodeLabel = node.Label;
+        SelectedNodeX = node.X;
+        SelectedNodeY = node.Y;
+    }
+
+    private void SelectEdge(string id)
+    {
+        SelectedItemId = id;
+        SelectedNodeId = null;
+    }
+
+    private void ApplySelectedNode()
+    {
+        if (string.IsNullOrWhiteSpace(SelectedNodeId))
+            return;
+
+        ViewModel.RenameDiagramNode(SelectedNodeId, SelectedNodeLabel ?? string.Empty);
+        ViewModel.MoveDiagramNode(SelectedNodeId, SelectedNodeX, SelectedNodeY);
+    }
+
+    private void ApplyBoundary()
+    {
+        if (ViewModel.DiagramGraph.SystemBoundary is null || string.IsNullOrWhiteSpace(BoundaryLabel))
+            return;
+
+        ViewModel.DiagramGraph.SystemBoundary.Label = BoundaryLabel.Trim();
+        ViewModel.DiagramDirty = true;
+    }
+
+    private void AddEdge()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedNodeId) && !string.IsNullOrWhiteSpace(EdgeTargetNodeId))
+            ViewModel.AddDiagramEdge(NewEdgeType, SelectedNodeId, EdgeTargetNodeId);
+    }
+
+    private void DeleteSelected()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedItemId))
+            ViewModel.DeleteDiagramItem(SelectedItemId);
+    }
+
+    private UseCaseDiagramNode? FindNode(string? id)
+        => ViewModel.DiagramGraph.Nodes.FirstOrDefault(node => string.Equals(node.Id, id, StringComparison.Ordinal));
+
+    private static string EdgeLabel(string type)
+        => type switch
+        {
+            "include" => "<<include>>",
+            "extend" => "<<extend>>",
+            "generalization" => "generalizes",
+            _ => string.Empty
+        };
+}

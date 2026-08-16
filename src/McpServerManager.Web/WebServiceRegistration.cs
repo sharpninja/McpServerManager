@@ -6,6 +6,7 @@ using McpServerManager.UI.Core.Commands;
 using McpServerManager.UI.Core.Hosting;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.Services.Infrastructure;
+using McpServerManager.UI.Core.ViewModels;
 using McpServerManager.Web.Adapters;
 using McpServerManager.Web.Authorization;
 using McpServerManager.Web.Services;
@@ -70,6 +71,10 @@ public static class WebServiceRegistration
         services.AddScoped<IConfigurationApiClient, ConfigurationApiClientAdapter>();
         services.AddScoped<IAgentApiClient, AgentApiClientAdapter>();
         services.AddScoped<ITriageApiClient, TriageApiClientAdapter>();
+        services.RemoveAll<IUseCaseService>();
+        services.RemoveAll<UseCaseDesignerViewModel>();
+        services.AddScoped<IUseCaseService, UseCaseServiceAdapter>();
+        services.AddScoped<UseCaseDesignerViewModel>();
         services.AddScoped<ISseSubscriptionService, SseSubscriptionService>();
         services.AddScoped<WebVoiceConversationViewModel>();
 

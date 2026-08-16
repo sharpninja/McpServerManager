@@ -1,7 +1,7 @@
 {
   "schema": "mcp-requirements-wiki/v1",
   "platform": "azure",
-  "generatedAtUtc": "2026-08-16T19:01:57.470145+00:00",
+  "generatedAtUtc": "2026-08-16T21:45:05.3865973+00:00",
   "documents": [
     "Home.md",
     "Functional-Requirements.md",
@@ -12,6 +12,7 @@
     "McpServerManager-Overview.md",
     "Director-Requirements.md",
     "Web-UI-Requirements.md",
+    "Use-Case-Designer.md",
     "Android-Crash-Diagnostics-Workflow.md",
     "DI-Convergence-Diagram.md",
     "DI-Convergence-Matrix.md",

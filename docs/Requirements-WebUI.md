@@ -36,11 +36,19 @@ MCP Web shall expose the triage queue, report group queue, run history, triage-c
 
 ### FR-MCP-WEB-WORKSPACE-001 Workspace Context
 
-Workspace selection shall be visible, changeable, and honored by dashboard, TODO, triage, and detail pages. Changing workspace shall invalidate cached page state so the new workspace is loaded before data is displayed.
+Workspace selection shall be visible, changeable, and honored by dashboard, TODO, triage, use-case, and detail pages. Changing workspace shall invalidate cached page state so the new workspace is loaded before data is displayed.
 
 **Status:** Complete.
 
 **Covered by:** shared workspace context services, navigation helpers, and bUnit navigation tests.
+
+### FR-MCP-WEB-USECASE-001 Use Case Designer
+
+MCP Web shall list, create, edit, approve, assign product keys, link functional requirements, and edit SVG use-case diagrams for the active workspace.
+
+**Status:** Complete.
+
+**Covered by:** `src/McpServerManager.Web/Pages/UseCases`, `McpServerManager.UI.Core` use-case view models, the typed Web use-case adapter, and UI.Core/Web use-case tests.
 
 ## Technical Requirements
 
@@ -58,4 +66,12 @@ The WebUi NUKE deployment path shall package `McpServerManager.Web.Hybrid` as th
 
 ### TR-MCP-WEB-004 Test Coverage
 
-bUnit tests shall cover navigation with and without auth, workspace-specific TODO routes, triage table usage, filtering and sorting controls, and template test required-variable JSON behavior.
+bUnit tests shall cover navigation with and without auth, workspace-specific TODO routes, triage table usage, filtering and sorting controls, template test required-variable JSON behavior, and use-case list/detail/diagram routes.
+
+### TR-MCP-WEB-005 Typed UseCases Client
+
+Use-case list, detail, approval, product, FR-link, rendered diagram, and graph save/load behavior shall be routed through shared UI.Core abstractions backed by typed `SharpNinja.McpServer.Client` UseCases methods. Razor pages shall not issue page-level REST calls for use-case operations.
+
+### TEST-MCP-WEB-USECASE-001 Use Case Designer Coverage
+
+UI.Core and Web tests shall cover workspace-aware use-case loading, create/update, approval and product assignment, actor/flow/step/FR-link operations, graph load/save, SVG node and edge editing, anonymous route redirects, stale workspace save refusal, and error preservation.

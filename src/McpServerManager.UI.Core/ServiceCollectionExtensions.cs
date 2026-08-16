@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<Services.ITimerService, Services.NoOpTimerService>();
         services.TryAddSingleton<Services.IHealthApiClient, Services.NoOpHealthApiClient>();
         services.TryAddSingleton<Services.ITriageApiClient, Services.NoOpTriageApiClient>();
+        services.TryAddSingleton<Services.IUseCaseService, Services.NoOpUseCaseService>();
         services.TryAddSingleton<IWorkspaceAuthTokenCache, FileWorkspaceAuthTokenCache>();
         services.TryAddSingleton<Services.ITodoListProjectionService, Services.TodoListProjectionService>();
         services.TryAddSingleton<Services.IRequirementsWikiPublisher, Services.NoOpRequirementsWikiPublisher>();
@@ -125,6 +126,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<AgentEventsViewModel>();
         services.AddTransient<AgentPoolViewModel>();
         services.AddTransient<TriageViewModel>();
+        services.AddTransient<UseCaseDesignerViewModel>();
         services.AddTransient<EventStreamViewModel>();
         services.AddTransient<ConfigurationViewModel>();
         services.AddTransient<MainWindowViewModel>();

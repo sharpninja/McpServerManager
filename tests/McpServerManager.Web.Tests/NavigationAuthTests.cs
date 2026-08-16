@@ -36,6 +36,7 @@ public sealed class NavigationAuthTests
         FollowLinkAndAssertPath(ctx, cut, "/templates");
         FollowLinkAndAssertPath(ctx, cut, "/context/search");
         FollowLinkAndAssertPath(ctx, cut, "/health-dashboard");
+        AssertLinkMissing(cut, "/usecases");
         AssertLinkMissing(cut, "/triage");
         AssertLinkMissing(cut, "/auth/config");
     }
@@ -58,6 +59,45 @@ public sealed class NavigationAuthTests
         });
     }
 
+
+    [Fact]
+    public void Routes_WithoutAuth_NavigatingToUseCasesRedirectsToLogin()
+    {
+        using var ctx = CreateContext(CreateAnonymousPrincipal());
+        var navigation = ctx.Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo("/usecases");
+
+        var cut = RenderRoutes(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            var current = new Uri(navigation.Uri);
+            Assert.Equal("/login", current.AbsolutePath);
+            Assert.Contains("returnUrl=", current.Query, StringComparison.Ordinal);
+            Assert.Contains(Uri.EscapeDataString("http://localhost/usecases"), current.Query, StringComparison.Ordinal);
+        });
+    }
+
+    [Theory]
+    [InlineData("/usecases/new")]
+    [InlineData("/usecases/42")]
+    [InlineData("/usecases/42/diagram")]
+    public void Routes_WithoutAuth_NavigatingToUseCaseMutationRoutesRedirectsToLogin(string route)
+    {
+        using var ctx = CreateContext(CreateAnonymousPrincipal());
+        var navigation = ctx.Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo(route);
+
+        var cut = RenderRoutes(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            var current = new Uri(navigation.Uri);
+            Assert.Equal("/login", current.AbsolutePath);
+            Assert.Contains("returnUrl=", current.Query, StringComparison.Ordinal);
+            Assert.Contains(Uri.EscapeDataString($"http://localhost{route}"), current.Query, StringComparison.Ordinal);
+        });
+    }
     [Fact]
     public void MainLayout_WithoutAuth_NavigatesToSignInAndHidesRoleGatedFeatures()
     {
@@ -66,6 +106,7 @@ public sealed class NavigationAuthTests
         var cut = RenderMainLayout(ctx);
 
         FollowHeaderLinkAndAssertPath(ctx, cut, "/login");
+        AssertLinkMissing(cut, "/usecases");
         AssertLinkMissing(cut, "/triage");
         AssertLinkMissing(cut, "/auth/config");
         Assert.Empty(cut.FindAll("a.Header-link[href='/logout']"));
@@ -80,6 +121,7 @@ public sealed class NavigationAuthTests
 
         var cut = RenderNavMenu(ctx);
 
+        FollowLinkAndAssertPath(ctx, cut, "/usecases");
         FollowLinkAndAssertPath(ctx, cut, "/triage");
         FollowLinkAndAssertPath(ctx, cut, "/auth/config");
     }
@@ -93,6 +135,7 @@ public sealed class NavigationAuthTests
 
         Assert.Contains("mcp-user", cut.Markup, StringComparison.Ordinal);
         FollowHeaderLinkAndAssertPath(ctx, cut, "/logout");
+        FollowLinkAndAssertPath(ctx, cut, "/usecases");
         FollowLinkAndAssertPath(ctx, cut, "/triage");
         FollowLinkAndAssertPath(ctx, cut, "/auth/config");
         Assert.Empty(cut.FindAll("a.Header-link[href='/login']"));
@@ -140,6 +183,7 @@ public sealed class NavigationAuthTests
 
         FollowLinkAndAssertPath(ctx, cut, "/todos");
         FollowLinkAndAssertPath(ctx, cut, "/templates");
+        FollowLinkAndAssertPath(ctx, cut, "/usecases");
         AssertLinkMissing(cut, "/triage");
         AssertLinkMissing(cut, "/auth/config");
     }

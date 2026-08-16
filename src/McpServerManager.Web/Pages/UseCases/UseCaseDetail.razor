@@ -1,0 +1,201 @@
+@page "/usecases/new"
+@page "/usecases/{UseCaseId:long}"
+@attribute [Authorize]
+@inject UseCaseDesignerViewModel ViewModel
+@inject NavigationManager Navigation
+
+<PageTitle>Use Case Editor</PageTitle>
+
+<div class="page-shell usecase-editor">
+    <div class="page-header">
+        <div>
+            <a href="/usecases" class="Link--primary">&larr; Back to use cases</a>
+            <h1>@(IsNew ? "New Use Case" : ViewModel.EditorTitle)</h1>
+            <p class="text-small color-fg-muted">Active workspace: @WorkspaceLabel</p>
+        </div>
+        <div class="d-flex gap-2">
+            @if (!IsNew)
+            {
+                <button class="btn" @onclick="OpenDiagram">Diagram</button>
+            }
+            <button class="btn btn-primary" disabled="@(ViewModel.IsSaving || string.IsNullOrWhiteSpace(ViewModel.EditorTitle))" @onclick="SaveAsync">Save</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+    {
+        <PrimerFlash Variant="danger" Title="Use case operation failed" Message="@ViewModel.ErrorMessage" />
+    }
+    @if (ViewModel.ValidationMessages.Count > 0)
+    {
+        <PrimerFlash Variant="warning" Title="Validation" Message="@string.Join("; ", ViewModel.ValidationMessages)" />
+    }
+
+    <div class="Box mb-3">
+        <div class="Box-header"><h2 class="h4 mb-0">Details</h2></div>
+        <div class="Box-body usecase-form-grid">
+            <label class="form-group">
+                <span class="form-label">Title</span>
+                <input class="form-control" @bind="ViewModel.EditorTitle" />
+            </label>
+            <label class="form-group">
+                <span class="form-label">Priority</span>
+                <input class="form-control" type="number" @bind="ViewModel.EditorPriority" />
+            </label>
+            <label class="form-group">
+                <span class="form-label">Approval</span>
+                <select class="form-select" @bind="ViewModel.EditorApprovalStatus">
+                    <option>Draft</option>
+                    <option>Submitted</option>
+                    <option>Approved</option>
+                    <option>Rejected</option>
+                </select>
+            </label>
+            <label class="form-group">
+                <span class="form-label">Product key</span>
+                <input class="form-control" @bind="ViewModel.EditorProductKey" />
+            </label>
+            <label class="form-group usecase-wide">
+                <span class="form-label">Brief description</span>
+                <textarea class="form-control" rows="3" @bind="ViewModel.EditorBriefDescription"></textarea>
+            </label>
+            <label class="form-group">
+                <span class="form-label">Precondition</span>
+                <textarea class="form-control" rows="3" @bind="ViewModel.EditorPrecondition"></textarea>
+            </label>
+            <label class="form-group">
+                <span class="form-label">Postcondition</span>
+                <textarea class="form-control" rows="3" @bind="ViewModel.EditorPostcondition"></textarea>
+            </label>
+            <label class="form-group usecase-wide">
+                <span class="form-label">Scope</span>
+                <input class="form-control" @bind="ViewModel.EditorScope" />
+            </label>
+        </div>
+    </div>
+
+    @if (!IsNew && ViewModel.SelectedUseCase is not null)
+    {
+        <div class="usecase-sections">
+            <section class="Box">
+                <div class="Box-header"><h2 class="h4 mb-0">Actors <span class="Counter">@ViewModel.SelectedUseCase.Actors.Count</span></h2></div>
+                <div class="Box-body">
+                    <div class="usecase-inline-form">
+                        <input class="form-control" placeholder="Actor name" @bind="NewActorName" />
+                        <select class="form-select" @bind="NewActorType"><option>Primary</option><option>Secondary</option><option>Supporting</option></select>
+                        <label class="form-checkbox"><input type="checkbox" @bind="NewActorPrimary" /> Primary</label>
+                        <button class="btn" @onclick="AddActorAsync">Add actor</button>
+                    </div>
+                    @foreach (var actor in ViewModel.SelectedUseCase.Actors)
+                    {
+                        <div class="usecase-row"><strong>@actor.Name</strong><span>@actor.Type</span><span>@(actor.IsPrimary ? "primary" : "")</span></div>
+                    }
+                </div>
+            </section>
+
+            <section class="Box">
+                <div class="Box-header"><h2 class="h4 mb-0">Flows <span class="Counter">@ViewModel.SelectedUseCase.Flows.Count</span></h2></div>
+                <div class="Box-body">
+                    <div class="usecase-inline-form">
+                        <select class="form-select" @bind="NewFlowType"><option>Basic</option><option>Alternative</option><option>Exception</option></select>
+                        <input class="form-control" placeholder="Flow name" @bind="NewFlowName" />
+                        <button class="btn" @onclick="AddFlowAsync">Add flow</button>
+                    </div>
+                    @foreach (var flow in ViewModel.SelectedUseCase.Flows)
+                    {
+                        <div class="usecase-flow">
+                            <div class="usecase-row"><strong>@flow.FlowType</strong><span>@flow.Name</span><span>ID @flow.FlowId</span></div>
+                            <div class="usecase-inline-form">
+                                <input class="form-control" placeholder="Step action" @bind="NewStepAction" />
+                                <input class="form-control" placeholder="System response" @bind="NewStepResponse" />
+                                <button class="btn btn-sm" @onclick="() => AddStepAsync(flow.FlowId)">Add step</button>
+                            </div>
+                            @foreach (var step in flow.Steps)
+                            {
+                                <div class="usecase-row usecase-step"><span>@step.StepNumber</span><span>@step.Action</span><span>@step.SystemResponse</span></div>
+                            }
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <section class="Box">
+                <div class="Box-header"><h2 class="h4 mb-0">Functional Requirements <span class="Counter">@ViewModel.SelectedUseCase.FrLinks.Count</span></h2></div>
+                <div class="Box-body">
+                    <div class="usecase-inline-form">
+                        <input class="form-control" placeholder="FR id" @bind="NewFrId" />
+                        <input class="form-control" placeholder="Link type" @bind="NewFrLinkType" />
+                        <button class="btn" @onclick="LinkFrAsync">Link FR</button>
+                    </div>
+                    @foreach (var link in ViewModel.SelectedUseCase.FrLinks)
+                    {
+                        <div class="usecase-row"><strong>@link.FrId</strong><span>@link.LinkType</span><button class="btn btn-sm" @onclick="() => UnlinkFrAsync(link.FrId)">Unlink</button></div>
+                    }
+                </div>
+            </section>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public long? UseCaseId { get; set; }
+
+    private bool IsNew => UseCaseId is null;
+    private string WorkspaceLabel => string.IsNullOrWhiteSpace(ViewModel.ActiveWorkspacePath) ? "control" : ViewModel.ActiveWorkspacePath;
+    private string? NewActorName { get; set; }
+    private string NewActorType { get; set; } = "Primary";
+    private bool NewActorPrimary { get; set; } = true;
+    private string NewFlowType { get; set; } = "Basic";
+    private string? NewFlowName { get; set; }
+    private string? NewStepAction { get; set; }
+    private string? NewStepResponse { get; set; }
+    private string? NewFrId { get; set; }
+    private string? NewFrLinkType { get; set; } = "Realizes";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (UseCaseId is { } id)
+        {
+            await ViewModel.LoadDetailAsync(id).ConfigureAwait(true);
+        }
+        else
+        {
+            ViewModel.StartNewUseCase();
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (IsNew)
+        {
+            var createdId = await ViewModel.CreateAsync().ConfigureAwait(true);
+            if (createdId is { } id)
+                Navigation.NavigateTo($"/usecases/{id}");
+            return;
+        }
+
+        await ViewModel.SaveDetailAsync().ConfigureAwait(true);
+    }
+
+    private Task AddActorAsync()
+        => ViewModel.AddActorAsync(NewActorName ?? string.Empty, NewActorType, NewActorPrimary);
+
+    private Task AddFlowAsync()
+        => ViewModel.AddFlowAsync(NewFlowType, NewFlowName);
+
+    private Task AddStepAsync(long flowId)
+        => ViewModel.AddStepAsync(flowId, NewStepAction ?? string.Empty, NewStepResponse);
+
+    private Task LinkFrAsync()
+        => ViewModel.LinkFrAsync(NewFrId ?? string.Empty, NewFrLinkType ?? "Realizes");
+
+    private Task UnlinkFrAsync(string frId)
+        => ViewModel.UnlinkFrAsync(frId);
+
+    private void OpenDiagram()
+    {
+        if (UseCaseId is { } id)
+            Navigation.NavigateTo($"/usecases/{id}/diagram");
+    }
+}

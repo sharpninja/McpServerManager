@@ -1,0 +1,97 @@
+@page "/usecases"
+@attribute [Authorize]
+@inject UseCaseDesignerViewModel ViewModel
+@inject NavigationManager Navigation
+
+<PageTitle>Use Cases</PageTitle>
+
+<div class="page-shell">
+    <div class="page-header">
+        <div>
+            <h1>Use Cases</h1>
+            <p class="text-small color-fg-muted">Active workspace: @WorkspaceLabel</p>
+        </div>
+        <div class="d-flex gap-2">
+            <PrimerButton Label="Refresh" OnClick="LoadAsync" />
+            <PrimerButton Label="New Use Case" Variant="primary" OnClick="GoNew" />
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+    {
+        <PrimerFlash Variant="danger" Title="Failed to load use cases" Message="@ViewModel.ErrorMessage" />
+    }
+
+    <div class="Box mb-3">
+        <div class="Box-body d-flex gap-2 flex-items-end">
+            <label class="form-group mb-0 flex-1">
+                <span class="form-label">Title filter</span>
+                <input class="form-control" value="@ViewModel.TitleFilter" @onchange="OnFilterChanged" />
+            </label>
+            <PrimerButton Label="Apply" OnClick="LoadAsync" />
+        </div>
+    </div>
+
+    <div class="Box">
+        <div class="Box-header d-flex flex-justify-between flex-items-center">
+            <h2 class="h4 mb-0">Use Case Library <span class="Counter">@ViewModel.UseCases.Count</span></h2>
+        </div>
+        <table class="Table usecase-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Scope</th>
+                    <th>Priority</th>
+                    <th>Updated</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (ViewModel.UseCases.Count == 0)
+                {
+                    <tr><td colspan="6" class="color-fg-muted">No use cases.</td></tr>
+                }
+                else
+                {
+                    @foreach (var useCase in ViewModel.UseCases)
+                    {
+                        <tr>
+                            <td>@useCase.UseCaseId</td>
+                            <td>@useCase.Title</td>
+                            <td>@(string.IsNullOrWhiteSpace(useCase.Scope) ? "-" : useCase.Scope)</td>
+                            <td>@useCase.Priority</td>
+                            <td>@useCase.UpdatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz")</td>
+                            <td class="text-right">
+                                <button class="btn btn-sm" @onclick="() => Open(useCase.UseCaseId)">Open</button>
+                                <button class="btn btn-sm" @onclick="() => OpenDiagram(useCase.UseCaseId)">Diagram</button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private string WorkspaceLabel => string.IsNullOrWhiteSpace(ViewModel.ActiveWorkspacePath) ? "control" : ViewModel.ActiveWorkspacePath;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        await ViewModel.LoadListAsync().ConfigureAwait(true);
+    }
+
+    private void OnFilterChanged(ChangeEventArgs args)
+    {
+        ViewModel.TitleFilter = args.Value?.ToString();
+    }
+
+    private void GoNew() => Navigation.NavigateTo("/usecases/new");
+
+    private void Open(long useCaseId) => Navigation.NavigateTo($"/usecases/{useCaseId}");
+
+    private void OpenDiagram(long useCaseId) => Navigation.NavigateTo($"/usecases/{useCaseId}/diagram");
+}

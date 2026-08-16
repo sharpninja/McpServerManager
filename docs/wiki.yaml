@@ -65,6 +65,13 @@ documents:
     platforms:
       - github
       - azure
+  - id: use-case-designer
+    title: Use Case Designer
+    source: docs/Use-Case-Designer.md
+    target: Use-Case-Designer.md
+    platforms:
+      - github
+      - azure
   - id: android-crash-diagnostics
     title: Android Crash Diagnostics Workflow
     source: docs/android-crash-diagnostics-workflow.md
@@ -106,6 +113,7 @@ navigation:
       - document: readme
       - document: director-requirements
       - document: webui-requirements
+      - document: use-case-designer
       - document: android-crash-diagnostics
   - title: Architecture
     path: Architecture

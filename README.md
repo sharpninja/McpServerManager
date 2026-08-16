@@ -1,6 +1,6 @@
 # McpServerManager
 
-McpServerManager is the cross-platform management suite for MCP Server workspaces. It includes a desktop Avalonia application, the Director terminal UI/CLI, the browser and hybrid MCP Web experience, and Android support surfaces for workspace, TODO, session, template, health, auth, and triage workflows.
+McpServerManager is the cross-platform management suite for MCP Server workspaces. It includes a desktop Avalonia application, the Director terminal UI/CLI, the browser and hybrid MCP Web experience, and Android support surfaces for workspace, TODO, session, template, health, auth, triage, and use-case workflows.
 
 Repository: [sharpninja/McpServerManager](https://github.com/sharpninja/McpServerManager)
 
@@ -11,6 +11,7 @@ Repository: [sharpninja/McpServerManager](https://github.com/sharpninja/McpServe
 - **MCP Web and Hybrid Host**: `mcp-web` is packaged as a global .NET tool that launches the Blazor Hybrid host while sharing the same Blazor source as the browser-hosted Web UI.
 - **Workspace-Centered Navigation**: dashboards and detail pages honor the active workspace, persist compatible credentials, and reload page state when the workspace changes.
 - **Triage Dashboard**: triage queues, report group queue, run history, triage-created TODOs, row selection, grouping, consolidation, resubmission, filtering, sorting, and cross-workspace TODO navigation are surfaced in MCP Web and Director.
+- **Use Case Designer**: MCP Web lists, creates, edits, approves, product-tags, FR-links, and diagram-edits workspace use cases with a fresh SVG designer backed by typed UseCases client calls.
 - **Requirements and Documentation Export**: MCP-backed requirements remain the source of truth and can be exported to wiki-ready documentation artifacts.
 - **Deployment Automation**: NUKE targets build, package, install, and deploy Director, Web UI, Android, desktop MSIX, desktop DEB, F-Droid artifacts, and supporting validation outputs.
 
