@@ -1,6 +1,10 @@
 using McpServer.Cqrs;
 using McpServerManager.UI.Core.ViewModels;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -43,7 +47,7 @@ internal sealed class DispatcherLogsScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _table.SelectedCellChanged += (_, _) =>
+        _table.ValueChanged += (_, _) =>
         {
             if (_rows.Count > 0)
                 ShowSelectedDetail();

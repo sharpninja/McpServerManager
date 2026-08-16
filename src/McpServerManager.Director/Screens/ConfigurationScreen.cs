@@ -1,7 +1,11 @@
 using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -61,7 +65,7 @@ internal sealed class ConfigurationScreen : View
             Height = Dim.Fill(4),
             CanFocus = true,
         };
-        _keyListView.SelectedItemChanged += OnKeySelected;
+        _keyListView.ValueChanged += OnKeySelected;
         Add(_keyListView);
 
         // Right panel: value editor
@@ -179,13 +183,13 @@ internal sealed class ConfigurationScreen : View
         }
     }
 
-    private void OnKeySelected(object? sender, ListViewItemEventArgs e)
+    private void OnKeySelected(object? sender, ValueChangedEventArgs<int?> e)
     {
         var keys = _viewModel.Keys;
-        if (e.Item >= 0 && e.Item < keys.Count)
-            _viewModel.SelectKey(keys[e.Item]);
+        var item = e.NewValue.GetValueOrDefault(-1);
+        if (item >= 0 && item < keys.Count)
+            _viewModel.SelectKey(keys[item]);
     }
-
     private void OnValueFieldTextChanged(object? sender, EventArgs e)
     {
         if (_syncingSelectedValueFromViewModel)

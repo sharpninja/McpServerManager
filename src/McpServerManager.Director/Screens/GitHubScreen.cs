@@ -3,7 +3,11 @@ using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -95,7 +99,7 @@ internal sealed class GitHubScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _issuesTable.SelectedCellChanged += (_, _) => _ = Task.Run(RefreshSelectedIssueDetailAsync);
+        _issuesTable.ValueChanged += (_, _) => _ = Task.Run(RefreshSelectedIssueDetailAsync);
         issuesFrame.Add(_issuesTable);
         leftPane.Add(issuesFrame);
 
@@ -116,7 +120,7 @@ internal sealed class GitHubScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _pullsTable.SelectedCellChanged += (_, _) => RefreshSelectedPullDetail();
+        _pullsTable.ValueChanged += (_, _) => RefreshSelectedPullDetail();
         pullsFrame.Add(_pullsTable);
         leftPane.Add(pullsFrame);
 

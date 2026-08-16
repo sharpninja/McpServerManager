@@ -1,7 +1,11 @@
 using System.Collections.ObjectModel;
 using McpServer.Cqrs;
 using McpServerManager.UI.Core.Messages;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -65,7 +69,7 @@ internal sealed class RepoScreen : View
             Width = Dim.Percent(35),
             Height = Dim.Fill(3),
         };
-        _entriesList.OpenSelectedItem += (_, args) => HandleOpenEntry(args.Item);
+        _entriesList.Accepted += (_, _) => HandleOpenEntry(_entriesList.SelectedItem.GetValueOrDefault(-1));
         Add(_entriesList);
 
         var filePathLabel = new Label { X = Pos.Right(_entriesList) + 1, Y = 2, Text = "File Path:" };

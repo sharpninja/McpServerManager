@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using McpServerManager.UI.Core.Services;
-using Terminal.Gui;
+using Terminal.Gui.App;
 
 namespace McpServerManager.Director;
 

@@ -3,7 +3,11 @@ using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -99,7 +103,7 @@ internal sealed class ToolRegistryScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _toolsTable.SelectedCellChanged += (_, _) => _ = Task.Run(RefreshSelectedToolDetailAsync);
+        _toolsTable.ValueChanged += (_, _) => _ = Task.Run(RefreshSelectedToolDetailAsync);
         toolsFrame.Add(_toolsTable);
         leftPane.Add(toolsFrame);
 
@@ -120,7 +124,7 @@ internal sealed class ToolRegistryScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _bucketsTable.SelectedCellChanged += (_, _) => RefreshSelectedBucketDetail();
+        _bucketsTable.ValueChanged += (_, _) => RefreshSelectedBucketDetail();
         bucketsFrame.Add(_bucketsTable);
         leftPane.Add(bucketsFrame);
 
@@ -578,7 +582,7 @@ internal sealed class ToolRegistryScreen : View
         var installBtn = new Button { Text = "Install Selected" };
         installBtn.Accepting += (_, _) =>
         {
-            var index = listView.SelectedItem;
+            var index = listView.SelectedItem.GetValueOrDefault(-1);
             if (index < 0 || index >= tools.Count)
                 return;
 

@@ -1,7 +1,11 @@
 using System.Collections.Specialized;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 

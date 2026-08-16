@@ -3,7 +3,12 @@ using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Drivers;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -88,10 +93,10 @@ internal sealed class AgentScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _defsTable.SelectedCellChanged += (_, _) => _ = Task.Run(RefreshDefinitionDetailAsync);
+        _defsTable.ValueChanged += (_, _) => _ = Task.Run(RefreshDefinitionDetailAsync);
         _defsTable.KeyDown += (_, e) =>
         {
-            if (e.KeyCode != KeyCode.Enter)
+            if (e != Key.Enter)
                 return;
             _ = Task.Run(AssignSelectedDefinitionAsync);
             e.Handled = true;
@@ -116,7 +121,7 @@ internal sealed class AgentScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _agentsTable.SelectedCellChanged += (_, _) => _ = Task.Run(RefreshWorkspaceDetailAsync);
+        _agentsTable.ValueChanged += (_, _) => _ = Task.Run(RefreshWorkspaceDetailAsync);
         agentsFrame.Add(_agentsTable);
         leftPane.Add(agentsFrame);
 
@@ -555,7 +560,7 @@ internal sealed class AgentScreen : View
         row++;
 
         dlg.Add(new Label { X = 1, Y = row, Text = "Enabled:" });
-        var enabledField = new CheckBox { X = 20, Y = row, CheckedState = detail.Enabled ? CheckState.Checked : CheckState.UnChecked };
+        var enabledField = new CheckBox { X = 20, Y = row, Value = detail.Enabled ? CheckState.Checked : CheckState.UnChecked };
         dlg.Add(enabledField);
         row++;
 
@@ -600,7 +605,7 @@ internal sealed class AgentScreen : View
             {
                 AgentId = detail.AgentId,
                 WorkspacePath = detail.WorkspacePath,
-                Enabled = enabledField.CheckedState == CheckState.Checked,
+                Enabled = enabledField.Value == CheckState.Checked,
                 AgentIsolation = NormalizeIsolation(isolationField.Text?.ToString()),
                 LaunchCommandOverride = NullIfWhitespace(launchField.Text?.ToString()),
                 ModelsOverride = ParseCsvOrNull(modelsField.Text?.ToString()),

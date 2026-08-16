@@ -1,6 +1,10 @@
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -58,7 +62,7 @@ internal sealed class SessionLogScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _table.SelectedCellChanged += (_, _) => QueueSelectedRowDetailRefresh();
+        _table.ValueChanged += (_, _) => QueueSelectedRowDetailRefresh();
         Add(_table);
 
         _detailTitleLabel = new Label

@@ -4,7 +4,11 @@ using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -73,7 +77,7 @@ internal sealed class RequirementsScreen : View
 
     private void BuildUi()
     {
-        var tabView = new TabView
+        var tabView = new Tabs
         {
             X = 0,
             Y = 0,
@@ -82,10 +86,16 @@ internal sealed class RequirementsScreen : View
         };
         Add(tabView);
 
-        tabView.AddTab(new Tab { DisplayText = "FR", View = BuildFrTab() }, andSelect: true);
-        tabView.AddTab(new Tab { DisplayText = "TR", View = BuildTrTab() }, andSelect: false);
-        tabView.AddTab(new Tab { DisplayText = "Test", View = BuildTestTab() }, andSelect: false);
-        tabView.AddTab(new Tab { DisplayText = "Mapping", View = BuildMappingTab() }, andSelect: false);
+        var frTab = BuildFrTab();
+        frTab.Title = "FR";
+        var trTab = BuildTrTab();
+        trTab.Title = "TR";
+        var testTab = BuildTestTab();
+        testTab.Title = "Test";
+        var mappingTab = BuildMappingTab();
+        mappingTab.Title = "Mapping";
+        tabView.Add(frTab, trTab, testTab, mappingTab);
+        tabView.Value = frTab;
 
         var selectorLabel = new Label { X = 0, Y = Pos.AnchorEnd(2), Text = "Generate Doc:" };
         _docSelectorField = new TextField { X = Pos.Right(selectorLabel) + 1, Y = Pos.AnchorEnd(2), Width = 18, Text = "all" };
@@ -120,7 +130,7 @@ internal sealed class RequirementsScreen : View
             Height = Dim.Fill(2),
         };
         _frTable = new TableView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), FullRowSelect = true, MultiSelect = false };
-        _frTable.SelectedCellChanged += (_, _) => RefreshSelectedFrDetail();
+        _frTable.ValueChanged += (_, _) => RefreshSelectedFrDetail();
         tableFrame.Add(_frTable);
         root.Add(tableFrame);
 
@@ -163,7 +173,7 @@ internal sealed class RequirementsScreen : View
             Height = Dim.Fill(2),
         };
         _trTable = new TableView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), FullRowSelect = true, MultiSelect = false };
-        _trTable.SelectedCellChanged += (_, _) => RefreshSelectedTrDetail();
+        _trTable.ValueChanged += (_, _) => RefreshSelectedTrDetail();
         tableFrame.Add(_trTable);
         root.Add(tableFrame);
 
@@ -205,7 +215,7 @@ internal sealed class RequirementsScreen : View
             Height = Dim.Fill(2),
         };
         _testTable = new TableView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), FullRowSelect = true, MultiSelect = false };
-        _testTable.SelectedCellChanged += (_, _) => RefreshSelectedTestDetail();
+        _testTable.ValueChanged += (_, _) => RefreshSelectedTestDetail();
         tableFrame.Add(_testTable);
         root.Add(tableFrame);
 
@@ -247,7 +257,7 @@ internal sealed class RequirementsScreen : View
             Height = Dim.Fill(2),
         };
         _mappingTable = new TableView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), FullRowSelect = true, MultiSelect = false };
-        _mappingTable.SelectedCellChanged += (_, _) => RefreshSelectedMappingDetail();
+        _mappingTable.ValueChanged += (_, _) => RefreshSelectedMappingDetail();
         tableFrame.Add(_mappingTable);
         root.Add(tableFrame);
 
@@ -782,7 +792,7 @@ internal sealed class RequirementsScreen : View
 
             void Confirm()
             {
-                var idx = listView.SelectedItem;
+                var idx = listView.SelectedItem.GetValueOrDefault(-1);
                 if (idx >= 0 && idx < items.Count)
                 {
                     var chosen = items[idx].WorkspacePath;
@@ -800,7 +810,7 @@ internal sealed class RequirementsScreen : View
             dlg.AddButton(selectBtn);
             dlg.AddButton(cancelBtn);
 
-            listView.OpenSelectedItem += (_, _) => Confirm();
+            listView.Accepted += (_, _) => Confirm();
             listView.SetFocus();
             Application.Run(dlg);
         });

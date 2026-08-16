@@ -1,6 +1,11 @@
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Configuration;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -51,9 +56,9 @@ internal sealed class TunnelScreen : View
             ReadOnly = true,
             Visible = false,
         };
-        var errorColorScheme = Colors.ColorSchemes.TryGetValue("Error", out var errScheme) ? errScheme : null;
+        var errorColorScheme = SchemeManager.TryGetScheme("Error", out var errScheme) ? errScheme : null;
         if (errorColorScheme is not null)
-            errorField.ColorScheme = errorColorScheme;
+            errorField.SetScheme(errorColorScheme);
         Add(errorField);
 
         _tableView = new TableView
@@ -65,7 +70,7 @@ internal sealed class TunnelScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _tableView.SelectedCellChanged += (_, _) => UpdateActionButtons();
+        _tableView.ValueChanged += (_, _) => UpdateActionButtons();
         Add(_tableView);
 
         // Button bar

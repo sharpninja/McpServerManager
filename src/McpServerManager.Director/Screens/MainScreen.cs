@@ -9,7 +9,11 @@ using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -61,7 +65,7 @@ internal sealed class MainScreen : Window
     private readonly ConfigurationViewModel _configurationVm;
     private readonly WorkspaceContextViewModel _workspaceContextVm;
     private Label _authLabel = null!;
-    private TabView _tabView = null!;
+    private Tabs _tabView = null!;
     private Label _workspaceContextLabel = null!;
     private TextView _workspaceContextStatus = null!;
     private readonly ObservableCollection<WorkspacePickerItem> _workspacePickerSource = [];
@@ -373,7 +377,7 @@ internal sealed class MainScreen : Window
                 [
                     new MenuItem("_About", "", () =>
                     {
-                        MessageBox.Query("About",
+                        MessageBox.Query(Application.Instance, "About",
                             "McpServer Director\nTerminal UI for workspace & agent management\n\nPowered by Terminal.Gui v2 + CommunityToolkit.Mvvm",
                             "OK");
                     }),
@@ -394,7 +398,7 @@ internal sealed class MainScreen : Window
         UpdateAuthStatus();
 
         // Tab view
-        _tabView = new TabView
+        _tabView = new Tabs
         {
             X = 0,
             Y = 1,
@@ -403,7 +407,7 @@ internal sealed class MainScreen : Window
         };
         Add(_tabView);
         RebuildTabs();
-        _tabView.SelectedTabChanged += (_, e) => RefreshTab(e.NewTab);
+        _tabView.ValueChanged += (_, e) => RefreshTabView(e.NewValue);
 
         _directorContext.ActiveWorkspaceChanged += (_, _) =>
         {
@@ -443,14 +447,13 @@ internal sealed class MainScreen : Window
         };
 
         // Auto-load on startup
-        Loaded += (_, _) =>
+        Initialized += (_, _) =>
         {
             ViewModelBinder.EnableScrollBars(this);
 
             _ = Task.Run(async () =>
             {
-                var logsScreen = _tabView.Tabs
-                    .Select(t => t.View)
+                var logsScreen = _tabView.TabCollection
                     .OfType<DispatcherLogsScreen>()
                     .FirstOrDefault();
                 if (logsScreen is not null)
@@ -526,7 +529,7 @@ internal sealed class MainScreen : Window
     /// </summary>
     private static void CopyFocusedText()
     {
-        var focused = Application.Top?.MostFocused;
+        var focused = Application.TopRunnableView?.MostFocused;
         if (focused is null) return;
 
         string? textToCopy = null;
@@ -567,7 +570,7 @@ internal sealed class MainScreen : Window
     }
 
     private void RefreshCurrentTab()
-        => RefreshTab(_tabView.SelectedTab);
+        => RefreshTabView(_tabView.Value);
 
     private async Task OpenTriageTodoAsync(OpenTriageTodoItem item)
     {
@@ -588,16 +591,16 @@ internal sealed class MainScreen : Window
         TodoScreen? todoScreen = null;
         Application.Invoke(() =>
         {
-            var tab = _tabView.Tabs.FirstOrDefault(t =>
-                string.Equals(t.DisplayText?.ToString(), "TODO", StringComparison.OrdinalIgnoreCase));
+            var tab = _tabView.TabCollection.FirstOrDefault(t =>
+                string.Equals(t.Title, "TODO", StringComparison.OrdinalIgnoreCase));
             if (tab is null)
             {
                 UpdateWorkspaceContextStatus($"Cannot open TODO {item.TodoId}: TODO tab is not available.");
                 return;
             }
 
-            _tabView.SelectedTab = tab;
-            todoScreen = tab.View as TodoScreen;
+            _tabView.Value = tab;
+            todoScreen = tab as TodoScreen;
             UpdateWorkspaceContextStatus();
         });
 
@@ -609,9 +612,6 @@ internal sealed class MainScreen : Window
 
         await todoScreen.SelectTodoAsync(item.TodoId).ConfigureAwait(true);
     }
-
-    private void RefreshTab(Tab? tab)
-        => RefreshTabView(tab?.View);
 
     private void RefreshTabView(View? view)
     {
@@ -741,13 +741,12 @@ internal sealed class MainScreen : Window
 
     private void RebuildTabs()
     {
-        var previousTab = _tabView.SelectedTab?.DisplayText?.ToString();
+        var previousTab = _tabView.Value?.Title;
 
-        // TabView.RemoveAll() is inherited from View and removes the control's
-        // internal subviews (including the tab strip). Remove hosted tabs only.
-        foreach (var tab in _tabView.Tabs.ToList())
+        // Tabs hosts each tab as a SubView; remove the hosted tab views only.
+        foreach (var tab in _tabView.TabCollection.ToList())
         {
-            _tabView.RemoveTab(tab);
+            _tabView.Remove(tab);
             // Avoid disposing removed tab views here. Terminal.Gui can still hold transient
             // internal references during redraw and throw when disposed views are re-drawn.
         }
@@ -762,30 +761,30 @@ internal sealed class MainScreen : Window
             if (registration.ScreenFactory(_serviceProvider) is not View view)
                 continue;
 
-            _tabView.AddTab(new Tab
-            {
-                DisplayText = registration.DisplayText,
-                View = view
-            }, andSelect: selectFirst);
+            view.Title = registration.DisplayText;
+            _tabView.Add(view);
+            if (selectFirst)
+                _tabView.Value = view;
             selectFirst = false;
         }
 
         if (selectFirst)
         {
-            var empty = new View { Width = Dim.Fill(), Height = Dim.Fill() };
+            var empty = new View { Width = Dim.Fill(), Height = Dim.Fill(), Title = "Info" };
             empty.Add(new Label
             {
                 Text = "No tabs available for the current role/login state.",
                 X = 1,
                 Y = 1,
             });
-            _tabView.AddTab(new Tab { DisplayText = "Info", View = empty }, andSelect: true);
+            _tabView.Add(empty);
+            _tabView.Value = empty;
         }
         else if (!string.IsNullOrWhiteSpace(previousTab))
         {
-            var match = _tabView.Tabs.FirstOrDefault(t => string.Equals(t.DisplayText?.ToString(), previousTab, StringComparison.OrdinalIgnoreCase));
+            var match = _tabView.TabCollection.FirstOrDefault(t => string.Equals(t.Title, previousTab, StringComparison.OrdinalIgnoreCase));
             if (match is not null)
-                _tabView.SelectedTab = match;
+                _tabView.Value = match;
         }
 
         RefreshWorkspacePickerItems();
@@ -878,7 +877,7 @@ internal sealed class MainScreen : Window
 
         void CommitSelection()
         {
-            var index = listView.SelectedItem;
+            var index = listView.SelectedItem.GetValueOrDefault(-1);
             if (index < 0 || index >= snapshot.Count)
                 return;
 
@@ -886,7 +885,7 @@ internal sealed class MainScreen : Window
             Application.RequestStop();
         }
 
-        listView.OpenSelectedItem += (_, _) => CommitSelection();
+        listView.Accepted += (_, _) => CommitSelection();
 
         var activateBtn = new Button { Text = "Activate" };
         activateBtn.Accepting += (_, _) => CommitSelection();
@@ -908,10 +907,10 @@ internal sealed class MainScreen : Window
 
     private void CycleTab()
     {
-        var tabs = _tabView.Tabs.ToList();
+        var tabs = _tabView.TabCollection.ToList();
         if (tabs.Count < 2) return;
-        var idx = tabs.IndexOf(_tabView.SelectedTab!);
-        _tabView.SelectedTab = tabs[(idx + 1) % tabs.Count];
+        var idx = tabs.IndexOf(_tabView.Value!);
+        _tabView.Value = tabs[(idx + 1) % tabs.Count];
     }
 
     private void OnApplicationKeyDown(object? sender, Key e)
@@ -922,7 +921,7 @@ internal sealed class MainScreen : Window
         if (e.Handled)
             return;
 
-        if (e.KeyCode == (KeyCode.W | KeyCode.CtrlMask))
+        if (e == Key.W.WithCtrl)
         {
             ShowWorkspaceSelectionDialog();
             e.Handled = true;
@@ -934,27 +933,27 @@ internal sealed class MainScreen : Window
         if (e.Handled)
             return;
 
-        if (e.KeyCode == (KeyCode.Tab | KeyCode.ShiftMask))
+        if (e == Key.Tab.WithShift)
         {
             CycleTab();
             e.Handled = true;
         }
-        else if (e.KeyCode == KeyCode.F2)
+        else if (e == Key.F2)
         {
             ShowLoginDialog();
             e.Handled = true;
         }
-        else if (e.KeyCode == KeyCode.F5)
+        else if (e == Key.F5)
         {
             RefreshCurrentTab();
             e.Handled = true;
         }
-        else if (e.KeyCode == (KeyCode.C | KeyCode.CtrlMask))
+        else if (e == Key.C.WithCtrl)
         {
             CopyFocusedText();
             e.Handled = true;
         }
-        else if (e.KeyCode == (KeyCode.Q | KeyCode.CtrlMask))
+        else if (e == Key.Q.WithCtrl)
         {
             Application.RequestStop();
             e.Handled = true;

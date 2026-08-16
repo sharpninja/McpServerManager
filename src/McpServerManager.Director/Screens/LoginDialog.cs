@@ -1,7 +1,12 @@
 using McpServerManager.Director.Auth;
 using McpServerManager.Director.Handlers;
 using McpServerManager.Director.Helpers;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Drivers;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -170,13 +175,13 @@ internal sealed class LoginDialog : Dialog
         // Clipboard hotkeys: Ctrl+Y copies user code, Ctrl+U copies verification URL
         KeyDown += (_, e) =>
         {
-            if (e.KeyCode == (KeyCode.Y | KeyCode.CtrlMask) && _currentUserCode is not null)
+            if (e == Key.Y.WithCtrl && _currentUserCode is not null)
             {
                 Clipboard.TrySetClipboardData(_currentUserCode);
                 _statusLabel.Text = "📋 User code copied to clipboard!";
                 e.Handled = true;
             }
-            else if (e.KeyCode == (KeyCode.U | KeyCode.CtrlMask) && _currentVerificationUri is not null)
+            else if (e == Key.U.WithCtrl && _currentVerificationUri is not null)
             {
                 Clipboard.TrySetClipboardData(_currentVerificationUri);
                 _statusLabel.Text = "📋 Verification URL copied to clipboard!";

@@ -3,7 +3,11 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using McpServer.Client.Models;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 using MarkdigSigned::Markdig;
 using MarkdigSigned::Markdig.Syntax;
 
@@ -23,8 +27,8 @@ internal sealed class AgentChatScreen : View
     private readonly object _turnGate = new();
 
     private Label _statusLabel = null!;
-    private ComboBox _agentNamePicker = null!;
-    private ComboBox _sessionIdPicker = null!;
+    private DropDownList _agentNamePicker = null!;
+    private DropDownList _sessionIdPicker = null!;
     private TextView _transcriptView = null!;
     private TextView _promptView = null!;
     private CancellationTokenSource? _activeTurnCts;
@@ -65,32 +69,28 @@ internal sealed class AgentChatScreen : View
         Add(_statusLabel);
 
         var agentLabel = new Label { X = 0, Y = 1, Text = "Agent:" };
-        _agentNamePicker = new ComboBox
+        _agentNamePicker = new DropDownList
         {
             X = Pos.Right(agentLabel) + 1,
             Y = 1,
             Width = 22,
             Height = 1,
             Text = string.Empty,
-            HideDropdownListOnClick = true,
         };
-        _agentNamePicker.SetSource(_agentNameOptions);
-        _agentNamePicker.SelectedItemChanged += (_, e) => OnAgentSelectionChanged(e.Value?.ToString());
-        _agentNamePicker.OpenSelectedItem += (_, e) => OnAgentSelectionChanged(e.Value?.ToString());
+        _agentNamePicker.Source = new ListWrapper<string>(_agentNameOptions);
+        _agentNamePicker.ValueChanged += (_, e) => OnAgentSelectionChanged(e.NewValue);
 
         var sessionLabel = new Label { X = Pos.Right(_agentNamePicker) + 2, Y = 1, Text = "Session:" };
-        _sessionIdPicker = new ComboBox
+        _sessionIdPicker = new DropDownList
         {
             X = Pos.Right(sessionLabel) + 1,
             Y = 1,
             Width = 30,
             Height = 1,
             Text = string.Empty,
-            HideDropdownListOnClick = true,
         };
-        _sessionIdPicker.SetSource(_sessionIdOptions);
-        _sessionIdPicker.SelectedItemChanged += (_, e) => OnSessionSelectionChanged(e.Value?.ToString());
-        _sessionIdPicker.OpenSelectedItem += (_, e) => OnSessionSelectionChanged(e.Value?.ToString());
+        _sessionIdPicker.Source = new ListWrapper<string>(_sessionIdOptions);
+        _sessionIdPicker.ValueChanged += (_, e) => OnSessionSelectionChanged(e.NewValue);
 
         var connectBtn = new Button { X = Pos.Right(_sessionIdPicker) + 2, Y = 1, Text = "Connect Agent" };
         connectBtn.Accepting += (_, _) => _ = Task.Run(ConnectAgentAsync);
@@ -461,18 +461,18 @@ internal sealed class AgentChatScreen : View
                 _agentNameOptions.Clear();
                 foreach (var name in agentNames)
                     _agentNameOptions.Add(name);
-                _agentNamePicker.SetSource(_agentNameOptions);
+                _agentNamePicker.Source = new ListWrapper<string>(_agentNameOptions);
 
                 _sessionIdOptions.Clear();
                 foreach (var id in sessionIds)
                     _sessionIdOptions.Add(id);
-                _sessionIdPicker.SetSource(_sessionIdOptions);
+                _sessionIdPicker.Source = new ListWrapper<string>(_sessionIdOptions);
 
                 if (!string.IsNullOrWhiteSpace(selectedAgent))
                 {
                     var agentIndex = agentNames.FindIndex(x => string.Equals(x, selectedAgent, StringComparison.OrdinalIgnoreCase));
                     if (agentIndex >= 0)
-                        _agentNamePicker.SelectedItem = agentIndex;
+                        _agentNamePicker.Value = agentNames[agentIndex];
                     _agentNamePicker.Text = selectedAgent;
                 }
 
@@ -480,7 +480,7 @@ internal sealed class AgentChatScreen : View
                 {
                     var sessionIndex = sessionIds.FindIndex(x => string.Equals(x, selectedSession, StringComparison.OrdinalIgnoreCase));
                     if (sessionIndex >= 0)
-                        _sessionIdPicker.SelectedItem = sessionIndex;
+                        _sessionIdPicker.Value = sessionIds[sessionIndex];
                     _sessionIdPicker.Text = selectedSession;
                 }
 

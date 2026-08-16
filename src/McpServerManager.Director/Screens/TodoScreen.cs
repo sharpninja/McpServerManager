@@ -1,5 +1,10 @@
 using McpServerManager.UI.Core.ViewModels;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Configuration;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -109,7 +114,7 @@ internal sealed class TodoScreen : View
         {
             MaxWidth = 200,
         };
-        _table.SelectedCellChanged += (_, _) => QueueSelectedRowDetailRefresh();
+        _table.ValueChanged += (_, _) => QueueSelectedRowDetailRefresh();
         Add(_table);
 
         var row1Y = Pos.Bottom(_table);
@@ -469,7 +474,7 @@ internal sealed class TodoScreen : View
 
         var confirm = 1;
         Application.Invoke(() =>
-            confirm = MessageBox.Query("Confirm Delete", $"Delete TODO '{todoId}'?", "Delete", "Cancel"));
+            confirm = MessageBox.Query(Application.Instance, "Confirm Delete", $"Delete TODO '{todoId}'?", "Delete", "Cancel").GetValueOrDefault(1));
         if (confirm != 0)
             return;
 
@@ -562,10 +567,10 @@ internal sealed class TodoScreen : View
 
         var confirm = 1;
         Application.Invoke(() =>
-            confirm = MessageBox.Query("Confirm Move",
+            confirm = MessageBox.Query(Application.Instance, "Confirm Move",
                 $"Move TODO '{todoId}' to:{Environment.NewLine}{targetLabel}",
                 "Move",
-                "Cancel"));
+                "Cancel").GetValueOrDefault(1));
         if (confirm != 0)
             return;
 
@@ -740,8 +745,8 @@ internal sealed class TodoScreen : View
         var dialog = new Dialog
         {
             Title = $"Agent {promptLabel}: {todoId}",
-            Width = Math.Min(120, Math.Max(80, Application.Top?.Frame.Width - 4 ?? 96)),
-            Height = Math.Min(30, Math.Max(12, Application.Top?.Frame.Height - 4 ?? 24)),
+            Width = Math.Min(120, Math.Max(80, Application.TopRunnableView?.Frame.Width - 4 ?? 96)),
+            Height = Math.Min(30, Math.Max(12, Application.TopRunnableView?.Frame.Height - 4 ?? 24)),
         };
 
         var outputView = new TextView
@@ -1010,7 +1015,7 @@ internal sealed class TodoScreen : View
 
         void CommitSelection()
         {
-            var index = listView.SelectedItem;
+            var index = listView.SelectedItem.GetValueOrDefault(-1);
             if (index < 0 || index >= snapshot.Count)
                 return;
 
@@ -1018,7 +1023,7 @@ internal sealed class TodoScreen : View
             Application.RequestStop();
         }
 
-        listView.OpenSelectedItem += (_, _) => CommitSelection();
+        listView.Accepted += (_, _) => CommitSelection();
 
         var moveButton = new Button { Text = "Move" };
         moveButton.Accepting += (_, _) => CommitSelection();
@@ -1298,9 +1303,9 @@ internal sealed class TodoScreen : View
 
     private static void ApplyEditableScheme(params View[] views)
     {
-        if (!Colors.ColorSchemes.TryGetValue("Editable", out var scheme))
+        if (!SchemeManager.TryGetScheme("Editable", out var scheme))
             return;
         foreach (var v in views)
-            v.ColorScheme = scheme;
+            v.SetScheme(scheme);
     }
 }

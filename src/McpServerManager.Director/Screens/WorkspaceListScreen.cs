@@ -1,6 +1,11 @@
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Configuration;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -66,7 +71,7 @@ internal sealed class WorkspaceListScreen : View
         };
         Add(statusLabel);
 
-        var errorColorScheme = Colors.ColorSchemes.TryGetValue("Error", out var errScheme) ? errScheme : null;
+        var errorColorScheme = SchemeManager.TryGetScheme("Error", out var errScheme) ? errScheme : null;
         var errorField = new TextField
         {
             X = 0,
@@ -77,7 +82,7 @@ internal sealed class WorkspaceListScreen : View
             Visible = false,
         };
         if (errorColorScheme is not null)
-            errorField.ColorScheme = errorColorScheme;
+            errorField.SetScheme(errorColorScheme);
         Add(errorField);
 
         _tableView = new TableView
@@ -89,7 +94,7 @@ internal sealed class WorkspaceListScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _tableView.SelectedCellChanged += (_, _) => QueueSelectedRowDetailRefresh();
+        _tableView.ValueChanged += (_, _) => QueueSelectedRowDetailRefresh();
         Add(_tableView);
 
         var editorY = Pos.Bottom(_tableView);
@@ -328,7 +333,7 @@ internal sealed class WorkspaceListScreen : View
         {
             var confirm = 1;
             InvokeOnUiThread(() =>
-                confirm = MessageBox.Query("Confirm Delete", $"Delete workspace '{workspacePath}'?", "Delete", "Cancel"));
+                confirm = MessageBox.Query(Application.Instance, "Confirm Delete", $"Delete workspace '{workspacePath}'?", "Delete", "Cancel").GetValueOrDefault(1));
             if (confirm != 0)
                 return;
         }
@@ -368,8 +373,8 @@ internal sealed class WorkspaceListScreen : View
             _dataDirectoryField.Text = snapshot.DataDirectory;
             _tunnelProviderField.Text = snapshot.TunnelProvider;
             _runAsField.Text = snapshot.RunAs;
-            _primaryCheckBox.CheckedState = snapshot.IsPrimary ? CheckState.Checked : CheckState.UnChecked;
-            _enabledCheckBox.CheckedState = snapshot.IsEnabled ? CheckState.Checked : CheckState.UnChecked;
+            _primaryCheckBox.Value = snapshot.IsPrimary ? CheckState.Checked : CheckState.UnChecked;
+            _enabledCheckBox.Value = snapshot.IsEnabled ? CheckState.Checked : CheckState.UnChecked;
             _promptTemplateEditor.Text = snapshot.PromptTemplate;
             _statusPromptEditor.Text = snapshot.StatusPrompt;
             _implementPromptEditor.Text = snapshot.ImplementPrompt;
@@ -386,8 +391,8 @@ internal sealed class WorkspaceListScreen : View
             _dataDirectoryField.Text?.ToString() ?? "",
             _tunnelProviderField.Text?.ToString() ?? "",
             _runAsField.Text?.ToString() ?? "",
-            _primaryCheckBox.CheckedState == CheckState.Checked,
-            _enabledCheckBox.CheckedState == CheckState.Checked,
+            _primaryCheckBox.Value == CheckState.Checked,
+            _enabledCheckBox.Value == CheckState.Checked,
             _promptTemplateEditor.Text?.ToString() ?? "",
             _statusPromptEditor.Text?.ToString() ?? "",
             _implementPromptEditor.Text?.ToString() ?? "",
@@ -533,11 +538,11 @@ internal sealed class WorkspaceListScreen : View
 
     private static void ApplyEditableScheme(params View[] views)
     {
-        if (!Colors.ColorSchemes.TryGetValue("Editable", out var scheme))
+        if (!SchemeManager.TryGetScheme("Editable", out var scheme))
             return;
 
         foreach (var v in views)
-            v.ColorScheme = scheme;
+            v.SetScheme(scheme);
     }
 
     private static void InvokeOnUiThread(Action action)

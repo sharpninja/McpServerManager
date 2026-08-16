@@ -1,6 +1,12 @@
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Configuration;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Drivers;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -58,9 +64,9 @@ internal sealed class AgentPoolScreen : View
             ReadOnly = true,
             Visible = false,
         };
-        var errorColorScheme = Colors.ColorSchemes.TryGetValue("Error", out var errScheme) ? errScheme : null;
+        var errorColorScheme = SchemeManager.TryGetScheme("Error", out var errScheme) ? errScheme : null;
         if (errorColorScheme is not null)
-            errorField.ColorScheme = errorColorScheme;
+            errorField.SetScheme(errorColorScheme);
         Add(errorField);
 
         var configuredLabel = new Label { X = 0, Y = 2, Text = "Configured Agents" };
@@ -79,14 +85,18 @@ internal sealed class AgentPoolScreen : View
         };
         _configuredTable.KeyDown += (_, e) =>
         {
-            if (e.KeyCode == KeyCode.Enter)
+            if (e == Key.Enter)
             {
                 OpenConfiguredAgentDialogForRow(_configuredTable.SelectedRow);
                 e.Handled = true;
             }
         };
-        _configuredTable.MouseClick += (_, _) => OpenConfiguredAgentDialogForRow(_configuredTable.SelectedRow);
-        _configuredTable.SelectedCellChanged += (_, e) => _vm.SelectedConfiguredIndex = e.NewRow;
+        _configuredTable.MouseEvent += (_, e) =>
+        {
+            if (e.IsSingleClicked)
+                OpenConfiguredAgentDialogForRow(_configuredTable.SelectedRow);
+        };
+        _configuredTable.ValueChanged += (_, e) => _vm.SelectedConfiguredIndex = e.NewValue?.SelectedCell.Y ?? -1;
         Add(_configuredTable);
 
         var agentsLabel = new Label { X = 0, Y = Pos.Bottom(_configuredTable), Text = "Runtime Agents" };
@@ -101,7 +111,7 @@ internal sealed class AgentPoolScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _agentsTable.SelectedCellChanged += (_, e) => _vm.SelectedRuntimeIndex = e.NewRow;
+        _agentsTable.ValueChanged += (_, e) => _vm.SelectedRuntimeIndex = e.NewValue?.SelectedCell.Y ?? -1;
         Add(_agentsTable);
 
         var queueLabel = new Label { X = 0, Y = Pos.Bottom(_agentsTable), Text = "Queue" };
@@ -116,7 +126,7 @@ internal sealed class AgentPoolScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _queueTable.SelectedCellChanged += (_, e) => _vm.SelectedQueueIndex = e.NewRow;
+        _queueTable.ValueChanged += (_, e) => _vm.SelectedQueueIndex = e.NewValue?.SelectedCell.Y ?? -1;
         Add(_queueTable);
 
         var agentLabel = new Label { X = 0, Y = Pos.Bottom(_queueTable), Text = "Agent:" };
@@ -321,9 +331,9 @@ internal sealed class AgentPoolScreen : View
             });
         }
 
-        configsTable.SelectedCellChanged += (_, e) =>
+        configsTable.ValueChanged += (_, e) =>
         {
-            var row = e.NewRow;
+            var row = e.NewValue?.SelectedCell.Y ?? -1;
             if (row < 0 || row >= definitionRows.Count)
                 return;
             LoadDefinitionIntoEditors(definitionRows[row].Id);

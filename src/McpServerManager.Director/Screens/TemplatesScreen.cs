@@ -2,7 +2,12 @@
 
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Configuration;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -83,9 +88,9 @@ internal sealed class TemplatesScreen : View
             ReadOnly = true,
             Visible = false,
         };
-        var errorColorScheme = Colors.ColorSchemes.TryGetValue("Error", out var errScheme) ? errScheme : null;
+        var errorColorScheme = SchemeManager.TryGetScheme("Error", out var errScheme) ? errScheme : null;
         if (errorColorScheme is not null)
-            errorField.ColorScheme = errorColorScheme;
+            errorField.SetScheme(errorColorScheme);
         Add(errorField);
 
         _tableView = new TableView
@@ -97,9 +102,9 @@ internal sealed class TemplatesScreen : View
             FullRowSelect = true,
             MultiSelect = false,
         };
-        _tableView.SelectedCellChanged += (_, e) =>
+        _tableView.ValueChanged += (_, e) =>
         {
-            _listVm.SelectedIndex = e.NewRow;
+            _listVm.SelectedIndex = e.NewValue?.SelectedCell.Y ?? -1;
         };
         Add(_tableView);
 
@@ -252,8 +257,8 @@ internal sealed class TemplatesScreen : View
         var dlg = new Dialog
         {
             Title = isNew ? "Create Template" : $"Edit Template: {_detailVm.EditorId}",
-            Width = Math.Min(100, Math.Max(70, Application.Top?.Frame.Width - 10 ?? 90)),
-            Height = Math.Min(25, Math.Max(16, Application.Top?.Frame.Height - 6 ?? 20)),
+            Width = Math.Min(100, Math.Max(70, Application.TopRunnableView?.Frame.Width - 10 ?? 90)),
+            Height = Math.Min(25, Math.Max(16, Application.TopRunnableView?.Frame.Height - 6 ?? 20)),
         };
 
         var idLabel = new Label { X = 1, Y = 1, Text = "ID:" };
@@ -311,7 +316,7 @@ internal sealed class TemplatesScreen : View
                 else
                 {
                     var err = _detailVm.ErrorMessage ?? "Template save failed.";
-                    Application.Invoke(() => MessageBox.ErrorQuery("Save Failed", err, "OK"));
+                    Application.Invoke(() => MessageBox.ErrorQuery(Application.Instance, "Save Failed", err, "OK"));
                 }
             });
         };
@@ -342,13 +347,13 @@ internal sealed class TemplatesScreen : View
             else
             {
                 var err = _detailVm.ErrorMessage ?? "Delete failed.";
-                Application.Invoke(() => MessageBox.ErrorQuery("Delete Failed", err, "OK"));
+                Application.Invoke(() => MessageBox.ErrorQuery(Application.Instance, "Delete Failed", err, "OK"));
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Trace.TraceError(ex.ToString());
-            Application.Invoke(() => MessageBox.ErrorQuery("Error", ex.Message, "OK"));
+            Application.Invoke(() => MessageBox.ErrorQuery(Application.Instance, "Error", ex.Message, "OK"));
         }
     }
 
@@ -360,8 +365,8 @@ internal sealed class TemplatesScreen : View
         var dlg = new Dialog
         {
             Title = $"Test Template: {selected.Id}",
-            Width = Math.Min(100, Math.Max(70, Application.Top?.Frame.Width - 10 ?? 90)),
-            Height = Math.Min(20, Math.Max(14, Application.Top?.Frame.Height - 6 ?? 16)),
+            Width = Math.Min(100, Math.Max(70, Application.TopRunnableView?.Frame.Width - 10 ?? 90)),
+            Height = Math.Min(20, Math.Max(14, Application.TopRunnableView?.Frame.Height - 6 ?? 16)),
         };
 
         var varsLabel = new Label { X = 1, Y = 1, Text = "Variables (JSON):" };

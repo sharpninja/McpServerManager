@@ -1,6 +1,10 @@
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -41,7 +45,7 @@ internal sealed class TriageScreen : View
         var fourthTop = Pos.Percent(75);
 
         var triageQueueFrame = CreateTableFrame("Triage Queue", 0, 0, topHeight, out _triageQueueTable);
-        _triageQueueTable.SelectedCellChanged += (_, _) =>
+        _triageQueueTable.ValueChanged += (_, _) =>
         {
             _viewModel.SelectedTriageQueueIndex = _triageQueueTable.SelectedRow;
             _ = Task.Run(LoadSelectedTriageGroupDetailAsync);
@@ -49,7 +53,7 @@ internal sealed class TriageScreen : View
         Add(triageQueueFrame);
 
         var reportGroupFrame = CreateTableFrame("Report Group Queue", Pos.Percent(50), 0, topHeight, out _reportGroupTable);
-        _reportGroupTable.SelectedCellChanged += (_, _) =>
+        _reportGroupTable.ValueChanged += (_, _) =>
         {
             _viewModel.SelectedReportGroupIndex = _reportGroupTable.SelectedRow;
             _ = Task.Run(LoadSelectedReportGroupDetailAsync);
@@ -57,7 +61,7 @@ internal sealed class TriageScreen : View
         Add(reportGroupFrame);
 
         var runHistoryFrame = CreateTableFrame("Run History", 0, secondTop, secondHeight, out _runHistoryTable);
-        _runHistoryTable.SelectedCellChanged += (_, _) =>
+        _runHistoryTable.ValueChanged += (_, _) =>
         {
             _viewModel.SelectedRunIndex = _runHistoryTable.SelectedRow;
             _ = Task.Run(LoadSelectedRunDetailAsync);
@@ -65,7 +69,7 @@ internal sealed class TriageScreen : View
         Add(runHistoryFrame);
 
         var openTodosFrame = CreateTableFrame("Triage-Created TODOs", Pos.Percent(50), secondTop, secondHeight, out _openTodosTable);
-        _openTodosTable.SelectedCellChanged += (_, _) =>
+        _openTodosTable.ValueChanged += (_, _) =>
         {
             _viewModel.SelectedOpenTodoIndex = _openTodosTable.SelectedRow;
             ShowSelectedOpenTodoDetail();

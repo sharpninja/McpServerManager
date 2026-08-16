@@ -1,7 +1,11 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using Terminal.Gui;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace McpServerManager.Director.Screens;
 
@@ -130,7 +134,7 @@ internal sealed class ViewModelBinder : IDisposable
                 {
                     System.Diagnostics.Trace.TraceError(ex.ToString());
                     Application.Invoke(() =>
-                        MessageBox.ErrorQuery("Error", ex.Message, "OK"));
+                        MessageBox.ErrorQuery(Application.Instance, "Error", ex.Message, "OK"));
                 }
             });
         }
@@ -166,25 +170,33 @@ internal sealed class ViewModelBinder : IDisposable
     /// <summary>Enables auto-show scrollbars on all scrollable descendant views recursively.</summary>
     internal static void EnableScrollBars(View root)
     {
-        foreach (var view in root.Subviews)
+        foreach (var view in root.SubViews)
         {
             if (view is TextView or TableView or ListView)
             {
-                view.VerticalScrollBar.AutoShow = true;
-                view.HorizontalScrollBar.AutoShow = true;
+                view.VerticalScrollBar.VisibilityMode = ScrollBarVisibilityMode.Auto;
+                view.HorizontalScrollBar.VisibilityMode = ScrollBarVisibilityMode.Auto;
             }
 
-            // TabView tab content isn't in the normal Subviews tree
-            if (view is TabView tabView)
-            {
-                foreach (var tab in tabView.Tabs)
-                {
-                    if (tab.View is not null)
-                        EnableScrollBars(tab.View);
-                }
-            }
-
+            // Tabs hosts each tab as a SubView, so the recursive walk below covers tab content.
             EnableScrollBars(view);
+        }
+    }
+}
+
+/// <summary>
+/// Compatibility helpers bridging the Terminal.Gui 2.0 <c>TableView.SelectedRow</c> API to the
+/// Terminal.Gui 2.4 <see cref="TableView.Value"/>/<see cref="TableView.SetSelection"/> model.
+/// </summary>
+internal static class TableViewCompatExtensions
+{
+    extension(TableView tableView)
+    {
+        /// <summary>Gets or sets the index of the selected row, or -1 when there is no selection.</summary>
+        public int SelectedRow
+        {
+            get => tableView.Value?.SelectedCell.Y ?? -1;
+            set => tableView.SetSelection(tableView.Value?.SelectedCell.X ?? 0, value, extendExistingSelection: false);
         }
     }
 }
