@@ -12,6 +12,14 @@ Cover valid cached token reuse, expired token deletion, new token persistence af
 - [ ] Tests prove newly obtained tokens are cached when a workspace is active.
 
 
+## TEST-DEPS-SUITES
+
+### TEST-DEPS-SUITES-001
+
+After each dependency upgrade slice, dotnet build succeeds for McpServerManager, Desktop, Web, and Director, and the five test suites (UI.Core, Core, Desktop, Web, Director) pass with zero failed and zero skipped tests.
+
+
+
 ## TEST-TRIAGE
 
 ### TEST-TRIAGE-001

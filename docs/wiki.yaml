@@ -1,0 +1,116 @@
+schema: mcp-wiki-export/v1
+home:
+  document: home
+documents:
+  - id: home
+    title: Home
+    source: generated:home
+    target: Home.md
+    platforms:
+      - github
+      - azure
+  - id: functional
+    title: Functional Requirements
+    source: generated:functional
+    target: Functional-Requirements.md
+    platforms:
+      - github
+      - azure
+  - id: technical
+    title: Technical Requirements
+    source: generated:technical
+    target: Technical-Requirements.md
+    platforms:
+      - github
+      - azure
+  - id: testing
+    title: Testing Requirements
+    source: generated:testing
+    target: Testing-Requirements.md
+    platforms:
+      - github
+      - azure
+  - id: mapping
+    title: TR per FR Mapping
+    source: generated:mapping
+    target: TR-per-FR-Mapping.md
+    platforms:
+      - github
+      - azure
+  - id: matrix
+    title: Requirements Matrix
+    source: generated:matrix
+    target: Requirements-Matrix.md
+    platforms:
+      - github
+      - azure
+  - id: readme
+    title: McpServerManager Overview
+    source: README.md
+    target: McpServerManager-Overview.md
+    platforms:
+      - github
+      - azure
+  - id: director-requirements
+    title: Director Requirements
+    source: docs/Requirements-Director.md
+    target: Director-Requirements.md
+    platforms:
+      - github
+      - azure
+  - id: webui-requirements
+    title: Web UI Requirements
+    source: docs/Requirements-WebUI.md
+    target: Web-UI-Requirements.md
+    platforms:
+      - github
+      - azure
+  - id: android-crash-diagnostics
+    title: Android Crash Diagnostics Workflow
+    source: docs/android-crash-diagnostics-workflow.md
+    target: Android-Crash-Diagnostics-Workflow.md
+    platforms:
+      - github
+      - azure
+  - id: arch-di-convergence-diagram
+    title: DI Convergence Diagram
+    source: docs/architecture/DI-Deviation-Diagram.md
+    target: DI-Convergence-Diagram.md
+    platforms:
+      - github
+      - azure
+  - id: arch-di-convergence-matrix
+    title: DI Convergence Matrix
+    source: docs/architecture/DI-Deviation-Matrix.md
+    target: DI-Convergence-Matrix.md
+    platforms:
+      - github
+      - azure
+  - id: arch-mvvm-data-resolution
+    title: MVVM Data Resolution Pattern
+    source: docs/architecture/MVVM-DATA-RESOLUTION-PATTERN.md
+    target: MVVM-Data-Resolution-Pattern.md
+    platforms:
+      - github
+      - azure
+navigation:
+  - document: home
+  - document: functional
+  - document: technical
+  - document: testing
+  - document: mapping
+  - document: matrix
+  - title: Project Docs
+    path: Project-Docs
+    children:
+      - document: readme
+      - document: director-requirements
+      - document: webui-requirements
+      - document: android-crash-diagnostics
+  - title: Architecture
+    path: Architecture
+    children:
+      - document: arch-di-convergence-diagram
+      - document: arch-di-convergence-matrix
+      - document: arch-mvvm-data-resolution
+

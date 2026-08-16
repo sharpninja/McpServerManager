@@ -49,6 +49,11 @@ Scope: layer-1+
 - [ ] When the cached token is expired, the app deletes it and falls back to the normal login flow.
 - [ ] After identity-server login succeeds in a workspace, the token is saved in workspace-scoped shared auth storage for reuse by other apps.
 
+## FR-DEPS-UPGRADE-001 Dependencies current and mutually compatible
+
+All NuGet dependencies in McpServerManager are at the highest stable version mutually compatible with net10.0 targets and each other, per the locked table in the 2026-07-08 dependency upgrade plan. Holds (FluentAssertions 7.x license; latest-stable-only ceilings) are documented with reasons.
+Scope: layer-1+
+
 ## FR-E1-001 FR-E1-001
 
 Placeholder requirement backfilled for TODO link FR-E1-001.
@@ -77,6 +82,11 @@ Scope: layer-1+
 ## FR-GEN-001 Generate Document Test
 
 FR for document generation test
+Scope: layer-1+
+
+## FR-MCP-TRIAGE-002 FR-MCP-TRIAGE-002
+
+Placeholder requirement backfilled for TODO link FR-MCP-TRIAGE-002.
 Scope: layer-1+
 
 ## FR-RTUI-001 FR-RTUI-001

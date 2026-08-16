@@ -59,3 +59,4 @@ The WebUi NUKE deployment path shall package `McpServerManager.Web.Hybrid` as th
 ### TR-MCP-WEB-004 Test Coverage
 
 bUnit tests shall cover navigation with and without auth, workspace-specific TODO routes, triage table usage, filtering and sorting controls, and template test required-variable JSON behavior.
+

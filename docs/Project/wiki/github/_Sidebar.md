@@ -2,5 +2,14 @@
 - [Functional Requirements](Functional-Requirements)
 - [Technical Requirements](Technical-Requirements)
 - [Testing Requirements](Testing-Requirements)
-- [Traceability Mapping](TR-per-FR-Mapping)
+- [TR per FR Mapping](TR-per-FR-Mapping)
 - [Requirements Matrix](Requirements-Matrix)
+- Project Docs
+  - [McpServerManager Overview](McpServerManager-Overview)
+  - [Director Requirements](Director-Requirements)
+  - [Web UI Requirements](Web-UI-Requirements)
+  - [Android Crash Diagnostics Workflow](Android-Crash-Diagnostics-Workflow)
+- Architecture
+  - [DI Convergence Diagram](DI-Convergence-Diagram)
+  - [DI Convergence Matrix](DI-Convergence-Matrix)
+  - [MVVM Data Resolution Pattern](MVVM-Data-Resolution-Pattern)

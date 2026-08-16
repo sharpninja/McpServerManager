@@ -83,3 +83,4 @@ On WSL with WSLg enabled, the desktop app window should appear on the Windows de
 1. Confirm WSLg is available on the host.
 2. Run from the desktop project: `dotnet run --project src/McpServerManager.Desktop/McpServerManager.Desktop.csproj -c Debug`.
 3. Use the Windows taskbar to bring the WSLg-hosted window forward if it launched behind another window.
+
