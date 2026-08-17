@@ -14,7 +14,7 @@
             <p class="text-small color-fg-muted">@ViewModel.EditorTitle</p>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn" @onclick="LoadAsync">Refresh</button>
+            <button class="btn" @onclick="RefreshAsync">Refresh</button>
             <button class="btn btn-primary" disabled="@(!ViewModel.CanSaveDiagram || ViewModel.IsSaving)" @onclick="SaveAsync">Save Diagram</button>
         </div>
     </div>
@@ -57,7 +57,7 @@
                     {
                         var boundary = ViewModel.DiagramGraph.SystemBoundary;
                         <rect class="usecase-boundary @(SelectedItemId == boundary.Id ? "selected" : null)" x="@boundary.X" y="@boundary.Y" width="@boundary.Width" height="@boundary.Height" rx="6" @onclick="() => SelectBoundary(boundary.Id)" />
-                        <svg:text class="usecase-boundary-label" x="@(boundary.X + 14)" y="@(boundary.Y + 28)">@boundary.Label</svg:text>
+                        <svg:text class="usecase-boundary-label" x="@(boundary.X + 14)" y="@(boundary.Y + 28)" @onclick="() => SelectBoundary(boundary.Id)">@boundary.Label</svg:text>
                     }
                     @foreach (var edge in ViewModel.DiagramGraph.Edges)
                     {
@@ -109,7 +109,7 @@
                     <label class="form-group"><span class="form-label">Connect to</span><select class="form-select" @bind="EdgeTargetNodeId"><option value="">Select target</option>@foreach (var node in ViewModel.DiagramGraph.Nodes.Where(n => n.Id != SelectedNodeId)){<option value="@node.Id">@node.Label</option>}</select></label>
                     <button class="btn" @onclick="ApplySelectedNode">Apply</button>
                 }
-                @if (ViewModel.DiagramGraph.SystemBoundary is not null)
+                @if (SelectedBoundary is not null)
                 {
                     <label class="form-group"><span class="form-label">Boundary label</span><input class="form-control" @bind="BoundaryLabel" /></label>
                     <button class="btn" @onclick="ApplyBoundary">Apply boundary</button>
@@ -137,12 +137,33 @@
     private double SelectedNodeY { get; set; }
     private string? BoundaryLabel { get; set; }
     private UseCaseDiagramNode? SelectedNode => string.IsNullOrWhiteSpace(SelectedNodeId) ? null : FindNode(SelectedNodeId);
+    private UseCaseDiagramBoundary? SelectedBoundary => ViewModel.DiagramGraph.SystemBoundary is { } boundary && SelectedItemId == boundary.Id ? boundary : null;
+    private long? LoadedRouteUseCaseId { get; set; }
+    private string? LoadedRouteWorkspacePath { get; set; }
 
-    protected override Task OnParametersSetAsync() => LoadAsync();
+    protected override Task OnParametersSetAsync() => LoadAsync(force: false);
 
-    private async Task LoadAsync()
+    private Task RefreshAsync() => LoadAsync(force: true);
+
+    private async Task LoadAsync(bool force)
     {
+        var workspacePath = ViewModel.ActiveWorkspacePath;
+        if (!force
+            && ((LoadedRouteUseCaseId == UseCaseId && string.Equals(LoadedRouteWorkspacePath, workspacePath, StringComparison.Ordinal))
+                || ViewModel.IsDiagramLoadedFor(UseCaseId, workspacePath)))
+            return;
+
+        if (!force && ViewModel.HasDirtyDiagramFor(UseCaseId))
+        {
+            ViewModel.ErrorMessage = "Workspace changed. Save or reload the diagram before switching workspaces.";
+            return;
+        }
+
         await ViewModel.LoadDiagramAsync(UseCaseId).ConfigureAwait(true);
+        LoadedRouteUseCaseId = UseCaseId;
+        LoadedRouteWorkspacePath = workspacePath;
+        SelectedItemId = null;
+        SelectedNodeId = null;
         BoundaryLabel = ViewModel.DiagramGraph.SystemBoundary?.Label;
     }
 
@@ -163,6 +184,7 @@
     {
         SelectedItemId = id;
         SelectedNodeId = null;
+        BoundaryLabel = ViewModel.DiagramGraph.SystemBoundary?.Label;
     }
 
     private void SelectNode(string id)
@@ -198,8 +220,7 @@
         if (ViewModel.DiagramGraph.SystemBoundary is null || string.IsNullOrWhiteSpace(BoundaryLabel))
             return;
 
-        ViewModel.DiagramGraph.SystemBoundary.Label = BoundaryLabel.Trim();
-        ViewModel.DiagramDirty = true;
+        ViewModel.RenameSystemBoundary(BoundaryLabel);
     }
 
     private void AddEdge()

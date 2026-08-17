@@ -93,9 +93,25 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
 
     public bool HasSelectedUseCase => SelectedUseCase is not null;
 
-    public bool CanSaveDetail => HasSelectedUseCase && DetailDirty && ValidateDetail();
+    public bool IsDetailLoadedFor(long useCaseId, string? workspacePath)
+        => SelectedUseCase?.UseCaseId == useCaseId
+            && _loadedUseCaseId == useCaseId
+            && string.Equals(_loadedUseCaseWorkspacePath, workspacePath, StringComparison.Ordinal);
 
-    public bool CanSaveDiagram => HasSelectedUseCase && DiagramDirty && ValidateDiagram();
+    public bool HasDirtyDetailFor(long useCaseId)
+        => DetailDirty && SelectedUseCase?.UseCaseId == useCaseId && _loadedUseCaseId == useCaseId;
+
+    public bool IsDiagramLoadedFor(long useCaseId, string? workspacePath)
+        => SelectedUseCase?.UseCaseId == useCaseId
+            && _loadedDiagramUseCaseId == useCaseId
+            && string.Equals(_loadedDiagramWorkspacePath, workspacePath, StringComparison.Ordinal);
+
+    public bool HasDirtyDiagramFor(long useCaseId)
+        => DiagramDirty && SelectedUseCase?.UseCaseId == useCaseId && _loadedDiagramUseCaseId == useCaseId;
+
+    public bool CanSaveDetail => HasSelectedUseCase && DetailDirty && IsDetailValid();
+
+    public bool CanSaveDiagram => HasSelectedUseCase && DiagramDirty && IsDiagramValid();
 
     partial void OnSelectedUseCaseChanged(UseCaseDetail? value)
     {
@@ -185,8 +201,9 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
                 workspacePath,
                 ct).ConfigureAwait(true);
 
+            SelectedUseCase = created;
+            CaptureUseCaseIdentity(created.UseCaseId, workspacePath);
             SelectedUseCase = await ApplyApprovalAndProductAsync(created, requestedApprovalStatus, requestedProductKey, workspacePath, ct).ConfigureAwait(true);
-            CaptureUseCaseIdentity(SelectedUseCase.UseCaseId, workspacePath);
             DetailDirty = false;
             StatusMessage = $"Created use case {SelectedUseCase.UseCaseId}.";
         }, cancellationToken).ConfigureAwait(true);
@@ -244,7 +261,7 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
                 new AttachUseCaseActorRequest { Name = name.Trim(), Type = Normalize(type) ?? "Primary", IsPrimary = isPrimary },
                 workspacePath,
                 ct).ConfigureAwait(true);
-            await ReloadSelectedAsync(ct).ConfigureAwait(true);
+            await ReloadSelectedPreservingDirtyHeaderAsync(ct).ConfigureAwait(true);
             StatusMessage = "Actor added.";
         }, cancellationToken).ConfigureAwait(true);
     }
@@ -264,7 +281,7 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
                 new AddUseCaseFlowRequest { FlowType = Normalize(flowType) ?? "Basic", Name = Normalize(name) },
                 workspacePath,
                 ct).ConfigureAwait(true);
-            await ReloadSelectedAsync(ct).ConfigureAwait(true);
+            await ReloadSelectedPreservingDirtyHeaderAsync(ct).ConfigureAwait(true);
             StatusMessage = "Flow added.";
         }, cancellationToken).ConfigureAwait(true);
     }
@@ -285,7 +302,7 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
                 new AddUseCaseStepRequest { Action = action.Trim(), SystemResponse = Normalize(systemResponse) },
                 workspacePath,
                 ct).ConfigureAwait(true);
-            await ReloadSelectedAsync(ct).ConfigureAwait(true);
+            await ReloadSelectedPreservingDirtyHeaderAsync(ct).ConfigureAwait(true);
             StatusMessage = "Step added.";
         }, cancellationToken).ConfigureAwait(true);
     }
@@ -305,7 +322,7 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
                 new LinkUseCaseToFrRequest { FrId = frId.Trim(), LinkType = Normalize(linkType) ?? "Realizes" },
                 workspacePath,
                 ct).ConfigureAwait(true);
-            await ReloadSelectedAsync(ct).ConfigureAwait(true);
+            await ReloadSelectedPreservingDirtyHeaderAsync(ct).ConfigureAwait(true);
             StatusMessage = "Functional requirement linked.";
         }, cancellationToken).ConfigureAwait(true);
     }
@@ -321,13 +338,19 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
         await RunSaveAsync(async ct =>
         {
             await _service.UnlinkFrAsync(useCaseId, frId, workspacePath, ct).ConfigureAwait(true);
-            await ReloadSelectedAsync(ct).ConfigureAwait(true);
+            await ReloadSelectedPreservingDirtyHeaderAsync(ct).ConfigureAwait(true);
             StatusMessage = "Functional requirement unlinked.";
         }, cancellationToken).ConfigureAwait(true);
     }
 
     public async Task LoadDiagramAsync(long useCaseId, CancellationToken cancellationToken = default)
     {
+        if (HasDirtyDetailFor(useCaseId))
+        {
+            ErrorMessage = "Save or reload the use case before opening the diagram.";
+            return;
+        }
+
         await RunLoadAsync(async ct =>
         {
             var workspacePath = ActiveWorkspacePath;
@@ -346,6 +369,16 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
     public void EnsureSystemBoundary()
     {
         DiagramGraph.SystemBoundary ??= new UseCaseDiagramBoundary { Id = "system", Label = "System", X = 220, Y = 80, Width = 520, Height = 360 };
+        DiagramDirty = true;
+        OnPropertyChanged(nameof(CanSaveDiagram));
+    }
+
+    public void RenameSystemBoundary(string label)
+    {
+        if (DiagramGraph.SystemBoundary is null || string.IsNullOrWhiteSpace(label))
+            return;
+
+        DiagramGraph.SystemBoundary.Label = label.Trim();
         DiagramDirty = true;
         OnPropertyChanged(nameof(CanSaveDiagram));
     }
@@ -464,6 +497,16 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
         return current;
     }
 
+    private sealed record DetailEditorSnapshot(
+        string Title,
+        string? BriefDescription,
+        string? Precondition,
+        string? Postcondition,
+        string? Scope,
+        int Priority,
+        string ApprovalStatus,
+        string? ProductKey);
+
     private async Task ReloadSelectedAsync(CancellationToken cancellationToken)
     {
         if (!TryGetLoadedUseCaseIdentity(out var useCaseId, out var workspacePath))
@@ -472,6 +515,43 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
         SelectedUseCase = await _service.GetAsync(useCaseId, workspacePath, cancellationToken).ConfigureAwait(true);
         CaptureUseCaseIdentity(useCaseId, workspacePath);
         DetailDirty = false;
+    }
+
+    private async Task ReloadSelectedPreservingDirtyHeaderAsync(CancellationToken cancellationToken)
+    {
+        var snapshot = DetailDirty ? CaptureDetailEditorSnapshot() : null;
+
+        await ReloadSelectedAsync(cancellationToken).ConfigureAwait(true);
+
+        if (snapshot is not null)
+        {
+            RestoreDetailEditorSnapshot(snapshot);
+            DetailDirty = true;
+            OnPropertyChanged(nameof(CanSaveDetail));
+        }
+    }
+
+    private DetailEditorSnapshot CaptureDetailEditorSnapshot()
+        => new(
+            EditorTitle,
+            EditorBriefDescription,
+            EditorPrecondition,
+            EditorPostcondition,
+            EditorScope,
+            EditorPriority,
+            EditorApprovalStatus,
+            EditorProductKey);
+
+    private void RestoreDetailEditorSnapshot(DetailEditorSnapshot snapshot)
+    {
+        EditorTitle = snapshot.Title;
+        EditorBriefDescription = snapshot.BriefDescription;
+        EditorPrecondition = snapshot.Precondition;
+        EditorPostcondition = snapshot.Postcondition;
+        EditorScope = snapshot.Scope;
+        EditorPriority = snapshot.Priority;
+        EditorApprovalStatus = snapshot.ApprovalStatus;
+        EditorProductKey = snapshot.ProductKey;
     }
 
     private async Task RefreshDiagramPreviewAsync(long useCaseId, string? workspacePath, CancellationToken cancellationToken)
@@ -535,7 +615,6 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
             return true;
         }
 
-        ClearLoadedUseCaseState();
         ErrorMessage = "Workspace changed. Reload the use case before saving.";
         return false;
     }
@@ -552,7 +631,6 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
             return true;
         }
 
-        ClearLoadedUseCaseState();
         ErrorMessage = "Workspace changed. Reload the diagram before saving.";
         return false;
     }
@@ -626,24 +704,42 @@ public sealed partial class UseCaseDesignerViewModel : ObservableObject
     private bool ValidateDetail()
     {
         ValidationMessages.Clear();
+        AddDetailValidationMessages();
+        return ValidationMessages.Count == 0;
+    }
+
+    private bool IsDetailValid()
+        => !string.IsNullOrWhiteSpace(EditorTitle) && EditorPriority >= 0;
+
+    private void AddDetailValidationMessages()
+    {
         if (string.IsNullOrWhiteSpace(EditorTitle))
             ValidationMessages.Add("Title is required.");
         if (EditorPriority < 0)
             ValidationMessages.Add("Priority cannot be negative.");
-        return ValidationMessages.Count == 0;
     }
 
     private bool ValidateDiagram()
     {
         ValidationMessages.Clear();
+        AddDiagramValidationMessages();
+        return ValidationMessages.Count == 0;
+    }
+
+    private bool IsDiagramValid()
+    {
+        var nodeIds = DiagramGraph.Nodes.Select(n => n.Id).ToHashSet(StringComparer.Ordinal);
+        return DiagramGraph.Edges.All(edge => nodeIds.Contains(edge.Source) && nodeIds.Contains(edge.Target));
+    }
+
+    private void AddDiagramValidationMessages()
+    {
         var nodeIds = DiagramGraph.Nodes.Select(n => n.Id).ToHashSet(StringComparer.Ordinal);
         foreach (var edge in DiagramGraph.Edges)
         {
             if (!nodeIds.Contains(edge.Source) || !nodeIds.Contains(edge.Target))
                 ValidationMessages.Add($"Edge {edge.Id} references a missing node.");
         }
-
-        return ValidationMessages.Count == 0;
     }
 
     private void MarkDetailDirty()

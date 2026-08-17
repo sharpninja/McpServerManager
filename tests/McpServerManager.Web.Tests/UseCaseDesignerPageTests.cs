@@ -53,6 +53,23 @@ public sealed class UseCaseDesignerPageTests
     }
 
     [Fact]
+    public void UseCaseDetail_SameRouteRemountPreservesDirtyFields()
+    {
+        var service = new UseCaseServiceStub();
+        using var ctx = CreateContext(service);
+        var cut = ctx.Render<McpServerManager.Web.Pages.UseCases.UseCaseDetail>(parameters => parameters.Add(component => component.UseCaseId, 42));
+        cut.WaitForAssertion(() => Assert.Contains("Existing actor", cut.Markup, StringComparison.Ordinal));
+
+        cut.Find("input.form-control").Change("Unsaved checkout");
+        Assert.True(cut.FindAll("button").First(button => button.TextContent.Trim() == "Diagram").HasAttribute("disabled"));
+        var remounted = ctx.Render<McpServerManager.Web.Pages.UseCases.UseCaseDetail>(parameters => parameters.Add(component => component.UseCaseId, 42));
+        remounted.FindAll("button").First(button => button.TextContent.Trim() == "Save").Click();
+
+        remounted.WaitForAssertion(() => Assert.Equal("Unsaved checkout", service.LastUpdateRequest?.Title));
+        Assert.Equal(1, service.DetailLoadCount);
+    }
+
+    [Fact]
     public void UseCaseDiagram_RendersSvgDesignerAndSavesGraphEdits()
     {
         var service = new UseCaseServiceStub { Graph = new UseCaseDiagramGraph() };
@@ -69,12 +86,31 @@ public sealed class UseCaseDesignerPageTests
         cut.FindAll("g.usecase-node")[0].Click();
         cut.FindAll("select.form-select").Last().Change(service.Graph.Nodes[1].Id);
         cut.FindAll("button").First(button => button.TextContent.Trim() == "Connect").Click();
+        cut.Find(".usecase-boundary-label").Click();
+        cut.Find("input.form-control[value='System']").Change("Checkout System");
+        cut.FindAll("button").First(button => button.TextContent.Trim() == "Apply boundary").Click();
         cut.FindAll("button").First(button => button.TextContent.Trim() == "Save Diagram").Click();
 
         cut.WaitForAssertion(() => Assert.NotNull(service.SavedGraph));
         Assert.NotNull(service.SavedGraph!.SystemBoundary);
+        Assert.Equal("Checkout System", service.SavedGraph.SystemBoundary.Label);
         Assert.Equal(2, service.SavedGraph.Nodes.Count);
         Assert.Single(service.SavedGraph.Edges);
+    }
+
+    [Fact]
+    public void UseCaseDiagram_SameRouteRemountPreservesDirtyGraph()
+    {
+        var service = new UseCaseServiceStub { Graph = new UseCaseDiagramGraph() };
+        using var ctx = CreateContext(service);
+        var cut = ctx.Render<McpServerManager.Web.Pages.UseCases.UseCaseDiagram>(parameters => parameters.Add(component => component.UseCaseId, 42));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("svg.usecase-svg-canvas")));
+
+        cut.FindAll("button").First(button => button.TextContent.Trim() == "Actor").Click();
+        var remounted = ctx.Render<McpServerManager.Web.Pages.UseCases.UseCaseDiagram>(parameters => parameters.Add(component => component.UseCaseId, 42));
+
+        Assert.Equal(1, service.GraphLoadCount);
+        Assert.Single(remounted.FindAll("g.usecase-node"));
     }
 
     [Fact]
@@ -117,6 +153,8 @@ public sealed class UseCaseDesignerPageTests
         public LinkUseCaseToFrRequest? LastFrLinkRequest { get; private set; }
         public UseCaseDiagramGraph Graph { get; set; } = CreateGraph();
         public UseCaseDiagramGraph? SavedGraph { get; private set; }
+        public int DetailLoadCount { get; private set; }
+        public int GraphLoadCount { get; private set; }
         public bool ThrowOnGraphLoad { get; set; }
 
         public Task<IReadOnlyList<UseCaseSummary>> ListAsync(string? title, string? workspacePath, CancellationToken cancellationToken = default)
@@ -130,6 +168,7 @@ public sealed class UseCaseDesignerPageTests
         public Task<UseCaseDetail> GetAsync(long useCaseId, string? workspacePath, CancellationToken cancellationToken = default)
         {
             LastWorkspacePath = workspacePath;
+            DetailLoadCount++;
             return Task.FromResult(CreateDetail(useCaseId));
         }
 
@@ -178,6 +217,7 @@ public sealed class UseCaseDesignerPageTests
 
         public Task<UseCaseDiagramGraph> GetDiagramGraphAsync(long useCaseId, string? workspacePath, CancellationToken cancellationToken = default)
         {
+            GraphLoadCount++;
             if (ThrowOnGraphLoad)
                 throw new InvalidOperationException("graph unavailable");
             return Task.FromResult(Graph);

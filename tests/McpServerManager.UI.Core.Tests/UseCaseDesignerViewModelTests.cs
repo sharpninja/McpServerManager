@@ -82,6 +82,7 @@ public sealed class UseCaseDesignerViewModelTests
             .Returns(Task.FromResult(new UseCaseFrLink { FrId = "FR-SEARCH-001" }));
         var vm = CreateViewModel(service);
         await vm.LoadDetailAsync(3);
+        vm.EditorTitle = "Unsaved search";
 
         await vm.AddActorAsync("User", "Primary", true);
         await vm.AddFlowAsync("Basic", "Main");
@@ -94,6 +95,8 @@ public sealed class UseCaseDesignerViewModelTests
         await service.Received(1).AddStepAsync(3, 2, Arg.Is<AddUseCaseStepRequest>(r => r.Action == "Search"), WorkspacePath, Arg.Any<CancellationToken>());
         await service.Received(1).LinkFrAsync(3, Arg.Is<LinkUseCaseToFrRequest>(r => r.FrId == "FR-SEARCH-001"), WorkspacePath, Arg.Any<CancellationToken>());
         await service.Received(1).UnlinkFrAsync(3, "FR-SEARCH-001", WorkspacePath, Arg.Any<CancellationToken>());
+        Assert.Equal("Unsaved search", vm.EditorTitle);
+        Assert.True(vm.DetailDirty);
     }
 
     [Fact]
@@ -207,6 +210,52 @@ public sealed class UseCaseDesignerViewModelTests
     }
 
     [Fact]
+    public async Task CreateAsync_WhenApprovalFails_ReturnsCreatedIdWithoutDuplicatingOnRetry()
+    {
+        var service = Substitute.For<IUseCaseService>();
+        service.CreateAsync(Arg.Any<CreateUseCaseRequest>(), WorkspacePath, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new UseCaseDetail { UseCaseId = 33, Title = "Create", ApprovalStatus = "Draft" }));
+        service.SetApprovalAsync(33, Arg.Any<SetUseCaseApprovalRequest>(), WorkspacePath, Arg.Any<CancellationToken>())
+            .Returns<Task<UseCaseDetail>>(_ => throw new InvalidOperationException("approval failed"));
+        var vm = CreateViewModel(service);
+        vm.StartNewUseCase();
+        vm.EditorTitle = "Create";
+        vm.EditorApprovalStatus = "Approved";
+
+        var createdId = await vm.CreateAsync();
+
+        Assert.Equal(33, createdId);
+        Assert.NotNull(vm.SelectedUseCase);
+        Assert.Equal(33, vm.SelectedUseCase.UseCaseId);
+        Assert.Contains("approval failed", vm.ErrorMessage, StringComparison.Ordinal);
+        await service.Received(1).CreateAsync(Arg.Any<CreateUseCaseRequest>(), WorkspacePath, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CanSaveDiagram_DoesNotMutateValidationMessages()
+    {
+        var service = Substitute.For<IUseCaseService>();
+        service.GetAsync(5, WorkspacePath, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new UseCaseDetail { UseCaseId = 5, Title = "Login", ApprovalStatus = "Draft" }));
+        service.GetDiagramGraphAsync(5, WorkspacePath, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new UseCaseDiagramGraph
+            {
+                Edges = [new UseCaseDiagramEdge { Id = "edge-1", Type = "association", Source = "missing-source", Target = "missing-target" }]
+            }));
+        service.GetDiagramAsync(5, "mermaid", WorkspacePath, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new UseCaseDiagram { UseCaseId = 5, Format = "mermaid", Content = "diagram" }));
+        var vm = CreateViewModel(service);
+        await vm.LoadDiagramAsync(5);
+        vm.ValidationMessages.Add("existing message");
+        vm.AddDiagramNode("actor", 10, 10);
+
+        var canSave = vm.CanSaveDiagram;
+
+        Assert.False(canSave);
+        Assert.Equal(["existing message"], vm.ValidationMessages);
+    }
+
+    [Fact]
     public async Task SaveDetailAsync_WhenWorkspaceChanges_RefusesStaleSave()
     {
         var service = Substitute.For<IUseCaseService>();
@@ -221,7 +270,9 @@ public sealed class UseCaseDesignerViewModelTests
         await vm.SaveDetailAsync();
 
         await service.DidNotReceive().UpdateAsync(Arg.Any<long>(), Arg.Any<UpdateUseCaseRequest>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
-        Assert.Null(vm.SelectedUseCase);
+        Assert.NotNull(vm.SelectedUseCase);
+        Assert.Equal("Changed", vm.EditorTitle);
+        Assert.True(vm.DetailDirty);
         Assert.Contains("Workspace changed", vm.ErrorMessage, StringComparison.Ordinal);
     }
 
@@ -261,6 +312,24 @@ public sealed class UseCaseDesignerViewModelTests
     }
 
     [Fact]
+    public async Task LoadDiagramAsync_WhenDetailIsDirty_RefusesToOverwriteDetailEdits()
+    {
+        var service = Substitute.For<IUseCaseService>();
+        service.GetAsync(9, WorkspacePath, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new UseCaseDetail { UseCaseId = 9, Title = "Existing", ApprovalStatus = "Draft" }));
+        var vm = CreateViewModel(service);
+        await vm.LoadDetailAsync(9);
+        vm.EditorTitle = "Unsaved title";
+
+        await vm.LoadDiagramAsync(9);
+
+        await service.DidNotReceive().GetDiagramGraphAsync(Arg.Any<long>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+        Assert.Equal("Unsaved title", vm.EditorTitle);
+        Assert.True(vm.DetailDirty);
+        Assert.Contains("Save or reload", vm.ErrorMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SaveDiagramAsync_WhenWorkspaceChanges_RefusesStaleSave()
     {
         var service = Substitute.For<IUseCaseService>();
@@ -279,7 +348,8 @@ public sealed class UseCaseDesignerViewModelTests
         await vm.SaveDiagramAsync();
 
         await service.DidNotReceive().PutDiagramGraphAsync(Arg.Any<long>(), Arg.Any<UseCaseDiagramGraph>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
-        Assert.Null(vm.SelectedUseCase);
+        Assert.NotNull(vm.SelectedUseCase);
+        Assert.True(vm.DiagramDirty);
         Assert.Contains("Workspace changed", vm.ErrorMessage, StringComparison.Ordinal);
     }
 
@@ -303,7 +373,9 @@ public sealed class UseCaseDesignerViewModelTests
         await vm.SaveDiagramAsync();
 
         await service.DidNotReceive().PutDiagramGraphAsync(Arg.Any<long>(), Arg.Any<UseCaseDiagramGraph>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
-        Assert.Empty(vm.DiagramGraph.Nodes);
+        Assert.NotEmpty(vm.DiagramGraph.Nodes);
+        Assert.True(vm.DiagramDirty);
+        Assert.Contains("Workspace changed", vm.ErrorMessage, StringComparison.Ordinal);
     }
     private static UseCaseDesignerViewModel CreateViewModel(IUseCaseService service)
         => new(service, new WorkspaceContextViewModel { ActiveWorkspacePath = WorkspacePath }, NullLogger<UseCaseDesignerViewModel>.Instance);

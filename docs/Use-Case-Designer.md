@@ -33,8 +33,10 @@ Supported diagram operations:
 
 ## State And Validation
 
-Save actions are disabled unless the detail or diagram is dirty and valid. Failed saves preserve local edits and display an actionable error. The shared view model tracks the loaded use-case ID and workspace for detail and diagram saves; if the workspace or loaded identity changes before a save, the stale state is cleared and the user must reload before writing.
+Save actions are disabled unless the detail or diagram is dirty and valid. Failed saves preserve local edits and display an actionable error. The shared view model tracks the loaded use-case ID and workspace for detail and diagram saves; if the workspace or loaded identity changes before a save, the save is refused without clearing the in-progress edit so the user can save or intentionally reload.
+
+Detail and diagram pages also reuse the shared view-model identity when Razor components remount. Same-route remounts do not reload over dirty edits, child actor/flow/step/FR-link operations preserve dirty header fields, and diagram navigation is blocked while detail edits are dirty.
 
 ## Test Coverage
 
-Current tests cover list/detail/diagram loading, create/update, approval and product assignment, actor/flow/step/FR-link operations, graph add/move/rename/connect/delete/save, stale workspace save refusal, graph load failure behavior, and anonymous route redirects for use-case list, create, detail, and diagram routes.
+Current tests cover list/detail/diagram loading, create/update, approval and product assignment, actor/flow/step/FR-link operations, graph add/move/rename/connect/delete/save, boundary label editing, stale workspace save refusal, graph load failure behavior, dirty detail and diagram remount preservation, partial create failure preservation, validation-message side effects, and anonymous route redirects for use-case list, create, detail, and diagram routes.

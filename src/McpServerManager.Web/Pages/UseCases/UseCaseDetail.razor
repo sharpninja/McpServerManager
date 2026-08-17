@@ -16,9 +16,9 @@
         <div class="d-flex gap-2">
             @if (!IsNew)
             {
-                <button class="btn" @onclick="OpenDiagram">Diagram</button>
+                <button class="btn" disabled="@ViewModel.DetailDirty" @onclick="OpenDiagram">Diagram</button>
             }
-            <button class="btn btn-primary" disabled="@(ViewModel.IsSaving || string.IsNullOrWhiteSpace(ViewModel.EditorTitle))" @onclick="SaveAsync">Save</button>
+            <button class="btn btn-primary" disabled="@SaveDisabled" @onclick="SaveAsync">Save</button>
         </div>
     </div>
 
@@ -142,7 +142,11 @@
     public long? UseCaseId { get; set; }
 
     private bool IsNew => UseCaseId is null;
+    private bool SaveDisabled => ViewModel.IsSaving || (IsNew ? string.IsNullOrWhiteSpace(ViewModel.EditorTitle) : !ViewModel.CanSaveDetail);
     private string WorkspaceLabel => string.IsNullOrWhiteSpace(ViewModel.ActiveWorkspacePath) ? "control" : ViewModel.ActiveWorkspacePath;
+    private long? LoadedRouteUseCaseId { get; set; }
+    private string? LoadedRouteWorkspacePath { get; set; }
+    private bool NewRouteInitialized { get; set; }
     private string? NewActorName { get; set; }
     private string NewActorType { get; set; } = "Primary";
     private bool NewActorPrimary { get; set; } = true;
@@ -155,13 +159,30 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        var workspacePath = ViewModel.ActiveWorkspacePath;
         if (UseCaseId is { } id)
         {
+            if ((LoadedRouteUseCaseId == id && string.Equals(LoadedRouteWorkspacePath, workspacePath, StringComparison.Ordinal))
+                || ViewModel.IsDetailLoadedFor(id, workspacePath))
+                return;
+
+            if (ViewModel.HasDirtyDetailFor(id))
+            {
+                ViewModel.ErrorMessage = "Workspace changed. Save or reload the use case before switching workspaces.";
+                return;
+            }
+
             await ViewModel.LoadDetailAsync(id).ConfigureAwait(true);
+            LoadedRouteUseCaseId = id;
+            LoadedRouteWorkspacePath = workspacePath;
+            NewRouteInitialized = false;
         }
-        else
+        else if (!NewRouteInitialized || !string.Equals(LoadedRouteWorkspacePath, workspacePath, StringComparison.Ordinal))
         {
             ViewModel.StartNewUseCase();
+            LoadedRouteUseCaseId = null;
+            LoadedRouteWorkspacePath = workspacePath;
+            NewRouteInitialized = true;
         }
     }
 
@@ -195,6 +216,12 @@
 
     private void OpenDiagram()
     {
+        if (ViewModel.DetailDirty)
+        {
+            ViewModel.ErrorMessage = "Save or reload the use case before opening the diagram.";
+            return;
+        }
+
         if (UseCaseId is { } id)
             Navigation.NavigateTo($"/usecases/{id}/diagram");
     }
