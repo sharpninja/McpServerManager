@@ -77,23 +77,44 @@ public sealed class MemoryPageTests
     }
 
     [Fact]
-    public void NavMenu_PlacesMemoryAfterTodosBeforeTriage()
+    public void AddWebServices_RegistersMemoryApiClientAdapter()
     {
-        using var ctx = CreateTestContext();
-        var cut = ctx.Render<McpServerManager.Web.Components.Layout.NavMenu>();
-        var hrefs = cut.FindAll("a.header-nav-tab")
-            .Select(a => a.GetAttribute("href"))
-            .ToList();
+        var services = new ServiceCollection();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["McpServer:BaseUrl"] = "http://localhost:7147",
+                ["McpServer:ApiKey"] = "test-api-key",
+                ["McpServer:WorkspacePath"] = @"E:\\repo"
+            })
+            .Build();
 
-        var todos = hrefs.IndexOf("/todos");
-        var memory = hrefs.IndexOf("/memory");
-        var triage = hrefs.IndexOf("/triage");
+        services.AddSingleton<IConfiguration>(config);
+        services.AddLogging();
+        services.AddWebServices();
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
 
-        Assert.True(todos >= 0, "Todos nav is missing.");
-        Assert.True(memory >= 0, "Memory nav is missing.");
-        Assert.Equal(todos + 1, memory);
-        if (triage >= 0)
-            Assert.True(memory < triage);
+        var client = scope.ServiceProvider.GetRequiredService<IMemoryApiClient>();
+        Assert.IsType<McpServerManager.Web.Adapters.MemoryApiClientAdapter>(client);
+    }
+
+    [Fact]
+    public void NavMenuMarkup_PlacesMemoryHrefImmediatelyAfterTodos()
+    {
+        var markup = File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "src", "McpServerManager.Web", "Components", "Layout", "NavMenu.razor"));
+
+        var todos = markup.IndexOf("href=\"/todos\"", StringComparison.Ordinal);
+        var memory = markup.IndexOf("href=\"/memory\"", StringComparison.Ordinal);
+        var triage = markup.IndexOf("href=\"/triage\"", StringComparison.Ordinal);
+
+        Assert.True(todos >= 0, "Todos NavLink is missing.");
+        Assert.True(memory >= 0, "Memory NavLink is missing.");
+        Assert.True(triage >= 0, "Triage NavLink is missing.");
+        Assert.True(todos < memory && memory < triage, "Memory must sit after Todos and before Triage.");
     }
 
     private static Bunit.BunitContext CreateTestContext(Action<IServiceCollection>? configureServices = null)

@@ -10,7 +10,7 @@ public sealed class MemoryScreenWiringTests
     [Fact]
     public void MemoryScreen_CanBeConstructed_WithListAndDetailViewModels()
     {
-        Assert.Equal(typeof(MemoryScreen).Namespace, "McpServerManager.Director.Screens");
+        Assert.Equal("McpServerManager.Director.Screens", typeof(MemoryScreen).Namespace);
         Assert.Contains(
             typeof(MemoryScreen).GetConstructors().SelectMany(c => c.GetParameters().Select(p => p.ParameterType.Name)),
             name => name is "MemoryListViewModel" or "MemoryDetailViewModel");

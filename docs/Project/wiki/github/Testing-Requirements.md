@@ -12,6 +12,17 @@ Cover valid cached token reuse, expired token deletion, new token persistence af
 - [ ] Tests prove newly obtained tokens are cached when a workspace is active.
 
 
+## TEST-MANAGER-MEMORY
+
+### TEST-MANAGER-MEMORY-001
+
+Cover Memory contracts, Viewer auth allow/deny for all five verbs (AC16), handler/dispatcher routing, list/detail ViewModels, Director tab-after-Sessions wiring, and Web `/memory` pages plus NavLink-after-Todos.
+
+**Acceptance Criteria:**
+- [x] UI.Core tests cover messages, mapper (no expectedVersion), handlers, Viewer deny/allow, and ViewModels.
+- [x] Director tests cover Memory tab order after Sessions and Viewer five-verb policy.
+- [x] Web tests cover list/detail render, display-only version, adapter DI, and NavLink order.
+
 ## TEST-TRIAGE
 
 ### TEST-TRIAGE-001

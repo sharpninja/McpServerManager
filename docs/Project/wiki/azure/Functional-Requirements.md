@@ -217,6 +217,24 @@ Scope: layer-1+
 MCP Web triage dashboard must let users select multiple triage rows or groups and move/consolidate them into report groups without leaving the triage page.
 Scope: layer-1+
 
+## FR-MANAGER-MEMORY-001 Director Memory tab
+
+Director SHALL expose workspace Memory (`GET/POST /mcpserver/memory`, `GET/PUT/DELETE /mcpserver/memory/{id}`) on a Viewer tab placed immediately after Sessions. Surfaces list/get/add/update/remove. Version is display-only. No Operator role and no expectedVersion/OCC.
+Scope: layer-1+
+**Acceptance Criteria:**
+- [x] Director Memory tab is registered after Sessions and is Viewer-visible.
+- [x] List/get/add/update/remove route through `IMemoryApiClient` and UI.Core handlers.
+- [x] Version is display-only; update never sends expectedVersion.
+
+## FR-MANAGER-MEMORY-002 Web Memory pages
+
+Mcp-Web SHALL expose Viewer-accessible Memory pages at `/memory` and `/memory/{Id}` with a NavLink after Todos and before Triage. Surfaces list/get/add/update/remove. Version is display-only. No Operator role and no expectedVersion/OCC.
+Scope: layer-1+
+**Acceptance Criteria:**
+- [x] `/memory` and `/memory/{Id}` pages render list/detail/add/update/remove.
+- [x] NavLink `/memory` sits after `/todos` and before `/triage`.
+- [x] Auth-contract tests cover all five verbs as Viewer with no Operator strings.
+
 ## FR-VM-CQRS-ANDROIDVOICE-001 Android voice host-composed services
 
 Android voice views must obtain speech recognition, text-to-speech, audio focus, and wake word services from host composition instead of constructing platform services directly.

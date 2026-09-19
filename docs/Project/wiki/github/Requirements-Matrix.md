@@ -36,6 +36,8 @@ Traceability policy: see `Requirements-Traceability-Policy.md`.
 | FR-RTUI-117 | Tracked | Functional-Requirements.md |
 | FR-TEST-001 | Tracked | Functional-Requirements.md |
 | FR-TEST-002 | Tracked | Functional-Requirements.md |
+| FR-MANAGER-MEMORY-001 | Tracked | Functional-Requirements.md |
+| FR-MANAGER-MEMORY-002 | Tracked | Functional-Requirements.md |
 | FR-TRIAGE-001 | Tracked | Functional-Requirements.md |
 | FR-TRIAGE-002 | Tracked | Functional-Requirements.md |
 | FR-WEB-001 | Tracked | Functional-Requirements.md |
@@ -80,6 +82,8 @@ Traceability policy: see `Requirements-Traceability-Policy.md`.
 | TR-RTUI-126 | Tracked | Technical-Requirements.md |
 | TR-RTUI-127 | Tracked | Technical-Requirements.md |
 | TR-RTUI-128 | Tracked | Technical-Requirements.md |
+| TR-MANAGER-MEMORY-001 | Tracked | Technical-Requirements.md |
+| TR-MANAGER-MEMORY-002 | Tracked | Technical-Requirements.md |
 | TR-TEST-001 | Tracked | Technical-Requirements.md |
 | TR-TRIAGE-ACTIONS-001 | Tracked | Technical-Requirements.md |
 | TR-TRIAGE-CLIENT-001 | Tracked | Technical-Requirements.md |
@@ -87,6 +91,7 @@ Traceability policy: see `Requirements-Traceability-Policy.md`.
 | TR-WEB-HYBRID-TOOL-001 | Tracked | Technical-Requirements.md |
 | TR-WEB-NAV-001 | Tracked | Technical-Requirements.md |
 | TEST-AUTH-CACHE-001 | Tracked | Testing-Requirements.md |
+| TEST-MANAGER-MEMORY-001 | Tracked | Testing-Requirements.md |
 | TEST-TRIAGE-001 | Tracked | Testing-Requirements.md |
 | TEST-TRIAGE-002 | Tracked | Testing-Requirements.md |
 | TEST-WEB-001 | Tracked | Testing-Requirements.md |

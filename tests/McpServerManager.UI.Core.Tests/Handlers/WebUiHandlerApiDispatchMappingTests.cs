@@ -19,6 +19,18 @@ public sealed class WebUiHandlerApiDispatchMappingTests
         todoApi.GetTodoAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((TodoDetail?)null);
 
+        var memoryApi = Substitute.For<IMemoryApiClient>();
+        memoryApi.ListMemoriesAsync(Arg.Any<ListMemoriesQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new ListMemoriesResult([], 0));
+        memoryApi.GetMemoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((MemoryDetail?)null);
+        memoryApi.AddMemoryAsync(Arg.Any<AddMemoryCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new MemoryMutationOutcome(true, null, null));
+        memoryApi.UpdateMemoryAsync(Arg.Any<UpdateMemoryCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new MemoryMutationOutcome(true, null, null));
+        memoryApi.RemoveMemoryAsync(Arg.Any<RemoveMemoryCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new MemoryMutationOutcome(true, null, null));
+
         var sessionApi = Substitute.For<ISessionLogApiClient>();
         sessionApi.ListSessionLogsAsync(Arg.Any<ListSessionLogsQuery>(), Arg.Any<CancellationToken>())
             .Returns(new ListSessionLogsResult([], 0, 20, 0));
@@ -60,6 +72,7 @@ public sealed class WebUiHandlerApiDispatchMappingTests
         using var host = UiCoreTestHost.Create(services =>
         {
             services.AddSingleton(todoApi);
+            services.AddSingleton(memoryApi);
             services.AddSingleton(sessionApi);
             services.AddSingleton(templateApi);
             services.AddSingleton(contextApi);
@@ -73,6 +86,11 @@ public sealed class WebUiHandlerApiDispatchMappingTests
 
         await dispatcher.QueryAsync(new ListTodosQuery());
         await dispatcher.QueryAsync(new GetTodoQuery("TODO-001"));
+        await dispatcher.QueryAsync(new ListMemoriesQuery());
+        await dispatcher.QueryAsync(new GetMemoryQuery("mem-1"));
+        await dispatcher.SendAsync(new AddMemoryCommand { Category = "prefs", Text = "remember this" });
+        await dispatcher.SendAsync(new UpdateMemoryCommand { MemoryId = "mem-1", Text = "updated" });
+        await dispatcher.SendAsync(new RemoveMemoryCommand { MemoryId = "mem-1" });
         await dispatcher.QueryAsync(new ListSessionLogsQuery());
         await dispatcher.QueryAsync(new GetSessionLogQuery("session-1"));
         await dispatcher.QueryAsync(new ListTemplatesQuery());
@@ -89,6 +107,11 @@ public sealed class WebUiHandlerApiDispatchMappingTests
 
         await todoApi.Received(1).ListTodosAsync(Arg.Any<ListTodosQuery>(), Arg.Any<CancellationToken>());
         await todoApi.Received(1).GetTodoAsync("TODO-001", Arg.Any<CancellationToken>());
+        await memoryApi.Received(1).ListMemoriesAsync(Arg.Any<ListMemoriesQuery>(), Arg.Any<CancellationToken>());
+        await memoryApi.Received(1).GetMemoryAsync("mem-1", Arg.Any<CancellationToken>());
+        await memoryApi.Received(1).AddMemoryAsync(Arg.Any<AddMemoryCommand>(), Arg.Any<CancellationToken>());
+        await memoryApi.Received(1).UpdateMemoryAsync(Arg.Any<UpdateMemoryCommand>(), Arg.Any<CancellationToken>());
+        await memoryApi.Received(1).RemoveMemoryAsync(Arg.Any<RemoveMemoryCommand>(), Arg.Any<CancellationToken>());
         await sessionApi.Received(1).ListSessionLogsAsync(Arg.Any<ListSessionLogsQuery>(), Arg.Any<CancellationToken>());
         await sessionApi.Received(1).GetSessionLogAsync("session-1", Arg.Any<CancellationToken>());
         await templateApi.Received(1).ListTemplatesAsync(Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());

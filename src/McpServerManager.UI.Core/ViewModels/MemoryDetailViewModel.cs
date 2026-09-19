@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using McpServer.Cqrs;
+using McpServer.Cqrs.Mvvm;
 using McpServerManager.UI.Core.Authorization;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.ViewModels.Base;

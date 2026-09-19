@@ -17,9 +17,10 @@ This matrix shows current-state UI presence and identifies omissions where the c
 ## Coverage Summary
 
 - Refreshed against live swagger at `http://PAYTON-DESKTOP:7147/swagger/v1/swagger.json` on `2026-03-03`.
-- `38` UI.Core handler types currently exist across `10` endpoint domains.
-- `35 / 138` distinct HTTP operations currently have at least one UI.Core handler path.
-- This matrix currently records `28` complete RelayCommand use cases and `9` active omission rows.
+- Memory domain refreshed 2026-09-19 for PLAN-MANAGER-MEMORY-UI-001 (`5 / 5` HTTP ops covered; Director TUI + Mcp-Web wired).
+- `38` UI.Core handler types currently exist across `10` endpoint domains (pre-Memory snapshot; Memory adds five dedicated handlers).
+- `35 / 138` distinct HTTP operations currently have at least one UI.Core handler path (pre-Memory snapshot; Memory adds five covered ops).
+- This matrix currently records `33` complete RelayCommand use cases and `9` active omission rows.
 - Session-log list/detail use cases share one swagger `GET /mcpserver/sessionlog` operation, so use-case totals and distinct HTTP-operation totals do not match one-to-one.
 
 ## Endpoint-Domain Coverage Snapshot
