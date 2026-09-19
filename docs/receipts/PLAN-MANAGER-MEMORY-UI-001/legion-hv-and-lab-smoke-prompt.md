@@ -1,78 +1,91 @@
-# Codex / Legion prompt — live HV + lab smoke for PLAN-MANAGER-MEMORY-UI-001
+# Codex / Legion prompt — live HV H-done + lab smoke
 
-Copy this prompt onto **PAYTON-LEGION2** (or any host with a valid `AGENTS-README-FIRST.yaml` and running MCP). Do not run this as a substitute on a VM that lacks `/health`.
+**Host:** PAYTON-LEGION2 (or any machine with a valid `AGENTS-README-FIRST.yaml` and a live MCP).  
+**Do not run this on the Cloud VM.** That VM has no marker and `/health` on `:7147` is connection-refused.
+
+**Hard rules**
+
+- Do **not** invent AGREE scores.
+- Do **not** publish add-profile / operator profile content.
+- Do **not** set MCP TODO `PLAN-MANAGER-MEMORY-UI-001` `done: true` unless live hostile **OverallVerdict = AGREE** with **accuracy ≥ 98** and **completeness ≥ 98**, plus request jsonl + response jsonl + the full session-log verdict body on disk.
 
 ---
 
-You are completing PLAN-MANAGER-MEMORY-UI-001 on `sharpninja/McpServerManager` after PR #7 (Memory UI). **Do not invent AGREE scores. Do not publish add-profile / operator profile content. Do not set MCP TODO `done: true` unless live hostile OverallVerdict is AGREE with accuracy≥98 and completeness≥98.**
+Paste everything below the line into Codex on Legion.
 
-## Preconditions
+---
 
-1. Read workspace `AGENTS-README-FIRST.yaml` (gitignored marker) for `baseUrl` and `apiKey`.
-2. `GET {baseUrl}/health` and keep the JSON body (nonce/status). If health fails, **stop**. Write a blocker receipt. Do not fake HV.
-3. `POST {baseUrl}/mcpserver/sessionlog` for this turn (`Add-McpSessionTurn` / `McpSession.psm1`). Keep the session id.
+You are closing PLAN-MANAGER-MEMORY-UI-001 on `sharpninja/McpServerManager`.
+
+Cloud VM already confirmed:
+
+- `origin/main` tip **`e1636b34545c0b3af428f59df202a18ee23ec3e5`** = merge of PR #7 (`Merge pull request #7 from sharpninja/cursor/memory-ui-839a`).
+- Focused Memory tests on that SHA: UI.Core **22** passed, Director **2** passed, Web **4** passed; Failed 0, Skipped 0.
+- Live HV was **not** run on the Cloud VM (no `AGENTS-README-FIRST.yaml`; `curl` to `http://127.0.0.1:7147/health` failed connect).
+- Follow-up PR #8 (`cursor/memory-completion-839a`) has workspace-reload / failed-load fixes + receipts. Merge it only if you want those on main before HV; HV claim may target `e1636b3` or a later main tip if you merge #8 first.
+
+## 1. Session bootstrap
+
+1. Read `AGENTS-README-FIRST.yaml` for `baseUrl` and `apiKey`.
+2. `GET {baseUrl}/health` — keep the JSON (status/nonce). If this fails, **stop** and write a blocker. Do not fake HV.
+3. `POST {baseUrl}/mcpserver/sessionlog` (`Add-McpSessionTurn` / `McpSession.psm1`). Keep session id.
 4. `GET {baseUrl}/mcpserver/sessionlog?limit=5`
-5. `GET {baseUrl}/mcpserver/todo` and find `PLAN-MANAGER-MEMORY-UI-001` (do not mark done yet).
+5. `GET {baseUrl}/mcpserver/todo` — locate `PLAN-MANAGER-MEMORY-UI-001`. Do not mark done yet.
 
-## Confirm merge tip
+## 2. Confirm main tip
 
 ```powershell
 git fetch origin main
 git checkout main
 git pull origin main
+git rev-parse HEAD
 git log -1 --oneline
 ```
 
-Focused tests (Failed 0, Skipped 0 required):
+Re-run if you want a Legion receipt (Failed 0 / Skipped 0 required):
 
 ```powershell
-$env:PATH = "$env:USERPROFILE\.dotnet;$env:USERPROFILE\.dotnet\tools;$env:PATH"
 dotnet test tests/McpServerManager.UI.Core.Tests --filter "FullyQualifiedName~Memory" -p:NuGetAudit=false --nologo
 dotnet test tests/McpServerManager.Director.Tests --filter "FullyQualifiedName~Memory" -p:NuGetAudit=false --nologo
 dotnet test tests/McpServerManager.Web.Tests --filter "FullyQualifiedName~Memory" -p:NuGetAudit=false --nologo
 ```
 
-## Lab smoke (memory-enabled workspace)
+## 3. Lab smoke (live workspace — this VM cannot do Director/Web GUI)
 
-Using `McpServerClient.Memory` or HTTP (`X-Api-Key`, `X-Workspace-Path` from marker):
+Use marker `X-Api-Key` + `X-Workspace-Path` (or `McpServerClient.Memory`). Do not use operator/add-profile content.
 
-| Step | Call | Pass if |
+| Verb | Call | Pass |
 | --- | --- | --- |
 | list | `GET /mcpserver/memory` (omit scope = Effective) | 200 + items/totalCount |
-| get | `GET /mcpserver/memory/{id}` | 200 + version field present |
-| add | `POST /mcpserver/memory` `{ category, text, scope }` id `PLAN-MEMORY-SMOKE-001` | 200/201 success |
-| update | `PUT /mcpserver/memory/{id}` `{ text }` only | 200; **no** `expectedVersion` in request |
-| remove | `DELETE /mcpserver/memory/{id}` | 200; subsequent get 404 |
+| get | `GET /mcpserver/memory/{id}` | 200; `version` present (display-only) |
+| add | `POST /mcpserver/memory` `{ id, category, text, scope }` id `PLAN-MEMORY-SMOKE-001` | 200/201 success |
+| update | `PUT /mcpserver/memory/{id}` `{ text }` only | 200; request has **no** `expectedVersion` |
+| remove | `DELETE /mcpserver/memory/{id}` | 200; later get 404 |
 
-Also click/smoke Director Memory tab (after Sessions) and Web `/memory` (NavLink after Todos, before Triage). Version is display-only.
+Then GUI on Legion: Director Memory tab **after Sessions**; Web `/memory` NavLink **after Todos, before Triage**; detail version labeled display only.
 
-Write `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/lab-smoke-live.md` with statuses, ids, versions.
+Write `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/lab-smoke-live.md` with HTTP statuses, ids, versions.
 
-## Live hostile H-done (required)
+## 4. Live hostile H-done (required for done:true)
 
-Run the **standard hostile HV / AGREE** pipeline used in this workspace (same tool that emits OverallVerdict). Target claim:
+Run the workspace **hostile HV / AGREE** tool (the one that emits `OverallVerdict`). Claim:
 
-> Director + Mcp-Web expose Viewer Memory list/get/add/update/remove per PLAN-MANAGER-MEMORY-UI-001 DoD; D4 Viewer; D11 version display-only; D6 client ≥1.3.1 MemoryClient; AC16 five-verb Viewer tests; no Operator; no OCC; PR merged to main.
+> Director + Mcp-Web expose Viewer Memory list/get/add/update/remove per PLAN-MANAGER-MEMORY-UI-001 DoD on main (`e1636b3` or current main tip). D4 Viewer; D11 version display-only; D6 SharpNinja.McpServer.Client ≥1.3.1 MemoryClient; AC16 five-verb Viewer tests; no Operator; no OCC.
 
-Requirements:
+Persist under `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/hv/`:
 
-- Hostile stance (find faults; do not rubber-stamp)
-- Persist **request jsonl** and **response jsonl** under `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/hv/`
-- Persist the **full session-log verdict body** (the sessionlog entry that contains OverallVerdict)
-- OverallVerdict must be **AGREE**
-- accuracy ≥ 98
-- completeness ≥ 98
+- `request.jsonl`
+- `response.jsonl`
+- `sessionlog-verdict.json` (full session-log entry containing OverallVerdict)
 
-If OverallVerdict is not AGREE, or scores are below 98, **do not** mark the TODO done. File findings and fix on a `cursor/…-839a` branch.
+Gate: OverallVerdict **AGREE**, accuracy ≥ 98, completeness ≥ 98. If not, fix on `cursor/<name>-839a` and do **not** mark the TODO done.
 
-## Only after live AGREE
+## 5. Only after that gate
 
 ```powershell
 Import-Module ./McpTodo.psm1
 Initialize-McpSession
-Complete-McpTodo -Id "PLAN-MANAGER-MEMORY-UI-001" -DoneSummary "Merged Memory UI to main; live HV AGREE accuracy/completeness ≥98; lab smoke list/get/add/update/remove recorded."
+Complete-McpTodo -Id "PLAN-MANAGER-MEMORY-UI-001" -DoneSummary "main e1636b3 (PR #7); live HV AGREE accuracy/completeness ≥98; lab smoke list/get/add/update/remove in lab-smoke-live.md"
 ```
 
-Attach HV jsonl paths and lab-smoke-live.md path in the session-log Response.
-
-If MCP TODO write fails after a valid live AGREE, leave `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/awaiting-mcp-done-write.md` updated with HV paths and the exact TODO PUT error.
+Attach the three HV files + `lab-smoke-live.md` in the session-log Response.
