@@ -48,6 +48,7 @@ internal static class DirectorServiceRegistration
             options.SessionLogClient = new SessionLogApiClientAdapter(directorContext);
             options.WorkspaceClient = new WorkspaceApiClientAdapter(directorContext);
             options.TodoClient = new TodoApiClientAdapter(directorContext);
+            options.MemoryClient = new MemoryApiClientAdapter(directorContext);
             options.VoiceClient = new VoiceApiClientAdapter(directorContext);
             options.EventStreamClient = new EventStreamApiClientAdapter(directorContext);
         });

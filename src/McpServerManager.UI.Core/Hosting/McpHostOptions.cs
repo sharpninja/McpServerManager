@@ -28,6 +28,10 @@ public sealed class McpHostOptions
 
     public Func<IServiceProvider, ITodoApiClient>? TodoClientFactory { get; set; }
 
+    public IMemoryApiClient? MemoryClient { get; set; }
+
+    public Func<IServiceProvider, IMemoryApiClient>? MemoryClientFactory { get; set; }
+
     public IWorkspaceApiClient? WorkspaceClient { get; set; }
 
     public Func<IServiceProvider, IWorkspaceApiClient>? WorkspaceClientFactory { get; set; }

@@ -1,0 +1,265 @@
+@page "/memory/{MemoryId}"
+
+@inject MemoryDetailViewModel ViewModel
+@inject MemoryListViewModel ListViewModel
+@inject IAuthorizationPolicyService AuthPolicy
+@inject WebCommandTarget CommandTarget
+@inject WorkspaceContextViewModel WorkspaceContext
+@inject NavigationManager Navigation
+
+<PageTitle>Memory Detail</PageTitle>
+
+<div class="detail-layout">
+    <aside class="detail-sidebar">
+        <div class="sidebar-header">
+            <span>Memories</span>
+            <a class="btn btn-sm" href="@GetNewHref()">Add</a>
+        </div>
+        @foreach (var item in ListViewModel?.Items ?? [])
+        {
+            <a class="sidebar-item @(string.Equals(item.Id, MemoryId, StringComparison.Ordinal) ? "active" : "")"
+               href="@GetDetailHref(item.Id)">
+                <span class="color-fg-muted f6">@item.Category · @item.Scope</span>
+                <br />@item.Id
+            </a>
+        }
+    </aside>
+
+    <div class="detail-main">
+        <DetailItemToolbar Items="GetNavigationItems()"
+                           CurrentKey="@MemoryId"
+                           ItemTypeLabel="Memory"
+                           AriaLabel="Memory item navigation" />
+
+        @if (string.IsNullOrWhiteSpace(MemoryId))
+        {
+            <PrimerBlankslate Heading="No memory selected" Description="Choose a memory from the sidebar." />
+        }
+        else if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage) && !IsNew)
+        {
+            <PrimerFlash Variant="danger" Title="Failed to load memory">@ViewModel.ErrorMessage</PrimerFlash>
+        }
+        else if (ViewModel.IsBusy && ViewModel.Detail is null && !IsNew)
+        {
+            <p class="color-fg-muted">Loading memory details...</p>
+        }
+        else if (ViewModel.Detail is null && !IsNew)
+        {
+            <PrimerBlankslate Heading="Memory not found" Description="The requested memory could not be loaded." />
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(ViewModel.StatusMessage) &&
+                 (ViewModel.StatusMessage.Contains("Saved", StringComparison.OrdinalIgnoreCase) ||
+                  ViewModel.StatusMessage.Contains("Added", StringComparison.OrdinalIgnoreCase)))
+            {
+                <PrimerFlash Variant="success" Title="Success">@ViewModel.StatusMessage</PrimerFlash>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+            {
+                <PrimerFlash Variant="danger" Title="Save failed">@ViewModel.ErrorMessage</PrimerFlash>
+            }
+
+            <div class="Box detail-card-section">
+                <div class="Box-header detail-card-section__header">
+                    <span class="h3 mb-0">@(IsNew ? "New memory" : ViewModel.Detail?.Id)</span>
+                    @if (CanMutate)
+                    {
+                        <div class="detail-card-expander__actions">
+                            <button class="btn btn-primary btn-sm" @onclick="SaveAsync" disabled="@ViewModel.IsBusy">Save</button>
+                            @if (!IsNew)
+                            {
+                                <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@ViewModel.IsBusy">Remove</button>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="Box-body">
+                    <div class="detail-field-grid">
+                        <div>
+                            <label class="text-small text-bold d-block">ID</label>
+                            @if (IsNew)
+                            {
+                                <input class="form-control width-full" placeholder="optional" @bind="ViewModel.EditorId" />
+                            }
+                            else
+                            {
+                                <code>@ViewModel.EditorId</code>
+                            }
+                        </div>
+                        <div>
+                            <label class="text-small text-bold d-block">Category</label>
+                            <input class="form-control width-full" @bind="ViewModel.EditorCategory" disabled="@(!CanMutate)" />
+                        </div>
+                        <div>
+                            <label class="text-small text-bold d-block">Scope</label>
+                            <select class="form-select width-full" @bind="ViewModel.EditorScope" disabled="@(!CanMutate)">
+                                <option value="@MemoryScope.Workspace">Workspace</option>
+                                <option value="@MemoryScope.Global">Global</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-small text-bold d-block">Version</label>
+                            <span>@(ViewModel.DisplayVersion?.ToString() ?? (IsNew ? "(new)" : "-")) <span class="color-fg-muted">(display only)</span></span>
+                        </div>
+                        <div>
+                            <label class="text-small text-bold d-block">Updated</label>
+                            <span>@(ViewModel.Detail?.UpdatedAtUtc.ToString("u") ?? "-")</span>
+                        </div>
+                        <div>
+                            <label class="text-small text-bold d-block">Updated by</label>
+                            <input class="form-control width-full" @bind="ViewModel.EditorUpdatedBy" disabled="@(!CanMutate)" />
+                        </div>
+                        <div class="detail-field--wide">
+                            <label class="text-small text-bold d-block">Text</label>
+                            <textarea class="form-control width-full" rows="10" @bind="ViewModel.EditorText" disabled="@(!CanMutate)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string MemoryId { get; set; } = string.Empty;
+
+    [SupplyParameterFromQuery]
+    public string? Scope { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Category { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Keyword { get; set; }
+
+    [SupplyParameterFromQuery(Name = "workspacePath")]
+    public string? WorkspacePath { get; set; }
+
+    private string? _loadedMemoryId;
+    private string? _lastFilterKey;
+
+    private bool IsNew => string.Equals(MemoryId, "new", StringComparison.OrdinalIgnoreCase);
+
+    private bool CanMutate => IsNew
+        ? AuthPolicy.CanExecuteAction(McpServerManager.UI.Core.Authorization.McpActionKeys.MemoryAdd)
+        : AuthPolicy.CanExecuteAction(McpServerManager.UI.Core.Authorization.McpActionKeys.MemoryUpdate);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ApplyWorkspaceFromQuery();
+
+        var filterKey = $"{Scope}|{Category}|{Keyword}|{WorkspacePath}";
+        if (!string.Equals(filterKey, _lastFilterKey, StringComparison.Ordinal))
+        {
+            _lastFilterKey = filterKey;
+            await CommandTarget.RunAsync(async () =>
+            {
+                ListViewModel.Scope = ParseScope(Scope);
+                ListViewModel.Category = Category;
+                ListViewModel.Keyword = Keyword;
+                await ListViewModel.LoadAsync().ConfigureAwait(true);
+            }).ConfigureAwait(true);
+        }
+
+        if (string.Equals(_loadedMemoryId, MemoryId, StringComparison.Ordinal))
+            return;
+
+        _loadedMemoryId = MemoryId;
+        await CommandTarget.RunAsync(async () =>
+        {
+            if (IsNew)
+            {
+                ViewModel.BeginNewDraft();
+                return;
+            }
+
+            await ViewModel.LoadAsync(MemoryId).ConfigureAwait(true);
+            ViewModel.PopulateEditorFromDetail();
+        }).ConfigureAwait(true);
+    }
+
+    private async Task SaveAsync()
+    {
+        await CommandTarget.RunAsync(async () =>
+        {
+            var ok = await ViewModel.SaveAsync().ConfigureAwait(true);
+            if (ok && ViewModel.Detail is not null && IsNew)
+                Navigation.NavigateTo(GetDetailHref(ViewModel.Detail.Id));
+        }).ConfigureAwait(true);
+    }
+
+    private async Task DeleteAsync()
+    {
+        await CommandTarget.RunAsync(async () =>
+        {
+            var ok = await ViewModel.DeleteAsync().ConfigureAwait(true);
+            if (ok)
+                Navigation.NavigateTo(GetListHref());
+        }).ConfigureAwait(true);
+    }
+
+    private string GetDetailHref(string memoryId)
+    {
+        var qs = BuildFilterQueryString();
+        return string.IsNullOrEmpty(qs)
+            ? $"/memory/{Uri.EscapeDataString(memoryId)}"
+            : $"/memory/{Uri.EscapeDataString(memoryId)}?{qs}";
+    }
+
+    private string GetNewHref()
+    {
+        var qs = BuildFilterQueryString();
+        return string.IsNullOrEmpty(qs) ? "/memory/new" : $"/memory/new?{qs}";
+    }
+
+    private string GetListHref()
+    {
+        var qs = BuildFilterQueryString();
+        return string.IsNullOrEmpty(qs) ? "/memory" : $"/memory?{qs}";
+    }
+
+    private IReadOnlyList<DetailNavigationItem> GetNavigationItems()
+        => (ListViewModel?.Items ?? [])
+            .Select(item => new DetailNavigationItem(
+                item.Id,
+                GetDetailHref(item.Id),
+                item.Id,
+                $"{item.Category} · {item.Scope}"))
+            .ToArray();
+
+    private void ApplyWorkspaceFromQuery()
+    {
+        if (string.IsNullOrWhiteSpace(WorkspacePath))
+            return;
+
+        var normalized = WorkspacePath.Trim();
+        if (!string.Equals(WorkspaceContext.ActiveWorkspacePath, normalized, StringComparison.Ordinal))
+            WorkspaceContext.ActiveWorkspacePath = normalized;
+    }
+
+    private static MemoryScope? ParseScope(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            string.Equals(value.Trim(), "Effective", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return Enum.TryParse<MemoryScope>(value.Trim(), ignoreCase: true, out var parsed)
+            ? parsed
+            : null;
+    }
+
+    private string BuildFilterQueryString()
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(WorkspacePath)) parts.Add($"workspacePath={Uri.EscapeDataString(WorkspacePath)}");
+        if (!string.IsNullOrWhiteSpace(Scope)) parts.Add($"scope={Uri.EscapeDataString(Scope)}");
+        if (!string.IsNullOrWhiteSpace(Category)) parts.Add($"category={Uri.EscapeDataString(Category)}");
+        if (!string.IsNullOrWhiteSpace(Keyword)) parts.Add($"keyword={Uri.EscapeDataString(Keyword)}");
+        return string.Join("&", parts);
+    }
+}

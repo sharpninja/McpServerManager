@@ -17,9 +17,10 @@ This matrix shows current-state UI presence and identifies omissions where the c
 ## Coverage Summary
 
 - Refreshed against live swagger at `http://PAYTON-DESKTOP:7147/swagger/v1/swagger.json` on `2026-03-03`.
-- `38` UI.Core handler types currently exist across `10` endpoint domains.
-- `35 / 138` distinct HTTP operations currently have at least one UI.Core handler path.
-- This matrix currently records `28` complete RelayCommand use cases and `9` active omission rows.
+- Memory domain refreshed 2026-09-19 for PLAN-MANAGER-MEMORY-UI-001 (`5 / 5` HTTP ops covered; Director TUI + Mcp-Web wired).
+- `38` UI.Core handler types currently exist across `10` endpoint domains (pre-Memory snapshot; Memory adds five dedicated handlers).
+- `35 / 138` distinct HTTP operations currently have at least one UI.Core handler path (pre-Memory snapshot; Memory adds five covered ops).
+- This matrix currently records `33` complete RelayCommand use cases and `9` active omission rows.
 - Session-log list/detail use cases share one swagger `GET /mcpserver/sessionlog` operation, so use-case totals and distinct HTTP-operation totals do not match one-to-one.
 
 ## Endpoint-Domain Coverage Snapshot
@@ -33,6 +34,7 @@ This matrix shows current-state UI presence and identifies omissions where the c
 | `sessionlog` | `3` | `1` | Read-only `GET /mcpserver/sessionlog` is covered; append/dialog POST flows are not. |
 | `templates` | `8` | `6` | `resolve` and ad-hoc `/templates/test` remain uncovered. |
 | `todo` | `13` | `9` | Move + queued prompt operations remain uncovered. |
+| `memory` | `5` | `5` | List/get/add/update/remove covered via `IMemoryApiClient` and Memory* handlers (PLAN-MANAGER-MEMORY-UI-001). Version is display-only (D11). |
 | `tunnel` | `7` | `6` | Direct provider-status query remains uncovered. |
 | `workspace` | `11` | `4` | Create/delete/status/start/stop/global-prompt operations remain uncovered. |
 | `requirements` | `20` | `0` | No UI.Core handler coverage yet. |
@@ -52,6 +54,7 @@ This matrix shows current-state UI presence and identifies omissions where the c
 | Endpoint Group | Expected UI.Core RelayCommand Surface for Blazor | Current Blazor Status |
 | --- | --- | --- |
 | TODO | `TodoListViewModel.RefreshCommand`, `TodoDetailViewModel.*Command` | Not yet wired in RequestTracker |
+| Memory | `MemoryListViewModel.RefreshCommand`, `MemoryDetailViewModel.Load/Save/Delete` | Wired in Mcp-Web `/memory` and `/memory/{Id}` |
 | Workspace | `WorkspaceListViewModel.RefreshCommand`, `WorkspaceDetailViewModel.GetWorkspaceCommand`, `WorkspacePolicyViewModel.SaveCommand`, `HealthSnapshotsViewModel.InitializeWorkspaceCommand` | Not yet wired in RequestTracker; parity is still blocked by missing shared create/delete/status/start/stop/global-prompt/workspace-health flows |
 | SessionLog | `SessionLogListViewModel.RefreshCommand`, `SessionLogDetailViewModel.LoadCommand` | Not yet wired in RequestTracker |
 | Health | `HealthSnapshotsViewModel.CheckHealthCommand` | Not yet wired in RequestTracker |
@@ -62,6 +65,11 @@ This matrix shows current-state UI presence and identifies omissions where the c
 
 | Endpoint Group | User Use Case | UI Tags | RelayCommand (ViewModel) | Handler | ViewModel Mutation |
 | --- | --- | --- | --- | --- | --- |
+| Memory | List memories (`GET /mcpserver/memory`) | `[TUI, Blazor]` | `MemoryListViewModel.RefreshCommand` | `ListMemoriesQueryHandler` | `SetItems(...)`, `StatusMessage`, `IsLoading` |
+| Memory | Get memory (`GET /mcpserver/memory/{id}`) | `[TUI, Blazor]` | `MemoryDetailViewModel.LoadAsync` | `GetMemoryQueryHandler` | `Detail`, editor fields, `DisplayVersion` |
+| Memory | Add memory (`POST /mcpserver/memory`) | `[TUI, Blazor]` | `MemoryDetailViewModel.SaveAsync` (draft) | `AddMemoryCommandHandler` | `Detail`, `IsNewDraft`, `StatusMessage` |
+| Memory | Update memory (`PUT /mcpserver/memory/{id}`) | `[TUI, Blazor]` | `MemoryDetailViewModel.SaveAsync` | `UpdateMemoryCommandHandler` | `Detail`, editor fields, version display-only |
+| Memory | Remove memory (`DELETE /mcpserver/memory/{id}`) | `[TUI, Blazor]` | `MemoryDetailViewModel.DeleteAsync` | `RemoveMemoryCommandHandler` | `BeginNewDraft()`, `StatusMessage` |
 | TODO | List TODOs (`GET /mcpserver/todo`) | `[Phone, Tablet, Desktop, TUI]` | `TodoListViewModel.RefreshCommand` | `ListTodosQueryHandler` | `SetItems(...)`, `StatusMessage`, `IsLoading` |
 | TODO | Get TODO detail (`GET /mcpserver/todo/{id}`) | `[Phone, Tablet, Desktop, TUI]` | `TodoDetailViewModel.LoadCommand` | `GetTodoQueryHandler` | `Detail`, `ApplyDetailToEditor(...)`, `IsNewDraft`, `StatusMessage` |
 | TODO | Create TODO (`POST /mcpserver/todo`) | `[Tablet, Desktop, TUI]` | `TodoDetailViewModel.CreateCommand` | `CreateTodoCommandHandler` | `Detail`, `TodoId`, editor fields, `MutationMessage` |

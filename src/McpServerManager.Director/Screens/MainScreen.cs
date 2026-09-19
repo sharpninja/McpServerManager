@@ -29,6 +29,8 @@ internal sealed class MainScreen : Window
     private readonly SessionLogDetailViewModel _sessionLogDetailVm;
     private readonly TodoListViewModel _todoVm;
     private readonly TodoDetailViewModel _todoDetailVm;
+    private readonly MemoryListViewModel _memoryVm;
+    private readonly MemoryDetailViewModel _memoryDetailVm;
     private readonly WorkspaceListViewModel _workspaceListVm;
     private readonly WorkspaceDetailViewModel _workspaceDetailVm;
     private readonly WorkspacePolicyViewModel _workspacePolicyVm;
@@ -82,6 +84,8 @@ internal sealed class MainScreen : Window
         SessionLogDetailViewModel sessionLogDetailVm,
         TodoListViewModel todoVm,
         TodoDetailViewModel todoDetailVm,
+        MemoryListViewModel memoryVm,
+        MemoryDetailViewModel memoryDetailVm,
         TunnelListViewModel tunnelListVm,
         TemplateListViewModel templateListVm,
         TemplateDetailViewModel templateDetailVm,
@@ -125,6 +129,8 @@ internal sealed class MainScreen : Window
         _sessionLogDetailVm = sessionLogDetailVm;
         _todoVm = todoVm;
         _todoDetailVm = todoDetailVm;
+        _memoryVm = memoryVm;
+        _memoryDetailVm = memoryDetailVm;
         _workspaceListVm = workspaceListVm;
         _workspaceDetailVm = workspaceDetailVm;
         _workspacePolicyVm = workspacePolicyVm;
@@ -198,6 +204,13 @@ internal sealed class MainScreen : Window
             "Sessions",
             McpRoles.Viewer,
             _ => new SessionLogScreen(_sessionLogVm, _sessionLogDetailVm),
+            HasWorkspaceOrControl));
+
+        _tabRegistry.RegisterTab(new TabRegistration(
+            McpArea.Memory,
+            "Memory",
+            McpRoles.Viewer,
+            _ => new MemoryScreen(_memoryVm, _memoryDetailVm),
             HasWorkspaceOrControl));
 
         _tabRegistry.RegisterTab(new TabRegistration(

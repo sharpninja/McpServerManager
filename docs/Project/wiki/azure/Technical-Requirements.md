@@ -253,6 +253,16 @@ Scope: layer-1+
 **TR-RTUI-128** — Placeholder requirement backfilled by DB-FK-001.
 Scope: layer-1+
 
+## TR-MANAGER-MEMORY-001
+
+**Director Memory CQRS + Viewer auth** — Memory list/get/add/update/remove SHALL use UI.Core messages, handlers, and `IMemoryApiClient` with Viewer action keys (`memory.list|get|add|update|remove`). Version is display-only. Hosts adapt `McpServerClient.Memory` from `SharpNinja.McpServer.Client` ≥1.3.1.
+Scope: layer-1+
+
+## TR-MANAGER-MEMORY-002
+
+**Web Memory routes and nav placement** — Mcp-Web SHALL register `/memory` and `/memory/{Id}` pages and a NavLink immediately after Todos and before Triage. DI SHALL bind `IMemoryApiClient` to the Web `MemoryApiClientAdapter`.
+Scope: layer-1+
+
 ## TR-TEST-001
 
 **TR-TEST-001** — Placeholder requirement backfilled for TODO link TR-TEST-001.

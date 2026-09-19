@@ -90,6 +90,21 @@ public static class McpActionKeys
     /// <summary>TODO plan prompt generation action.</summary>
     public const string TodoPromptPlan = "todo.prompt.plan";
 
+    /// <summary>Memory list query action.</summary>
+    public const string MemoryList = "memory.list";
+
+    /// <summary>Memory detail query action.</summary>
+    public const string MemoryGet = "memory.get";
+
+    /// <summary>Memory add action.</summary>
+    public const string MemoryAdd = "memory.add";
+
+    /// <summary>Memory update action.</summary>
+    public const string MemoryUpdate = "memory.update";
+
+    /// <summary>Memory remove action.</summary>
+    public const string MemoryRemove = "memory.remove";
+
     /// <summary>Repo list action.</summary>
     public const string RepoList = "repo.list";
 

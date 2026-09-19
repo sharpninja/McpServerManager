@@ -21,6 +21,7 @@ public sealed class MainScreenTabOrderingTests
         [
             "TODO",
             "Sessions",
+            "Memory",
             "Agents",
             "Agent Pool",
             "Triage",
@@ -55,6 +56,7 @@ public sealed class MainScreenTabOrderingTests
         [
             "TODO",
             "Sessions",
+            "Memory",
             "Agents",
             "Agent Pool",
             "Triage",
@@ -85,6 +87,7 @@ public sealed class MainScreenTabOrderingTests
         [
             "TODO",
             "Sessions",
+            "Memory",
             "Triage",
             "Tunnels",
             "Templates",
@@ -109,6 +112,7 @@ public sealed class MainScreenTabOrderingTests
         [
             new(McpArea.Todo, "TODO", McpRoles.Viewer, _ => new object(), HasWorkspaceOrControl),
             new(McpArea.SessionLogs, "Sessions", McpRoles.Viewer, _ => new object(), HasWorkspaceOrControl),
+            new(McpArea.Memory, "Memory", McpRoles.Viewer, _ => new object(), HasWorkspaceOrControl),
             new(McpArea.Health, "Health", McpRoles.Viewer, _ => new object(), HasControlConnection, TabPlacementGroup.NonWorkspaceTrailing),
             new(McpArea.Workspaces, "Workspaces", McpRoles.Admin, _ => new object(), HasControlConnection, TabPlacementGroup.NonWorkspaceTrailing),
             new(McpArea.Agents, "Agents", McpRoles.AgentManager, _ => new object(), HasWorkspaceOrControl),
