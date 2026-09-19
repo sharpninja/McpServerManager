@@ -62,6 +62,7 @@ public sealed partial class MemoryDetailViewModel : AreaDetailViewModelBase<Memo
 
             if (!result.IsSuccess)
             {
+                ResetAfterFailedLoad();
                 ErrorMessage = result.Error ?? "Unknown error loading memory.";
                 StatusMessage = "Memory load failed.";
                 return;
@@ -71,7 +72,9 @@ public sealed partial class MemoryDetailViewModel : AreaDetailViewModelBase<Memo
             LastUpdatedAt = DateTimeOffset.UtcNow;
             if (result.Value is null)
             {
+                ResetAfterFailedLoad();
                 StatusMessage = "Memory not found.";
+                ErrorMessage = "Memory not found.";
                 return;
             }
 
@@ -81,6 +84,7 @@ public sealed partial class MemoryDetailViewModel : AreaDetailViewModelBase<Memo
         catch (Exception ex)
         {
             _logger.LogError("{ExceptionDetail}", ex.ToString());
+            ResetAfterFailedLoad();
             ErrorMessage = ex.Message;
             StatusMessage = "Memory load failed.";
         }
@@ -202,15 +206,29 @@ public sealed partial class MemoryDetailViewModel : AreaDetailViewModelBase<Memo
     /// <summary>Clears the editor and begins a new memory draft.</summary>
     public void BeginNewDraft()
     {
-        Detail = null;
+        ClearEditorFields();
         IsNewDraft = true;
+        StatusMessage = "New memory draft.";
+        ErrorMessage = null;
+    }
+
+    /// <summary>
+    /// Drops stale detail/editor state after a failed or missing load so Save cannot mutate the previous memory.
+    /// </summary>
+    private void ResetAfterFailedLoad()
+    {
+        ClearEditorFields();
+        IsNewDraft = false;
+    }
+
+    private void ClearEditorFields()
+    {
+        Detail = null;
         EditorId = "";
         EditorCategory = "";
         EditorScope = MemoryScope.Workspace;
         EditorText = "";
         EditorUpdatedBy = "";
-        StatusMessage = "New memory draft.";
-        ErrorMessage = null;
     }
 
     /// <summary>Populates editor fields from the currently loaded detail. Version stays display-only.</summary>

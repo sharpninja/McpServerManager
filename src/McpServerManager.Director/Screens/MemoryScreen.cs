@@ -235,7 +235,9 @@ internal sealed class MemoryScreen : View
                 _ = Task.Run(async () =>
                 {
                     await _detailVm.LoadAsync(selected.Id).ConfigureAwait(true);
-                    _detailVm.PopulateEditorFromDetail();
+                    if (!string.Equals(_detailVm.Detail?.Id, selected.Id, StringComparison.Ordinal))
+                        return;
+
                     Application.Invoke(() => OpenEditorDialog(isNew: false));
                 });
                 return;

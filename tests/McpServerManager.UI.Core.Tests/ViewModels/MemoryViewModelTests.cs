@@ -111,4 +111,46 @@ public sealed class MemoryViewModelTests
         Assert.True(viewModel.IsNewDraft);
         Assert.Null(viewModel.Detail);
     }
+
+    [Fact]
+    public async Task MemoryDetailViewModel_LoadAsync_WhenGetFails_ClearsStaleEditor()
+    {
+        var api = Substitute.For<IMemoryApiClient>();
+        api.GetMemoryAsync("mem-1", Arg.Any<CancellationToken>()).Returns(Sample);
+        api.GetMemoryAsync("mem-2", Arg.Any<CancellationToken>())
+            .Returns<MemoryDetail?>(_ => throw new InvalidOperationException("workspace missing"));
+
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(api));
+        var viewModel = host.GetRequiredService<MemoryDetailViewModel>();
+        await viewModel.LoadAsync("mem-1");
+        Assert.Equal("remember this", viewModel.EditorText);
+
+        await viewModel.LoadAsync("mem-2");
+
+        Assert.Null(viewModel.Detail);
+        Assert.False(viewModel.IsNewDraft);
+        Assert.Equal("", viewModel.EditorId);
+        Assert.Equal("", viewModel.EditorText);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.ErrorMessage));
+        Assert.Equal("Memory load failed.", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task MemoryDetailViewModel_LoadAsync_WhenNotFound_ClearsStaleEditor()
+    {
+        var api = Substitute.For<IMemoryApiClient>();
+        api.GetMemoryAsync("mem-1", Arg.Any<CancellationToken>()).Returns(Sample);
+        api.GetMemoryAsync("mem-missing", Arg.Any<CancellationToken>()).Returns((MemoryDetail?)null);
+
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(api));
+        var viewModel = host.GetRequiredService<MemoryDetailViewModel>();
+        await viewModel.LoadAsync("mem-1");
+
+        await viewModel.LoadAsync("mem-missing");
+
+        Assert.Null(viewModel.Detail);
+        Assert.False(viewModel.IsNewDraft);
+        Assert.Equal("", viewModel.EditorText);
+        Assert.Equal("Memory not found.", viewModel.ErrorMessage);
+    }
 }
