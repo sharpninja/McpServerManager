@@ -77,6 +77,19 @@ public sealed class MemoryPageTests
     }
 
     [Fact]
+    public void MemoryDetailMarkup_ReloadKeyIncludesWorkspaceAndMemoryId()
+    {
+        var markup = File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "src", "McpServerManager.Web", "Pages", "Memory", "MemoryDetail.razor"));
+
+        Assert.Contains("_loadedDetailKey", markup, StringComparison.Ordinal);
+        Assert.Contains("WorkspaceContext.ActiveWorkspacePath}|{MemoryId}", markup, StringComparison.Ordinal);
+        Assert.Contains("if (string.Equals(ViewModel.Detail?.Id, MemoryId, StringComparison.Ordinal))", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AddWebServices_RegistersMemoryApiClientAdapter()
     {
         var services = new ServiceCollection();

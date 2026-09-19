@@ -138,7 +138,7 @@
     [SupplyParameterFromQuery(Name = "workspacePath")]
     public string? WorkspacePath { get; set; }
 
-    private string? _loadedMemoryId;
+    private string? _loadedDetailKey;
     private string? _lastFilterKey;
 
     private bool IsNew => string.Equals(MemoryId, "new", StringComparison.OrdinalIgnoreCase);
@@ -164,10 +164,11 @@
             }).ConfigureAwait(true);
         }
 
-        if (string.Equals(_loadedMemoryId, MemoryId, StringComparison.Ordinal))
+        var detailKey = $"{WorkspaceContext.ActiveWorkspacePath}|{MemoryId}";
+        if (string.Equals(_loadedDetailKey, detailKey, StringComparison.Ordinal))
             return;
 
-        _loadedMemoryId = MemoryId;
+        _loadedDetailKey = detailKey;
         await CommandTarget.RunAsync(async () =>
         {
             if (IsNew)
@@ -177,7 +178,8 @@
             }
 
             await ViewModel.LoadAsync(MemoryId).ConfigureAwait(true);
-            ViewModel.PopulateEditorFromDetail();
+            if (string.Equals(ViewModel.Detail?.Id, MemoryId, StringComparison.Ordinal))
+                ViewModel.PopulateEditorFromDetail();
         }).ConfigureAwait(true);
     }
 

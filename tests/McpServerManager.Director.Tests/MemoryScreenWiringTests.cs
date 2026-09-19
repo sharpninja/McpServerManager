@@ -14,6 +14,11 @@ public sealed class MemoryScreenWiringTests
         Assert.Contains(
             typeof(MemoryScreen).GetConstructors().SelectMany(c => c.GetParameters().Select(p => p.ParameterType.Name)),
             name => name is "MemoryListViewModel" or "MemoryDetailViewModel");
+        var source = File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "src", "McpServerManager.Director", "Screens", "MemoryScreen.cs"));
+        Assert.Contains("if (!string.Equals(_detailVm.Detail?.Id, selected.Id, StringComparison.Ordinal))", source, StringComparison.Ordinal);
     }
 
     [Fact]
