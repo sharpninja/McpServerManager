@@ -19,18 +19,21 @@ public sealed class McpHostBuilderExtensionsTests
         var services = new ServiceCollection();
         var commandTarget = Substitute.For<ICommandTarget>();
         var todoClient = Substitute.For<ITodoApiClient>();
+        var memoryClient = Substitute.For<IMemoryApiClient>();
         var workspaceClient = Substitute.For<IWorkspaceApiClient>();
 
         services.AddMcpHost(options =>
         {
             options.CommandTarget = commandTarget;
             options.TodoClient = todoClient;
+            options.MemoryClient = memoryClient;
             options.WorkspaceClient = workspaceClient;
         });
 
         using var provider = services.BuildServiceProvider();
 
         Assert.Same(todoClient, provider.GetRequiredService<ITodoApiClient>());
+        Assert.Same(memoryClient, provider.GetRequiredService<IMemoryApiClient>());
         Assert.Same(workspaceClient, provider.GetRequiredService<IWorkspaceApiClient>());
         Assert.Same(commandTarget, provider.GetRequiredService<ICommandTarget>());
         Assert.Same(commandTarget, provider.GetRequiredService<INavigationTarget>());
@@ -48,6 +51,7 @@ public sealed class McpHostBuilderExtensionsTests
             options.Lifetime = McpHostLifetimeStrategy.Scoped;
             options.CommandTargetFactory = static _ => Substitute.For<ICommandTarget>();
             options.TodoClientFactory = static _ => Substitute.For<ITodoApiClient>();
+            options.MemoryClientFactory = static _ => Substitute.For<IMemoryApiClient>();
             options.WorkspaceClientFactory = static _ => Substitute.For<IWorkspaceApiClient>();
         });
 
@@ -60,12 +64,15 @@ public sealed class McpHostBuilderExtensionsTests
         var commandTargetB = scopeB.ServiceProvider.GetRequiredService<ICommandTarget>();
         var todoClientA = scopeA.ServiceProvider.GetRequiredService<ITodoApiClient>();
         var todoClientB = scopeB.ServiceProvider.GetRequiredService<ITodoApiClient>();
+        var memoryClientA = scopeA.ServiceProvider.GetRequiredService<IMemoryApiClient>();
+        var memoryClientB = scopeB.ServiceProvider.GetRequiredService<IMemoryApiClient>();
         var workspaceClientA = scopeA.ServiceProvider.GetRequiredService<IWorkspaceApiClient>();
         var workspaceClientB = scopeB.ServiceProvider.GetRequiredService<IWorkspaceApiClient>();
 
         Assert.Same(commandTargetA1, commandTargetA2);
         Assert.NotSame(commandTargetA1, commandTargetB);
         Assert.NotSame(todoClientA, todoClientB);
+        Assert.NotSame(memoryClientA, memoryClientB);
         Assert.NotSame(workspaceClientA, workspaceClientB);
     }
 
@@ -109,6 +116,7 @@ public sealed class McpHostBuilderExtensionsTests
         Assert.Same(workspaceContext, scopeA.ServiceProvider.GetRequiredService<WorkspaceContextViewModel>());
         Assert.Null(scopeA.ServiceProvider.GetService<ICommandTarget>());
         Assert.NotNull(scopeA.ServiceProvider.GetRequiredService<ITodoApiClient>());
+        Assert.NotNull(scopeA.ServiceProvider.GetRequiredService<IMemoryApiClient>());
         Assert.NotNull(scopeA.ServiceProvider.GetRequiredService<IWorkspaceApiClient>());
         Assert.NotNull(scopeA.ServiceProvider.GetRequiredService<ISessionLogApiClient>());
         Assert.NotNull(scopeA.ServiceProvider.GetRequiredService<IVoiceApiClient>());

@@ -46,6 +46,8 @@ internal static class InteractiveCommand
             var sessionLogDetailVm = sp.GetRequiredService<SessionLogDetailViewModel>();
             var todoVm = sp.GetRequiredService<TodoListViewModel>();
             var todoDetailVm = sp.GetRequiredService<TodoDetailViewModel>();
+            var memoryVm = sp.GetRequiredService<MemoryListViewModel>();
+            var memoryDetailVm = sp.GetRequiredService<MemoryDetailViewModel>();
             var tunnelListVm = sp.GetRequiredService<TunnelListViewModel>();
             var templateListVm = sp.GetRequiredService<TemplateListViewModel>();
             var templateDetailVm = sp.GetRequiredService<TemplateDetailViewModel>();
@@ -95,6 +97,8 @@ internal static class InteractiveCommand
                     sessionLogDetailVm,
                     todoVm,
                     todoDetailVm,
+                    memoryVm,
+                    memoryDetailVm,
                     tunnelListVm,
                     templateListVm,
                     templateDetailVm,

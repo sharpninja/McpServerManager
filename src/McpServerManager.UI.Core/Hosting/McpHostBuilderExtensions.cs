@@ -60,6 +60,7 @@ public static class McpHostBuilderExtensions
         if (HasExplicitApiClients(options))
         {
             RegisterForLifetime<ITodoApiClient>(services, options.Lifetime, options.TodoClient, options.TodoClientFactory, static (sp, client) => client);
+            RegisterForLifetime<IMemoryApiClient>(services, options.Lifetime, options.MemoryClient, options.MemoryClientFactory, static (sp, client) => client);
             RegisterForLifetime<IWorkspaceApiClient>(services, options.Lifetime, options.WorkspaceClient, options.WorkspaceClientFactory, static (sp, client) => client);
             RegisterForLifetime<IVoiceApiClient>(services, options.Lifetime, options.VoiceClient, options.VoiceClientFactory, static (sp, client) => client);
             RegisterForLifetime<ISessionLogApiClient>(services, options.Lifetime, options.SessionLogClient, options.SessionLogClientFactory, static (sp, client) => client);
@@ -128,12 +129,14 @@ public static class McpHostBuilderExtensions
 
         RegisterForLifetime<UiCoreSessionLogApiClientAdapter>(services, options.Lifetime, static sp => new UiCoreSessionLogApiClientAdapter(sp.GetRequiredService<McpSessionLogService>()));
         RegisterForLifetime<UiCoreTodoApiClientAdapter>(services, options.Lifetime, static sp => new UiCoreTodoApiClientAdapter(sp.GetRequiredService<McpTodoService>()));
+        RegisterForLifetime<UiCoreMemoryApiClientAdapter>(services, options.Lifetime, static sp => new UiCoreMemoryApiClientAdapter(sp.GetRequiredService<McpServerClient>()));
         RegisterForLifetime<UiCoreWorkspaceApiClientAdapter>(services, options.Lifetime, static sp => new UiCoreWorkspaceApiClientAdapter(sp.GetRequiredService<McpWorkspaceService>()));
         RegisterForLifetime<UiCoreVoiceApiClientAdapter>(services, options.Lifetime, static sp => new UiCoreVoiceApiClientAdapter(sp.GetRequiredService<McpVoiceConversationService>()));
         RegisterForLifetime<UiCoreEventStreamApiClientAdapter>(services, options.Lifetime, static sp => new UiCoreEventStreamApiClientAdapter(sp.GetRequiredService<McpAgentEventStreamService>()));
         RegisterForLifetime<IAgentEventStreamReader>(services, options.Lifetime, static sp => new McpAgentEventStreamReader(sp.GetRequiredService<McpAgentEventStreamService>()));
         RegisterForLifetime<IVoiceConversationService, McpVoiceConversationService>(services, options.Lifetime, static sp => sp.GetRequiredService<McpVoiceConversationService>());
         RegisterForLifetime<ITodoApiClient, UiCoreTodoApiClientAdapter>(services, options.Lifetime, static sp => sp.GetRequiredService<UiCoreTodoApiClientAdapter>());
+        RegisterForLifetime<IMemoryApiClient, UiCoreMemoryApiClientAdapter>(services, options.Lifetime, static sp => sp.GetRequiredService<UiCoreMemoryApiClientAdapter>());
         RegisterForLifetime<IWorkspaceApiClient, UiCoreWorkspaceApiClientAdapter>(services, options.Lifetime, static sp => sp.GetRequiredService<UiCoreWorkspaceApiClientAdapter>());
         RegisterForLifetime<ISessionLogApiClient, UiCoreSessionLogApiClientAdapter>(services, options.Lifetime, static sp => sp.GetRequiredService<UiCoreSessionLogApiClientAdapter>());
         RegisterForLifetime<IVoiceApiClient, UiCoreVoiceApiClientAdapter>(services, options.Lifetime, static sp => sp.GetRequiredService<UiCoreVoiceApiClientAdapter>());
@@ -190,6 +193,8 @@ public static class McpHostBuilderExtensions
     private static bool HasExplicitApiClients(McpHostOptions options)
         => options.TodoClient is not null
         || options.TodoClientFactory is not null
+        || options.MemoryClient is not null
+        || options.MemoryClientFactory is not null
         || options.WorkspaceClient is not null
         || options.WorkspaceClientFactory is not null
         || options.VoiceClient is not null

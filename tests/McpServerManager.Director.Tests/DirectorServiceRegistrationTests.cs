@@ -30,6 +30,7 @@ public sealed class DirectorServiceRegistrationTests
         Assert.IsType<SessionLogApiClientAdapter>(provider.GetRequiredService<ISessionLogApiClient>());
         Assert.IsType<WorkspaceApiClientAdapter>(provider.GetRequiredService<IWorkspaceApiClient>());
         Assert.IsType<TodoApiClientAdapter>(provider.GetRequiredService<ITodoApiClient>());
+        Assert.IsType<MemoryApiClientAdapter>(provider.GetRequiredService<IMemoryApiClient>());
         Assert.IsType<VoiceApiClientAdapter>(provider.GetRequiredService<IVoiceApiClient>());
         Assert.IsType<EventStreamApiClientAdapter>(provider.GetRequiredService<IEventStreamApiClient>());
         Assert.IsType<RepoApiClientAdapter>(provider.GetRequiredService<IRepoApiClient>());

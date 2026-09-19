@@ -40,6 +40,7 @@ public static class WebServiceRegistration
             options.SessionLogClientFactory = static sp => ActivatorUtilities.CreateInstance<SessionLogApiClientAdapter>(sp);
             options.WorkspaceClientFactory = static sp => ActivatorUtilities.CreateInstance<WorkspaceApiClientAdapter>(sp);
             options.TodoClientFactory = static sp => ActivatorUtilities.CreateInstance<TodoApiClientAdapter>(sp);
+            options.MemoryClientFactory = static sp => ActivatorUtilities.CreateInstance<MemoryApiClientAdapter>(sp);
             options.VoiceClientFactory = static sp => ActivatorUtilities.CreateInstance<VoiceApiClientAdapter>(sp);
             options.EventStreamClientFactory = static sp => ActivatorUtilities.CreateInstance<EventStreamApiClientAdapter>(sp);
         });

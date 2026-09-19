@@ -1,0 +1,167 @@
+@page "/memory"
+
+@inherits McpServerManager.Web.Components.UiDispatcherComponentBase
+
+@inject MemoryListViewModel ViewModel
+@inject WebCommandTarget CommandTarget
+@inject WorkspaceContextViewModel WorkspaceContext
+
+<PageTitle>Memory</PageTitle>
+
+<h1 class="h2 mb-3">Memory</h1>
+
+<form method="get" class="Box p-3 mb-3">
+    @if (!string.IsNullOrWhiteSpace(WorkspacePath))
+    {
+        <input type="hidden" name="workspacePath" value="@WorkspacePath" />
+    }
+    <div class="d-flex flex-wrap gap-3">
+        <label class="d-flex flex-column">
+            <span class="text-small color-fg-muted">Scope</span>
+            <select class="form-select" name="scope">
+                <option value="" selected="@(string.IsNullOrWhiteSpace(Scope))">Effective</option>
+                <option value="Workspace" selected="@string.Equals(Scope, "Workspace", StringComparison.OrdinalIgnoreCase)">Workspace</option>
+                <option value="Global" selected="@string.Equals(Scope, "Global", StringComparison.OrdinalIgnoreCase)">Global</option>
+            </select>
+        </label>
+        <label class="d-flex flex-column">
+            <span class="text-small color-fg-muted">Category</span>
+            <input class="form-control" name="category" value="@Category" />
+        </label>
+        <label class="d-flex flex-column flex-1">
+            <span class="text-small color-fg-muted">Keyword</span>
+            <input class="form-control" name="keyword" value="@Keyword" />
+        </label>
+        <div class="d-flex flex-items-end gap-2">
+            <button class="btn btn-primary" type="submit">Apply</button>
+            <a class="btn" href="@GetNewHref()">Add memory</a>
+        </div>
+    </div>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+{
+    <PrimerFlash Variant="danger" Title="Failed to load memories">@ViewModel.ErrorMessage</PrimerFlash>
+}
+else if (ViewModel.IsLoading)
+{
+    <p class="color-fg-muted">Loading memories...</p>
+}
+else if (ViewModel.Items.Count == 0)
+{
+    <PrimerBlankslate Heading="No memories found" Description="Try changing the filters or add a new memory." />
+}
+else
+{
+    <PrimerDataTable TGridItem="MemoryListItem" Items="ViewModel.Items" Class="Table--full-width">
+        <ChildContent>
+            <TemplateColumn Title="ID" Context="item">
+                <code>@item.Id</code>
+            </TemplateColumn>
+            <PropertyColumn Property="@(item => item.Category)" Title="Category" />
+            <PropertyColumn Property="@(item => item.Scope)" Title="Scope" />
+            <TemplateColumn Title="Version" Context="item">
+                @item.Version
+            </TemplateColumn>
+            <TemplateColumn Title="Updated" Context="item">
+                @item.UpdatedAtUtc.ToString("u")
+            </TemplateColumn>
+            <TemplateColumn Title="Text" Context="item">
+                @(item.Text.Length > 80 ? item.Text[..80] + "…" : item.Text)
+            </TemplateColumn>
+            <TemplateColumn Context="item">
+                <a class="btn btn-sm" href="@GetDetailHref(item.Id)">Details</a>
+            </TemplateColumn>
+        </ChildContent>
+    </PrimerDataTable>
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Scope { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Category { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Keyword { get; set; }
+
+    [SupplyParameterFromQuery(Name = "workspacePath")]
+    public string? WorkspacePath { get; set; }
+
+    private string? _lastQueryKey;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var queryKey = $"{Scope}|{Category}|{Keyword}|{WorkspacePath}";
+        if (string.Equals(queryKey, _lastQueryKey, StringComparison.Ordinal))
+            return;
+
+        _lastQueryKey = queryKey;
+        var loadTask = CommandTarget.RunAsync(async () =>
+        {
+            ViewModel.Scope = ParseScope(Scope);
+            ViewModel.Category = Category;
+            ViewModel.Keyword = Keyword;
+            ApplyWorkspaceFromQuery();
+            await ViewModel.LoadAsync().ConfigureAwait(true);
+        });
+
+        while (!ViewModel.IsLoading && !loadTask.IsCompleted)
+            await Task.Yield();
+
+        if (ViewModel.IsLoading)
+            await RefreshUiAsync();
+
+        await loadTask.ConfigureAwait(true);
+    }
+
+    private string GetDetailHref(string id)
+    {
+        var qs = BuildFilterQueryString();
+        return string.IsNullOrEmpty(qs)
+            ? $"/memory/{Uri.EscapeDataString(id)}"
+            : $"/memory/{Uri.EscapeDataString(id)}?{qs}";
+    }
+
+    private string GetNewHref()
+    {
+        var qs = BuildFilterQueryString();
+        return string.IsNullOrEmpty(qs)
+            ? "/memory/new"
+            : $"/memory/new?{qs}";
+    }
+
+    private string BuildFilterQueryString()
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(WorkspacePath)) parts.Add($"workspacePath={Uri.EscapeDataString(WorkspacePath)}");
+        if (!string.IsNullOrWhiteSpace(Scope)) parts.Add($"scope={Uri.EscapeDataString(Scope)}");
+        if (!string.IsNullOrWhiteSpace(Category)) parts.Add($"category={Uri.EscapeDataString(Category)}");
+        if (!string.IsNullOrWhiteSpace(Keyword)) parts.Add($"keyword={Uri.EscapeDataString(Keyword)}");
+        return string.Join("&", parts);
+    }
+
+    private void ApplyWorkspaceFromQuery()
+    {
+        if (string.IsNullOrWhiteSpace(WorkspacePath))
+            return;
+
+        var normalized = WorkspacePath.Trim();
+        if (!string.Equals(WorkspaceContext.ActiveWorkspacePath, normalized, StringComparison.Ordinal))
+            WorkspaceContext.ActiveWorkspacePath = normalized;
+    }
+
+    private static MemoryScope? ParseScope(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            string.Equals(value.Trim(), "Effective", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return Enum.TryParse<MemoryScope>(value.Trim(), ignoreCase: true, out var parsed)
+            ? parsed
+            : null;
+    }
+}

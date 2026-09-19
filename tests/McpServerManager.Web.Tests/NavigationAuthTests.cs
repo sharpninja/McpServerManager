@@ -32,6 +32,7 @@ public sealed class NavigationAuthTests
         FollowLinkAndAssertPath(ctx, cut, "/dashboard");
         FollowLinkAndAssertPath(ctx, cut, "/workspaces");
         FollowLinkAndAssertPath(ctx, cut, "/todos");
+        FollowLinkAndAssertPath(ctx, cut, "/memory");
         FollowLinkAndAssertPath(ctx, cut, "/sessions");
         FollowLinkAndAssertPath(ctx, cut, "/templates");
         FollowLinkAndAssertPath(ctx, cut, "/context/search");
@@ -139,6 +140,7 @@ public sealed class NavigationAuthTests
         var cut = RenderNavMenu(ctx);
 
         FollowLinkAndAssertPath(ctx, cut, "/todos");
+        FollowLinkAndAssertPath(ctx, cut, "/memory");
         FollowLinkAndAssertPath(ctx, cut, "/templates");
         AssertLinkMissing(cut, "/triage");
         AssertLinkMissing(cut, "/auth/config");

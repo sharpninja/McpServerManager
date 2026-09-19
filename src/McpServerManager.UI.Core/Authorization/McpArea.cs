@@ -23,6 +23,9 @@ public enum McpArea
     /// <summary>TODO management and prompt helpers.</summary>
     Todo,
 
+    /// <summary>Workspace memory list/get/add/update/remove.</summary>
+    Memory,
+
     /// <summary>Session log query and submission tooling.</summary>
     SessionLogs,
 
