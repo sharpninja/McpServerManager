@@ -1,7 +1,8 @@
 # Awaiting MCP `done: true` write
 
 Plan: **PLAN-MANAGER-MEMORY-UI-001**  
-Date: 2026-09-19
+Date: 2026-09-19  
+PR #7 merge SHA: `e1636b34545c0b3af428f59df202a18ee23ec3e5` (merged to `main` by sharpninja)
 
 ## Status
 

@@ -17,13 +17,15 @@ VM: Cursor Cloud Agent (no live MCP, no memory-enabled workspace)
 | update | `Update_*` handler tests, VM Save existing without OCC | No |
 | remove | `Remove_*` handler tests, VM `DeleteAsync` | No |
 
-Focused Memory suites on this VM (pre-merge tip of `cursor/memory-ui-839a`):
+Focused Memory suites on **`main` tip `e1636b3`** (PR #7 merge; Failed 0, Skipped 0):
 
 | Suite | Passed | Failed | Skipped |
 | --- | --- | --- | --- |
-| UI.Core `FullyQualifiedName~Memory` | 24 | 0 | 0 |
+| UI.Core `FullyQualifiedName~Memory` | 22 | 0 | 0 |
 | Director `FullyQualifiedName~Memory` | 2 | 0 | 0 |
-| Web `FullyQualifiedName~Memory` | 5 | 0 | 0 |
+| Web `FullyQualifiedName~Memory` | 4 | 0 | 0 |
+
+Post-merge follow-up (workspace reload + failed-load reset) adds 2 UI.Core + 1 Web tests on `cursor/memory-completion-839a`.
 
 ## Live workspace checklist (Legion — not run here)
 
