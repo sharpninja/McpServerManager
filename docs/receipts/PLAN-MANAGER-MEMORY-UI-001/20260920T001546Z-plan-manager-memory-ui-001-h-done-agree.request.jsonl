@@ -1,0 +1,1 @@
+{"type": "request", "utc": "2026-09-20T00:15:46Z", "todoId": "PLAN-MANAGER-MEMORY-UI-001", "managerSha": "e1636b34545c0b3af428f59df202a18ee23ec3e5", "claim": "done:true after Director headless + Web lab smoke on box", "evidence": ["lab-smoke-web-box-20260919T235547Z.md", "lab-smoke-director-box-20260920T001521Z.md", "mcp-start receipt under /workspace/deliverables/reseed/"]}

@@ -1,5 +1,7 @@
 # Hostile AGREE — PLAN-MANAGER-MEMORY-UI-001 v1.2
 
+> **SUPERSEDED (keep history).** This source-hostile 98/98 checklist (live AGREE unavailable) is superseded by box H-done **AGREE** Accuracy 99 / Completeness 99 on 2026-09-20. Canonical closeout: `hostile-validator-20260920T001546Z-agree.md`, `plan-done-20260920T001605Z.md`, and the `20260920T001546Z-plan-manager-memory-ui-001-h-done-agree.*.jsonl` pair. Do not treat "not marked done in MCP" / "live AGREE still not invoked" in this draft as current closure status.
+
 Date: 2026-09-19  
 Reviewer: cloud agent (source-hostile, no live AGREE service)  
 Base: `main`  

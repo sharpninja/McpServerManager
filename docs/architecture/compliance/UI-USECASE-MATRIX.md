@@ -18,6 +18,7 @@ This matrix shows current-state UI presence and identifies omissions where the c
 
 - Refreshed against live swagger at `http://PAYTON-DESKTOP:7147/swagger/v1/swagger.json` on `2026-03-03`.
 - Memory domain refreshed 2026-09-19 for PLAN-MANAGER-MEMORY-UI-001 (`5 / 5` HTTP ops covered; Director TUI + Mcp-Web wired).
+- Memory closeout refreshed 2026-09-20: box H-done **AGREE** (Accuracy 99 / Completeness 99). Web `/memory` five-verb PASS. Director headless `FakeDriver` visual-tree + live five-verb PASS. Version display-only (D11) on both hosts. Manager tip `e1636b34`; box MCP `1.0.0+720c2b49`. Receipts: `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/`.
 - `38` UI.Core handler types currently exist across `10` endpoint domains (pre-Memory snapshot; Memory adds five dedicated handlers).
 - `35 / 138` distinct HTTP operations currently have at least one UI.Core handler path (pre-Memory snapshot; Memory adds five covered ops).
 - This matrix currently records `33` complete RelayCommand use cases and `9` active omission rows.
@@ -34,7 +35,7 @@ This matrix shows current-state UI presence and identifies omissions where the c
 | `sessionlog` | `3` | `1` | Read-only `GET /mcpserver/sessionlog` is covered; append/dialog POST flows are not. |
 | `templates` | `8` | `6` | `resolve` and ad-hoc `/templates/test` remain uncovered. |
 | `todo` | `13` | `9` | Move + queued prompt operations remain uncovered. |
-| `memory` | `5` | `5` | List/get/add/update/remove covered via `IMemoryApiClient` and Memory* handlers (PLAN-MANAGER-MEMORY-UI-001). Version is display-only (D11). |
+| `memory` | `5` | `5` | List/get/add/update/remove covered via `IMemoryApiClient` and Memory* handlers (PLAN-MANAGER-MEMORY-UI-001, H-done AGREE). Version is display-only (D11). Director lab: `FakeDriver` + `MemoryScreen` Subviews; MCP awaits after `Application.Shutdown()`. |
 | `tunnel` | `7` | `6` | Direct provider-status query remains uncovered. |
 | `workspace` | `11` | `4` | Create/delete/status/start/stop/global-prompt operations remain uncovered. |
 | `requirements` | `20` | `0` | No UI.Core handler coverage yet. |
@@ -54,7 +55,7 @@ This matrix shows current-state UI presence and identifies omissions where the c
 | Endpoint Group | Expected UI.Core RelayCommand Surface for Blazor | Current Blazor Status |
 | --- | --- | --- |
 | TODO | `TodoListViewModel.RefreshCommand`, `TodoDetailViewModel.*Command` | Not yet wired in RequestTracker |
-| Memory | `MemoryListViewModel.RefreshCommand`, `MemoryDetailViewModel.Load/Save/Delete` | Wired in Mcp-Web `/memory` and `/memory/{Id}` |
+| Memory | `MemoryListViewModel.RefreshCommand`, `MemoryDetailViewModel.Load/Save/Delete` | Wired in Mcp-Web `/memory` and `/memory/{Id}` (Viewer CRUD; Version display-only; box five-verb PASS 2026-09-19) |
 | Workspace | `WorkspaceListViewModel.RefreshCommand`, `WorkspaceDetailViewModel.GetWorkspaceCommand`, `WorkspacePolicyViewModel.SaveCommand`, `HealthSnapshotsViewModel.InitializeWorkspaceCommand` | Not yet wired in RequestTracker; parity is still blocked by missing shared create/delete/status/start/stop/global-prompt/workspace-health flows |
 | SessionLog | `SessionLogListViewModel.RefreshCommand`, `SessionLogDetailViewModel.LoadCommand` | Not yet wired in RequestTracker |
 | Health | `HealthSnapshotsViewModel.CheckHealthCommand` | Not yet wired in RequestTracker |
@@ -118,6 +119,11 @@ This matrix shows current-state UI presence and identifies omissions where the c
 ## Divergent UI Behavior Annotations
 
 ### Complete-path use cases
+
+- `List/get/add/update/remove memories` (`/mcpserver/memory` five verbs)
+  - `TUI`: Viewer Memory tab immediately after Sessions (`MemoryScreen`). Version is display-only (`DisplayVersion`; no `EditorVersion`). Headless lab: `Application.Init(new FakeDriver())`, walk `MemoryScreen` Subviews, MCP awaits after `Application.Shutdown()`.
+  - `Blazor`: Mcp-Web `/memory` and `/memory/{Id}`; NavLink after Todos and before Triage. Version display-only. Box five-verb PASS.
+  - `Phone/Tablet/Desktop`: Not a first-class Avalonia Memory surface in this plan.
 
 - `List TODOs` (`GET /mcpserver/todo`)
   - `Phone`: Dedicated list screen with tap-to-detail navigation and explicit refresh button.
@@ -367,6 +373,31 @@ flowchart LR
   TUI --> W4
 ```
 
+### Memory Endpoints
+
+```mermaid
+flowchart LR
+  TUI([TUI])
+  Blazor([Blazor])
+
+  M1(("List memories<br/>[TUI, Blazor]"))
+  M2(("Get memory<br/>[TUI, Blazor]"))
+  M3(("Add memory<br/>[TUI, Blazor]"))
+  M4(("Update memory<br/>[TUI, Blazor]"))
+  M5(("Remove memory<br/>[TUI, Blazor]"))
+
+  TUI --> M1
+  TUI --> M2
+  TUI --> M3
+  TUI --> M4
+  TUI --> M5
+  Blazor --> M1
+  Blazor --> M2
+  Blazor --> M3
+  Blazor --> M4
+  Blazor --> M5
+```
+
 ### SessionLog Endpoints
 
 ```mermaid
@@ -459,4 +490,6 @@ flowchart LR
 - `src/McpServerManager.Desktop/Views/*`
 - `src/McpServerManager.Android/Views/*`
 - `lib/McpServer/src/McpServer.Director/Screens/*`
-- `Blazor host: not present in this workspace; inventory tracked as projected parity surface`
+- `src/McpServerManager.Director/Screens/MemoryScreen.cs` (PLAN-MANAGER-MEMORY-UI-001)
+- `src/McpServerManager.Web/Pages/Memory/*` (PLAN-MANAGER-MEMORY-UI-001)
+- `Blazor host: not present in this workspace; inventory tracked as projected parity surface` (Mcp-Web Memory pages are wired; other Blazor groups remain projected)

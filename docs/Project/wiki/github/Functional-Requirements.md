@@ -221,6 +221,8 @@ Scope: layer-1+
 
 Director SHALL expose workspace Memory (`GET/POST /mcpserver/memory`, `GET/PUT/DELETE /mcpserver/memory/{id}`) on a Viewer tab placed immediately after Sessions. Surfaces list/get/add/update/remove. Version is display-only. No Operator role and no expectedVersion/OCC.
 Scope: layer-1+
+**Status:** Shipped — PLAN-MANAGER-MEMORY-UI-001 box H-done AGREE 2026-09-20 (Accuracy 99 / Completeness 99). Manager tip `e1636b34`. Box MCP `1.0.0+720c2b49`.
+**Lab:** Headless Terminal.Gui `FakeDriver` + `MemoryScreen` Subviews walk; MCP five-verb awaits after `Application.Shutdown()`. Receipt `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/lab-smoke-director-box-20260920T001521Z.md`.
 **Acceptance Criteria:**
 - [x] Director Memory tab is registered after Sessions and is Viewer-visible.
 - [x] List/get/add/update/remove route through `IMemoryApiClient` and UI.Core handlers.
@@ -230,6 +232,8 @@ Scope: layer-1+
 
 Mcp-Web SHALL expose Viewer-accessible Memory pages at `/memory` and `/memory/{Id}` with a NavLink after Todos and before Triage. Surfaces list/get/add/update/remove. Version is display-only. No Operator role and no expectedVersion/OCC.
 Scope: layer-1+
+**Status:** Shipped — PLAN-MANAGER-MEMORY-UI-001 box H-done AGREE 2026-09-20 (Accuracy 99 / Completeness 99). Manager tip `e1636b34`. Box MCP `1.0.0+720c2b49`.
+**Lab:** Web `/memory` five-verb PASS; NAV Memory after Todos; Version 1→2 display-only. Receipt `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/lab-smoke-web-box-20260919T235547Z.md`.
 **Acceptance Criteria:**
 - [x] `/memory` and `/memory/{Id}` pages render list/detail/add/update/remove.
 - [x] NavLink `/memory` sits after `/todos` and before `/triage`.

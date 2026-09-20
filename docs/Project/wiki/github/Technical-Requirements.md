@@ -257,11 +257,13 @@ Scope: layer-1+
 
 **Director Memory CQRS + Viewer auth** — Memory list/get/add/update/remove SHALL use UI.Core messages, handlers, and `IMemoryApiClient` with Viewer action keys (`memory.list|get|add|update|remove`). Version is display-only. Hosts adapt `McpServerClient.Memory` from `SharpNinja.McpServer.Client` ≥1.3.1.
 Scope: layer-1+
+**Status:** Shipped with PLAN-MANAGER-MEMORY-UI-001 H-done AGREE 2026-09-20. Headless lab: `FakeDriver` + `MemoryScreen` Subviews; MCP awaits after `Application.Shutdown()`.
 
 ## TR-MANAGER-MEMORY-002
 
 **Web Memory routes and nav placement** — Mcp-Web SHALL register `/memory` and `/memory/{Id}` pages and a NavLink immediately after Todos and before Triage. DI SHALL bind `IMemoryApiClient` to the Web `MemoryApiClientAdapter`.
 Scope: layer-1+
+**Status:** Shipped with PLAN-MANAGER-MEMORY-UI-001 H-done AGREE 2026-09-20. Box Web `/memory` five-verb PASS; Version display-only.
 
 ## TR-TEST-001
 

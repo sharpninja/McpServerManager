@@ -91,6 +91,10 @@ director ui
 
 Current UI includes role-filtered tabs and auto-refresh on tab entry for supported tabs.
 
+Viewer **Memory** sits immediately after **Sessions**. It surfaces workspace Memory list/get/add/update/remove. Version is display-only (D11); updates do not send `expectedVersion`. There is no Operator Memory role.
+
+Headless lab path (box): `Application.Init(new FakeDriver())`, construct `MemoryScreen`, walk `View.Subviews` for Refresh/Add/Edit/Remove/Filter, then run MCP five-verb awaits after `Application.Shutdown()`. Receipt: `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/lab-smoke-director-box-20260920T001521Z.md`.
+
 ## Troubleshooting
 
 - No marker found: set a default URL with `director config set-default-url <url>` or run inside a workspace.

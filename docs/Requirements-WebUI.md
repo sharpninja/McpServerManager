@@ -18,6 +18,8 @@ A web-based management UI for McpServer providing workspace management, agent co
 
 Mcp-Web SHALL expose Viewer-accessible Memory pages at `/memory` and `/memory/{Id}` with a NavLink after Todos and before Triage. Surfaces list/get/add/update/remove. Version is display-only. No Operator role and no expectedVersion/OCC.
 
-**Status:** Implemented (PLAN-MANAGER-MEMORY-UI-001)
+**Status:** Shipped — PLAN-MANAGER-MEMORY-UI-001 closed with box H-done **AGREE** (Accuracy 99 / Completeness 99) on 2026-09-20. Manager tip `e1636b34545c0b3af428f59df202a18ee23ec3e5` (PR #7). Box MCP `1.0.0+720c2b49`.
+
+**Lab:** Web `/memory` five-verb PASS (LIST/ADD/GET/UPDATE/REMOVE) plus NAV (Memory immediately after Todos). UPDATE confirmed Version 1→2 display-only. Receipt: `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/lab-smoke-web-box-20260919T235547Z.md`.
 
 **Covered by:** `Pages/Memory/MemoryList.razor`, `Pages/Memory/MemoryDetail.razor`, `MemoryApiClientAdapter`

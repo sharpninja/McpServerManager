@@ -1,5 +1,7 @@
 # PLAN-MANAGER-MEMORY-UI-001 Slice 7 — docs, receipts, hostile AGREE
 
+> **SUPERSEDED for closure status (keep history).** Slice 7 docs remain useful as the first in-repo Memory UI refresh. Claims that the plan is **not** marked done without a live AGREE receipt, and that closeout requires only this source-hostile 98/98 file, are superseded by box H-done **AGREE** (2026-09-20, Accuracy 99 / Completeness 99) plus Web and Director headless lab receipts in this folder.
+
 Date: 2026-09-19  
 Branch: `cursor/memory-ui-839a`  
 Base: `main` (this repo has no develop)

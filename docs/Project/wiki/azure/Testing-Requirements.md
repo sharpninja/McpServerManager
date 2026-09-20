@@ -18,10 +18,13 @@ Cover valid cached token reuse, expired token deletion, new token persistence af
 
 Cover Memory contracts, Viewer auth allow/deny for all five verbs (AC16), handler/dispatcher routing, list/detail ViewModels, Director tab-after-Sessions wiring, and Web `/memory` pages plus NavLink-after-Todos.
 
+**Status:** Units plus box labs closed under PLAN-MANAGER-MEMORY-UI-001 H-done AGREE 2026-09-20. Web five-verb PASS; Director headless `FakeDriver` visual-tree + live five-verb PASS. Version display-only (D11).
 **Acceptance Criteria:**
 - [x] UI.Core tests cover messages, mapper (no expectedVersion), handlers, Viewer deny/allow, and ViewModels.
 - [x] Director tests cover Memory tab order after Sessions and Viewer five-verb policy.
 - [x] Web tests cover list/detail render, display-only version, adapter DI, and NavLink order.
+- [x] Box lab: Web `/memory` five-verb PASS (`lab-smoke-web-box-20260919T235547Z.md`).
+- [x] Box lab: Director headless FakeDriver visual-tree + live five-verb PASS (`lab-smoke-director-box-20260920T001521Z.md`).
 
 ## TEST-TRIAGE
 

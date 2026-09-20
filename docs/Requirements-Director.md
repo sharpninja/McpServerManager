@@ -10,15 +10,17 @@ A console application (`McpServerManager.Director`) shall provide agent orchestr
 
 **Status:** ✅ Complete
 
-**Covered by:** `McpServerManager.Director` project — 15 source files: `Program.cs`, `McpHttpClient.cs`, `Auth/DirectorAuthOptions.cs`, `Auth/OidcAuthService.cs`, `Auth/TokenCache.cs`, `Commands/AuthCommands.cs`, `Commands/CommandHelpers.cs`, `Commands/DirectorCommands.cs`, `Commands/InteractiveCommand.cs`, `Screens/MainScreen.cs`, `Screens/HealthScreen.cs`, `Screens/AgentScreen.cs`, `Screens/TodoScreen.cs`, `Screens/SessionLogScreen.cs`, `Screens/WorkspaceListScreen.cs`, `Screens/WorkspacePolicyScreen.cs`, `Screens/LoginDialog.cs`, `Screens/ViewModelBinder.cs`
+**Covered by:** `McpServerManager.Director` project — 15 source files: `Program.cs`, `McpHttpClient.cs`, `Auth/DirectorAuthOptions.cs`, `Auth/OidcAuthService.cs`, `Auth/TokenCache.cs`, `Commands/AuthCommands.cs`, `Commands/CommandHelpers.cs`, `Commands/DirectorCommands.cs`, `Commands/InteractiveCommand.cs`, `Screens/MainScreen.cs`, `Screens/HealthScreen.cs`, `Screens/AgentScreen.cs`, `Screens/TodoScreen.cs`, `Screens/SessionLogScreen.cs`, `Screens/MemoryScreen.cs`, `Screens/WorkspaceListScreen.cs`, `Screens/WorkspacePolicyScreen.cs`, `Screens/LoginDialog.cs`, `Screens/ViewModelBinder.cs`
 
-**Implementation:** 17 CLI commands registered via System.CommandLine. All commands communicate with the MCP server via `McpHttpClient` (reads connection details from `AGENTS-README-FIRST.yaml`). Auth uses OIDC Device Authorization Flow with token caching to `~/.mcpserver/tokens.json`. Interactive mode (`director interactive|tui|ui`) launches Terminal.Gui v2 including a Viewer-scoped Memory tab (after Sessions) for list/get/add/update/remove via `MemoryListViewModel` / `MemoryDetailViewModel`. ViewModels from `McpServerManager.UI.Core` are bound to Terminal.Gui controls via `ViewModelBinder` (INotifyPropertyChanged → Application.Invoke).
+**Implementation:** 17 CLI commands registered via System.CommandLine. All commands communicate with the MCP server via `McpHttpClient` (reads connection details from `AGENTS-README-FIRST.yaml`). Auth uses OIDC Device Authorization Flow with token caching to `~/.mcpserver/tokens.json`. Interactive mode (`director interactive|tui|ui`) launches Terminal.Gui v2 including a Viewer-scoped Memory tab (after Sessions) for list/get/add/update/remove via `MemoryListViewModel` / `MemoryDetailViewModel`. Version is display-only (D11). ViewModels from `McpServerManager.UI.Core` are bound to Terminal.Gui controls via `ViewModelBinder` (INotifyPropertyChanged → Application.Invoke).
 
 ### FR-MANAGER-MEMORY-001 Director Memory Tab
 
 Director SHALL expose workspace Memory (`GET/POST /mcpserver/memory`, `GET/PUT/DELETE /mcpserver/memory/{id}`) on a Viewer tab placed immediately after Sessions. Version is display-only. No Operator role and no expectedVersion/OCC.
 
-**Status:** Implemented (PLAN-MANAGER-MEMORY-UI-001)
+**Status:** Shipped — PLAN-MANAGER-MEMORY-UI-001 closed with box H-done **AGREE** (Accuracy 99 / Completeness 99) on 2026-09-20. Manager tip `e1636b34545c0b3af428f59df202a18ee23ec3e5` (PR #7). Box MCP `1.0.0+720c2b49`.
+
+**Lab:** Director headless path uses Terminal.Gui `FakeDriver` + `MemoryScreen` Subviews walk (Refresh/Add/Edit/Remove/Filter). MCP five-verb awaits run after `Application.Shutdown()`. Live five-verb PASS; Version display-only (`DisplayVersion` only; no `EditorVersion`; update does not send `expectedVersion`). Receipt: `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/lab-smoke-director-box-20260920T001521Z.md`.
 
 **Covered by:** `MemoryScreen`, `MemoryListViewModel`, `MemoryDetailViewModel`, `MemoryApiClientAdapter`
 
@@ -48,7 +50,7 @@ Tab composition SHALL be role-aware and declarative, with registration metadata 
 
 ### TR-MCP-DIR-001
 
-**Director Console App with CQRS** — `McpServerManager.Director` console application using `System.CommandLine` for CLI parsing and `McpServer.Cqrs` for all action dispatch. CLI commands: `health`, `list`, `agents` (defs/ws/events), `add`, `ban`, `unban`, `delete`, `validate`, `init`, `sync` (status/run), `todo`, `session-log`, `login`, `logout`, `whoami`, `interactive` (aliases: `tui`, `ui`), `exec`, `list-viewmodels`. Interactive mode uses Terminal.Gui v2 with 7 tabbed screens (Health, Workspaces, Agents, TODO, Sessions, Sync, Policy) plus LoginDialog, menu bar, auth status indicator, and keyboard shortcuts (F2 Login, F5 Refresh, Ctrl+Q Quit).
+**Director Console App with CQRS** — `McpServerManager.Director` console application using `System.CommandLine` for CLI parsing and `McpServer.Cqrs` for all action dispatch. CLI commands: `health`, `list`, `agents` (defs/ws/events), `add`, `ban`, `unban`, `delete`, `validate`, `init`, `sync` (status/run), `todo`, `session-log`, `login`, `logout`, `whoami`, `interactive` (aliases: `tui`, `ui`), `exec`, `list-viewmodels`. Interactive mode uses Terminal.Gui v2 with tabbed screens (Health, Workspaces, Agents, TODO, Sessions, Memory immediately after Sessions, Sync, Policy) plus LoginDialog, menu bar, auth status indicator, and keyboard shortcuts (F2 Login, F5 Refresh, Ctrl+Q Quit). Viewer Memory is list/get/add/update/remove; Version is display-only (D11). Headless lab path: `Application.Init(new FakeDriver())`, walk `MemoryScreen` Subviews, then MCP awaits after `Application.Shutdown()`.
 
 **Status:** ✅ Complete — 18 CLI commands, 9 Terminal.Gui screens, solution builds with 0 warnings
 

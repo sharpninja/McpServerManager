@@ -15,6 +15,7 @@ Repository: [sharpninja/McpServerManager](https://github.com/sharpninja/McpServe
     *   **JSON Inspector**: Built-in JSON viewer to inspect the raw underlying data for deep debugging.
 *   **Markdown Rendering**: Integrated `markdig`-based markdown viewer for rendering log content and associated documentation.
 *   **Responsive UI**: Modern, light-theme interface with collapsible sections and persistent window state.
+*   **Director + Web Memory (Viewer CRUD)**: Shipped in PLAN-MANAGER-MEMORY-UI-001 (PR #7, tip `e1636b34`). Director TUI exposes a Viewer Memory tab immediately after Sessions (list/get/add/update/remove). Mcp-Web exposes `/memory` and `/memory/{Id}` with a NavLink after Todos and before Triage. Version is display-only (D11) on both hosts. Box H-done AGREE (Accuracy 99 / Completeness 99) plus lab receipts live under `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/`. Headless Director lab path: Terminal.Gui `FakeDriver` + `MemoryScreen` Subviews walk; MCP awaits after `Application.Shutdown()`.
 
 ## Data Ingestion
 
