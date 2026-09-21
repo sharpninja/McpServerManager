@@ -836,6 +836,7 @@ internal sealed class MainScreen : Window
     private void RefreshWorkspacePickerItems()
     {
         _workspacePickerSource.Clear();
+        _workspacePickerSource.Add(new WorkspacePickerItem(string.Empty, "(Default workspace)"));
         foreach (var ws in _workspaceListVm.Workspaces)
         {
             var label = ws.IsPrimary
@@ -858,6 +859,7 @@ internal sealed class MainScreen : Window
         var snapshot = new ObservableCollection<WorkspacePickerItem>(_workspacePickerSource.ToList());
         var selectedPath = _directorContext.ActiveWorkspacePath;
         string? chosenPath = null;
+        var committed = false;
 
         var dlg = new Dialog
         {
@@ -896,6 +898,7 @@ internal sealed class MainScreen : Window
                 return;
 
             chosenPath = snapshot[index].WorkspacePath;
+            committed = true;
             Application.RequestStop();
         }
 
@@ -912,8 +915,15 @@ internal sealed class MainScreen : Window
         listView.SetFocus();
         Application.Run(dlg);
 
-        if (string.IsNullOrWhiteSpace(chosenPath))
+        if (!committed)
             return;
+
+        if (string.IsNullOrWhiteSpace(chosenPath))
+        {
+            if (!_directorContext.TryClearActiveWorkspace(out var clearError))
+                UpdateWorkspaceContextStatus($"Context switch failed: {clearError}");
+            return;
+        }
 
         if (!_directorContext.TrySetActiveWorkspace(chosenPath, out var error))
             UpdateWorkspaceContextStatus($"Context switch failed: {error}");
