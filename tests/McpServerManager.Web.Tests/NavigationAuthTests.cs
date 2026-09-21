@@ -153,6 +153,47 @@ public sealed class NavigationAuthTests
     }
 
     [Fact]
+    public void MainLayout_DefaultWorkspace_RemovesWorkspacePathQuery_AndKeepsGlobalMemoryToggle()
+    {
+        const string workspacePath = @"E:\repo";
+        using var ctx = CreateContext(
+            CreatePrincipal("mcp-user", "admin"),
+            services =>
+            {
+                services.AddSingleton<IWorkspaceApiClient>(new LayoutWorkspaceApiClientStub(
+                    new WorkspaceSummary(workspacePath, "Repo", true, true)));
+                services.AddSingleton<IMemoryApiClient>(new EmptyMemoryApiClient());
+            });
+        var navigation = ctx.Services.GetRequiredService<BunitNavigationManager>();
+        navigation.NavigateTo($"/memory/new?workspacePath={Uri.EscapeDataString(workspacePath)}&scope=Global");
+        var workspaceContext = ctx.Services.GetRequiredService<WorkspaceContextViewModel>();
+
+        var cut = RenderRoutes(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("workspacePath=", navigation.Uri, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(workspacePath, workspaceContext.ActiveWorkspacePath);
+            Assert.Empty(cut.FindAll("[data-testid='global-memory-toggle']"));
+        });
+
+        cut.Find("#workspace-picker-toggle").Click();
+        cut.WaitForAssertion(() =>
+            Assert.Contains("(Default workspace)", cut.Find("#workspace-picker-panel").TextContent, StringComparison.Ordinal));
+        cut.Find("#workspace-picker-panel select").Change(string.Empty);
+
+        cut.WaitForAssertion(() =>
+        {
+            var current = new Uri(navigation.Uri);
+            Assert.Equal("/memory/new", current.AbsolutePath);
+            Assert.DoesNotContain("workspacePath=", current.Query, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("scope=Global", current.Query, StringComparison.Ordinal);
+            Assert.True(string.IsNullOrEmpty(workspaceContext.ActiveWorkspacePath));
+            Assert.NotEmpty(cut.FindAll("[data-testid='global-memory-toggle']"));
+        });
+    }
+
+    [Fact]
     public void NavMenu_WithAuthenticatedUserWithoutRequiredRole_NavigatesToPublicFeaturesAndHidesRoleGatedFeatures()
     {
         using var ctx = CreateContext(CreatePrincipal("viewer-user", "viewer"));
@@ -302,6 +343,24 @@ public sealed class NavigationAuthTests
 
         public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object? resource, string policyName)
             => Task.FromResult(AuthorizationResult.Success());
+    }
+
+    private sealed class EmptyMemoryApiClient : IMemoryApiClient
+    {
+        public Task<ListMemoriesResult> ListMemoriesAsync(ListMemoriesQuery query, CancellationToken cancellationToken = default)
+            => Task.FromResult(new ListMemoriesResult([], 0));
+
+        public Task<MemoryDetail?> GetMemoryAsync(string memoryId, CancellationToken cancellationToken = default)
+            => Task.FromResult<MemoryDetail?>(null);
+
+        public Task<MemoryMutationOutcome> AddMemoryAsync(AddMemoryCommand command, CancellationToken cancellationToken = default)
+            => Task.FromResult(new MemoryMutationOutcome(false, null, null));
+
+        public Task<MemoryMutationOutcome> UpdateMemoryAsync(UpdateMemoryCommand command, CancellationToken cancellationToken = default)
+            => Task.FromResult(new MemoryMutationOutcome(false, null, null));
+
+        public Task<MemoryMutationOutcome> RemoveMemoryAsync(RemoveMemoryCommand command, CancellationToken cancellationToken = default)
+            => Task.FromResult(new MemoryMutationOutcome(false, null, null));
     }
 
     private sealed class LayoutWorkspaceApiClientStub(params WorkspaceSummary[] workspaces) : IWorkspaceApiClient
