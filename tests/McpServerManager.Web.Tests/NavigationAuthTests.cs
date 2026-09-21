@@ -133,6 +133,26 @@ public sealed class NavigationAuthTests
     }
 
     [Fact]
+    public void MainLayout_DefaultWorkspaceOption_ClearsActiveWorkspacePath()
+    {
+        using var ctx = CreateContext(
+            CreatePrincipal("mcp-user", "admin"),
+            services => services.AddSingleton<IWorkspaceApiClient>(new LayoutWorkspaceApiClientStub(
+                new WorkspaceSummary(@"E:\repo", "Repo", true, true))));
+        var workspaceContext = ctx.Services.GetRequiredService<WorkspaceContextViewModel>();
+
+        var cut = RenderMainLayout(ctx);
+        cut.Find("#workspace-picker-toggle").Click();
+
+        cut.WaitForAssertion(() =>
+            Assert.Contains("(Default workspace)", cut.Find("#workspace-picker-panel select").TextContent, StringComparison.Ordinal));
+
+        cut.Find("#workspace-picker-panel select").Change(string.Empty);
+
+        cut.WaitForAssertion(() => Assert.True(string.IsNullOrEmpty(workspaceContext.ActiveWorkspacePath)));
+    }
+
+    [Fact]
     public void NavMenu_WithAuthenticatedUserWithoutRequiredRole_NavigatesToPublicFeaturesAndHidesRoleGatedFeatures()
     {
         using var ctx = CreateContext(CreatePrincipal("viewer-user", "viewer"));

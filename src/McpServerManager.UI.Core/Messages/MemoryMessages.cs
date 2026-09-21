@@ -12,6 +12,24 @@ public enum MemoryScope
     Workspace = 1,
 }
 
+/// <summary>Rules for saving memories when the UI is on the default workspace.</summary>
+public static class MemoryScopePolicy
+{
+    /// <summary>Shown when a workspace-scoped save is attempted with no active workspace.</summary>
+    public const string WorkspaceScopeRequiresActiveWorkspace =
+        "Select a workspace before saving a workspace-scoped memory. Turn on Global Memory to save without a workspace.";
+
+    /// <summary>True when the active workspace path is missing (Default workspace).</summary>
+    public static bool IsDefaultWorkspace(string? activeWorkspacePath)
+        => string.IsNullOrWhiteSpace(activeWorkspacePath);
+
+    /// <summary>
+    /// Workspace scope needs an owner. Global scope is valid with no active workspace.
+    /// </summary>
+    public static bool CanPersist(string? activeWorkspacePath, MemoryScope scope)
+        => scope == MemoryScope.Global || !IsDefaultWorkspace(activeWorkspacePath);
+}
+
 /// <summary>Query to list memories with optional filters.</summary>
 public sealed record ListMemoriesQuery : IQuery<ListMemoriesResult>
 {

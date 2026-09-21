@@ -4,6 +4,7 @@ using McpServerManager.UI.Core.Handlers;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Services;
 using McpServerManager.UI.Core.Tests.TestInfrastructure;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
@@ -115,7 +116,11 @@ public sealed class MemoryHandlerAuthContractTests
         var command = new AddMemoryCommand { Category = "prefs", Text = "remember this" };
         client.AddMemoryAsync(command, Arg.Any<CancellationToken>())
             .Returns(new MemoryMutationOutcome(true, null, Sample));
-        var handler = new AddMemoryCommandHandler(client, AllowViewer(), NullLogger<AddMemoryCommandHandler>.Instance);
+        var handler = new AddMemoryCommandHandler(
+            client,
+            AllowViewer(),
+            Workspace(@"E:\repo"),
+            NullLogger<AddMemoryCommandHandler>.Instance);
 
         var result = await handler.HandleAsync(command, CallContextFactory.Create());
 
@@ -128,7 +133,11 @@ public sealed class MemoryHandlerAuthContractTests
     public async Task Add_WhenDenied_DoesNotCallClient()
     {
         var client = Substitute.For<IMemoryApiClient>();
-        var handler = new AddMemoryCommandHandler(client, Deny(McpActionKeys.MemoryAdd), NullLogger<AddMemoryCommandHandler>.Instance);
+        var handler = new AddMemoryCommandHandler(
+            client,
+            Deny(McpActionKeys.MemoryAdd),
+            Workspace(null),
+            NullLogger<AddMemoryCommandHandler>.Instance);
 
         var result = await handler.HandleAsync(
             new AddMemoryCommand { Category = "prefs", Text = "remember this" },
@@ -146,7 +155,11 @@ public sealed class MemoryHandlerAuthContractTests
         var command = new UpdateMemoryCommand { MemoryId = "mem-1", Text = "updated" };
         client.UpdateMemoryAsync(command, Arg.Any<CancellationToken>())
             .Returns(new MemoryMutationOutcome(true, null, Sample with { Text = "updated", Version = 4 }));
-        var handler = new UpdateMemoryCommandHandler(client, AllowViewer(), NullLogger<UpdateMemoryCommandHandler>.Instance);
+        var handler = new UpdateMemoryCommandHandler(
+            client,
+            AllowViewer(),
+            Workspace(@"E:\repo"),
+            NullLogger<UpdateMemoryCommandHandler>.Instance);
 
         var result = await handler.HandleAsync(command, CallContextFactory.Create());
 
@@ -160,7 +173,11 @@ public sealed class MemoryHandlerAuthContractTests
     public async Task Update_WhenDenied_DoesNotCallClient()
     {
         var client = Substitute.For<IMemoryApiClient>();
-        var handler = new UpdateMemoryCommandHandler(client, Deny(McpActionKeys.MemoryUpdate), NullLogger<UpdateMemoryCommandHandler>.Instance);
+        var handler = new UpdateMemoryCommandHandler(
+            client,
+            Deny(McpActionKeys.MemoryUpdate),
+            Workspace(null),
+            NullLogger<UpdateMemoryCommandHandler>.Instance);
 
         var result = await handler.HandleAsync(
             new UpdateMemoryCommand { MemoryId = "mem-1", Text = "updated" },
@@ -198,6 +215,77 @@ public sealed class MemoryHandlerAuthContractTests
         Assert.False(result.IsSuccess);
         Assert.Equal("Permission denied: requires viewer.", result.Error);
         await client.DidNotReceive().RemoveMemoryAsync(Arg.Any<RemoveMemoryCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Add_GlobalOnDefaultWorkspace_CallsClient()
+    {
+        var client = Substitute.For<IMemoryApiClient>();
+        var command = new AddMemoryCommand
+        {
+            Category = "prefs",
+            Text = "remember this",
+            Scope = MemoryScope.Global,
+        };
+        client.AddMemoryAsync(command, Arg.Any<CancellationToken>())
+            .Returns(new MemoryMutationOutcome(true, null, Sample with { Scope = MemoryScope.Global, WorkspacePath = null }));
+        var handler = new AddMemoryCommandHandler(
+            client,
+            AllowViewer(),
+            Workspace(null),
+            NullLogger<AddMemoryCommandHandler>.Instance);
+
+        var result = await handler.HandleAsync(command, CallContextFactory.Create());
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Value!.Success);
+        await client.Received(1).AddMemoryAsync(
+            Arg.Is<AddMemoryCommand>(c => c.Scope == MemoryScope.Global),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Add_WorkspaceScopeOnDefaultWorkspace_DoesNotCallClient()
+    {
+        var client = Substitute.For<IMemoryApiClient>();
+        var handler = new AddMemoryCommandHandler(
+            client,
+            AllowViewer(),
+            Workspace(string.Empty),
+            NullLogger<AddMemoryCommandHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            new AddMemoryCommand { Category = "prefs", Text = "remember this", Scope = MemoryScope.Workspace },
+            CallContextFactory.Create());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(MemoryScopePolicy.WorkspaceScopeRequiresActiveWorkspace, result.Error);
+        await client.DidNotReceive().AddMemoryAsync(Arg.Any<AddMemoryCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Update_WorkspaceScopeOnDefaultWorkspace_DoesNotCallClient()
+    {
+        var client = Substitute.For<IMemoryApiClient>();
+        var handler = new UpdateMemoryCommandHandler(
+            client,
+            AllowViewer(),
+            Workspace(null),
+            NullLogger<UpdateMemoryCommandHandler>.Instance);
+
+        var result = await handler.HandleAsync(
+            new UpdateMemoryCommand { MemoryId = "mem-1", Scope = MemoryScope.Workspace, Text = "updated" },
+            CallContextFactory.Create());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(MemoryScopePolicy.WorkspaceScopeRequiresActiveWorkspace, result.Error);
+        await client.DidNotReceive().UpdateMemoryAsync(Arg.Any<UpdateMemoryCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    private static WorkspaceContextViewModel Workspace(string? path)
+    {
+        var workspace = new WorkspaceContextViewModel { ActiveWorkspacePath = path };
+        return workspace;
     }
 
     private static ConfigurableAuthorizationPolicyService AllowViewer()

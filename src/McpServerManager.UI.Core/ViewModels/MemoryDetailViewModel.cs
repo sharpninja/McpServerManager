@@ -16,6 +16,7 @@ namespace McpServerManager.UI.Core.ViewModels;
 public sealed partial class MemoryDetailViewModel : AreaDetailViewModelBase<MemoryDetail>
 {
     private readonly Dispatcher _dispatcher;
+    private readonly WorkspaceContextViewModel _workspaceContext;
     private readonly ILogger<MemoryDetailViewModel> _logger;
 
     /// <summary>Whether the current editor state represents a new unsaved draft.</summary>
@@ -37,12 +38,41 @@ public sealed partial class MemoryDetailViewModel : AreaDetailViewModelBase<Memo
     [ObservableProperty] private string _editorUpdatedBy = "";
 
     /// <summary>Initializes a new instance of the memory detail ViewModel.</summary>
-    public MemoryDetailViewModel(Dispatcher dispatcher, ILogger<MemoryDetailViewModel> logger)
+    public MemoryDetailViewModel(
+        Dispatcher dispatcher,
+        WorkspaceContextViewModel workspaceContext,
+        ILogger<MemoryDetailViewModel> logger)
         : base(McpArea.Memory)
     {
         _dispatcher = dispatcher;
+        _workspaceContext = workspaceContext;
         _logger = logger;
+        workspaceContext.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(WorkspaceContextViewModel.ActiveWorkspacePath))
+                return;
+
+            OnPropertyChanged(nameof(ShowGlobalMemoryToggle));
+            OnPropertyChanged(nameof(CanSaveMemory));
+            OnPropertyChanged(nameof(GlobalMemory));
+        };
     }
+
+    /// <summary>True when the picker is on the Default workspace (no active path).</summary>
+    public bool ShowGlobalMemoryToggle => MemoryScopePolicy.IsDefaultWorkspace(_workspaceContext.ActiveWorkspacePath);
+
+    /// <summary>
+    /// Global Memory toggle. On stores Scope=Global (no workspace owner).
+    /// Off is workspace scope, which cannot be saved without an active workspace.
+    /// </summary>
+    public bool GlobalMemory
+    {
+        get => EditorScope == MemoryScope.Global;
+        set => EditorScope = value ? MemoryScope.Global : MemoryScope.Workspace;
+    }
+
+    /// <summary>False when the editor is workspace-scoped on the Default workspace.</summary>
+    public bool CanSaveMemory => MemoryScopePolicy.CanPersist(_workspaceContext.ActiveWorkspacePath, EditorScope);
 
     /// <summary>Display-only version from the last loaded/saved detail.</summary>
     public int? DisplayVersion => Detail?.Version;
@@ -136,6 +166,13 @@ public sealed partial class MemoryDetailViewModel : AreaDetailViewModelBase<Memo
 
         try
         {
+            if (!CanSaveMemory)
+            {
+                ErrorMessage = MemoryScopePolicy.WorkspaceScopeRequiresActiveWorkspace;
+                StatusMessage = "Memory save blocked.";
+                return false;
+            }
+
             if (IsNewDraft)
             {
                 var cmd = new AddMemoryCommand
@@ -206,7 +243,7 @@ public sealed partial class MemoryDetailViewModel : AreaDetailViewModelBase<Memo
         IsNewDraft = true;
         EditorId = "";
         EditorCategory = "";
-        EditorScope = MemoryScope.Workspace;
+        EditorScope = ShowGlobalMemoryToggle ? MemoryScope.Global : MemoryScope.Workspace;
         EditorText = "";
         EditorUpdatedBy = "";
         StatusMessage = "New memory draft.";
@@ -225,5 +262,12 @@ public sealed partial class MemoryDetailViewModel : AreaDetailViewModelBase<Memo
         EditorScope = Detail.Scope;
         EditorText = Detail.Text;
         EditorUpdatedBy = Detail.UpdatedBy ?? "";
+    }
+
+    partial void OnEditorScopeChanged(MemoryScope value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(GlobalMemory));
+        OnPropertyChanged(nameof(CanSaveMemory));
     }
 }

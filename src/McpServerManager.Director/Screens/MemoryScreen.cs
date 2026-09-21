@@ -268,6 +268,18 @@ internal sealed class MemoryScreen : View
 
         var scopeLabel = new Label { X = 1, Y = 3, Text = "Scope:" };
         var scopeField = new TextField { X = 16, Y = 3, Width = Dim.Fill(2), Text = _detailVm.EditorScope.ToString() };
+        CheckBox? globalMemoryToggle = null;
+        if (_detailVm.ShowGlobalMemoryToggle)
+        {
+            globalMemoryToggle = new CheckBox
+            {
+                X = 16,
+                Y = 3,
+                Width = Dim.Fill(2),
+                Text = "Global Memory",
+                CheckedState = _detailVm.GlobalMemory ? CheckState.Checked : CheckState.UnChecked,
+            };
+        }
 
         var updatedByLabel = new Label { X = 1, Y = 4, Text = "Updated By:" };
         var updatedByField = new TextField { X = 16, Y = 4, Width = Dim.Fill(2), Text = _detailVm.EditorUpdatedBy };
@@ -290,17 +302,33 @@ internal sealed class MemoryScreen : View
             WordWrap = true,
         };
 
-        dlg.Add(idLabel, idField, catLabel, catField, scopeLabel, scopeField,
+        dlg.Add(idLabel, idField, catLabel, catField, scopeLabel,
             updatedByLabel, updatedByField, versionLabel, textLabel, textField);
+        if (globalMemoryToggle is not null)
+            dlg.Add(globalMemoryToggle);
+        else
+            dlg.Add(scopeField);
 
         var saveBtn = new Button { Text = "Save" };
         saveBtn.Accepting += (_, _) =>
         {
             _detailVm.EditorId = idField.Text?.ToString() ?? "";
             _detailVm.EditorCategory = catField.Text?.ToString() ?? "";
-            _detailVm.EditorScope = ParseScope(scopeField.Text?.ToString()) ?? MemoryScope.Workspace;
+            if (globalMemoryToggle is not null)
+                _detailVm.GlobalMemory = globalMemoryToggle.CheckedState == CheckState.Checked;
+            else
+                _detailVm.EditorScope = ParseScope(scopeField.Text?.ToString()) ?? MemoryScope.Workspace;
             _detailVm.EditorUpdatedBy = updatedByField.Text?.ToString() ?? "";
             _detailVm.EditorText = textField.Text?.ToString() ?? "";
+
+            if (!_detailVm.CanSaveMemory)
+            {
+                MessageBox.ErrorQuery(
+                    "Save Failed",
+                    MemoryScopePolicy.WorkspaceScopeRequiresActiveWorkspace,
+                    "OK");
+                return;
+            }
 
             _ = Task.Run(async () =>
             {
