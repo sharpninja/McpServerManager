@@ -23,6 +23,7 @@ public sealed class HealthCommandTests : IClassFixture<McpServerFixture>
     [Fact]
     public async Task Health_ReturnsServerStatus()
     {
+        DirectorRunner.ConfigFile.Value = null;
         var result = await DirectorRunner.RunAsync(
             $"health --workspace \"{_server.WorkspaceDir}\"",
             workingDirectory: _server.WorkspaceDir);

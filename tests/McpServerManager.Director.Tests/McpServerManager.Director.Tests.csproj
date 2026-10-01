@@ -19,6 +19,10 @@
     <ProjectReference Include="..\..\src\McpServerManager.Director\McpServerManager.Director.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\build\CommandLinePublishGuard.cs" Link="CommandLinePublishGuard.cs" />
+    <Content Include="Fixtures\System.CommandLine.2.0.9.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="System.Text.Json" Version="10.0.3" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />

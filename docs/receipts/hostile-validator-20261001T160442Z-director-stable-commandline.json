@@ -1,0 +1,45 @@
+{
+  "TimestampUtc": "2026-10-01T16:04:42Z",
+  "ValidatorIdentity": "GrokSubagentHostile",
+  "AddProfileExecuted": "yes",
+  "AddProfileFileCount": 21,
+  "WorkClass": "mixed",
+  "SessionId": "GrokCode-20261001T155322Z-hv-dir-stable",
+  "RequestId": "req-20261001T155322Z-001-hv-director-stable-commandline",
+  "OverallVerdict": "DISAGREE",
+  "AccuracyPercent": 98,
+  "CompletenessPercent": 98,
+  "Fail": [],
+  "Unknown": [
+    "A3",
+    "A11"
+  ],
+  "NotApplicable": [
+    "B1",
+    "C1"
+  ],
+  "Pass": [
+    "A1",
+    "A2",
+    "A4",
+    "A5",
+    "A6",
+    "A7",
+    "A8",
+    "A9",
+    "A10",
+    "A12",
+    "A13",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "D1"
+  ],
+  "RequestJsonl": "F:\\GitHub\\McpServerManager\\docs\\receipts\\hv\\20261001T160442Z-director-stable-commandline.request.jsonl",
+  "ResponseJsonl": "F:\\GitHub\\McpServerManager\\docs\\receipts\\hv\\20261001T160442Z-director-stable-commandline.response.jsonl",
+  "ReceiptMarkdown": "F:\\GitHub\\McpServerManager\\docs\\receipts\\hostile-validator-20261001T160442Z-director-stable-commandline.md"
+}

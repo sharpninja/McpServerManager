@@ -11,7 +11,12 @@ internal static class DirectorCliConfigStore
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".mcpserver");
 
-    private static readonly string s_configPath = Path.Combine(s_configDir, "director.config.json");
+    private static readonly string s_defaultConfigPath = Path.Combine(s_configDir, "director.config.json");
+
+    private static string ConfigPath =>
+        Environment.GetEnvironmentVariable("DIRECTOR_CLI_CONFIG") is { Length: > 0 } overridePath
+            ? overridePath
+            : s_defaultConfigPath;
 
     private static readonly JsonSerializerOptions s_jsonOpts = new()
     {
@@ -22,12 +27,12 @@ internal static class DirectorCliConfigStore
 
     public static DirectorCliConfig Load()
     {
-        if (!File.Exists(s_configPath))
+        if (!File.Exists(ConfigPath))
             return new DirectorCliConfig();
 
         try
         {
-            var json = File.ReadAllText(s_configPath);
+            var json = File.ReadAllText(ConfigPath);
             return JsonSerializer.Deserialize<DirectorCliConfig>(json, s_jsonOpts) ?? new DirectorCliConfig();
         }
         catch
@@ -38,12 +43,15 @@ internal static class DirectorCliConfigStore
 
     public static void Save(DirectorCliConfig config)
     {
-        Directory.CreateDirectory(s_configDir);
+        var configPath = ConfigPath;
+        var configDir = Path.GetDirectoryName(configPath);
+        if (!string.IsNullOrEmpty(configDir))
+            Directory.CreateDirectory(configDir);
         var json = JsonSerializer.Serialize(config, s_jsonOpts);
-        File.WriteAllText(s_configPath, json);
+        File.WriteAllText(configPath, json);
     }
 
-    public static string GetConfigPath() => s_configPath;
+    public static string GetConfigPath() => ConfigPath;
 }
 
 internal sealed class DirectorCliConfig

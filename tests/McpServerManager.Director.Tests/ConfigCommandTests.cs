@@ -8,9 +8,17 @@ namespace McpServerManager.Director.Tests;
 [Collection("Director config commands")]
 public sealed class ConfigCommandTests
 {
+    private static void UseIsolatedConfig()
+    {
+        var configFile = Path.Combine(Path.GetTempPath(), "director-config-tests", Guid.NewGuid().ToString("N"), "director.config.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(configFile)!);
+        DirectorRunner.ConfigFile.Value = configFile;
+    }
+
     [Fact]
     public async Task ConfigHelp_ExitZero_ListsSubcommands()
     {
+        UseIsolatedConfig();
         var result = await DirectorRunner.RunAsync("config --help");
 
         Assert.Equal(0, result.ExitCode);
@@ -24,6 +32,7 @@ public sealed class ConfigCommandTests
     [Fact]
     public async Task ConfigShow_ExitZero_ShowsConfigPath()
     {
+        UseIsolatedConfig();
         var result = await DirectorRunner.RunAsync("config show");
 
         Assert.Equal(0, result.ExitCode);
@@ -36,6 +45,7 @@ public sealed class ConfigCommandTests
     [Fact]
     public async Task ConfigSetDefaultUrlHelp_ExitZero()
     {
+        UseIsolatedConfig();
         var result = await DirectorRunner.RunAsync("config set-default-url --help");
 
         Assert.Equal(0, result.ExitCode);
@@ -45,6 +55,7 @@ public sealed class ConfigCommandTests
     [Fact]
     public async Task ConfigSetDefaultUrl_InvalidUrl_PrintsError()
     {
+        UseIsolatedConfig();
         var result = await DirectorRunner.RunAsync("config set-default-url not-a-url");
 
         Assert.Equal(0, result.ExitCode);
@@ -54,6 +65,7 @@ public sealed class ConfigCommandTests
     [Fact]
     public async Task ConfigSetDefaultUrl_SetAndClear_RoundTrips()
     {
+        UseIsolatedConfig();
         // Set a test URL.
         var setResult = await DirectorRunner.RunAsync("config set-default-url http://localhost:9999");
         Assert.Equal(0, setResult.ExitCode);
@@ -78,6 +90,7 @@ public sealed class ConfigCommandTests
     [Fact]
     public async Task ConfigSetUrlAlias_ExitZero()
     {
+        UseIsolatedConfig();
         var result = await DirectorRunner.RunAsync("config set-url http://localhost:7777");
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("7777", result.AllOutput);
@@ -91,6 +104,7 @@ public sealed class ConfigCommandTests
     [Fact]
     public async Task ConfigClearDefaultUrl_ExitZero()
     {
+        UseIsolatedConfig();
         var result = await DirectorRunner.RunAsync("config clear-default-url");
 
         Assert.Equal(0, result.ExitCode);

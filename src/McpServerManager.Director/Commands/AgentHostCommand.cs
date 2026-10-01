@@ -20,11 +20,14 @@ namespace McpServerManager.Director.Commands;
 
 internal static class AgentHostCommand
 {
-    private static readonly Option<string?> s_workspaceOption = new("--workspace", "Workspace path (defaults to current directory)");
+    private static readonly Option<string?> s_workspaceOption = new("--workspace")
+    {
+        Description = "Workspace path (defaults to current directory)",
+    };
 
     public static void Register(RootCommand root)
     {
-        s_workspaceOption.AddAlias("-w");
+        s_workspaceOption.Aliases.Add("-w");
 
         var promptArgument = new Argument<string[]>("prompt")
         {
@@ -38,8 +41,11 @@ internal static class AgentHostCommand
             promptArgument
         };
 
-        command.SetHandler(async (string? workspace, string[] prompt) =>
+        command.SetAction(async parseResult =>
         {
+            var workspace = parseResult.GetValue(s_workspaceOption);
+            var prompt = parseResult.GetValue(promptArgument) ?? [];
+            var exitCode = 0;
             using var cancellationSource = new CancellationTokenSource();
             DirectorAgentConsoleApplication? application = null;
             ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
@@ -71,27 +77,31 @@ internal static class AgentHostCommand
                     var args = prompt.Length == 0
                         ? Array.Empty<string>()
                         : [string.Join(' ', prompt).Trim()];
-                    var exitCode = await application.RunAsync(args, cancellationSource.Token).ConfigureAwait(false);
+                    exitCode = await application.RunAsync(args, cancellationSource.Token).ConfigureAwait(false);
                     Environment.ExitCode = exitCode;
                 }
             }
             catch (OperationCanceledException)
             {
                 Console.Error.WriteLine("Canceled.");
-                Environment.ExitCode = 130;
+                exitCode = 130;
+                Environment.ExitCode = exitCode;
             }
             catch (Exception exception)
             {
                 Console.Error.WriteLine($"Failed to start the Director MCP Agent host: {exception}");
-                Environment.ExitCode = 1;
+                exitCode = 1;
+                Environment.ExitCode = exitCode;
             }
             finally
             {
                 Console.CancelKeyPress -= cancelHandler;
             }
-        }, s_workspaceOption, promptArgument);
 
-        root.AddCommand(command);
+            return exitCode;
+        });
+
+        root.Add(command);
     }
 
     private static void ConfigureHostedAgentServices(

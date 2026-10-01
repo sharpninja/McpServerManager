@@ -15,32 +15,36 @@ namespace McpServerManager.Director.Commands;
 /// </summary>
 internal static class DirectorCommands
 {
-    private static readonly Option<string?> s_workspaceOption = new("--workspace", "Workspace path (defaults to current directory)");
+    private static readonly Option<string?> s_workspaceOption = new("--workspace")
+    {
+        Description = "Workspace path (defaults to current directory)",
+    };
 
     /// <summary>Registers all Director commands on the root command.</summary>
     public static void Register(RootCommand root)
     {
-        s_workspaceOption.AddAlias("-w");
+        s_workspaceOption.Aliases.Add("-w");
 
-        root.AddCommand(BuildHealthCommand());
-        root.AddCommand(BuildListCommand());
-        root.AddCommand(BuildAgentsCommand());
-        root.AddCommand(BuildAddCommand());
-        root.AddCommand(BuildBanCommand());
-        root.AddCommand(BuildUnbanCommand());
-        root.AddCommand(BuildDeleteCommand());
-        root.AddCommand(BuildValidateCommand());
-        root.AddCommand(BuildInitCommand());
-        root.AddCommand(BuildAddWorkspaceCommand());
-        root.AddCommand(BuildTodoCommand());
-        root.AddCommand(BuildSessionLogCommand());
+        root.Add(BuildHealthCommand());
+        root.Add(BuildListCommand());
+        root.Add(BuildAgentsCommand());
+        root.Add(BuildAddCommand());
+        root.Add(BuildBanCommand());
+        root.Add(BuildUnbanCommand());
+        root.Add(BuildDeleteCommand());
+        root.Add(BuildValidateCommand());
+        root.Add(BuildInitCommand());
+        root.Add(BuildAddWorkspaceCommand());
+        root.Add(BuildTodoCommand());
+        root.Add(BuildSessionLogCommand());
     }
 
     private static Command BuildHealthCommand()
     {
         var cmd = new Command("health", "Check MCP server health") { s_workspaceOption };
-        cmd.SetHandler(async (string? workspace) =>
+        cmd.SetAction(async parseResult =>
         {
+            var workspace = parseResult.GetValue(s_workspaceOption);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, context) =>
             {
                 try
@@ -66,15 +70,17 @@ internal static class DirectorCommands
                     Error($"Server unreachable: {ex.Message}");
                 }
             }).ConfigureAwait(true);
-        }, s_workspaceOption);
+            return 0;
+        });
         return cmd;
     }
 
     private static Command BuildListCommand()
     {
         var cmd = new Command("list", "List all registered workspaces") { s_workspaceOption };
-        cmd.SetHandler(async (string? workspace) =>
+        cmd.SetAction(async parseResult =>
         {
+            var workspace = parseResult.GetValue(s_workspaceOption);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, _) =>
             {
                 try
@@ -107,17 +113,19 @@ internal static class DirectorCommands
                     Error(ex.Message);
                 }
             }).ConfigureAwait(true);
-        }, s_workspaceOption);
+            return 0;
+        });
         return cmd;
     }
 
     private static Command BuildAgentsCommand()
     {
         var defCmd = new Command("definitions", "List all agent type definitions");
-        defCmd.AddAlias("defs");
-        defCmd.AddOption(s_workspaceOption);
-        defCmd.SetHandler(async (string? workspace) =>
+        defCmd.Aliases.Add("defs");
+        defCmd.Add(s_workspaceOption);
+        defCmd.SetAction(async parseResult =>
         {
+            var workspace = parseResult.GetValue(s_workspaceOption);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, _) =>
             {
                 var result = await dispatcher.QueryAsync(new ListAgentDefinitionsQuery()).ConfigureAwait(true);
@@ -142,13 +150,15 @@ internal static class DirectorCommands
 
                 AnsiConsole.Write(table);
             }).ConfigureAwait(true);
-        }, s_workspaceOption);
+            return 0;
+        });
 
         var wsCmd = new Command("workspace", "List agents configured for this workspace");
-        wsCmd.AddAlias("ws");
-        wsCmd.AddOption(s_workspaceOption);
-        wsCmd.SetHandler(async (string? workspace) =>
+        wsCmd.Aliases.Add("ws");
+        wsCmd.Add(s_workspaceOption);
+        wsCmd.SetAction(async parseResult =>
         {
+            var workspace = parseResult.GetValue(s_workspaceOption);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, context) =>
             {
                 var workspacePath = ResolveWorkspacePathOrError(context);
@@ -181,23 +191,34 @@ internal static class DirectorCommands
 
                 AnsiConsole.Write(table);
             }).ConfigureAwait(true);
-        }, s_workspaceOption);
+            return 0;
+        });
 
         var eventsCmd = new Command("events", "Show agent lifecycle events");
-        var agentIdArg = new Argument<string>("agent-id", "Agent type ID");
-        var limitOpt = new Option<int>("--limit", () => 20, "Max events to show");
-        eventsCmd.AddArgument(agentIdArg);
-        eventsCmd.AddOption(s_workspaceOption);
-        eventsCmd.AddOption(limitOpt);
-        eventsCmd.SetHandler(async (string agentId, string? workspace, int limit) =>
+        var agentIdArg = new Argument<string>("agent-id")
         {
+            Description = "Agent type ID",
+        };
+        var limitOpt = new Option<int>("--limit")
+        {
+            Description = "Max events to show",
+            DefaultValueFactory = _ => 20,
+        };
+        eventsCmd.Add(agentIdArg);
+        eventsCmd.Add(s_workspaceOption);
+        eventsCmd.Add(limitOpt);
+        eventsCmd.SetAction(async parseResult =>
+        {
+            var agentId = parseResult.GetValue(agentIdArg);
+            var workspace = parseResult.GetValue(s_workspaceOption);
+            var limit = parseResult.GetValue(limitOpt);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, context) =>
             {
                 var workspacePath = ResolveWorkspacePathOrError(context);
                 if (workspacePath is null)
                     return;
 
-                var result = await dispatcher.QueryAsync(new GetAgentEventsQuery(agentId, workspacePath, limit)).ConfigureAwait(true);
+                var result = await dispatcher.QueryAsync(new GetAgentEventsQuery(agentId ?? string.Empty, workspacePath, limit)).ConfigureAwait(true);
                 if (!result.IsSuccess || result.Value is null)
                 {
                     Error(result.Error ?? "Failed to load events.");
@@ -221,7 +242,8 @@ internal static class DirectorCommands
 
                 AnsiConsole.Write(table);
             }).ConfigureAwait(true);
-        }, agentIdArg, s_workspaceOption, limitOpt);
+            return 0;
+        });
 
         var agentsCmd = new Command("agents", "Manage agents (definitions, workspace configs, events)")
         {
@@ -234,9 +256,20 @@ internal static class DirectorCommands
 
     private static Command BuildAddCommand()
     {
-        var agentIdArg = new Argument<string>("agent-id", "Agent type ID to add");
-        var isolationOpt = new Option<string>("--isolation", () => "worktree", "Isolation strategy: worktree or clone");
-        var enabledOpt = new Option<bool>("--enabled", () => true, "Whether the agent is enabled");
+        var agentIdArg = new Argument<string>("agent-id")
+        {
+            Description = "Agent type ID to add",
+        };
+        var isolationOpt = new Option<string>("--isolation")
+        {
+            Description = "Isolation strategy: worktree or clone",
+            DefaultValueFactory = _ => "worktree",
+        };
+        var enabledOpt = new Option<bool>("--enabled")
+        {
+            Description = "Whether the agent is enabled",
+            DefaultValueFactory = _ => true,
+        };
 
         var cmd = new Command("add", "Add an agent to the current workspace")
         {
@@ -246,8 +279,12 @@ internal static class DirectorCommands
             enabledOpt,
         };
 
-        cmd.SetHandler(async (string agentId, string? workspace, string isolation, bool enabled) =>
+        cmd.SetAction(async parseResult =>
         {
+            var agentId = parseResult.GetValue(agentIdArg);
+            var workspace = parseResult.GetValue(s_workspaceOption);
+            var isolation = parseResult.GetValue(isolationOpt);
+            var enabled = parseResult.GetValue(enabledOpt);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, context) =>
             {
                 var workspacePath = ResolveWorkspacePathOrError(context);
@@ -256,25 +293,39 @@ internal static class DirectorCommands
 
                 var result = await dispatcher.SendAsync(new AssignWorkspaceAgentCommand
                 {
-                    AgentId = agentId,
+                    AgentId = agentId ?? string.Empty,
                     WorkspacePath = workspacePath,
                     Enabled = enabled,
-                    AgentIsolation = isolation,
+                    AgentIsolation = isolation ?? "worktree",
                 }).ConfigureAwait(true);
 
                 PrintAgentMutationOutcome(result, $"Agent '{agentId}' added to workspace.");
             }).ConfigureAwait(true);
-        }, agentIdArg, s_workspaceOption, isolationOpt, enabledOpt);
+            return 0;
+        });
 
         return cmd;
     }
 
     private static Command BuildBanCommand()
     {
-        var agentIdArg = new Argument<string>("agent-id", "Agent type ID to ban");
-        var reasonOpt = new Option<string?>("--reason", "Reason for banning");
-        var globalOpt = new Option<bool>("--global", () => false, "Ban globally across all workspaces");
-        var prOpt = new Option<int?>("--until-pr", "PR number that must close before unbanning");
+        var agentIdArg = new Argument<string>("agent-id")
+        {
+            Description = "Agent type ID to ban",
+        };
+        var reasonOpt = new Option<string?>("--reason")
+        {
+            Description = "Reason for banning",
+        };
+        var globalOpt = new Option<bool>("--global")
+        {
+            Description = "Ban globally across all workspaces",
+            DefaultValueFactory = _ => false,
+        };
+        var prOpt = new Option<int?>("--until-pr")
+        {
+            Description = "PR number that must close before unbanning",
+        };
 
         var cmd = new Command("ban", "Ban an agent from a workspace (or globally)")
         {
@@ -285,8 +336,13 @@ internal static class DirectorCommands
             prOpt,
         };
 
-        cmd.SetHandler(async (string agentId, string? workspace, string? reason, bool global, int? untilPr) =>
+        cmd.SetAction(async parseResult =>
         {
+            var agentId = parseResult.GetValue(agentIdArg);
+            var workspace = parseResult.GetValue(s_workspaceOption);
+            var reason = parseResult.GetValue(reasonOpt);
+            var global = parseResult.GetValue(globalOpt);
+            var untilPr = parseResult.GetValue(prOpt);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, context) =>
             {
                 var workspacePath = global ? null : ResolveWorkspacePathOrError(context);
@@ -295,7 +351,7 @@ internal static class DirectorCommands
 
                 var result = await dispatcher.SendAsync(new BanAgentCommand
                 {
-                    AgentId = agentId,
+                    AgentId = agentId ?? string.Empty,
                     Reason = reason,
                     Global = global,
                     BannedUntilPr = untilPr,
@@ -304,15 +360,23 @@ internal static class DirectorCommands
 
                 PrintAgentMutationOutcome(result, $"Agent '{agentId}' banned{(global ? " globally" : "")}.");
             }).ConfigureAwait(true);
-        }, agentIdArg, s_workspaceOption, reasonOpt, globalOpt, prOpt);
+            return 0;
+        });
 
         return cmd;
     }
 
     private static Command BuildUnbanCommand()
     {
-        var agentIdArg = new Argument<string>("agent-id", "Agent type ID to unban");
-        var globalOpt = new Option<bool>("--global", () => false, "Unban globally across all workspaces");
+        var agentIdArg = new Argument<string>("agent-id")
+        {
+            Description = "Agent type ID to unban",
+        };
+        var globalOpt = new Option<bool>("--global")
+        {
+            Description = "Unban globally across all workspaces",
+            DefaultValueFactory = _ => false,
+        };
 
         var cmd = new Command("unban", "Unban an agent")
         {
@@ -321,25 +385,32 @@ internal static class DirectorCommands
             globalOpt,
         };
 
-        cmd.SetHandler(async (string agentId, string? workspace, bool global) =>
+        cmd.SetAction(async parseResult =>
         {
+            var agentId = parseResult.GetValue(agentIdArg);
+            var workspace = parseResult.GetValue(s_workspaceOption);
+            var global = parseResult.GetValue(globalOpt);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, context) =>
             {
                 var workspacePath = global ? null : ResolveWorkspacePathOrError(context);
                 if (!global && workspacePath is null)
                     return;
 
-                var result = await dispatcher.SendAsync(new UnbanAgentCommand(agentId, workspacePath, global)).ConfigureAwait(true);
+                var result = await dispatcher.SendAsync(new UnbanAgentCommand(agentId ?? string.Empty, workspacePath, global)).ConfigureAwait(true);
                 PrintAgentMutationOutcome(result, $"Agent '{agentId}' unbanned{(global ? " globally" : "")}.");
             }).ConfigureAwait(true);
-        }, agentIdArg, s_workspaceOption, globalOpt);
+            return 0;
+        });
 
         return cmd;
     }
 
     private static Command BuildDeleteCommand()
     {
-        var agentIdArg = new Argument<string>("agent-id", "Agent type ID to remove");
+        var agentIdArg = new Argument<string>("agent-id")
+        {
+            Description = "Agent type ID to remove",
+        };
 
         var cmd = new Command("delete", "Remove an agent from the current workspace")
         {
@@ -347,18 +418,21 @@ internal static class DirectorCommands
             s_workspaceOption,
         };
 
-        cmd.SetHandler(async (string agentId, string? workspace) =>
+        cmd.SetAction(async parseResult =>
         {
+            var agentId = parseResult.GetValue(agentIdArg);
+            var workspace = parseResult.GetValue(s_workspaceOption);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, context) =>
             {
                 var workspacePath = ResolveWorkspacePathOrError(context);
                 if (workspacePath is null)
                     return;
 
-                var result = await dispatcher.SendAsync(new DeleteWorkspaceAgentCommand(agentId, workspacePath)).ConfigureAwait(true);
+                var result = await dispatcher.SendAsync(new DeleteWorkspaceAgentCommand(agentId ?? string.Empty, workspacePath)).ConfigureAwait(true);
                 PrintAgentMutationOutcome(result, $"Agent '{agentId}' removed from workspace.");
             }).ConfigureAwait(true);
-        }, agentIdArg, s_workspaceOption);
+            return 0;
+        });
 
         return cmd;
     }
@@ -366,8 +440,9 @@ internal static class DirectorCommands
     private static Command BuildValidateCommand()
     {
         var cmd = new Command("validate", "Validate the agents.yaml file for a workspace") { s_workspaceOption };
-        cmd.SetHandler(async (string? workspace) =>
+        cmd.SetAction(async parseResult =>
         {
+            var workspace = parseResult.GetValue(s_workspaceOption);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, context) =>
             {
                 var workspacePath = ResolveWorkspacePathOrError(context);
@@ -390,15 +465,17 @@ internal static class DirectorCommands
                         AnsiConsole.MarkupLine($"  [dim]{Markup.Escape(result.Value.Error)}[/]");
                 }
             }).ConfigureAwait(true);
-        }, s_workspaceOption);
+            return 0;
+        });
         return cmd;
     }
 
     private static Command BuildInitCommand()
     {
         var cmd = new Command("init", "Initialize the current workspace for agent management") { s_workspaceOption };
-        cmd.SetHandler(async (string? workspace) =>
+        cmd.SetAction(async parseResult =>
         {
+            var workspace = parseResult.GetValue(s_workspaceOption);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, context) =>
             {
                 var workspacePath = ResolveWorkspacePathOrError(context);
@@ -415,7 +492,8 @@ internal static class DirectorCommands
                 var seededText = result.Value.SeededDefinitions is int seeded ? $" (seeded {seeded})" : "";
                 Success($"Workspace initialized for agent management{seededText}.");
             }).ConfigureAwait(true);
-        }, s_workspaceOption);
+            return 0;
+        });
         return cmd;
     }
 
@@ -426,10 +504,17 @@ internal static class DirectorCommands
     /// </summary>
     private static Command BuildAddWorkspaceCommand()
     {
-        var nameOption = new Option<string?>("--name", "Display name for the workspace (defaults to directory name)");
-        nameOption.AddAlias("-n");
-        var serverOption = new Option<string>("--server", () => "http://localhost:7147", "MCP Server base URL");
-        serverOption.AddAlias("-s");
+        var nameOption = new Option<string?>("--name")
+        {
+            Description = "Display name for the workspace (defaults to directory name)",
+        };
+        nameOption.Aliases.Add("-n");
+        var serverOption = new Option<string>("--server")
+        {
+            Description = "MCP Server base URL",
+            DefaultValueFactory = _ => "http://localhost:7147",
+        };
+        serverOption.Aliases.Add("-s");
 
         var cmd = new Command("add-workspace", "Register CWD as a new MCP Server workspace and verify trust")
         {
@@ -438,17 +523,20 @@ internal static class DirectorCommands
             serverOption,
         };
 
-        cmd.SetHandler(async (string? workspace, string? name, string server) =>
+        cmd.SetAction(async parseResult =>
         {
+            var workspace = parseResult.GetValue(s_workspaceOption);
+            var name = parseResult.GetValue(nameOption);
+            var server = parseResult.GetValue(serverOption);
             var workspacePath = Path.GetFullPath(
                 string.IsNullOrWhiteSpace(workspace) ? Environment.CurrentDirectory : workspace.Trim());
             var markerPath = Path.Combine(workspacePath, "AGENTS-README-FIRST.yaml");
 
             if (File.Exists(markerPath))
             {
-                Info($"Workspace already registered — validating trust for {markerPath}...");
+                Info($"Workspace already registered: validating trust for {markerPath}...");
                 await ValidateMarkerTrustAsync(workspacePath, markerPath).ConfigureAwait(true);
-                return;
+                return 0;
             }
 
             name ??= new DirectoryInfo(workspacePath).Name;
@@ -469,14 +557,14 @@ internal static class DirectorCommands
             else
             {
                 Error("Failed to obtain a local full-access API key. Run Director from a registered local workspace or ensure a configured workspace marker exists.");
-                return;
+                return 0;
             }
 
             // Step 2: Register the workspace (with retry for 503 during server startup).
             // Uses raw HttpClient instead of McpHttpClient.PostAsync to get direct access
             // to HttpResponseMessage.StatusCode for the retry decision.
             const int maxRetries = 5;
-            using var registrationHttp = new HttpClient { BaseAddress = new Uri(server) };
+            using var registrationHttp = new HttpClient { BaseAddress = new Uri(server ?? "http://localhost:7147") };
             registrationHttp.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
             if (!string.IsNullOrWhiteSpace(credentialWorkspacePath))
                 registrationHttp.DefaultRequestHeaders.Add("X-Workspace-Path", credentialWorkspacePath);
@@ -496,7 +584,7 @@ internal static class DirectorCommands
                     {
                         var errorMsg = resultDoc.RootElement.TryGetProperty("error", out var errProp) ? errProp.GetString() : "Unknown error";
                         Error($"Server rejected workspace registration: {errorMsg}");
-                        return;
+                        return 0;
                     }
 
                     Success("Workspace registered on the MCP Server.");
@@ -514,13 +602,13 @@ internal static class DirectorCommands
 
                 var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
                 Error($"Failed to register workspace: HTTP {(int)response.StatusCode} {response.StatusCode}: {errorBody}");
-                return;
+                return 0;
             }
 
             if (!registered)
             {
                 Error("Failed to register workspace after all retry attempts.");
-                return;
+                return 0;
             }
 
             // Step 3: Watch for AGENTS-README-FIRST.yaml to be created by the server
@@ -529,12 +617,13 @@ internal static class DirectorCommands
             if (!appeared)
             {
                 Warn("Marker file was not created within 30 seconds. Check the MCP Server logs.");
-                return;
+                return 0;
             }
 
             // Step 4: Validate trust on the new marker
             await ValidateMarkerTrustAsync(workspacePath, markerPath).ConfigureAwait(true);
-        }, s_workspaceOption, nameOption, serverOption);
+            return 0;
+        });
 
         return cmd;
     }
@@ -780,10 +869,15 @@ internal static class DirectorCommands
     private static Command BuildTodoCommand()
     {
         var listCmd = new Command("list", "List TODO items") { s_workspaceOption };
-        var sectionOpt = new Option<string?>("--section", "Filter by section");
-        listCmd.AddOption(sectionOpt);
-        listCmd.SetHandler(async (string? workspace, string? section) =>
+        var sectionOpt = new Option<string?>("--section")
         {
+            Description = "Filter by section",
+        };
+        listCmd.Add(sectionOpt);
+        listCmd.SetAction(async parseResult =>
+        {
+            var workspace = parseResult.GetValue(s_workspaceOption);
+            var section = parseResult.GetValue(sectionOpt);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, _) =>
             {
                 var result = await dispatcher.QueryAsync(new ListTodosQuery { Section = section }).ConfigureAwait(true);
@@ -813,7 +907,8 @@ internal static class DirectorCommands
                 AnsiConsole.Write(table);
                 Info($"{result.Value.Items.Count} items");
             }).ConfigureAwait(true);
-        }, s_workspaceOption, sectionOpt);
+            return 0;
+        });
 
         var todoCmd = new Command("todo", "Manage TODO items") { listCmd };
         return todoCmd;
@@ -822,10 +917,16 @@ internal static class DirectorCommands
     private static Command BuildSessionLogCommand()
     {
         var listCmd = new Command("list", "List recent session logs") { s_workspaceOption };
-        var limitOpt = new Option<int>("--limit", () => 10, "Max logs to show");
-        listCmd.AddOption(limitOpt);
-        listCmd.SetHandler(async (string? workspace, int limit) =>
+        var limitOpt = new Option<int>("--limit")
         {
+            Description = "Max logs to show",
+            DefaultValueFactory = _ => 10,
+        };
+        listCmd.Add(limitOpt);
+        listCmd.SetAction(async parseResult =>
+        {
+            var workspace = parseResult.GetValue(s_workspaceOption);
+            var limit = parseResult.GetValue(limitOpt);
             await RunWithDispatcherAsync(workspace, async (_, dispatcher, _) =>
             {
                 var result = await dispatcher.QueryAsync(new ListSessionLogsQuery
@@ -861,10 +962,11 @@ internal static class DirectorCommands
 
                 AnsiConsole.Write(table);
             }).ConfigureAwait(true);
-        }, s_workspaceOption, limitOpt);
+            return 0;
+        });
 
         var slCmd = new Command("session-log", "View session logs") { listCmd };
-        slCmd.AddAlias("sl");
+        slCmd.Aliases.Add("sl");
         return slCmd;
     }
 

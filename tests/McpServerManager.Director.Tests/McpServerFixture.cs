@@ -37,7 +37,9 @@ public sealed class McpServerFixture : IAsyncLifetime
         _workspaceDir = Path.Combine(Path.GetTempPath(), $"mcp-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_workspaceDir);
         _ownsWorkspaceDir = true;
-        _baseUrl = $"http://localhost:{_port}";
+        // Bind IPv4 explicitly. HttpListener on "localhost" can accept IPv6 while
+        // the director client connects to 127.0.0.1 and gets connection refused.
+        _baseUrl = $"http://127.0.0.1:{_port}";
 
         StartHealthEndpoint();
         await WaitForHealthAsync().ConfigureAwait(true);

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using McpServerManager.Build;
 using Serilog;
 
 partial class Build
@@ -277,7 +278,11 @@ partial class Build
 
         InvokeDotNet(new List<string> { "tool", "uninstall", "--global", toolId }, RepoRootPath, false);
 
-        EnsureDirectoryExists(publishDirectory);
+        // Publish -o does not delete files it no longer copies. SkipUnchangedFiles
+        // also keeps a destination DLL that is newer than the resolved package.
+        // That left a System.CommandLine build beside a director binary compiled
+        // against a different contract, so every command threw MissingMethodException.
+        ClearDirectory(publishDirectory);
         InvokeDotNet(
             new List<string>
             {
@@ -289,6 +294,7 @@ partial class Build
                 publishDirectory
             },
             RepoRootPath);
+        CommandLinePublishGuard.EnsureCompatible(Path.Combine(publishDirectory, "System.CommandLine.dll"));
 
         var entryPoint = $"{assemblyName}.dll";
         var runner = "dotnet";

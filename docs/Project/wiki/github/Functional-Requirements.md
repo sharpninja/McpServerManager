@@ -49,6 +49,11 @@ Scope: layer-1+
 - [ ] When the cached token is expired, the app deletes it and falls back to the normal login flow.
 - [ ] After identity-server login succeeds in a workspace, the token is saved in workspace-scoped shared auth storage for reuse by other apps.
 
+## FR-DEPS-UPGRADE-001 Dependencies current and mutually compatible
+
+All NuGet dependencies in McpServerManager are at the highest stable version mutually compatible with net10.0 targets and each other, per the locked table in the 2026-07-08 dependency upgrade plan. Holds (FluentAssertions 7.x license; latest-stable-only ceilings) are documented with reasons.
+Scope: layer-1+
+
 ## FR-E1-001 FR-E1-001
 
 Placeholder requirement backfilled for TODO link FR-E1-001.
@@ -77,6 +82,11 @@ Scope: layer-1+
 ## FR-GEN-001 Generate Document Test
 
 FR for document generation test
+Scope: layer-1+
+
+## FR-MCP-TRIAGE-002 FR-MCP-TRIAGE-002
+
+Placeholder requirement backfilled for TODO link FR-MCP-TRIAGE-002.
 Scope: layer-1+
 
 ## FR-RTUI-001 FR-RTUI-001
@@ -216,28 +226,6 @@ Scope: layer-1+
 
 MCP Web triage dashboard must let users select multiple triage rows or groups and move/consolidate them into report groups without leaving the triage page.
 Scope: layer-1+
-
-## FR-MANAGER-MEMORY-001 Director Memory tab
-
-Director SHALL expose workspace Memory (`GET/POST /mcpserver/memory`, `GET/PUT/DELETE /mcpserver/memory/{id}`) on a Viewer tab placed immediately after Sessions. Surfaces list/get/add/update/remove. Version is display-only. No Operator role and no expectedVersion/OCC.
-Scope: layer-1+
-**Status:** Shipped — PLAN-MANAGER-MEMORY-UI-001 box H-done AGREE 2026-09-20 (Accuracy 99 / Completeness 99). Manager tip `e1636b34`. Box MCP `1.0.0+720c2b49`.
-**Lab:** Headless Terminal.Gui `FakeDriver` + `MemoryScreen` Subviews walk; MCP five-verb awaits after `Application.Shutdown()`. Receipt `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/lab-smoke-director-box-20260920T001521Z.md`.
-**Acceptance Criteria:**
-- [x] Director Memory tab is registered after Sessions and is Viewer-visible.
-- [x] List/get/add/update/remove route through `IMemoryApiClient` and UI.Core handlers.
-- [x] Version is display-only; update never sends expectedVersion.
-
-## FR-MANAGER-MEMORY-002 Web Memory pages
-
-Mcp-Web SHALL expose Viewer-accessible Memory pages at `/memory` and `/memory/{Id}` with a NavLink after Todos and before Triage. Surfaces list/get/add/update/remove. Version is display-only. No Operator role and no expectedVersion/OCC.
-Scope: layer-1+
-**Status:** Shipped — PLAN-MANAGER-MEMORY-UI-001 box H-done AGREE 2026-09-20 (Accuracy 99 / Completeness 99). Manager tip `e1636b34`. Box MCP `1.0.0+720c2b49`.
-**Lab:** Web `/memory` five-verb PASS; NAV Memory after Todos; Version 1→2 display-only. Receipt `docs/receipts/PLAN-MANAGER-MEMORY-UI-001/lab-smoke-web-box-20260919T235547Z.md`.
-**Acceptance Criteria:**
-- [x] `/memory` and `/memory/{Id}` pages render list/detail/add/update/remove.
-- [x] NavLink `/memory` sits after `/todos` and before `/triage`.
-- [x] Auth-contract tests cover all five verbs as Viewer with no Operator strings.
 
 ## FR-VM-CQRS-ANDROIDVOICE-001 Android voice host-composed services
 

@@ -1,7 +1,13 @@
 # Requirements
 
+- [Home](Home)
 - [Functional Requirements](Functional-Requirements)
 - [Technical Requirements](Technical-Requirements)
 - [Testing Requirements](Testing-Requirements)
-- [Traceability Mapping](TR-per-FR-Mapping)
+- [TR per FR Mapping](TR-per-FR-Mapping)
 - [Requirements Matrix](Requirements-Matrix)
+- [McpServerManager](McpServerManager)
+- [Director](Director)
+- [Director Requirements](Requirements-Director)
+- [Web UI Requirements](Requirements-WebUI)
+- [Operations](Operations)

@@ -21,7 +21,7 @@ internal static class Program
     /// <returns>Exit code.</returns>
     public static async Task<int> Main(string[] args)
     {
-        var rootCommand = new RootCommand("McpServer Director — CLI management tool");
+        var rootCommand = new RootCommand("McpServer Director: CLI management tool");
 
         // FR-MCP-030: Register all Director agent management commands
         DirectorCommands.Register(rootCommand);
@@ -40,22 +40,26 @@ internal static class Program
 
         // exec <viewmodel> [--input <json>]
         var execCommand = BuildExecCommand();
-        rootCommand.AddCommand(execCommand);
+        rootCommand.Add(execCommand);
 
         // list-viewmodels
         var listCommand = BuildListCommand();
-        rootCommand.AddCommand(listCommand);
+        rootCommand.Add(listCommand);
 
-        return await rootCommand.InvokeAsync(args).ConfigureAwait(true);
+        return await rootCommand.Parse(args).InvokeAsync().ConfigureAwait(true);
     }
 
     private static Command BuildExecCommand()
     {
-        var viewModelArg = new Argument<string>("viewmodel",
-            "ViewModel class name or CLI alias (see 'director list-viewmodels').");
-        var inputOption = new Option<string?>("--input",
-            "JSON object used to populate writable ViewModel properties before execution.");
-        inputOption.AddAlias("-i");
+        var viewModelArg = new Argument<string>("viewmodel")
+        {
+            Description = "ViewModel class name or CLI alias (see 'director list-viewmodels').",
+        };
+        var inputOption = new Option<string?>("--input")
+        {
+            Description = "JSON object used to populate writable ViewModel properties before execution.",
+        };
+        inputOption.Aliases.Add("-i");
 
         var execCommand = new Command("exec", "Execute a ViewModel command by name or alias")
         {
@@ -69,15 +73,17 @@ internal static class Program
             "director exec todo-prompt-status -i '{\"TodoId\":\"MVP-SUPPORT-019\"}' | " +
             "director exec todo-requirements -i '{\"TodoId\":\"MVP-SUPPORT-019\"}'";
 
-        execCommand.SetHandler(async (string viewModelName, string? input) =>
+        execCommand.SetAction(async parseResult =>
         {
+            var viewModelName = parseResult.GetValue(viewModelArg);
+            var input = parseResult.GetValue(inputOption);
             using var sp = DirectorHost.CreateProvider();
             var registry = sp.GetRequiredService<IViewModelRegistry>();
 
             try
             {
                 // Resolve ViewModel
-                var vm = registry.Resolve(viewModelName);
+                var vm = registry.Resolve(viewModelName ?? string.Empty);
                 AnsiConsole.MarkupLine($"[green]Resolved:[/] {vm.GetType().Name}");
 
                 // Set properties from JSON input
@@ -117,7 +123,9 @@ internal static class Program
                 System.Diagnostics.Trace.TraceError(ex.ToString());
                 AnsiConsole.WriteException(ex);
             }
-        }, viewModelArg, inputOption);
+
+            return 0;
+        });
 
         return execCommand;
     }
@@ -125,12 +133,16 @@ internal static class Program
     private static Command BuildListCommand()
     {
         var listCommand = new Command("list-viewmodels", "List registered ViewModels, CLI aliases, and descriptions for 'director exec'");
-        var filterOption = new Option<string?>("--filter", "Optional substring filter for alias/name/type/description");
-        filterOption.AddAlias("-f");
-        listCommand.AddOption(filterOption);
-
-        listCommand.SetHandler((string? filter) =>
+        var filterOption = new Option<string?>("--filter")
         {
+            Description = "Optional substring filter for alias/name/type/description",
+        };
+        filterOption.Aliases.Add("-f");
+        listCommand.Add(filterOption);
+
+        listCommand.SetAction(parseResult =>
+        {
+            var filter = parseResult.GetValue(filterOption);
             using var sp = DirectorHost.CreateProvider();
             var registry = sp.GetRequiredService<IViewModelRegistry>();
 
@@ -155,7 +167,8 @@ internal static class Program
             }
 
             AnsiConsole.Write(table);
-        }, filterOption);
+            return 0;
+        });
 
         return listCommand;
     }

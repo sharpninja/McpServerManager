@@ -1,0 +1,16 @@
+utc=2026-10-01T16:40:09Z
+installed_assembly=2.0.12.0
+installed_length=151352
+installed_sha256=2B5EE7C20FDBD08AF6C5DD7271C4E6B53FEDAB72864EE85ABEE94A647ABA704E
+installed_is_beta4=False
+lyft_help_exit=0
+lyft_help_stderr_length=0
+lyft_help_contains_add_workspace=True
+lyft_help_missing_method=False
+live_director_health_exit=0
+live_director_health_text=Server healthy at http://PAYTON-LEGION2:7147
+filter=Help_|CommandLinePublishGuard|VersionFlag|InvalidUrl|Whoami|Logout_ExitZero|MarkerSignature|ConfigShow|ConfigClear|SetAndClear|SetUrlAlias|Health_
+test_exit=0
+test_result=Passed 41, Failed 0, Skipped 0, Total 41
+health_fixture=HttpListener bound to http://127.0.0.1:{port}
+config_isolation=DIRECTOR_CLI_CONFIG per test process; config command tests no longer write the user profile director.config.json

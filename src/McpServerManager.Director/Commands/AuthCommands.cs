@@ -18,17 +18,24 @@ internal static class AuthCommands
     /// <summary>Registers auth commands on the root command.</summary>
     public static void Register(RootCommand root)
     {
-        root.AddCommand(BuildLoginCommand());
-        root.AddCommand(BuildLogoutCommand());
-        root.AddCommand(BuildWhoamiCommand());
+        root.Add(BuildLoginCommand());
+        root.Add(BuildLogoutCommand());
+        root.Add(BuildWhoamiCommand());
     }
 
     // ── login ────────────────────────────────────────────────────────────
 
     private static Command BuildLoginCommand()
     {
-        var authorityOpt = new Option<string?>("--authority", "Keycloak realm authority URL");
-        var clientIdOpt = new Option<string>("--client-id", () => "mcp-director", "Keycloak client ID");
+        var authorityOpt = new Option<string?>("--authority")
+        {
+            Description = "Keycloak realm authority URL",
+        };
+        var clientIdOpt = new Option<string>("--client-id")
+        {
+            Description = "Keycloak client ID",
+            DefaultValueFactory = _ => "mcp-director",
+        };
 
         var cmd = new Command("login", "Authenticate with Keycloak using Device Authorization Flow")
         {
@@ -36,13 +43,15 @@ internal static class AuthCommands
             clientIdOpt,
         };
 
-        cmd.SetHandler(async (string? authority, string clientId) =>
+        cmd.SetAction(async parseResult =>
         {
+            var authority = parseResult.GetValue(authorityOpt);
+            var clientId = parseResult.GetValue(clientIdOpt);
             // Resolve authority: CLI option → env var → server auto-discovery → marker file
             var resolvedAuthority = authority
                 ?? Environment.GetEnvironmentVariable("MCP_AUTH_AUTHORITY");
 
-            var options = new DirectorAuthOptions { ClientId = clientId };
+            var options = new DirectorAuthOptions { ClientId = clientId ?? "mcp-director" };
 
             // Try auto-discovery from MCP server if no authority specified
             if (string.IsNullOrWhiteSpace(resolvedAuthority))
@@ -66,7 +75,7 @@ internal static class AuthCommands
             {
                 Error("Keycloak authority not specified.");
                 AnsiConsole.MarkupLine("[dim]Provide --authority, set MCP_AUTH_AUTHORITY env var, or ensure MCP server is running with Mcp:Auth configured.[/]");
-                return;
+                return 0;
             }
 
             using var authService = new OidcAuthService(options);
@@ -112,7 +121,9 @@ internal static class AuthCommands
             {
                 Error(result.Error ?? "Login failed.");
             }
-        }, authorityOpt, clientIdOpt);
+
+            return 0;
+        });
 
         return cmd;
     }
@@ -123,10 +134,11 @@ internal static class AuthCommands
     {
         var cmd = new Command("logout", "Clear cached authentication tokens");
 
-        cmd.SetHandler(() =>
+        cmd.SetAction(_ =>
         {
             OidcAuthService.Logout();
             Success("Logged out. Token cache cleared.");
+            return 0;
         });
 
         return cmd;
@@ -138,13 +150,13 @@ internal static class AuthCommands
     {
         var cmd = new Command("whoami", "Display current authenticated user");
 
-        cmd.SetHandler(() =>
+        cmd.SetAction(_ =>
         {
             var user = OidcAuthService.GetCurrentUser();
             if (user is null)
             {
                 Warn("Not logged in. Run 'director login' to authenticate.");
-                return;
+                return 0;
             }
 
             var table = new Table();
@@ -161,6 +173,7 @@ internal static class AuthCommands
             table.AddRow("Status", user.IsExpired ? "[red]Expired[/]" : "[green]Valid[/]");
 
             AnsiConsole.Write(table);
+            return 0;
         });
 
         return cmd;

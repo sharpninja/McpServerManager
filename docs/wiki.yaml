@@ -1,0 +1,104 @@
+schema: mcp-wiki-export/v1
+home:
+  document: home
+documents:
+- id: home
+  title: Home
+  source: generated:home
+  target: Home.md
+  platforms:
+  - github
+  - azure
+- id: functional
+  title: Functional Requirements
+  source: generated:functional
+  target: Functional-Requirements.md
+  platforms:
+  - github
+  - azure
+- id: technical
+  title: Technical Requirements
+  source: generated:technical
+  target: Technical-Requirements.md
+  platforms:
+  - github
+  - azure
+- id: testing
+  title: Testing Requirements
+  source: generated:testing
+  target: Testing-Requirements.md
+  platforms:
+  - github
+  - azure
+- id: mapping
+  title: TR per FR Mapping
+  source: generated:mapping
+  target: TR-per-FR-Mapping.md
+  platforms:
+  - github
+  - azure
+- id: matrix
+  title: Requirements Matrix
+  source: generated:matrix
+  target: Requirements-Matrix.md
+  platforms:
+  - github
+  - azure
+- id: project-readme
+  title: McpServerManager
+  source: README.md
+  target: McpServerManager.md
+  platforms:
+  - github
+  - azure
+- id: director-readme
+  title: Director
+  source: src/McpServerManager.Director/README.md
+  target: Director.md
+  platforms:
+  - github
+  - azure
+- id: requirements-director
+  title: Director Requirements
+  source: docs/Requirements-Director.md
+  target: Requirements-Director.md
+  platforms:
+  - github
+  - azure
+- id: requirements-webui
+  title: Web UI Requirements
+  source: docs/Requirements-WebUI.md
+  target: Requirements-WebUI.md
+  platforms:
+  - github
+  - azure
+- id: operations
+  title: Operations
+  source: docs/Operations/README.md
+  target: Operations.md
+  platforms:
+  - github
+  - azure
+navigation:
+- document: home
+  children: &o0 []
+- document: functional
+  children: *o0
+- document: technical
+  children: *o0
+- document: testing
+  children: *o0
+- document: mapping
+  children: *o0
+- document: matrix
+  children: *o0
+- document: project-readme
+  children: *o0
+- document: director-readme
+  children: *o0
+- document: requirements-director
+  children: *o0
+- document: requirements-webui
+  children: *o0
+- document: operations
+  children: *o0

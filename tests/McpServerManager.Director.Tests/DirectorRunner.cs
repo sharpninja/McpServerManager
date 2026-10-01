@@ -26,6 +26,13 @@ internal static class DirectorRunner
     private const int DefaultTimeoutMs = 30_000;
 
     /// <summary>
+    /// Optional config file for the director process started by the current test.
+    /// When unset, each invocation gets its own empty file so tests do not share
+    /// the user profile config or each other's default URL.
+    /// </summary>
+    internal static readonly AsyncLocal<string?> ConfigFile = new();
+
+    /// <summary>
     /// Runs the Director CLI with the given arguments and returns the exit code,
     /// captured stdout, and captured stderr.
     /// </summary>
@@ -50,6 +57,16 @@ internal static class DirectorRunner
 
         // Ensure ANSI markup does not leak into captured output.
         psi.Environment["NO_COLOR"] = "1";
+        var configFile = ConfigFile.Value;
+        if (string.IsNullOrWhiteSpace(configFile))
+        {
+            configFile = Path.Combine(Path.GetTempPath(), "director-cli-tests", Guid.NewGuid().ToString("N"), "director.config.json");
+        }
+
+        var configDir = Path.GetDirectoryName(configFile);
+        if (!string.IsNullOrEmpty(configDir))
+            Directory.CreateDirectory(configDir);
+        psi.Environment["DIRECTOR_CLI_CONFIG"] = configFile;
 
         using var process = Process.Start(psi)!;
         var stdoutTask = process.StandardOutput.ReadToEndAsync();
