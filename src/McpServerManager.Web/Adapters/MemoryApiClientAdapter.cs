@@ -19,7 +19,7 @@ internal sealed class MemoryApiClientAdapter : IMemoryApiClient
 
     public async Task<ListMemoriesResult> ListMemoriesAsync(ListMemoriesQuery query, CancellationToken cancellationToken = default)
     {
-        var response = await _context.UseActiveWorkspaceApiClientAsync(
+        var response = await UseMemoryClientAsync(
                 (client, ct) => client.Memory.ListAsync(
                     MemoryMessageMapper.ToClientScope(query.Scope),
                     query.Category,
@@ -34,7 +34,7 @@ internal sealed class MemoryApiClientAdapter : IMemoryApiClient
     {
         try
         {
-            var item = await _context.UseActiveWorkspaceApiClientAsync(
+            var item = await UseMemoryClientAsync(
                     (client, ct) => client.Memory.GetAsync(memoryId, ct),
                     cancellationToken)
                 .ConfigureAwait(true);
@@ -51,7 +51,7 @@ internal sealed class MemoryApiClientAdapter : IMemoryApiClient
     {
         try
         {
-            var result = await _context.UseActiveWorkspaceApiClientAsync(
+            var result = await UseMemoryClientAsync(
                     (client, ct) => client.Memory.AddAsync(MemoryMessageMapper.ToAddRequest(command), ct),
                     cancellationToken)
                 .ConfigureAwait(true);
@@ -73,7 +73,7 @@ internal sealed class MemoryApiClientAdapter : IMemoryApiClient
     {
         try
         {
-            var result = await _context.UseActiveWorkspaceApiClientAsync(
+            var result = await UseMemoryClientAsync(
                     (client, ct) => client.Memory.UpdateAsync(
                         command.MemoryId,
                         MemoryMessageMapper.ToUpdateRequest(command),
@@ -98,7 +98,7 @@ internal sealed class MemoryApiClientAdapter : IMemoryApiClient
     {
         try
         {
-            var result = await _context.UseActiveWorkspaceApiClientAsync(
+            var result = await UseMemoryClientAsync(
                     (client, ct) => client.Memory.RemoveAsync(command.MemoryId, ct),
                     cancellationToken)
                 .ConfigureAwait(true);
@@ -109,5 +109,19 @@ internal sealed class MemoryApiClientAdapter : IMemoryApiClient
             _logger.LogWarning("{ExceptionDetail}", ex.ToString());
             return new MemoryMutationOutcome(false, ex.Message, null, MemoryMutationFailureKind.NotFound);
         }
+    }
+
+    /// <summary>
+    /// Default workspace (empty active path) uses the control client so Global creates
+    /// are not sent with a stale workspace path. A selected workspace keeps the active client.
+    /// </summary>
+    private Task<T> UseMemoryClientAsync<T>(
+        Func<McpServerClient, CancellationToken, Task<T>> operation,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_context.ActiveWorkspacePath))
+            return _context.UseControlApiClientAsync(operation, cancellationToken);
+
+        return _context.UseActiveWorkspaceApiClientAsync(operation, cancellationToken);
     }
 }

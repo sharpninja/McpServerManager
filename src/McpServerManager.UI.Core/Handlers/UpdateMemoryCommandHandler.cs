@@ -2,6 +2,7 @@ using McpServer.Cqrs;
 using McpServerManager.UI.Core.Authorization;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using Microsoft.Extensions.Logging;
 
 namespace McpServerManager.UI.Core.Handlers;
@@ -14,15 +15,18 @@ internal sealed class UpdateMemoryCommandHandler : ICommandHandler<UpdateMemoryC
 {
     private readonly IMemoryApiClient _memoryApiClient;
     private readonly IAuthorizationPolicyService _authorizationPolicy;
+    private readonly WorkspaceContextViewModel _workspaceContext;
     private readonly ILogger<UpdateMemoryCommandHandler> _logger;
 
     public UpdateMemoryCommandHandler(
         IMemoryApiClient memoryApiClient,
         IAuthorizationPolicyService authorizationPolicy,
+        WorkspaceContextViewModel workspaceContext,
         ILogger<UpdateMemoryCommandHandler> logger)
     {
         _memoryApiClient = memoryApiClient;
         _authorizationPolicy = authorizationPolicy;
+        _workspaceContext = workspaceContext;
         _logger = logger;
     }
 
@@ -38,6 +42,12 @@ internal sealed class UpdateMemoryCommandHandler : ICommandHandler<UpdateMemoryC
                 string.IsNullOrWhiteSpace(requiredRole)
                     ? "Permission denied."
                     : $"Permission denied: requires {requiredRole}.");
+        }
+
+        if (command.Scope == MemoryScope.Workspace &&
+            MemoryScopePolicy.IsDefaultWorkspace(_workspaceContext.ActiveWorkspacePath))
+        {
+            return Result<MemoryMutationOutcome>.Failure(MemoryScopePolicy.WorkspaceScopeRequiresActiveWorkspace);
         }
 
         try

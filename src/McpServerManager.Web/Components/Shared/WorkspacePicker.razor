@@ -52,7 +52,14 @@
             ? null
             : args.Value?.ToString();
 
+        // Default workspace must drop workspacePath from the URL before the context
+        // change remounts the page, or ApplyWorkspaceFromQuery restores the old path.
+        if (string.IsNullOrWhiteSpace(this.currentWorkspacePath))
+            await this.SelectedWorkspaceChanged.InvokeAsync(this.currentWorkspacePath).ConfigureAwait(true);
+
         this.WorkspaceContext.ActiveWorkspacePath = this.currentWorkspacePath;
-        await this.SelectedWorkspaceChanged.InvokeAsync(this.currentWorkspacePath).ConfigureAwait(true);
+
+        if (!string.IsNullOrWhiteSpace(this.currentWorkspacePath))
+            await this.SelectedWorkspaceChanged.InvokeAsync(this.currentWorkspacePath).ConfigureAwait(true);
     }
 }

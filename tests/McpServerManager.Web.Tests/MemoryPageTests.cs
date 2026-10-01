@@ -1,3 +1,4 @@
+using AngleSharp.Html.Dom;
 using Bunit;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Services;
@@ -73,6 +74,87 @@ public sealed class MemoryPageTests
             Assert.Contains("display only", cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain("expectedVersion", cut.Markup, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("Operator", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("Global Memory", cut.Markup, StringComparison.Ordinal);
+            Assert.NotEmpty(cut.FindAll("[data-testid='memory-scope']"));
+        });
+    }
+
+    [Fact]
+    public void MemoryDetailPage_DefaultWorkspace_ShowsGlobalMemoryToggle_AndSaveCreatesGlobal()
+    {
+        AddMemoryCommand? captured = null;
+        var api = Substitute.For<IMemoryApiClient>();
+        api.ListMemoriesAsync(Arg.Any<ListMemoriesQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new ListMemoriesResult([], 0));
+        api.AddMemoryAsync(Arg.Any<AddMemoryCommand>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                captured = call.Arg<AddMemoryCommand>();
+                return new MemoryMutationOutcome(
+                    true,
+                    null,
+                    new MemoryDetail(
+                        captured.Id ?? "mem-new",
+                        captured.Category,
+                        captured.Scope,
+                        null,
+                        captured.Text,
+                        1,
+                        DateTimeOffset.Parse("2026-09-21T00:00:00Z"),
+                        DateTimeOffset.Parse("2026-09-21T00:00:00Z"),
+                        captured.UpdatedBy));
+            });
+
+        using var ctx = CreateTestContext(services => services.AddSingleton(api));
+        ctx.Services.GetRequiredService<WorkspaceContextViewModel>().ActiveWorkspacePath = null;
+        var cut = ctx.Render<McpServerManager.Web.Pages.Memory.MemoryDetail>(parameters =>
+            parameters.Add(p => p.MemoryId, "new"));
+
+        cut.WaitForAssertion(() =>
+        {
+            var toggle = Assert.IsAssignableFrom<IHtmlInputElement>(cut.Find("[data-testid='global-memory-toggle']"));
+            Assert.Equal("checkbox", toggle.Type);
+            Assert.True(toggle.IsChecked);
+            Assert.Contains("Global Memory", cut.Markup, StringComparison.Ordinal);
+            Assert.Empty(cut.FindAll("[data-testid='memory-scope']"));
+        });
+
+        cut.Find("[data-testid='memory-category']").Change("prefs");
+        cut.Find("[data-testid='memory-text']").Change("remember this");
+        cut.Find(".detail-card-expander__actions .btn-primary").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(captured);
+            Assert.Equal(MemoryScope.Global, captured!.Scope);
+            Assert.Equal("prefs", captured.Category);
+            Assert.Equal("remember this", captured.Text);
+        });
+    }
+
+    [Fact]
+    public void MemoryDetailPage_DefaultWorkspace_GlobalToggleOff_DisablesSave()
+    {
+        var api = Substitute.For<IMemoryApiClient>();
+        api.ListMemoriesAsync(Arg.Any<ListMemoriesQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new ListMemoriesResult([], 0));
+
+        using var ctx = CreateTestContext(services => services.AddSingleton(api));
+        ctx.Services.GetRequiredService<WorkspaceContextViewModel>().ActiveWorkspacePath = string.Empty;
+        var cut = ctx.Render<McpServerManager.Web.Pages.Memory.MemoryDetail>(parameters =>
+            parameters.Add(p => p.MemoryId, "new"));
+
+        cut.WaitForAssertion(() =>
+            Assert.True(Assert.IsAssignableFrom<IHtmlInputElement>(cut.Find("[data-testid='global-memory-toggle']")).IsChecked));
+
+        cut.Find("[data-testid='global-memory-toggle']").Change(false);
+
+        cut.WaitForAssertion(() =>
+        {
+            var toggle = Assert.IsAssignableFrom<IHtmlInputElement>(cut.Find("[data-testid='global-memory-toggle']"));
+            Assert.False(toggle.IsChecked);
+            Assert.True(cut.Find(".detail-card-expander__actions .btn-primary").HasAttribute("disabled"));
+            Assert.Contains(MemoryScopePolicy.WorkspaceScopeRequiresActiveWorkspace, cut.Markup, StringComparison.Ordinal);
         });
     }
 

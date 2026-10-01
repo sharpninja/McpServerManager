@@ -67,7 +67,7 @@
                     @if (CanMutate)
                     {
                         <div class="detail-card-expander__actions">
-                            <button class="btn btn-primary btn-sm" @onclick="SaveAsync" disabled="@ViewModel.IsBusy">Save</button>
+                            <button class="btn btn-primary btn-sm" @onclick="SaveAsync" disabled="@(ViewModel.IsBusy || !ViewModel.CanSaveMemory)">Save</button>
                             @if (!IsNew)
                             {
                                 <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@ViewModel.IsBusy">Remove</button>
@@ -90,15 +90,38 @@
                         </div>
                         <div>
                             <label class="text-small text-bold d-block">Category</label>
-                            <input class="form-control width-full" @bind="ViewModel.EditorCategory" disabled="@(!CanMutate)" />
+                            <input class="form-control width-full" data-testid="memory-category" @bind="ViewModel.EditorCategory" disabled="@(!CanMutate)" />
                         </div>
-                        <div>
-                            <label class="text-small text-bold d-block">Scope</label>
-                            <select class="form-select width-full" @bind="ViewModel.EditorScope" disabled="@(!CanMutate)">
-                                <option value="@MemoryScope.Workspace">Workspace</option>
-                                <option value="@MemoryScope.Global">Global</option>
-                            </select>
-                        </div>
+                        @if (ViewModel.ShowGlobalMemoryToggle)
+                        {
+                            <div class="detail-field--wide">
+                                <label class="text-small text-bold d-flex flex-items-center">
+                                    <input type="checkbox"
+                                           class="mr-2"
+                                           data-testid="global-memory-toggle"
+                                           @bind="ViewModel.GlobalMemory"
+                                           disabled="@(!CanMutate)" />
+                                    Global Memory
+                                </label>
+                                <p class="f6 color-fg-muted mb-0">On saves a global memory with no workspace owner.</p>
+                            </div>
+                            @if (!ViewModel.CanSaveMemory)
+                            {
+                                <div class="detail-field--wide" data-testid="global-memory-workspace-required">
+                                    <PrimerFlash Variant="warning" Title="Workspace required">@MemoryScopePolicy.WorkspaceScopeRequiresActiveWorkspace</PrimerFlash>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div>
+                                <label class="text-small text-bold d-block">Scope</label>
+                                <select class="form-select width-full" data-testid="memory-scope" @bind="ViewModel.EditorScope" disabled="@(!CanMutate)">
+                                    <option value="@MemoryScope.Workspace">Workspace</option>
+                                    <option value="@MemoryScope.Global">Global</option>
+                                </select>
+                            </div>
+                        }
                         <div>
                             <label class="text-small text-bold d-block">Version</label>
                             <span>@(ViewModel.DisplayVersion?.ToString() ?? (IsNew ? "(new)" : "-")) <span class="color-fg-muted">(display only)</span></span>
@@ -113,7 +136,7 @@
                         </div>
                         <div class="detail-field--wide">
                             <label class="text-small text-bold d-block">Text</label>
-                            <textarea class="form-control width-full" rows="10" @bind="ViewModel.EditorText" disabled="@(!CanMutate)"></textarea>
+                            <textarea class="form-control width-full" data-testid="memory-text" rows="10" @bind="ViewModel.EditorText" disabled="@(!CanMutate)"></textarea>
                         </div>
                     </div>
                 </div>

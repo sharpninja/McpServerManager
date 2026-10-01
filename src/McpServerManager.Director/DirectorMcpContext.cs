@@ -137,6 +137,28 @@ internal sealed class DirectorMcpContext : IMcpHostContext, IDisposable
         return true;
     }
 
+    /// <summary>
+    /// Clears the active workspace and returns to the Default workspace (control connection only).
+    /// </summary>
+    public bool TryClearActiveWorkspace(out string? error)
+    {
+        error = null;
+        McpHttpClient? oldHttp = null;
+        lock (_gate)
+        {
+            oldHttp = _activeWorkspaceClient;
+            _activeWorkspaceClient = null;
+            _activeWorkspaceApiClient = null;
+            ActiveWorkspacePath = null;
+        }
+
+        if (oldHttp is not null)
+            oldHttp.Dispose();
+
+        ActiveWorkspaceChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
     public async Task<McpServerClient> GetRequiredControlApiClientAsync(CancellationToken cancellationToken = default)
     {
         McpServerClient? client;

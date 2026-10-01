@@ -72,9 +72,12 @@ public sealed class MemoryViewModelTests
             });
 
         using var host = UiCoreTestHost.Create(services => services.AddSingleton(api));
+        host.GetRequiredService<WorkspaceContextViewModel>().ActiveWorkspacePath = @"E:\repo";
         var viewModel = host.GetRequiredService<MemoryDetailViewModel>();
 
         viewModel.BeginNewDraft();
+        Assert.False(viewModel.ShowGlobalMemoryToggle);
+        Assert.Equal(MemoryScope.Workspace, viewModel.EditorScope);
         viewModel.EditorCategory = "prefs";
         viewModel.EditorText = "remember this";
         Assert.True(await viewModel.SaveAsync());
@@ -110,5 +113,68 @@ public sealed class MemoryViewModelTests
             Arg.Any<CancellationToken>());
         Assert.True(viewModel.IsNewDraft);
         Assert.Null(viewModel.Detail);
+    }
+
+    [Fact]
+    public async Task MemoryDetailViewModel_DefaultWorkspace_GlobalToggleOn_SavesGlobal()
+    {
+        AddMemoryCommand? captured = null;
+        var api = Substitute.For<IMemoryApiClient>();
+        api.AddMemoryAsync(Arg.Any<AddMemoryCommand>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                captured = call.Arg<AddMemoryCommand>();
+                return new MemoryMutationOutcome(
+                    true,
+                    null,
+                    Sample with
+                    {
+                        Scope = MemoryScope.Global,
+                        WorkspacePath = null,
+                        Text = captured.Text,
+                        Category = captured.Category,
+                    });
+            });
+
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(api));
+        host.GetRequiredService<WorkspaceContextViewModel>().ActiveWorkspacePath = null;
+        var viewModel = host.GetRequiredService<MemoryDetailViewModel>();
+
+        viewModel.BeginNewDraft();
+        Assert.True(viewModel.ShowGlobalMemoryToggle);
+        Assert.True(viewModel.GlobalMemory);
+        Assert.True(viewModel.CanSaveMemory);
+        Assert.Equal(MemoryScope.Global, viewModel.EditorScope);
+
+        viewModel.EditorCategory = "prefs";
+        viewModel.EditorText = "remember this";
+        Assert.True(await viewModel.SaveAsync());
+
+        Assert.NotNull(captured);
+        Assert.Equal(MemoryScope.Global, captured!.Scope);
+        Assert.Equal("prefs", captured.Category);
+        Assert.Equal("remember this", captured.Text);
+    }
+
+    [Fact]
+    public async Task MemoryDetailViewModel_DefaultWorkspace_GlobalToggleOff_DoesNotSaveWorkspaceScope()
+    {
+        var api = Substitute.For<IMemoryApiClient>();
+        using var host = UiCoreTestHost.Create(services => services.AddSingleton(api));
+        host.GetRequiredService<WorkspaceContextViewModel>().ActiveWorkspacePath = "  ";
+        var viewModel = host.GetRequiredService<MemoryDetailViewModel>();
+
+        viewModel.BeginNewDraft();
+        viewModel.GlobalMemory = false;
+        viewModel.EditorCategory = "prefs";
+        viewModel.EditorText = "remember this";
+
+        Assert.True(viewModel.ShowGlobalMemoryToggle);
+        Assert.False(viewModel.GlobalMemory);
+        Assert.Equal(MemoryScope.Workspace, viewModel.EditorScope);
+        Assert.False(viewModel.CanSaveMemory);
+        Assert.False(await viewModel.SaveAsync());
+        Assert.Equal(MemoryScopePolicy.WorkspaceScopeRequiresActiveWorkspace, viewModel.ErrorMessage);
+        await api.DidNotReceive().AddMemoryAsync(Arg.Any<AddMemoryCommand>(), Arg.Any<CancellationToken>());
     }
 }

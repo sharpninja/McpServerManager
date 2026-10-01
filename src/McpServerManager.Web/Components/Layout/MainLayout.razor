@@ -1,7 +1,9 @@
 @inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.WebUtilities
 @using Microsoft.JSInterop
 @inject McpServerManager.UI.Core.Services.IUiDispatcherService UiDispatcher
+@inject NavigationManager Navigation
 @inject IJSRuntime JsRuntime
 @inject WorkspaceAutoSelector WorkspaceAutoSelector
 @inject BackendConnectionMonitor ConnectionMonitor
@@ -47,7 +49,7 @@
             @if (_isWorkspacePickerOpen)
             {
                 <div class="Box p-3 app-workspace-picker-panel" id="workspace-picker-panel">
-                    <WorkspacePicker Label="Workspace" IncludeDefaultOption="false" SelectedWorkspaceChanged="OnWorkspaceSelectedAsync" />
+                    <WorkspacePicker Label="Workspace" IncludeDefaultOption="true" SelectedWorkspaceChanged="OnWorkspaceSelectedAsync" />
                 </div>
             }
         </div>
@@ -174,10 +176,52 @@
         _isWorkspacePickerOpen = !_isWorkspacePickerOpen;
     }
 
-    private Task OnWorkspaceSelectedAsync(string? _)
+    private Task OnWorkspaceSelectedAsync(string? workspacePath)
     {
         _isWorkspacePickerOpen = false;
+        if (string.IsNullOrWhiteSpace(workspacePath))
+            RemoveWorkspacePathQuery();
+
         return RefreshUiAsync();
+    }
+
+    /// <summary>
+    /// Drops <c>workspacePath</c> from the current URL so a Default-workspace choice
+    /// is not restored by page query binding after the workspace change remounts the body.
+    /// </summary>
+    private void RemoveWorkspacePathQuery()
+    {
+        var relativeUri = RemoveQueryParameter(Navigation.Uri, "workspacePath");
+        if (relativeUri is null)
+            return;
+
+        Navigation.NavigateTo(relativeUri, forceLoad: false, replace: true);
+    }
+
+    private static string? RemoveQueryParameter(string absoluteUri, string parameterName)
+    {
+        var uri = new Uri(absoluteUri, UriKind.Absolute);
+        var pairs = QueryHelpers.ParseQuery(uri.Query);
+        if (!pairs.Keys.Any(key => string.Equals(key, parameterName, StringComparison.OrdinalIgnoreCase)))
+            return null;
+
+        var remaining = new List<string>();
+        foreach (var pair in pairs)
+        {
+            if (string.Equals(pair.Key, parameterName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            foreach (var value in pair.Value)
+                remaining.Add($"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(value ?? string.Empty)}");
+        }
+
+        var pathAndQuery = remaining.Count == 0
+            ? uri.AbsolutePath
+            : $"{uri.AbsolutePath}?{string.Join("&", remaining)}";
+        if (!string.IsNullOrEmpty(uri.Fragment))
+            pathAndQuery += uri.Fragment;
+
+        return pathAndQuery;
     }
 
     private async Task GoBackAsync()
