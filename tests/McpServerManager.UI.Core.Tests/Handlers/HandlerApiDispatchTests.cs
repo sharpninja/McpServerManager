@@ -3,6 +3,7 @@ using McpServer.Cqrs;
 using McpServerManager.UI.Core.Authorization;
 using McpServerManager.UI.Core.Models;
 using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using McpServerManager.UI.Core.Tests.TestInfrastructure;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -132,6 +133,12 @@ public sealed class HandlerApiDispatchTests
                 .Returns(Task.FromResult("https://resolved"));
             dependencySubstitutes.Add(sub);
             return sub;
+        }
+
+        if (dependencyType == typeof(WorkspaceContextViewModel))
+        {
+            // Concrete ViewModel (not an interface substitute). Non-empty path so workspace-scoped memory handlers can reach the API client.
+            return new WorkspaceContextViewModel { ActiveWorkspacePath = @"E:\repo" };
         }
 
         throw new InvalidOperationException($"Unhandled dependency '{dependencyType.FullName}'.");

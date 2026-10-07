@@ -11,11 +11,18 @@ namespace McpServerManager.Web.Tests;
 
 public sealed class VoiceClientStreamingTests
 {
+    // Ceiling for waits on cross-process signals (Kestrel cold start, first connection).
+    // The streaming property itself is proven by ordering, not by wall-clock: the server
+    // holds the response open until the test releases it, so a first chunk observed before
+    // the release can only have been yielded before the stream completed.
+    private static readonly TimeSpan SignalTimeout = TimeSpan.FromSeconds(30);
+
     [Fact]
     public async Task SubmitTurnStreamingAsync_YieldsChunkBeforeStreamCompletes()
     {
         var firstChunkWritten = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var continueStream = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var streamCompleted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var requestMethod = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var requestPath = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var acceptHeader = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -34,44 +41,76 @@ public sealed class VoiceClientStreamingTests
             await context.Response.WriteAsync("data: {\"type\":\"chunk\",\"text\":\"hello\"}\n\n");
             await context.Response.Body.FlushAsync();
             firstChunkWritten.TrySetResult(true);
-            await continueStream.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            await continueStream.Task.WaitAsync(SignalTimeout);
             await context.Response.WriteAsync("data: {\"type\":\"done\",\"turnId\":\"turn-1\",\"latencyMs\":123}\n\n");
             await context.Response.Body.FlushAsync();
+            streamCompleted.TrySetResult(true);
         });
 
-        await app.StartAsync();
-        using var httpClient = new HttpClient();
-        var client = new VoiceClient(httpClient, new McpServerClientOptions
+        await app.StartAsync(TestContext.Current.CancellationToken);
+        try
         {
-            BaseUrl = new Uri(app.Urls.Single()),
-            ApiKey = "test-api-key",
-            WorkspacePath = @"E:\repo"
-        });
-
-        await using var enumerator = client.SubmitTurnStreamingAsync(
-            "session-123",
-            new VoiceTurnRequest
+            using var httpClient = new HttpClient();
+            var client = new VoiceClient(httpClient, new McpServerClientOptions
             {
-                UserTranscriptText = "hello",
-                Language = "en-US",
-                ClientTimestampUtc = "2026-03-18T00:00:00Z"
-            }).GetAsyncEnumerator();
+                BaseUrl = new Uri(app.Urls.Single()),
+                ApiKey = "test-api-key",
+                WorkspacePath = @"E:\repo"
+            });
 
-        var firstMoveTask = enumerator.MoveNextAsync().AsTask();
-        await firstChunkWritten.Task.WaitAsync(TimeSpan.FromSeconds(1));
-        var completed = await Task.WhenAny(firstMoveTask, Task.Delay(500)) == firstMoveTask;
+            await using var enumerator = client.SubmitTurnStreamingAsync(
+                "session-123",
+                new VoiceTurnRequest
+                {
+                    UserTranscriptText = "hello",
+                    Language = "en-US",
+                    ClientTimestampUtc = "2026-03-18T00:00:00Z"
+                }).GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
-        Assert.True(completed);
-        Assert.True(await firstMoveTask);
-        Assert.Equal("chunk", enumerator.Current.Type);
-        Assert.Equal("hello", enumerator.Current.Text);
-        Assert.Equal("POST", await requestMethod.Task.WaitAsync(TimeSpan.FromSeconds(1)));
-        Assert.Equal("/mcpserver/voice/session/session-123/turn/stream", await requestPath.Task.WaitAsync(TimeSpan.FromSeconds(1)));
-        Assert.Equal("text/event-stream", await acceptHeader.Task.WaitAsync(TimeSpan.FromSeconds(1)));
+            Task<bool>? pendingMove = null;
+            try
+            {
+                var firstMove = enumerator.MoveNextAsync().AsTask();
+                pendingMove = firstMove;
+                await firstChunkWritten.Task.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken);
 
-        continueStream.TrySetResult(true);
-        Assert.True(await enumerator.MoveNextAsync());
-        Assert.Equal("done", enumerator.Current.Type);
-        await app.StopAsync();
+                Assert.True(await firstMove.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken));
+                Assert.False(continueStream.Task.IsCompleted, "the server must still be holding the stream open");
+                Assert.False(streamCompleted.Task.IsCompleted, "the first chunk must be yielded before the stream completes");
+                Assert.Equal("chunk", enumerator.Current.Type);
+                Assert.Equal("hello", enumerator.Current.Text);
+                Assert.Equal("POST", await requestMethod.Task.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken));
+                Assert.Equal("/mcpserver/voice/session/session-123/turn/stream", await requestPath.Task.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken));
+                Assert.Equal("text/event-stream", await acceptHeader.Task.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken));
+
+                continueStream.TrySetResult(true);
+                var secondMove = enumerator.MoveNextAsync().AsTask();
+                pendingMove = secondMove;
+                Assert.True(await secondMove.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken));
+                Assert.Equal("done", enumerator.Current.Type);
+            }
+            finally
+            {
+                // Release the server and drain any outstanding MoveNextAsync before the enumerator is
+                // disposed; disposing an async iterator mid-MoveNext throws NotSupportedException and
+                // would mask the original assertion failure.
+                continueStream.TrySetResult(true);
+                if (pendingMove is { IsCompleted: false })
+                {
+                    try
+                    {
+                        await pendingMove.WaitAsync(SignalTimeout, CancellationToken.None);
+                    }
+                    catch (Exception)
+                    {
+                        // The primary assertion failure (if any) is already propagating.
+                    }
+                }
+            }
+        }
+        finally
+        {
+            await app.StopAsync(CancellationToken.None);
+        }
     }
 }

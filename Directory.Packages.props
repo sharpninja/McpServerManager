@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    McpServerManager does not use NuGet Central Package Management.
+    This file stops MSBuild from importing an enclosing repository's
+    Directory.Packages.props (for example when the Manager tree is expanded
+    inside an McpServer worktree), which otherwise fails restore with NU1008.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

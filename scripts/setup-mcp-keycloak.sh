@@ -21,7 +21,7 @@ echo "McpServer Keycloak Setup"
 echo "========================================"
 echo "Keycloak URL: $KEYCLOAK_URL"
 echo "Realm: $REALM_NAME"
-echo "MCP Server URL: $MCP_SERVER_URL"
+echo "QBrain.AI URL: $MCP_SERVER_URL"
 echo ""
 
 keycloak_api() {
