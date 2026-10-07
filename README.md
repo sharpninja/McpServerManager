@@ -1,6 +1,6 @@
-# McpServerManager
+# QBrain.AI Manager
 
-McpServerManager is an Avalonia UI desktop application designed to visualize and analyze session logs and request data from AI coding assistants like **GitHub Copilot** and **Cursor**. It provides a unified view of interactions, enabling developers to review prompt history, context usage, and automated actions taken by these tools.
+QBrain.AI Manager is an Avalonia UI desktop application. The GitHub repository remains sharpninja/McpServerManager designed to visualize and analyze session logs and request data from AI coding assistants like **GitHub Copilot** and **Cursor**. It provides a unified view of interactions, enabling developers to review prompt history, context usage, and automated actions taken by these tools.
 
 Repository: [sharpninja/McpServerManager](https://github.com/sharpninja/McpServerManager)
 

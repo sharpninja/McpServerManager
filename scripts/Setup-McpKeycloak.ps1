@@ -50,7 +50,7 @@ Write-Host "McpServer Keycloak Setup" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Keycloak URL: $KeycloakUrl"
 Write-Host "Realm: $RealmName"
-Write-Host "MCP Server URL: $McpServerUrl"
+Write-Host "QBrain.AI URL: $McpServerUrl"
 Write-Host ""
 
 function Invoke-KeycloakApi {

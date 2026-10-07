@@ -498,7 +498,7 @@ internal static class DirectorCommands
     }
 
     /// <summary>
-    /// FR-MCP-030: Adds CWD (or the specified path) as a new workspace on the MCP Server,
+    /// FR-MCP-030: Adds CWD (or the specified path) as a new workspace on the QBrain.AI,
     /// waits for the server to write the AGENTS-README-FIRST.yaml marker file, then
     /// verifies trust via HMAC signature check and health nonce echo.
     /// </summary>
@@ -511,12 +511,12 @@ internal static class DirectorCommands
         nameOption.Aliases.Add("-n");
         var serverOption = new Option<string>("--server")
         {
-            Description = "MCP Server base URL",
+            Description = "QBrain.AI base URL",
             DefaultValueFactory = _ => "http://localhost:7147",
         };
         serverOption.Aliases.Add("-s");
 
-        var cmd = new Command("add-workspace", "Register CWD as a new MCP Server workspace and verify trust")
+        var cmd = new Command("add-workspace", "Register CWD as a new QBrain.AI workspace and verify trust")
         {
             s_workspaceOption,
             nameOption,
@@ -587,7 +587,7 @@ internal static class DirectorCommands
                         return 0;
                     }
 
-                    Success("Workspace registered on the MCP Server.");
+                    Success("Workspace registered on the QBrain.AI.");
                     registered = true;
                     break;
                 }
@@ -616,7 +616,7 @@ internal static class DirectorCommands
             var appeared = await WaitForFileAsync(markerPath, TimeSpan.FromSeconds(30)).ConfigureAwait(true);
             if (!appeared)
             {
-                Warn("Marker file was not created within 30 seconds. Check the MCP Server logs.");
+                Warn("Marker file was not created within 30 seconds. Check the QBrain.AI logs.");
                 return 0;
             }
 

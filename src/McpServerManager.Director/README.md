@@ -1,6 +1,6 @@
 # McpServer Director (`director`)
 
-`director` is the .NET global tool for administering an MCP Server instance.
+`director` is the .NET global tool for administering an QBrain.AI instance.
 
 It provides:
 
@@ -27,7 +27,7 @@ Development/local package install:
 dotnet tool install --global SharpNinja.McpServer.Director --add-source <path-to-nupkg-folder> --ignore-failed-sources
 ```
 
-## Connecting To MCP Server
+## Connecting To QBrain.AI
 
 ### Preferred (workspace marker)
 

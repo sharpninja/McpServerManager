@@ -37,7 +37,7 @@ This uses default values:
 - Admin username: `admin`
 - Admin password: `admin`
 - Realm name: `mcpserver`
-- MCP Server URL: `http://localhost:7147`
+- QBrain.AI URL: `http://localhost:7147`
 
 ### Custom Configuration
 ```powershell
@@ -66,7 +66,7 @@ McpServer Keycloak Setup
 ========================================
 Keycloak URL: http://localhost:7080
 Realm: mcpserver
-MCP Server URL: http://localhost:7147
+QBrain.AI URL: http://localhost:7147
 
 [1/10] Authenticating with Keycloak...
   ✓ Authenticated as admin
@@ -203,7 +203,7 @@ After running the setup script:
    - `agent-manager` — Manage agents and sessions
    - `viewer` — Read-only access
 
-### 3. Configure MCP Server
+### 3. Configure QBrain.AI
 Update `lib/McpServer/appsettings.yaml` with the client secret displayed in the setup summary:
 
 ```yaml
