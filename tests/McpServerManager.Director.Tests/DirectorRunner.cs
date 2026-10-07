@@ -89,20 +89,25 @@ internal static class DirectorRunner
         return new CliResult(process.ExitCode, stdout, stderr);
     }
 
-    private static string FindRepoRoot()
+    private static string FindRepoRoot() => FindRepoRoot(AppContext.BaseDirectory);
+
+    internal static string FindRepoRoot(string startDirectory)
     {
-        // Walk up from the test assembly location to find the .sln file.
-        var dir = AppContext.BaseDirectory;
+        // Walk up from the test assembly location to the Manager repository root.
+        // Require both the Manager solution and the Director project so discovery
+        // never escapes into an enclosing repository (HV-R3-01).
+        var dir = startDirectory;
         while (dir is not null)
         {
-            if (File.Exists(Path.Combine(dir, "McpServer.sln")))
+            if (File.Exists(Path.Combine(dir, "McpServerManager.sln")) &&
+                Directory.Exists(Path.Combine(dir, "src", "McpServerManager.Director")))
                 return dir;
             dir = Path.GetDirectoryName(dir);
         }
 
         // Fallback — assume standard repo layout relative to bin output.
         return Path.GetFullPath(
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+            Path.Combine(startDirectory, "..", "..", "..", "..", ".."));
     }
 
     private static string GetBuildConfiguration()
