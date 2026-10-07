@@ -23,6 +23,11 @@ public sealed class TimerService : ITimerService
         // so without this gate a tick that passed its checks could still invoke the
         // callback after Stop() or Dispose() returned (HV-R4-01). The gate is re-entrant,
         // so a callback may stop, restart, or dispose its own handle.
+        //
+        // Stop and Dispose cancel the current run's token BEFORE waiting on the gate, so a
+        // synchronous, cancellation-aware invocation can exit instead of deadlocking against
+        // the caller that is waiting for it (HV-R5-02). Restart after Stop starts a new run
+        // with a fresh, uncancelled token.
         private readonly object _gate = new();
         private readonly Func<CancellationToken, Task> _callback;
         private readonly bool _recurring;
@@ -30,6 +35,7 @@ public sealed class TimerService : ITimerService
         private CancellationTokenSource? _cts;
         private TimeSpan _interval;
         private volatile bool _running;
+        private bool _disposed;
 
         public TimerHandle(TimeSpan interval, Func<CancellationToken, Task> callback, bool recurring)
         {
@@ -69,12 +75,16 @@ public sealed class TimerService : ITimerService
 
         public void Stop()
         {
-            // Close the gate first so ticks waiting on the lock bail out, then wait for any
-            // invocation currently inside the gate to finish starting.
+            // Close the gate, cancel the in-flight run so a blocked invocation can exit, then
+            // wait for any invocation currently inside the gate to finish starting.
             _running = false;
+            var cancelled = Volatile.Read(ref _cts);
+            CancelQuietly(cancelled);
             lock (_gate)
             {
                 _running = false;
+                if (!ReferenceEquals(_cts, cancelled))
+                    CancelQuietly(_cts);
                 _timer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
             }
         }
@@ -86,8 +96,13 @@ public sealed class TimerService : ITimerService
                 if (newInterval.HasValue)
                     _interval = newInterval.Value;
 
-                if (_timer is null)
+                if (_disposed || _timer is null)
                     return;
+
+                // A cancelled source belongs to a stopped run; in-flight continuations of that run
+                // may still observe its token, so it is replaced rather than disposed here.
+                if (_cts is null || _cts.IsCancellationRequested)
+                    _cts = new CancellationTokenSource();
 
                 _running = true;
                 _timer.Change(_interval, _recurring ? _interval : Timeout.InfiniteTimeSpan);
@@ -97,10 +112,15 @@ public sealed class TimerService : ITimerService
         public void Dispose()
         {
             _running = false;
+            CancelQuietly(Volatile.Read(ref _cts));
             Timer? timer;
             CancellationTokenSource? cts;
             lock (_gate)
             {
+                if (_disposed)
+                    return;
+
+                _disposed = true;
                 _running = false;
                 timer = _timer;
                 _timer = null;
@@ -108,9 +128,24 @@ public sealed class TimerService : ITimerService
                 _cts = null;
             }
 
-            cts?.Cancel();
-            cts?.Dispose();
+            // The source is cancelled but deliberately not disposed: an in-flight invocation's
+            // continuation may still observe its token after Dispose returns (same rule as Restart).
+            CancelQuietly(cts);
             timer?.Dispose();
+        }
+
+        private static void CancelQuietly(CancellationTokenSource? cts)
+        {
+            if (cts is null)
+                return;
+
+            try
+            {
+                cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
     }
 }

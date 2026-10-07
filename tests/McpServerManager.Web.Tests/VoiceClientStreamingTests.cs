@@ -67,9 +67,11 @@ public sealed class VoiceClientStreamingTests
                     ClientTimestampUtc = "2026-03-18T00:00:00Z"
                 }).GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
+            Task<bool>? pendingMove = null;
             try
             {
                 var firstMove = enumerator.MoveNextAsync().AsTask();
+                pendingMove = firstMove;
                 await firstChunkWritten.Task.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken);
 
                 Assert.True(await firstMove.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken));
@@ -82,15 +84,28 @@ public sealed class VoiceClientStreamingTests
                 Assert.Equal("text/event-stream", await acceptHeader.Task.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken));
 
                 continueStream.TrySetResult(true);
-                Assert.True(await enumerator.MoveNextAsync().AsTask().WaitAsync(SignalTimeout, TestContext.Current.CancellationToken));
+                var secondMove = enumerator.MoveNextAsync().AsTask();
+                pendingMove = secondMove;
+                Assert.True(await secondMove.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken));
                 Assert.Equal("done", enumerator.Current.Type);
             }
             finally
             {
-                // Release the server so no MoveNextAsync is pending when the enumerator is disposed;
-                // disposing an async iterator mid-MoveNext throws NotSupportedException and would
-                // mask the original assertion failure.
+                // Release the server and drain any outstanding MoveNextAsync before the enumerator is
+                // disposed; disposing an async iterator mid-MoveNext throws NotSupportedException and
+                // would mask the original assertion failure.
                 continueStream.TrySetResult(true);
+                if (pendingMove is { IsCompleted: false })
+                {
+                    try
+                    {
+                        await pendingMove.WaitAsync(SignalTimeout, CancellationToken.None);
+                    }
+                    catch (Exception)
+                    {
+                        // The primary assertion failure (if any) is already propagating.
+                    }
+                }
             }
         }
         finally

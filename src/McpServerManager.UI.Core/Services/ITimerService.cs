@@ -16,11 +16,12 @@ public interface ITimerService
 public interface ITimerHandle : IDisposable
 {
     /// <summary>
-    /// Stops the timer without disposing. After this returns, no callback invocation is
-    /// still running its synchronous portion and none starts until <see cref="Restart"/>.
+    /// Stops the timer without disposing. Cancels the token supplied to any in-flight invocation;
+    /// after this returns, no callback invocation is still running its synchronous portion and
+    /// none starts until <see cref="Restart"/>, which supplies a fresh token.
     /// </summary>
     void Stop();
 
-    /// <summary>Restarts the timer, optionally with a new interval.</summary>
+    /// <summary>Restarts the timer, optionally with a new interval. After a Stop, callbacks receive a new, uncancelled token.</summary>
     void Restart(TimeSpan? newInterval = null);
 }

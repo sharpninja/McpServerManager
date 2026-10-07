@@ -147,7 +147,7 @@ public sealed class TimerServiceTests
         int count = 0;
         var firedTwice = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var handle = _sut.CreateRecurring(
-            TimeSpan.FromSeconds(10),
+            TimeSpan.FromHours(1),
             _ =>
             {
                 if (Interlocked.Increment(ref count) >= 2)
@@ -158,11 +158,12 @@ public sealed class TimerServiceTests
                 return Task.CompletedTask;
             });
 
-        // Should not have fired yet with a 10 s interval.
+        // Should not have fired yet with a 1 h interval.
         await Task.Delay(100, TestContext.Current.CancellationToken);
         Volatile.Read(ref count).Should().Be(0);
 
-        // Restart with a much shorter interval; two callbacks prove the new interval is in effect.
+        // Restart with a much shorter interval. Two callbacks inside the 30 s ceiling can only come from the
+        // new 50 ms interval; a Restart that ignored it would keep the 1 h interval and time out (HV-R5-01).
         handle.Restart(TimeSpan.FromMilliseconds(50));
         await firedTwice.Task.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken);
         handle.Dispose();
@@ -223,5 +224,139 @@ public sealed class TimerServiceTests
 
             Volatile.Read(ref completed).Should().Be(snapshot, $"iteration {iteration} observed a callback after Dispose() returned");
         }
+    }
+
+    // HV-R5-02: a synchronous, cancellation-aware callback must be cancelled by Dispose rather than
+    // waited on; otherwise Dispose and the callback wait on each other forever.
+    [Fact]
+    public async Task Dispose_WhileCancellationAwareCallbackBlocks_CancelsTokenAndReturns()
+    {
+        using var entered = new ManualResetEventSlim();
+        using var rescue = new ManualResetEventSlim();
+        CancellationToken observed = default;
+        var handle = _sut.CreateOneShot(
+            TimeSpan.FromMilliseconds(1),
+            ct =>
+            {
+                observed = ct;
+                entered.Set();
+                WaitHandle.WaitAny([ct.WaitHandle, rescue.WaitHandle]);
+                return Task.CompletedTask;
+            });
+
+        try
+        {
+            entered.Wait(SignalTimeout, TestContext.Current.CancellationToken).Should().BeTrue();
+            var dispose = Task.Factory.StartNew(handle.Dispose, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            bool returned = await Task.WhenAny(dispose, Task.Delay(SignalTimeout, TestContext.Current.CancellationToken)) == dispose;
+
+            returned.Should().BeTrue("Dispose must cancel the in-flight callback instead of waiting on it");
+            observed.IsCancellationRequested.Should().BeTrue();
+        }
+        finally
+        {
+            rescue.Set();
+        }
+    }
+
+    [Fact]
+    public async Task Stop_WhileCancellationAwareCallbackBlocks_CancelsTokenAndReturns()
+    {
+        using var entered = new ManualResetEventSlim();
+        using var rescue = new ManualResetEventSlim();
+        CancellationToken observed = default;
+        using var handle = _sut.CreateOneShot(
+            TimeSpan.FromMilliseconds(1),
+            ct =>
+            {
+                observed = ct;
+                entered.Set();
+                WaitHandle.WaitAny([ct.WaitHandle, rescue.WaitHandle]);
+                return Task.CompletedTask;
+            });
+
+        try
+        {
+            entered.Wait(SignalTimeout, TestContext.Current.CancellationToken).Should().BeTrue();
+            var stop = Task.Factory.StartNew(handle.Stop, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            bool returned = await Task.WhenAny(stop, Task.Delay(SignalTimeout, TestContext.Current.CancellationToken)) == stop;
+
+            returned.Should().BeTrue("Stop must cancel the in-flight callback instead of waiting on it");
+            observed.IsCancellationRequested.Should().BeTrue();
+        }
+        finally
+        {
+            rescue.Set();
+        }
+    }
+
+    [Fact]
+    public async Task Restart_AfterStop_SuppliesUncancelledToken()
+    {
+        int restarted = 0;
+        var firstFire = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var resumedTokenCancelled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var handle = _sut.CreateRecurring(
+            TimeSpan.FromMilliseconds(50),
+            ct =>
+            {
+                if (Volatile.Read(ref restarted) == 1)
+                {
+                    resumedTokenCancelled.TrySetResult(ct.IsCancellationRequested);
+                }
+                else
+                {
+                    firstFire.TrySetResult();
+                }
+
+                return Task.CompletedTask;
+            });
+
+        await firstFire.Task.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken);
+        handle.Stop();
+        Volatile.Write(ref restarted, 1);
+        handle.Restart();
+
+        (await resumedTokenCancelled.Task.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken)).Should().BeFalse();
+    }
+
+    // Dispose cancels the token handed to an in-flight asynchronous invocation, but the
+    // invocation's continuation may still observe that token after Dispose returns. The token
+    // must stay usable (cancelled, not disposed), matching how Restart treats a stopped run.
+    [Fact]
+    public async Task Dispose_WhileAsyncCallbackPending_TokenStaysObservableAfterDisposeReturns()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var outcome = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        bool cancelledAfterDispose = false;
+        var handle = _sut.CreateOneShot(
+            TimeSpan.FromMilliseconds(1),
+            async ct =>
+            {
+                entered.TrySetResult();
+                await release.Task.ConfigureAwait(false);
+                try
+                {
+                    cancelledAfterDispose = ct.WaitHandle.WaitOne(0);
+                    using (ct.Register(static () => { }))
+                    {
+                    }
+
+                    outcome.TrySetResult(null);
+                }
+                catch (Exception ex)
+                {
+                    outcome.TrySetResult(ex);
+                }
+            });
+
+        await entered.Task.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken);
+        handle.Dispose();
+        release.TrySetResult();
+        var error = await outcome.Task.WaitAsync(SignalTimeout, TestContext.Current.CancellationToken);
+
+        error.Should().BeNull("the token supplied to an in-flight invocation must not be disposed under it");
+        cancelledAfterDispose.Should().BeTrue();
     }
 }
