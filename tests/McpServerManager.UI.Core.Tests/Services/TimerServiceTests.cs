@@ -29,7 +29,7 @@ public sealed class TimerServiceTests
                     return Task.CompletedTask;
                 });
 
-            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
             handle.Stop();
             int snapshot = Volatile.Read(ref completed);
             await Task.Delay(150, TestContext.Current.CancellationToken);
@@ -42,18 +42,32 @@ public sealed class TimerServiceTests
     public async Task Restart_AfterStop_ResumesCallbacks()
     {
         int count = 0;
+        int threshold = int.MaxValue;
+        var firstFire = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var resumed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var handle = _sut.CreateRecurring(
             TimeSpan.FromMilliseconds(50),
-            _ => { Interlocked.Increment(ref count); return Task.CompletedTask; });
+            _ =>
+            {
+                int now = Interlocked.Increment(ref count);
+                firstFire.TrySetResult();
+                if (now > Volatile.Read(ref threshold))
+                {
+                    resumed.TrySetResult();
+                }
 
-        await Task.Delay(150, TestContext.Current.CancellationToken);
+                return Task.CompletedTask;
+            });
+
+        await firstFire.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         handle.Stop();
         int snapshot = Volatile.Read(ref count);
         await Task.Delay(150, TestContext.Current.CancellationToken);
         Assert.Equal(snapshot, Volatile.Read(ref count));
 
+        Volatile.Write(ref threshold, snapshot);
         handle.Restart();
-        await Task.Delay(250, TestContext.Current.CancellationToken);
+        await resumed.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         handle.Dispose();
 
         Assert.True(Volatile.Read(ref count) > snapshot);
@@ -76,7 +90,7 @@ public sealed class TimerServiceTests
                     return Task.CompletedTask;
                 });
 
-            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
             handle.Dispose();
             int snapshot = Volatile.Read(ref completed);
             await Task.Delay(150, TestContext.Current.CancellationToken);
