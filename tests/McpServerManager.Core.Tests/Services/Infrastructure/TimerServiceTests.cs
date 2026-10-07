@@ -126,4 +126,59 @@ public sealed class TimerServiceTests
 
         count.Should().BeGreaterThanOrEqualTo(2);
     }
+
+    // HV-R4-01: once Stop() returns, no callback invocation may still be running its
+    // synchronous portion and none may start until Restart(). The callback sleeps after
+    // signalling entry so an in-flight invocation always overlaps the Stop() call.
+    [Fact]
+    public async Task Stop_WhileCallbackInFlight_NoInvocationCompletesAfterStopReturns()
+    {
+        for (int iteration = 0; iteration < 10; iteration++)
+        {
+            int completed = 0;
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var handle = _sut.CreateRecurring(
+                TimeSpan.FromMilliseconds(10),
+                _ =>
+                {
+                    entered.TrySetResult();
+                    Thread.Sleep(40);
+                    Interlocked.Increment(ref completed);
+                    return Task.CompletedTask;
+                });
+
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            handle.Stop();
+            int snapshot = Volatile.Read(ref completed);
+            await Task.Delay(150, TestContext.Current.CancellationToken);
+
+            Volatile.Read(ref completed).Should().Be(snapshot, $"iteration {iteration} observed a callback after Stop() returned");
+        }
+    }
+
+    [Fact]
+    public async Task Dispose_WhileCallbackInFlight_NoInvocationCompletesAfterDisposeReturns()
+    {
+        for (int iteration = 0; iteration < 10; iteration++)
+        {
+            int completed = 0;
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var handle = _sut.CreateRecurring(
+                TimeSpan.FromMilliseconds(10),
+                _ =>
+                {
+                    entered.TrySetResult();
+                    Thread.Sleep(40);
+                    Interlocked.Increment(ref completed);
+                    return Task.CompletedTask;
+                });
+
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            handle.Dispose();
+            int snapshot = Volatile.Read(ref completed);
+            await Task.Delay(150, TestContext.Current.CancellationToken);
+
+            Volatile.Read(ref completed).Should().Be(snapshot, $"iteration {iteration} observed a callback after Dispose() returned");
+        }
+    }
 }

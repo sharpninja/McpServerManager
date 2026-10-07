@@ -15,7 +15,10 @@ public interface ITimerService
 /// <summary>Handle to a running timer that can be stopped or restarted.</summary>
 public interface ITimerHandle : IDisposable
 {
-    /// <summary>Stops the timer without disposing.</summary>
+    /// <summary>
+    /// Stops the timer without disposing. After this returns, no callback invocation is
+    /// still running its synchronous portion and none starts until <see cref="Restart"/>.
+    /// </summary>
     void Stop();
 
     /// <summary>Restarts the timer, optionally with a new interval.</summary>
