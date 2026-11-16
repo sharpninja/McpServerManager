@@ -10,6 +10,9 @@ partial class Build : NukeBuild
     [Parameter("Override version for packages and artifacts")] 
     readonly string PackageVersion = string.Empty;
 
+    [Parameter("NuGet push source for PublishTools (defaults to NuGet.org)")]
+    readonly string NuGetSource = "https://api.nuget.org/v3/index.json";
+
     [Parameter("Comma-separated list of components to deploy (All, Director, WebUi, AndroidPhone, AndroidEmulator, DesktopMsix, DesktopDeb)")] 
     readonly string DeploySelection = "All";
 
@@ -155,6 +158,8 @@ partial class Build : NukeBuild
     Target PackDirectorTool => _ => _.Executes(RunPackDirectorToolTarget);
 
     Target PreparePagesArtifact => _ => _.Executes(RunPreparePagesArtifactTarget);
+
+    Target PublishTools => _ => _.Executes(RunPublishToolsTarget);
 
     Target PublishWebZip => _ => _.Executes(RunPublishWebZipTarget);
 

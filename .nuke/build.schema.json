@@ -38,6 +38,7 @@
         "ListVsix",
         "PackDirectorTool",
         "PreparePagesArtifact",
+        "PublishTools",
         "PublishWebZip",
         "ReadVsix",
         "StartWebUi",
@@ -198,6 +199,10 @@
         "NoCert": {
           "type": "boolean",
           "description": "Skip code signing during packaging"
+        },
+        "NuGetSource": {
+          "type": "string",
+          "description": "NuGet push source for PublishTools (defaults to NuGet.org)"
         },
         "NupkgDir": {
           "type": "string",

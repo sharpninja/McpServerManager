@@ -4,12 +4,14 @@
     <id>SharpNinja.McpServer.Director</id>
     <version>0.6.17</version>
     <authors>SharpNinja</authors>
-    <description>CLI management tool for McpServer. Provides workspace management, agent orchestration, compliance policy editing, Keycloak OIDC auth, and an interactive Terminal.Gui TUI with 7 tabbed screens. 18 CLI commands via System.CommandLine.</description>
+    <description>Cross-platform QBrain.AI Director tool for Windows and Linux.</description>
     <packageTypes>
       <packageType name="DotnetTool" />
     </packageTypes>
-   </metadata>
-   <files>
-     <file src="F:\GitHub\McpServerManager\src\McpServerManager.Director\bin\Release\net10.0\publish\**" target="tools/net10.0/any" />
-   </files>
- </package>
+  </metadata>
+  <files>
+    <file src="F:\GitHub\McpServerManager\artifacts\director-tool\Release\launcher\**" target="tools/net10.0/any" />
+    <file src="F:\GitHub\McpServerManager\artifacts\director-tool\Release\runtimes\win-x64\**" target="tools/net10.0/any/runtimes/win-x64" />
+    <file src="F:\GitHub\McpServerManager\artifacts\director-tool\Release\runtimes\linux-x64\**" target="tools/net10.0/any/runtimes/linux-x64" />
+  </files>
+</package>

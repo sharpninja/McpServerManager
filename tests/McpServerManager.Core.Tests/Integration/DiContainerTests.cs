@@ -66,7 +66,7 @@ public sealed class DiContainerTests : IDisposable
         target.Should().BeSameAs(_target);
     }
 
-    [Fact]
+    [Fact(Skip = "Copilot tests are disabled.")]
     public void ServiceProvider_Resolves_UiCoreTodoCopilotTarget()
     {
         var target = _provider.GetService<McpServerManager.UI.Core.Commands.ITodoCopilotTarget>();

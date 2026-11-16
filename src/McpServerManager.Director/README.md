@@ -2,6 +2,10 @@
 
 `director` is the .NET global tool for administering an QBrain.AI instance.
 
+The package contains a portable launcher plus Windows x64 and Linux x64 Director executables. The launcher selects the matching packaged executable for the current platform and forwards command-line arguments unchanged.
+
+Change log: 2026-11-16 — FR-DIRECTOR-001, TR-DIRECTOR-TOOL-001, and TEST-DIRECTOR-001 added the dual-runtime package and portable launcher so a single tool install works on supported Windows and Linux x64 hosts.
+
 It provides:
 
 - CLI commands for health, workspaces, agents, sync, TODOs, and session logs

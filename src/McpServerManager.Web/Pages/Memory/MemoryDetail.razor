@@ -1,4 +1,5 @@
 @page "/memory/{MemoryId}"
+@using Markdig
 
 @inject MemoryDetailViewModel ViewModel
 @inject MemoryListViewModel ListViewModel
@@ -136,7 +137,48 @@
                         </div>
                         <div class="detail-field--wide">
                             <label class="text-small text-bold d-block">Text</label>
-                            <textarea class="form-control width-full" data-testid="memory-text" rows="10" @bind="ViewModel.EditorText" disabled="@(!CanMutate)"></textarea>
+                            <div class="memory-text-tabs" role="tablist" aria-label="Memory text view">
+                                <button type="button"
+                                        id="memory-text-raw-tab"
+                                        class="memory-text-tab @(!_showRenderedMarkdown ? "selected" : null)"
+                                        role="tab"
+                                        aria-selected="@(!_showRenderedMarkdown ? "true" : "false")"
+                                        aria-controls="memory-text-raw-panel"
+                                        data-testid="memory-tab-raw"
+                                        @onclick="ShowRawText">
+                                    Raw
+                                </button>
+                                <button type="button"
+                                        id="memory-text-rendered-tab"
+                                        class="memory-text-tab @(_showRenderedMarkdown ? "selected" : null)"
+                                        role="tab"
+                                        aria-selected="@(_showRenderedMarkdown ? "true" : "false")"
+                                        aria-controls="memory-text-rendered-panel"
+                                        data-testid="memory-tab-rendered"
+                                        @onclick="ShowRenderedMarkdown">
+                                    Rendered
+                                </button>
+                            </div>
+                            @if (_showRenderedMarkdown)
+                            {
+                                <div id="memory-text-rendered-panel"
+                                     class="memory-text-panel memory-markdown-preview"
+                                     role="tabpanel"
+                                     aria-labelledby="memory-text-rendered-tab"
+                                     tabindex="0"
+                                     data-testid="memory-markdown-preview">
+                                    @RenderMarkdown(ViewModel.EditorText)
+                                </div>
+                            }
+                            else
+                            {
+                                <div id="memory-text-raw-panel"
+                                     class="memory-text-panel"
+                                     role="tabpanel"
+                                     aria-labelledby="memory-text-raw-tab">
+                                    <textarea class="form-control width-full" data-testid="memory-text" rows="10" @bind="ViewModel.EditorText" disabled="@(!CanMutate)"></textarea>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -163,6 +205,12 @@
 
     private string? _loadedMemoryId;
     private string? _lastFilterKey;
+    private bool _showRenderedMarkdown;
+
+    private static readonly MarkdownPipeline MemoryMarkdownPipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .DisableHtml()
+        .Build();
 
     private bool IsNew => string.Equals(MemoryId, "new", StringComparison.OrdinalIgnoreCase);
 
@@ -191,6 +239,7 @@
             return;
 
         _loadedMemoryId = MemoryId;
+        _showRenderedMarkdown = false;
         await CommandTarget.RunAsync(async () =>
         {
             if (IsNew)
@@ -203,6 +252,24 @@
             ViewModel.PopulateEditorFromDetail();
         }).ConfigureAwait(true);
     }
+
+    /// <summary>
+    /// Displays the editable raw memory text.
+    /// </summary>
+    private void ShowRawText() => _showRenderedMarkdown = false;
+
+    /// <summary>
+    /// Displays a read-only Markdown rendering of the current editor text.
+    /// </summary>
+    private void ShowRenderedMarkdown() => _showRenderedMarkdown = true;
+
+    /// <summary>
+    /// Renders memory text as Markdown while suppressing embedded raw HTML.
+    /// </summary>
+    /// <param name="markdown">The current raw memory text.</param>
+    /// <returns>HTML produced by the safe memory Markdown pipeline.</returns>
+    private static MarkupString RenderMarkdown(string? markdown)
+        => new(Markdown.ToHtml(markdown ?? string.Empty, MemoryMarkdownPipeline));
 
     private async Task SaveAsync()
     {

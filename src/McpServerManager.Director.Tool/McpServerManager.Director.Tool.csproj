@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseAppHost>false</UseAppHost>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>McpServerManager.Director.Tool</AssemblyName>
+    <RootNamespace>McpServerManager.Director.Tool</RootNamespace>
+  </PropertyGroup>
+</Project>

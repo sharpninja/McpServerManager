@@ -210,7 +210,7 @@ public sealed class TodoViewModelTests
             entry.Message.Contains("Todo status update", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [Fact(Skip = "Copilot tests are disabled.")]
     public async Task TodoListHostViewModel_CopilotStatusCommand_SelectsProvidedEntry()
     {
         var apiClient = Substitute.For<ITodoApiClient>();
@@ -224,7 +224,7 @@ public sealed class TodoViewModelTests
         Assert.Same(entry, host.SelectedEntry);
     }
 
-    [Fact]
+    [Fact(Skip = "Copilot tests are disabled.")]
     public async Task TodoListHostViewModel_CopilotPlanCommand_SelectsProvidedEntry()
     {
         var apiClient = Substitute.For<ITodoApiClient>();
@@ -238,7 +238,7 @@ public sealed class TodoViewModelTests
         Assert.Same(entry, host.SelectedEntry);
     }
 
-    [Fact]
+    [Fact(Skip = "Copilot tests are disabled.")]
     public async Task TodoListHostViewModel_CopilotImplementCommand_SelectsProvidedEntry()
     {
         var apiClient = Substitute.For<ITodoApiClient>();

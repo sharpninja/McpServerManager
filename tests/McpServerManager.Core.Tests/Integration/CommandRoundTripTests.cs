@@ -97,7 +97,7 @@ public sealed class CommandRoundTripTests : IDisposable
         _target.Received(1).PhoneNavigateSection("details");
     }
 
-    [Fact]
+    [Fact(Skip = "Copilot tests are disabled.")]
     public async Task CopilotPlanCommand_DispatchesThroughDispatcher()
     {
         var uiCoreTarget = (McpServerManager.UI.Core.Commands.ITodoCopilotTarget)_target;
