@@ -228,7 +228,7 @@ public partial class MainWindowViewModel : ViewModelBase, ICommandTarget
     public string AppVersionDisplay => $"v{AppVersion}";
 
     /// <summary>Window title including the full SemVer from GitVersion.</summary>
-    public string WindowTitle => $"McpServerManager {AppVersionDisplay}";
+    public string WindowTitle => $"QBrain.AI Manager {AppVersionDisplay}";
 
     [ObservableProperty]
     private string _statusMessage = "Ready";

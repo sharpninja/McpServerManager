@@ -9,7 +9,7 @@ using McpServerManager.Android.Services;
 namespace McpServerManager.Android;
 
 [Activity(
-    Label = "MCP Server Manager",
+    Label = "QBrain.AI Manager",
     Theme = "@style/MyTheme.NoActionBar",
     Icon = "@drawable/icon",
     MainLauncher = true,

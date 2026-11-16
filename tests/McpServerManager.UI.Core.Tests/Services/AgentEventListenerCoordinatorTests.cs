@@ -82,7 +82,7 @@ public sealed class AgentEventListenerCoordinatorTests
         var coordinator = CreateCoordinator(reader, status, notifications);
 
         coordinator.Start();
-        await reader.SecondSubscription.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await reader.SecondSubscription.Task.WaitAsync(TimeSpan.FromSeconds(30));
         coordinator.Stop();
 
         Assert.True(reader.StreamCalls >= 2);

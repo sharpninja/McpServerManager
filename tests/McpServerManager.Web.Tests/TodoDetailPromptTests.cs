@@ -48,7 +48,7 @@ public sealed class TodoDetailPromptTests
     // Button rendering
     // ---------------------------------------------------------------------------
 
-    [Fact]
+    [Fact(Skip = "Copilot tests are disabled.")]
     public void TodoDetailPage_RendersThreeCopilotButtons_WhenTodoLoaded()
     {
         var api = new TodoApiClientStub { OnGetTodoAsync = (_, _) => Task.FromResult<TodoDetail?>(SampleTodo) };

@@ -80,6 +80,64 @@ public sealed class MemoryPageTests
     }
 
     [Fact]
+    public void MemoryDetailPage_SwitchesBetweenEditableRawText_AndSafeRenderedMarkdown()
+    {
+        var api = Substitute.For<IMemoryApiClient>();
+        api.ListMemoriesAsync(Arg.Any<ListMemoriesQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new ListMemoriesResult([], 0));
+        api.GetMemoryAsync("mem-1", Arg.Any<CancellationToken>())
+            .Returns(new MemoryDetail(
+                "mem-1",
+                "prefs",
+                MemoryScope.Workspace,
+                @"E:\repo",
+                "Initial text",
+                4,
+                DateTimeOffset.Parse("2026-09-01T00:00:00Z"),
+                DateTimeOffset.Parse("2026-09-19T00:00:00Z"),
+                "viewer"));
+
+        using var ctx = CreateTestContext(services => services.AddSingleton(api));
+        var cut = ctx.Render<McpServerManager.Web.Pages.Memory.MemoryDetail>(parameters =>
+            parameters.Add(p => p.MemoryId, "mem-1"));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("true", cut.Find("[data-testid='memory-tab-raw']").GetAttribute("aria-selected"));
+            Assert.Equal("false", cut.Find("[data-testid='memory-tab-rendered']").GetAttribute("aria-selected"));
+            Assert.NotEmpty(cut.FindAll("[data-testid='memory-text']"));
+        });
+
+        const string markdown = "## Preview heading\n\n**remember this**\n\n<script>alert('xss')</script>";
+        cut.Find("[data-testid='memory-text']").Change(markdown);
+        cut.Find("[data-testid='memory-tab-rendered']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("false", cut.Find("[data-testid='memory-tab-raw']").GetAttribute("aria-selected"));
+            Assert.Equal("true", cut.Find("[data-testid='memory-tab-rendered']").GetAttribute("aria-selected"));
+
+            var preview = cut.Find("[data-testid='memory-markdown-preview']");
+            Assert.Equal("tabpanel", preview.GetAttribute("role"));
+            Assert.Equal("Preview heading", preview.QuerySelector("h2")?.TextContent);
+            Assert.Equal("remember this", preview.QuerySelector("strong")?.TextContent);
+            Assert.Empty(preview.QuerySelectorAll("script"));
+        });
+
+        cut.Find("[data-testid='memory-tab-raw']").Click();
+
+        cut.WaitForAssertion(() =>
+            Assert.NotEmpty(cut.FindAll("[data-testid='memory-text']")));
+
+        cut.Find("[data-testid='memory-tab-rendered']").Click();
+
+        cut.WaitForAssertion(() =>
+            Assert.Equal(
+                "Preview heading",
+                cut.Find("[data-testid='memory-markdown-preview'] h2").TextContent));
+    }
+
+    [Fact]
     public void MemoryDetailPage_DefaultWorkspace_ShowsGlobalMemoryToggle_AndSaveCreatesGlobal()
     {
         AddMemoryCommand? captured = null;

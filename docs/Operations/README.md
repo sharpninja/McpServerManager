@@ -76,7 +76,7 @@ These scripts automate updating the `mcp-web` client secret in `appsettings.Deve
          │                      │                      │
          ▼                      ▼                      ▼
 ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│  MCP Server API  │  │  Director CLI    │  │  Web UI          │
+│  QBrain.AI API  │  │  Director CLI    │  │  Web UI          │
 │  Validates JWT   │  │  Device Flow     │  │  Auth Code Flow  │
 │  tokens          │  │  authentication  │  │  + session       │
 └──────────────────┘  └──────────────────┘  └──────────────────┘
@@ -85,7 +85,7 @@ These scripts automate updating the `mcp-web` client secret in `appsettings.Deve
 ### Token Flow
 1. **Director CLI**: User authenticates via Device Flow → receives JWT → stores locally → includes in API requests
 2. **Web UI**: User authenticates via Auth Code Flow → receives JWT → stored in HTTP-only cookie → included in API requests
-3. **MCP Server**: Validates JWT tokens from both clients using `mcp-server-api` credentials
+3. **QBrain.AI**: Validates JWT tokens from both clients using `mcp-server-api` credentials
 
 All tokens include:
 - **Audience (`aud`)**: `mcp-server-api`

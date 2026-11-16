@@ -276,7 +276,10 @@ partial class Build
             return nupkgPath;
         }
 
-        InvokeDotNet(new List<string> { "tool", "uninstall", "--global", toolId }, RepoRootPath, false);
+        if (installAfterPack)
+        {
+            InvokeDotNet(new List<string> { "tool", "uninstall", "--global", toolId }, RepoRootPath, false);
+        }
 
         // Publish -o does not delete files it no longer copies. SkipUnchangedFiles
         // also keeps a destination DLL that is newer than the resolved package.
@@ -294,7 +297,10 @@ partial class Build
                 publishDirectory
             },
             RepoRootPath);
-        CommandLinePublishGuard.EnsureCompatible(Path.Combine(publishDirectory, "System.CommandLine.dll"));
+        if (string.Equals(toolId, "SharpNinja.McpServer.Director", StringComparison.OrdinalIgnoreCase))
+        {
+            CommandLinePublishGuard.EnsureCompatible(Path.Combine(publishDirectory, "System.CommandLine.dll"));
+        }
 
         var entryPoint = $"{assemblyName}.dll";
         var runner = "dotnet";
@@ -381,6 +387,420 @@ partial class Build
 
         if (installAfterPack)
         {
+            InvokeDotNet(
+                new List<string>
+                {
+                    "tool",
+                    "install",
+                    "--global",
+                    toolId,
+                    "--add-source",
+                    outputDirectory,
+                    "--version",
+                    version.SemVer
+                },
+                RepoRootPath);
+        }
+
+        return nupkgPath;
+    }
+
+    /// <summary>
+    /// Builds one portable <c>director</c> tool package containing the generic launcher
+    /// and the Windows and Linux Director payloads.
+    /// </summary>
+    /// <param name="nupkgDirectory">Directory that receives the generated package.</param>
+    /// <param name="installAfterPack">Whether to replace the installed global tool after packing.</param>
+    /// <param name="skipVersionBumpValue">Whether the GitVersion patch bump is skipped.</param>
+    /// <param name="skipProcessStopValue">Whether running Director processes are left running.</param>
+    /// <param name="packageVersionOverride">Optional explicit package version.</param>
+    /// <returns>The absolute path of the generated NuGet package.</returns>
+    /// <remarks>
+    /// Change log: 2026-11-16 — FR-DIRECTOR-001, TR-DIRECTOR-TOOL-001, TEST-DIRECTOR-001;
+    /// AC-DIRECTOR-PACKAGE, AC-DIRECTOR-WINDOWS-LINUX, and AC-DIRECTOR-DEPLOY.
+    /// Director pack, deploy, and publish paths now produce one package with a portable
+    /// launcher and framework-dependent Windows and Linux x64 apphosts.
+    /// </remarks>
+    private string ExecuteDirectorToolPipeline(
+        string nupkgDirectory,
+        bool installAfterPack,
+        bool skipVersionBumpValue,
+        bool skipProcessStopValue,
+        string? packageVersionOverride = null)
+    {
+        const string toolId = "SharpNinja.McpServer.Director";
+        const string toolCommand = "director";
+        const string toolTargetFramework = "net10.0";
+
+        var launcherProjectPath = Path.Combine(
+            RepoRootPath,
+            "src",
+            "McpServerManager.Director.Tool",
+            "McpServerManager.Director.Tool.csproj");
+        var directorProjectPath = Path.Combine(
+            RepoRootPath,
+            "src",
+            "McpServerManager.Director",
+            "McpServerManager.Director.csproj");
+
+        foreach (var projectPath in new[] { launcherProjectPath, directorProjectPath })
+        {
+            if (!File.Exists(projectPath))
+            {
+                throw new FileNotFoundException($"Project not found: {projectPath}", projectPath);
+            }
+        }
+
+        if (!skipVersionBumpValue && string.IsNullOrWhiteSpace(packageVersionOverride))
+        {
+            RunBumpGitVersionPatch();
+        }
+
+        var version = ResolveVersionDetails(
+            string.IsNullOrWhiteSpace(packageVersionOverride) ? PackageVersion : packageVersionOverride);
+        var outputDirectory = Path.IsPathRooted(nupkgDirectory)
+            ? nupkgDirectory
+            : Path.Combine(RepoRootPath, nupkgDirectory);
+        var packageRoot = Path.Combine(RepoRootPath, "artifacts", "director-tool", Configuration);
+        var launcherDirectory = Path.Combine(packageRoot, "launcher");
+        var windowsDirectory = Path.Combine(packageRoot, "runtimes", "win-x64");
+        var linuxDirectory = Path.Combine(packageRoot, "runtimes", "linux-x64");
+        var dotnetToolSettingsPath = Path.Combine(launcherDirectory, "DotnetToolSettings.xml");
+        var nuspecPath = Path.Combine(outputDirectory, $"{toolId}.nuspec");
+        var nupkgPath = Path.Combine(outputDirectory, $"{toolId}.{version.SemVer}.nupkg");
+
+        EnsureDirectoryExists(outputDirectory);
+        if (!ShouldExecuteAction($"Publish and pack {toolId} for Windows and Linux ({Configuration})"))
+        {
+            return nupkgPath;
+        }
+
+        if (!skipProcessStopValue)
+        {
+            foreach (var process in Process.GetProcessesByName(toolCommand))
+            {
+                try
+                {
+                    process.Kill(true);
+                }
+                catch
+                {
+                }
+                finally
+                {
+                    process.Dispose();
+                }
+            }
+        }
+
+        ClearDirectory(packageRoot);
+        InvokeDotNet(
+            new List<string>
+            {
+                "publish",
+                launcherProjectPath,
+                "-c",
+                Configuration,
+                "--no-self-contained",
+                "-o",
+                launcherDirectory
+            },
+            RepoRootPath);
+        InvokeDotNet(
+            new List<string>
+            {
+                "publish",
+                directorProjectPath,
+                "-c",
+                Configuration,
+                "-r",
+                "win-x64",
+                "--self-contained",
+                "false",
+                "-o",
+                windowsDirectory
+            },
+            RepoRootPath);
+        InvokeDotNet(
+            new List<string>
+            {
+                "publish",
+                directorProjectPath,
+                "-c",
+                Configuration,
+                "-r",
+                "linux-x64",
+                "--self-contained",
+                "false",
+                "-o",
+                linuxDirectory
+            },
+            RepoRootPath);
+
+        CommandLinePublishGuard.EnsureCompatible(Path.Combine(windowsDirectory, "System.CommandLine.dll"));
+        CommandLinePublishGuard.EnsureCompatible(Path.Combine(linuxDirectory, "System.CommandLine.dll"));
+
+        var launcherPath = Path.Combine(launcherDirectory, "McpServerManager.Director.Tool.dll");
+        var windowsExecutablePath = Path.Combine(windowsDirectory, "director.exe");
+        var linuxExecutablePath = Path.Combine(linuxDirectory, "director");
+        foreach (var payloadPath in new[] { launcherPath, windowsExecutablePath, linuxExecutablePath })
+        {
+            if (!File.Exists(payloadPath))
+            {
+                throw new FileNotFoundException($"Director tool payload was not created: {payloadPath}", payloadPath);
+            }
+        }
+
+        File.WriteAllText(
+            dotnetToolSettingsPath,
+            $"""
+             <?xml version="1.0" encoding="utf-8"?>
+             <DotNetCliTool Version="2">
+               <Commands>
+                 <Command Name="{toolCommand}" EntryPoint="McpServerManager.Director.Tool.dll" Runner="dotnet" />
+               </Commands>
+             </DotNetCliTool>
+             """,
+            new UTF8Encoding(false));
+
+        File.WriteAllText(
+            nuspecPath,
+            $"""
+             <?xml version="1.0" encoding="utf-8"?>
+             <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+               <metadata>
+                 <id>{toolId}</id>
+                 <version>{version.SemVer}</version>
+                 <authors>SharpNinja</authors>
+                 <description>Cross-platform QBrain.AI Director tool for Windows and Linux.</description>
+                 <packageTypes>
+                   <packageType name="DotnetTool" />
+                 </packageTypes>
+               </metadata>
+               <files>
+                 <file src="{launcherDirectory}\**" target="tools/{toolTargetFramework}/any" />
+                 <file src="{windowsDirectory}\**" target="tools/{toolTargetFramework}/any/runtimes/win-x64" />
+                 <file src="{linuxDirectory}\**" target="tools/{toolTargetFramework}/any/runtimes/linux-x64" />
+               </files>
+             </package>
+             """,
+            new UTF8Encoding(false));
+
+        if (!CommandExists("nuget"))
+        {
+            throw new InvalidOperationException(
+                "nuget.exe is required to pack the multi-platform SharpNinja.McpServer.Director tool payload.");
+        }
+
+        if (File.Exists(nupkgPath))
+        {
+            File.Delete(nupkgPath);
+        }
+
+        InvokeProcess(
+            "nuget",
+            new List<string> { "pack", nuspecPath, "-OutputDirectory", outputDirectory, "-NoPackageAnalysis" },
+            RepoRootPath,
+            true);
+
+        if (installAfterPack)
+        {
+            InvokeDotNet(new List<string> { "tool", "uninstall", "--global", toolId }, RepoRootPath, false);
+            InvokeDotNet(
+                new List<string>
+                {
+                    "tool",
+                    "install",
+                    "--global",
+                    toolId,
+                    "--add-source",
+                    outputDirectory,
+                    "--version",
+                    version.SemVer
+                },
+                RepoRootPath);
+        }
+
+        return nupkgPath;
+    }
+
+    /// <summary>
+    /// Builds one portable <c>mcp-web</c> tool package containing the generic launcher,
+    /// the Windows Hybrid payload, and the Linux Web payload.
+    /// </summary>
+    /// <param name="nupkgDirectory">Directory that receives the generated package.</param>
+    /// <param name="installAfterPack">Whether to replace the installed global tool after packing.</param>
+    /// <param name="skipVersionBumpValue">Whether the GitVersion patch bump is skipped.</param>
+    /// <param name="packageVersionOverride">Optional explicit package version.</param>
+    /// <returns>The absolute path of the generated NuGet package.</returns>
+    private string ExecuteWebUiToolPipeline(
+        string nupkgDirectory,
+        bool installAfterPack,
+        bool skipVersionBumpValue,
+        string? packageVersionOverride = null)
+    {
+        const string toolId = "SharpNinja.McpServer.Web";
+        const string toolCommand = "mcp-web";
+        const string toolTargetFramework = "net10.0";
+
+        var launcherProjectPath = Path.Combine(
+            RepoRootPath,
+            "src",
+            "McpServerManager.Web.Tool",
+            "McpServerManager.Web.Tool.csproj");
+        var windowsProjectPath = Path.Combine(
+            RepoRootPath,
+            "src",
+            "McpServerManager.Web.Hybrid",
+            "McpServerManager.Web.Hybrid.csproj");
+        var linuxProjectPath = Path.Combine(
+            RepoRootPath,
+            "src",
+            "McpServerManager.Web",
+            "McpServerManager.Web.csproj");
+
+        foreach (var projectPath in new[] { launcherProjectPath, windowsProjectPath, linuxProjectPath })
+        {
+            if (!File.Exists(projectPath))
+            {
+                throw new FileNotFoundException($"Project not found: {projectPath}", projectPath);
+            }
+        }
+
+        if (!skipVersionBumpValue && string.IsNullOrWhiteSpace(packageVersionOverride))
+        {
+            RunBumpGitVersionPatch();
+        }
+
+        var version = ResolveVersionDetails(
+            string.IsNullOrWhiteSpace(packageVersionOverride) ? PackageVersion : packageVersionOverride);
+        var outputDirectory = Path.IsPathRooted(nupkgDirectory)
+            ? nupkgDirectory
+            : Path.Combine(RepoRootPath, nupkgDirectory);
+        var packageRoot = Path.Combine(RepoRootPath, "artifacts", "mcp-web-tool", Configuration);
+        var launcherDirectory = Path.Combine(packageRoot, "launcher");
+        var windowsDirectory = Path.Combine(packageRoot, "runtimes", "win-x64");
+        var linuxDirectory = Path.Combine(packageRoot, "runtimes", "linux-x64");
+        var dotnetToolSettingsPath = Path.Combine(launcherDirectory, "DotnetToolSettings.xml");
+        var nuspecPath = Path.Combine(outputDirectory, $"{toolId}.nuspec");
+        var nupkgPath = Path.Combine(outputDirectory, $"{toolId}.{version.SemVer}.nupkg");
+
+        EnsureDirectoryExists(outputDirectory);
+        if (!ShouldExecuteAction($"Publish and pack {toolId} for Windows and Linux ({Configuration})"))
+        {
+            return nupkgPath;
+        }
+
+        ClearDirectory(packageRoot);
+        InvokeDotNet(
+            new List<string>
+            {
+                "publish",
+                launcherProjectPath,
+                "-c",
+                Configuration,
+                "--no-self-contained",
+                "-o",
+                launcherDirectory
+            },
+            RepoRootPath);
+        InvokeDotNet(
+            new List<string>
+            {
+                "publish",
+                windowsProjectPath,
+                "-c",
+                Configuration,
+                "-r",
+                "win-x64",
+                "--self-contained",
+                "false",
+                "-o",
+                windowsDirectory
+            },
+            RepoRootPath);
+        InvokeDotNet(
+            new List<string>
+            {
+                "publish",
+                linuxProjectPath,
+                "-c",
+                Configuration,
+                "-r",
+                "linux-x64",
+                "--self-contained",
+                "false",
+                "-o",
+                linuxDirectory
+            },
+            RepoRootPath);
+
+        var launcherPath = Path.Combine(launcherDirectory, "McpServerManager.Web.Tool.dll");
+        var windowsExecutablePath = Path.Combine(windowsDirectory, "McpServerManager.Web.Hybrid.exe");
+        var linuxExecutablePath = Path.Combine(linuxDirectory, "McpServerManager.Web");
+        foreach (var payloadPath in new[] { launcherPath, windowsExecutablePath, linuxExecutablePath })
+        {
+            if (!File.Exists(payloadPath))
+            {
+                throw new FileNotFoundException($"Web tool payload was not created: {payloadPath}", payloadPath);
+            }
+        }
+
+        File.WriteAllText(
+            dotnetToolSettingsPath,
+            $"""
+             <?xml version="1.0" encoding="utf-8"?>
+             <DotNetCliTool Version="2">
+               <Commands>
+                 <Command Name="{toolCommand}" EntryPoint="McpServerManager.Web.Tool.dll" Runner="dotnet" />
+               </Commands>
+             </DotNetCliTool>
+             """,
+            new UTF8Encoding(false));
+
+        File.WriteAllText(
+            nuspecPath,
+            $"""
+             <?xml version="1.0" encoding="utf-8"?>
+             <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+               <metadata>
+                 <id>{toolId}</id>
+                 <version>{version.SemVer}</version>
+                 <authors>SharpNinja</authors>
+                 <description>Cross-platform QBrain.AI Manager Web UI tool for Windows and Linux.</description>
+                 <packageTypes>
+                   <packageType name="DotnetTool" />
+                 </packageTypes>
+               </metadata>
+               <files>
+                 <file src="{launcherDirectory}\**" target="tools/{toolTargetFramework}/any" />
+                 <file src="{windowsDirectory}\**" target="tools/{toolTargetFramework}/any/runtimes/win-x64" />
+                 <file src="{linuxDirectory}\**" target="tools/{toolTargetFramework}/any/runtimes/linux-x64" />
+               </files>
+             </package>
+             """,
+            new UTF8Encoding(false));
+
+        if (!CommandExists("nuget"))
+        {
+            throw new InvalidOperationException(
+                "nuget.exe is required to pack the multi-platform SharpNinja.McpServer.Web tool payload.");
+        }
+
+        if (File.Exists(nupkgPath))
+        {
+            File.Delete(nupkgPath);
+        }
+
+        InvokeProcess(
+            "nuget",
+            new List<string> { "pack", nuspecPath, "-OutputDirectory", outputDirectory, "-NoPackageAnalysis" },
+            RepoRootPath,
+            true);
+
+        if (installAfterPack)
+        {
+            InvokeDotNet(new List<string> { "tool", "uninstall", "--global", toolId }, RepoRootPath, false);
             InvokeDotNet(
                 new List<string>
                 {
@@ -750,10 +1170,7 @@ partial class Build
                 return CreateDeploymentResult("Director", "Skipped", "nuget or dotnet nuget was not found in PATH.");
             }
 
-            var nupkgPath = ExecuteDotnetToolPipeline(
-                Path.Combine(RepoRootPath, "src", "McpServerManager.Director", "McpServerManager.Director.csproj"),
-                "SharpNinja.McpServer.Director",
-                "director",
+            var nupkgPath = ExecuteDirectorToolPipeline(
                 "nupkg",
                 installAfterPack: true,
                 skipVersionBumpValue: SkipVersionBump || !string.IsNullOrWhiteSpace(packageVersionOverride),
@@ -782,14 +1199,10 @@ partial class Build
                 return CreateDeploymentResult("WebUi", "Skipped", "nuget or dotnet nuget was not found in PATH.");
             }
 
-            var nupkgPath = ExecuteDotnetToolPipeline(
-                Path.Combine(RepoRootPath, "src", "McpServerManager.Web.Hybrid", "McpServerManager.Web.Hybrid.csproj"),
-                "SharpNinja.McpServer.Web",
-                "mcp-web",
+            var nupkgPath = ExecuteWebUiToolPipeline(
                 "nupkg",
                 installAfterPack: true,
                 skipVersionBumpValue: SkipVersionBump || !string.IsNullOrWhiteSpace(packageVersionOverride),
-                skipProcessStopValue: true,
                 packageVersionOverride: packageVersionOverride);
 
             return CreateDeploymentResult("WebUi", WhatIf ? "WhatIf" : "Success", WhatIf ? $"Would install WebUi from {nupkgPath}." : $"Installed WebUi from {nupkgPath}.");
@@ -913,23 +1326,87 @@ partial class Build
         var resolvedProjectPath = ResolveProjectPathOrDefault(ProjectPath, Path.Combine("src", "McpServerManager.Director", "McpServerManager.Director.csproj"));
         var resolvedToolId = string.IsNullOrWhiteSpace(ToolId) ? "SharpNinja.McpServer.Director" : ToolId;
         var resolvedToolCommand = string.IsNullOrWhiteSpace(ToolCommand) ? "director" : ToolCommand;
-        var packagePath = ExecuteDotnetToolPipeline(
-            resolvedProjectPath,
-            resolvedToolId,
-            resolvedToolCommand,
-            NupkgDir,
-            installAfterPack: true,
-            skipVersionBumpValue: SkipVersionBump,
-            skipProcessStopValue: SkipProcessStop);
+        var directorProjectPath = Path.Combine(RepoRootPath, "src", "McpServerManager.Director", "McpServerManager.Director.csproj");
+        var isDirectorTool = string.Equals(Path.GetFullPath(resolvedProjectPath), Path.GetFullPath(directorProjectPath), StringComparison.OrdinalIgnoreCase)
+            && string.Equals(resolvedToolId, "SharpNinja.McpServer.Director", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(resolvedToolCommand, "director", StringComparison.OrdinalIgnoreCase);
+        var packagePath = isDirectorTool
+            ? ExecuteDirectorToolPipeline(
+                NupkgDir,
+                installAfterPack: true,
+                skipVersionBumpValue: SkipVersionBump,
+                skipProcessStopValue: SkipProcessStop)
+            : ExecuteDotnetToolPipeline(
+                resolvedProjectPath,
+                resolvedToolId,
+                resolvedToolCommand,
+                NupkgDir,
+                installAfterPack: true,
+                skipVersionBumpValue: SkipVersionBump,
+                skipProcessStopValue: SkipProcessStop);
         Log.Information($"Dotnet tool pipeline complete: {packagePath}");
+    }
+
+    private void RunPublishToolsTarget()
+    {
+        var version = ResolveVersionDetails(PackageVersion).SemVer;
+        if (!ShouldExecuteAction($"Pack and publish Director and mcp-web {version} to {NuGetSource}"))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(NuGetSource))
+        {
+            throw new InvalidOperationException("NuGetSource must be set to publish tools.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("NUGET_API_KEY")))
+        {
+            throw new InvalidOperationException("NUGET_API_KEY must be set to publish tools.");
+        }
+
+        var sdkVersionText = InvokeDotNet(new List<string> { "--version" }, RepoRootPath)
+            .StandardOutputLines.FirstOrDefault()?.Trim();
+        var normalizedSdkVersion = sdkVersionText?.Split('-')[0];
+        if (!Version.TryParse(normalizedSdkVersion, out var sdkVersion)
+            || sdkVersion < new Version(10, 0, 300))
+        {
+            throw new InvalidOperationException(
+                $"PublishTools requires .NET SDK 10.0.300 or newer for NUGET_API_KEY support (found '{sdkVersionText ?? "<none>"}').");
+        }
+
+        var directorPackage = ExecuteDirectorToolPipeline(
+            ArtifactsDirectoryPath,
+            installAfterPack: false,
+            skipVersionBumpValue: true,
+            skipProcessStopValue: true,
+            packageVersionOverride: version);
+        var webPackage = ExecuteWebUiToolPipeline(
+            ArtifactsDirectoryPath,
+            installAfterPack: false,
+            skipVersionBumpValue: true,
+            packageVersionOverride: version);
+
+        foreach (var packagePath in new[] { directorPackage, webPackage })
+        {
+            if (!File.Exists(packagePath))
+            {
+                throw new FileNotFoundException($"Tool package was not created: {packagePath}", packagePath);
+            }
+        }
+
+        foreach (var packagePath in new[] { directorPackage, webPackage })
+        {
+            InvokeDotNet(
+                new List<string> { "nuget", "push", packagePath, "--source", NuGetSource, "--skip-duplicate", "--no-symbols", "--timeout", "900" },
+                RepoRootPath);
+            Log.Information($"Push completed for {Path.GetFileName(packagePath)} to {NuGetSource} (published or already present).");
+        }
     }
 
     private void RunPackDirectorToolTarget()
     {
-        var packagePath = ExecuteDotnetToolPipeline(
-            Path.Combine(RepoRootPath, "src", "McpServerManager.Director", "McpServerManager.Director.csproj"),
-            "SharpNinja.McpServer.Director",
-            "director",
+        var packagePath = ExecuteDirectorToolPipeline(
             ArtifactsDirectoryPath,
             installAfterPack: false,
             skipVersionBumpValue: true,

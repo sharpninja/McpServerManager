@@ -29,9 +29,9 @@ public sealed class MainWindowViewModelVersionTests
     [Fact]
     public void AppTitle_BuildsTitleWithSemVerSuffix()
     {
-        var title = AppTitle.Build("MCP Server Manager", typeof(MainWindowViewModelVersionTests).Assembly);
+        var title = AppTitle.Build("QBrain.AI Manager", typeof(MainWindowViewModelVersionTests).Assembly);
 
-        Assert.StartsWith("MCP Server Manager v", title, StringComparison.Ordinal);
+        Assert.StartsWith("QBrain.AI Manager v", title, StringComparison.Ordinal);
         Assert.DoesNotContain("+", title, StringComparison.Ordinal);
         Assert.DoesNotContain(".Sha", title, StringComparison.OrdinalIgnoreCase);
     }

@@ -6,7 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="400"
         x:Class="McpServerManager.Desktop.Views.ConnectionWindow"
         x:DataType="vm:ConnectionViewModel"
-        Title="Connect to MCP Server"
+        Title="Connect to QBrain.AI"
         Width="420" Height="400"
         WindowStartupLocation="CenterScreen"
         CanResize="False"
@@ -16,7 +16,7 @@
                   HorizontalScrollBarVisibility="Disabled">
         <Border Padding="24" VerticalAlignment="Center">
             <StackPanel Spacing="12">
-                <TextBlock Text="Connect to MCP Server"
+                <TextBlock Text="Connect to QBrain.AI"
                            FontSize="22"
                            FontWeight="SemiBold"/>
 

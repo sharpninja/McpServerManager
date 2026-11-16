@@ -1,6 +1,7 @@
 using McpServer.Cqrs;
 using McpServerManager.UI.Core.Messages;
 using McpServerManager.UI.Core.Services;
+using McpServerManager.UI.Core.ViewModels;
 using McpServerManager.UI.Core.Tests.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -81,6 +82,8 @@ public sealed class WebUiHandlerApiDispatchMappingTests
             services.AddSingleton(workspaceApi);
             services.AddSingleton(configurationApi);
         });
+
+        host.GetRequiredService<WorkspaceContextViewModel>().ActiveWorkspacePath = @"E:\repo";
 
         var dispatcher = host.GetRequiredService<Dispatcher>();
 

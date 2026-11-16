@@ -11,6 +11,6 @@ public partial class App : Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        return new Window(new MainPage()) { Title = AppTitle.Build("MCP Server Manager", typeof(App).Assembly) };
+        return new Window(new MainPage()) { Title = AppTitle.Build("QBrain.AI Manager", typeof(App).Assembly) };
     }
 }

@@ -4,12 +4,14 @@
     <id>SharpNinja.McpServer.Web</id>
     <version>0.6.17</version>
     <authors>SharpNinja</authors>
-    <description>SharpNinja.McpServer.Web</description>
+    <description>Cross-platform QBrain.AI Manager Web UI tool for Windows and Linux.</description>
     <packageTypes>
       <packageType name="DotnetTool" />
     </packageTypes>
-   </metadata>
-   <files>
-     <file src="F:\GitHub\McpServerManager\src\McpServerManager.Web.Hybrid\bin\Release\net10.0-windows10.0.19041.0\publish\**" target="tools/net10.0/any" />
-   </files>
- </package>
+  </metadata>
+  <files>
+    <file src="F:\GitHub\McpServerManager\artifacts\mcp-web-tool\Release\launcher\**" target="tools/net10.0/any" />
+    <file src="F:\GitHub\McpServerManager\artifacts\mcp-web-tool\Release\runtimes\win-x64\**" target="tools/net10.0/any/runtimes/win-x64" />
+    <file src="F:\GitHub\McpServerManager\artifacts\mcp-web-tool\Release\runtimes\linux-x64\**" target="tools/net10.0/any/runtimes/linux-x64" />
+  </files>
+</package>

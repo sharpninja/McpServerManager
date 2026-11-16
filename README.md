@@ -1,6 +1,6 @@
-# McpServerManager
+# QBrain.AI Manager
 
-McpServerManager is an Avalonia UI desktop application designed to visualize and analyze session logs and request data from AI coding assistants like **GitHub Copilot** and **Cursor**. It provides a unified view of interactions, enabling developers to review prompt history, context usage, and automated actions taken by these tools.
+QBrain.AI Manager is an Avalonia UI desktop application. The GitHub repository remains sharpninja/McpServerManager designed to visualize and analyze session logs and request data from AI coding assistants like **GitHub Copilot** and **Cursor**. It provides a unified view of interactions, enabling developers to review prompt history, context usage, and automated actions taken by these tools.
 
 Repository: [sharpninja/McpServerManager](https://github.com/sharpninja/McpServerManager)
 
@@ -69,6 +69,17 @@ Use NUKE from the repo root as the authoritative build/deploy entry point for lo
 bash ./build.sh VersionInfo --json-output-path artifacts/version.json
 bash ./build.sh BuildDesktopDeb --package-version <semver>
 ```
+
+### Publish the .NET tools
+
+On Windows, with .NET SDK 10.0.300 or newer, `nuget.exe`, and `NUGET_API_KEY` set in the environment:
+
+```powershell
+.\build.ps1 PublishTools --what-if --package-version <semver>
+.\build.ps1 PublishTools --package-version <semver>
+```
+
+`PublishTools` packs `SharpNinja.McpServer.Director` (`director`) and `SharpNinja.McpServer.Web` (`mcp-web`) at the same version, then pushes both packages to NuGet.org. Each tool contains a portable launcher plus Windows x64 and Linux x64 executable payloads and selects the matching executable at runtime. The web package uses its Blazor Hybrid payload on Windows and ASP.NET Core payload on Linux. Use `--nuget-source <feed>` to publish to another feed, such as a local validation folder. The API key is read from `NUGET_API_KEY`; it is not passed on the command line.
 
 Current target names:
 - `Director`
